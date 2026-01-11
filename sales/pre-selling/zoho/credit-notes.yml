@@ -1,0 +1,2809 @@
+openapi: 3.0.0
+info:
+  title: Credit Notes
+  description: 'A credit note is a promisory note issued to a person, when we owe him money. Credit notes are created when a refund is to be made to a customer. A credit note object allows you to keep track of all credit note related information.<br><br><b>Possible error codes: </b><br><table><thead><tr><th>Error Code</th><th>Message</th></tr></thead><tbody><tr><td><span style="color:#FF0000;"> 1002</span></td><td>Credit Note does not exists</td></tr><tr><td><span style="color:#FF0000;"> 12003</span></td><td>Credit notes that are in closed status cannot be applied to invoices</td></tr><tr><td><span style="color:#FF0000;"> 12004</span></td><td>Credit notes that are in void status cannot be applied to invoices</td></tr><tr><td><span style="color:#FF0000;"> 12005</span></td><td>Credits cannot be applied to invoices in the draft status</td></tr><tr><td><span style="color:#FF0000;"> 12006</span></td><td>Credits cannot be applied to invoices in the closed status</td></tr><tr><td><span style="color:#FF0000;"> 12007</span></td><td>Credits cannot be applied to invoices in the void status</td></tr><tr><td><span style="color:#FF0000;"> 12018</span></td><td>The specified Credit Note Number already exists</td></tr></tbody></table>'
+  contact: {}
+  version: 1.0.0
+servers:
+  - url: https://www.zohoapis.com/invoice/v3
+    description: API Endpoint
+tags:
+  - name: credit-notes
+    description: Credit-Notes Module
+paths:
+  /creditnotes:
+    post:
+      tags:
+        - credit-notes
+      operationId: create_credit_note
+      summary: Create a credit note
+      description: Details of an existing creditnote.
+      parameters:
+        - name: invoice_id
+          in: query
+          description: Invoice ID of the required invoice.
+          required: false
+          schema:
+            type: string
+          example: '90300000079426'
+        - name: ignore_auto_number_generation
+          in: query
+          description: Set to true if you need to provide your own credit note number.
+          required: false
+          schema:
+            type: boolean
+          example: false
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create-a-credit-note-request'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/create-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    get:
+      tags:
+        - credit-notes
+      operationId: list_credit_notes
+      summary: List Credit Notes
+      description: List all the Credit Notes.
+      parameters:
+        - name: creditnote_number
+          in: query
+          description: Unique number generated (starts with CN) which will be displayed in the interface and credit notes. <code>Maximum Length [100]</code>
+          required: false
+          schema:
+            type: string
+          example: CN-29
+        - name: date
+          in: query
+          description: The date on which credit note is raised. <code>Date Format [yyyy-mm-dd]</code>
+          required: false
+          schema:
+            type: string
+          example: '2016-06-05'
+        - name: status
+          in: query
+          description: Status of the credit note. This can be <code>open</code>, <code>closed</code> or <code>void</code>.
+          required: false
+          schema:
+            type: string
+          example: open
+        - name: total
+          in: query
+          description: Total credits raised in this credit note.
+          required: false
+          schema:
+            type: number
+            format: double
+          example: 450
+        - name: reference_number
+          in: query
+          description: Reference number generated for the payment. A string of your choice can also be used as the reference number. <code>Maximum Length [100]</code>
+          required: false
+          schema:
+            type: string
+          example: INV-384
+        - name: customer_name
+          in: query
+          description: Name of the customer to whom the credit note is raised. <code>Maximum Length of the name [100]</code>
+          required: false
+          schema:
+            type: string
+          example: Bowman Furniture
+        - name: item_name
+          in: query
+          description: Search credit notes by item name. <code>Maximum length [100]</code>
+          required: false
+          schema:
+            type: string
+          example: kit
+        - name: customer_id
+          in: query
+          description: Customer ID of the customer for whom the credit note is raised.
+          required: false
+          schema:
+            type: string
+          example: '903000000000099'
+        - name: item_description
+          in: query
+          description: description for the item. Variants <code>item_description_startswith</code> and <code>item_description_contains</code>. <code>Maximum length [100]</code>
+          required: false
+          schema:
+            type: string
+          example: ''
+        - name: item_id
+          in: query
+          description: Unique string generated for the item to which a refund is to be made.
+          required: false
+          schema:
+            type: string
+          example: '90300000081501'
+        - name: filter_by
+          in: query
+          description: Filter credit notes by status. Allowed values <code>Status.All</code> <code>Status.Open</code> <code>Status.Draft</code> <code>Status.Closed</code> and <code>Status.Void</code>
+          required: false
+          schema:
+            type: string
+          example: ''
+        - name: search_text
+          in: query
+          description: Search credit notes by credit note number or customer name or credit note reference number. <code>Maximum length [100]</code>
+          required: false
+          schema:
+            type: string
+          example: ''
+        - name: sort_column
+          in: query
+          description: Sort credit notes by following columns customer_name, creditnote_number, balance, total, date and created_time. Allowed Values <code>customer_name</code> <code>creditnote_number</code> <code>balance</code> <code>total</code> <code>date</code> and <code>created_time</code>
+          required: false
+          schema:
+            type: string
+          example: created_time
+        - name: page
+          in: query
+          description: Page number to be fetched. Default value is 1.
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: per_page
+          in: query
+          description: Number of records to be fetched per page. Default value is 200.
+          required: false
+          schema:
+            type: integer
+            default: 200
+          example: 200
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-credit-notes-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    parameters:
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}:
+    put:
+      tags:
+        - credit-notes
+      operationId: update_credit_note
+      summary: Update a credit note
+      description: Update Details of an existing creditnote.
+      parameters:
+        - name: ignore_auto_number_generation
+          in: query
+          description: Set to true if you need to provide your own credit note number.
+          required: false
+          schema:
+            type: boolean
+          example: false
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update-a-credit-note-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.UPDATE
+    get:
+      tags:
+        - credit-notes
+      operationId: get_credit_note
+      summary: Get a credit note
+      description: Details of an existing creditnote.
+      parameters:
+        - name: print
+          in: query
+          description: 'Export credit note pdf with default print option. Allowed Values: <code>true</code>, <code>false</code>, <code>on</code> and <code>off</code>'
+          required: false
+          schema:
+            type: boolean
+          example: true
+        - name: accept
+          in: query
+          description: 'You can get credit note details as json/pdf/html. Default format is html. Allowed Values: <code>json</code>, <code>pdf</code> and <code>html</code>'
+          required: false
+          schema:
+            type: string
+          example: ''
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    delete:
+      tags:
+        - credit-notes
+      operationId: delete_credit_note
+      summary: Delete a credit note
+      description: Delete an existing credit note.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.DELETE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/email:
+    post:
+      tags:
+        - credit-notes
+      operationId: email_credit_note
+      summary: Email a credit note
+      description: Email a credit note.
+      parameters:
+        - name: customer_id
+          in: query
+          description: Customer ID of the customer for whom the credit note is raised.
+          required: false
+          schema:
+            type: string
+          example: '903000000000099'
+        - name: attachments
+          in: query
+          description: The files to be attached with the email.
+          required: false
+          schema:
+            type: string
+            format: binary
+          example: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/email-a-credit-note-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/void:
+    post:
+      tags:
+        - credit-notes
+      operationId: mark_credit_note_as_void
+      summary: Void a credit note
+      description: To mark a credit note as invalid/nullify it content.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/void-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/converttoopen:
+    post:
+      tags:
+        - credit-notes
+      operationId: mark_credit_note_as_open
+      summary: Open a voided credit note
+      description: Convert a voided credit note to open.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/open-a-voided-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/emailhistory:
+    get:
+      tags:
+        - credit-notes
+      operationId: get_credit_note_email_history
+      summary: Email history
+      description: Get email history of a credit code.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email-history-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/address/billing:
+    put:
+      tags:
+        - credit-notes
+      operationId: update_credit_note_billing_address
+      summary: Update billing address
+      description: Updates the billing address for an existing credit note alone.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update-billing-address-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update-billing-address-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.UPDATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/address/shipping:
+    put:
+      tags:
+        - credit-notes
+      operationId: update_credit_note_shipping_address
+      summary: Update Shipping address
+      description: Updates the shipping address for an existing credit note alone.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update-shipping-address-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update-shipping-address-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.UPDATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/templates:
+    get:
+      tags:
+        - credit-notes
+      operationId: list_credit_note_templates
+      summary: List credit note templates
+      description: Get all credit note pdf templates.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-credit-note-templates-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    parameters:
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/templates/{template_id}:
+    put:
+      tags:
+        - credit-notes
+      operationId: update_credit_note_template
+      summary: Update a credit note template
+      description: Update the pdf template associated with the credit note.
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          description: Unique identifier of the credit note template.
+          schema:
+            type: string
+          example: '90300000001336'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update-a-credit-note-template-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.UPDATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/invoices:
+    get:
+      tags:
+        - credit-notes
+      operationId: list_invoices_credited
+      summary: List invoices credited
+      description: List invoices to which the credit note is applied.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-invoices-credited-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    post:
+      tags:
+        - credit-notes
+      operationId: apply_credit_to_invoice
+      summary: Credit to an invoice
+      description: Apply credit note to existing invoices.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/credit-to-an-invoice-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credit-to-an-invoice-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/invoices/{creditnote_invoice_id}:
+    delete:
+      tags:
+        - credit-notes
+      operationId: delete_credit_notes_applied_to_invoice
+      summary: Delete invoices credited
+      description: Delete the credits applied to an invoice.
+      parameters:
+        - name: creditnote_invoice_id
+          in: path
+          required: true
+          description: Unique identifier of the credit note invoice.
+          schema:
+            type: string
+          example: '982000000567172'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete-invoices-credited-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.DELETE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/comments:
+    get:
+      tags:
+        - credit-notes
+      operationId: list_credit_note_comments
+      summary: List credit note comments & history
+      description: Get history and comments of a credit note.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-credit-note-comments-and-history-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    post:
+      tags:
+        - credit-notes
+      operationId: create_credit_note_comment
+      summary: Add a comment
+      description: Add a comment to an existing credit note.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/add-a-comment-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/add-a-comment-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/comments/{comment_id}:
+    delete:
+      tags:
+        - credit-notes
+      operationId: delete_credit_note_comment
+      summary: Delete a Comment
+      description: Delete a credit note comment.
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          description: Unique identifier of the comment.
+          schema:
+            type: string
+          example: '982000000570001'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete-a-comment-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.DELETE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - name: comment_id
+        in: path
+        required: true
+        description: Unique identifier of the comment.
+        schema:
+          type: string
+        example: '982000000570001'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/refunds:
+    get:
+      tags:
+        - credit-notes
+      operationId: list_credit_note_refunds
+      summary: List credit note refunds
+      description: List all refunds with pagination.
+      parameters:
+        - name: customer_id
+          in: query
+          description: Customer ID of the customer for whom the credit note is raised.
+          required: false
+          schema:
+            type: string
+          example: '903000000000099'
+        - name: sort_column
+          in: query
+          description: 'Sort refunds list. Allowed Values: <code>refund_mode</code>, <code>reference_number</code>, <code>date</code>, <code>creditnote_number</code>, <code>customer_name</code>, <code>amount_bcy</code> and <code>amount_fcy</code>'
+          required: false
+          schema:
+            type: string
+          example: created_time
+        - name: page
+          in: query
+          description: Page number to be fetched. Default value is 1.
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: per_page
+          in: query
+          description: Number of records to be fetched per page. Default value is 200.
+          required: false
+          schema:
+            type: integer
+            default: 200
+          example: 200
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-credit-note-refunds-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    parameters:
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/refunds:
+    get:
+      tags:
+        - credit-notes
+      operationId: list_credit_note_refunds
+      summary: List refunds of a credit note
+      description: List all refunds of an existing credit note.
+      parameters:
+        - name: page
+          in: query
+          description: Page number to be fetched. Default value is 1.
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: per_page
+          in: query
+          description: Number of records to be fetched per page. Default value is 200.
+          required: false
+          schema:
+            type: integer
+            default: 200
+          example: 200
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-refunds-of-a-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    post:
+      tags:
+        - credit-notes
+      operationId: refund_credit_note
+      summary: Refund credit note
+      description: Refund credit note amount.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/refund-credit-note-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/refund-credit-note-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.CREATE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+  /creditnotes/{creditnote_id}/refunds/{creditnote_refund_id}:
+    get:
+      tags:
+        - credit-notes
+      operationId: get_credit_note_refund
+      summary: Get credit note refund
+      description: Get refund of a particular credit note.
+      parameters:
+        - name: creditnote_refund_id
+          in: path
+          required: true
+          description: Unique identifier of the credit note refund.
+          schema:
+            type: string
+          example: '982000000567158'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get-credit-note-refund-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.READ
+    put:
+      tags:
+        - credit-notes
+      operationId: update_credit_note_refund
+      summary: Update credit note refund
+      description: Update the refunded transaction.
+      parameters:
+        - name: creditnote_refund_id
+          in: path
+          required: true
+          description: Unique identifier of the credit note refund.
+          schema:
+            type: string
+          example: '982000000567158'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update-credit-note-refund-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update-credit-note-refund-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.UPDATE
+    delete:
+      tags:
+        - credit-notes
+      operationId: delete_credit_note_refund
+      summary: Delete credit note refund
+      description: Delete a credit note refund.
+      parameters:
+        - name: creditnote_refund_id
+          in: path
+          required: true
+          description: Unique identifier of the credit note refund.
+          schema:
+            type: string
+          example: '982000000567158'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete-credit-note-refund-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.creditnotes.DELETE
+    parameters:
+      - name: creditnote_id
+        in: path
+        required: true
+        description: Unique identifier of the credit note.
+        schema:
+          type: string
+        example: '90300000072369'
+      - $ref: '#/components/parameters/organization_id'
+components:
+  parameters:
+    organization_id:
+      name: X-com-zoho-invoice-organizationid
+      description: ID of the organization
+      in: header
+      required: true
+      schema:
+        type: string
+      example: '10234695'
+  schemas:
+    gendoc-attributes-schema:
+      $ref: '#/components/schemas/creditnote-response'
+    creditnote-response:
+      description: A credit note is a promisory note that is issued to a contact, promising him/her a sum of amount.
+      type: object
+      properties:
+        creditnote_id:
+          $ref: '#/components/schemas/creditnote_id'
+        creditnote_number:
+          $ref: '#/components/schemas/creditnote_number'
+        date:
+          $ref: '#/components/schemas/date'
+        status:
+          $ref: '#/components/schemas/status'
+        customer_id:
+          $ref: '#/components/schemas/customer_id'
+        product_type:
+          $ref: '#/components/schemas/product_type'
+        serial_numbers:
+          $ref: '#/components/schemas/serial_numbers'
+        customer_name:
+          $ref: '#/components/schemas/customer_name'
+        custom_fields:
+          $ref: '#/components/schemas/custom_fields'
+        reference_number:
+          $ref: '#/components/schemas/reference_number'
+        email:
+          $ref: '#/components/schemas/email'
+        total:
+          $ref: '#/components/schemas/total'
+        balance:
+          $ref: '#/components/schemas/balance'
+        line_items:
+          description: Items present in a credit note
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                $ref: '#/components/schemas/item_id'
+              description:
+                $ref: '#/components/schemas/description'
+              name:
+                $ref: '#/components/schemas/name'
+              type:
+                $ref: '#/components/schemas/type'
+              quantity:
+                $ref: '#/components/schemas/quantity'
+              tax_id:
+                $ref: '#/components/schemas/tax_id'
+              tds_tax_id:
+                $ref: '#/components/schemas/tds_tax_id'
+              rate:
+                $ref: '#/components/schemas/rate'
+              item_total:
+                $ref: '#/components/schemas/item_total'
+              product_type:
+                $ref: '#/components/schemas/product_type'
+              hsn_or_sac:
+                $ref: '#/components/schemas/hsn_or_sac'
+              project_id:
+                $ref: '#/components/schemas/project_id'
+              project_name:
+                $ref: '#/components/schemas/project_name'
+              sat_item_key_code:
+                $ref: '#/components/schemas/sat_item_key_code'
+              unitkey_code:
+                $ref: '#/components/schemas/unitkey_code'
+        invoices:
+          description: Invoices included for a credit note redemption
+          type: array
+          items:
+            type: object
+            properties:
+              invoice_id:
+                $ref: '#/components/schemas/invoice_id'
+              invoice_number:
+                $ref: '#/components/schemas/invoice_number'
+              amount:
+                $ref: '#/components/schemas/amount'
+        taxes:
+          description: Taxes associated with the subscription.
+          type: array
+          items:
+            type: object
+            properties:
+              tax_id:
+                $ref: '#/components/schemas/tax_id'
+              tax_name:
+                $ref: '#/components/schemas/tax_name'
+              tax_amount:
+                $ref: '#/components/schemas/tax_amount'
+        currency_code:
+          $ref: '#/components/schemas/currency_code'
+        currency_symbol:
+          $ref: '#/components/schemas/currency_symbol'
+        billing_address:
+          description: Address to which a customer is billed
+          type: object
+          properties:
+            address:
+              $ref: '#/components/schemas/address'
+            city:
+              $ref: '#/components/schemas/city'
+            state:
+              $ref: '#/components/schemas/state'
+            zip:
+              $ref: '#/components/schemas/zip'
+            country:
+              $ref: '#/components/schemas/country'
+            fax:
+              $ref: '#/components/schemas/fax'
+        shipping_address:
+          description: Address to which goods/any exchange must be shipped to  contact
+          type: object
+          properties:
+            address:
+              $ref: '#/components/schemas/address'
+            city:
+              $ref: '#/components/schemas/city'
+            state:
+              $ref: '#/components/schemas/state'
+            zip:
+              $ref: '#/components/schemas/zip'
+            country:
+              $ref: '#/components/schemas/country'
+            fax:
+              $ref: '#/components/schemas/fax'
+        created_time:
+          $ref: '#/components/schemas/created_time'
+        updated_time:
+          $ref: '#/components/schemas/updated_time'
+        template_id:
+          $ref: '#/components/schemas/template_id'
+        template_name:
+          $ref: '#/components/schemas/template_name'
+        notes:
+          $ref: '#/components/schemas/notes'
+        terms:
+          $ref: '#/components/schemas/terms'
+    search_text:
+      description: Search credit notes by credit note number or customer name or credit note reference number. <code>Maximum length [100]</code>
+      type: string
+    creditnote_id:
+      description: Unique ID of the credit note generated by the server.
+      type: string
+      example: '90300000072369'
+    creditnote_number:
+      description: Unique number generated (starts with CN) which will be displayed in the interface and credit notes. <code>Maximum Length [100]</code>
+      type: string
+      example: CN-29
+    ignore_auto_number_generation:
+      description: Set to true if you need to provide your own credit note number.
+      type: boolean
+      example: false
+    filter_by:
+      description: Filter credit notes by status. Allowed values <code>Status.All</code> <code>Status.Open</code> <code>Status.Draft</code> <code>Status.Closed</code> and <code>Status.Void</code>
+    date:
+      description: The date on which credit note is raised. <code>Date Format [yyyy-mm-dd]</code>
+      type: string
+      example: '2016-06-05'
+    status:
+      description: Status of the credit note. This can be <code>open</code>, <code>closed</code> or <code>void</code>.
+      type: string
+      example: open
+    gst_treatment:
+      description: Choose whether the contact is GST registered/unregistered/consumer/overseas. Allowed values are <code> business_gst </code> , <code> business_none </code> , <code> overseas </code> , <code> consumer </code>.
+      type: string
+      example: business_gst
+      x-node_available_in:
+        - in
+      x-node_unavailable_in: []
+    gst_no:
+      description: 15 digit GST identification number of the customer.
+      type: string
+      example: 22AAAAA0000A1Z5
+      x-node_available_in:
+        - in
+      x-node_unavailable_in: []
+    cfdi_usage:
+      description: 'Choose CFDI Usage.</br>Allowed values: <code>acquisition_of_merchandise</code>, <code>return_discount_bonus</code>, <code>general_expense</code>, <code>buildings</code>, <code>furniture_office_equipment</code>, <code>transport_equipment</code>, <code>computer_equipmentdye_molds_tools</code>, <code>telephone_communication</code>, <code>satellite_communication</code>, <code>other_machinery_equipment</code>, <code>hospital_expense</code>, <code>medical_expense_disability</code>, <code>funeral_expense</code>, <code>donation</code>, <code>interest_mortage_loans</code>, <code>contribution_sar</code>, <code>medical_expense_insurance_pormium</code>, <code>school_transportation_expense</code>, <code>deposit_saving_account</code>, <code>payment_educational_service</code>, <code>no_tax_effect</code>, <code>payment</code>, <code>payroll</code>.'
+      type: string
+      example: acquisition_of_merchandise
+      x-node_available_in:
+        - mx
+      x-node_unavailable_in: []
+    cfdi_reference_type:
+      description: 'Choose CFDI Reference Type.</br>Allowed values: <code>credit_note</code>, <code>debit_note</code>, <code>return_of_merchandise</code>, <code>substitution_previous_cfdi</code>, <code>transfer_of_goods</code>, <code>invoice_generated_from_order</code>, <code>cfdi_for_advance</code>.'
+      type: string
+      example: return_of_merchandise
+      x-node_available_in:
+        - mx
+      x-node_unavailable_in: []
+    place_of_supply:
+      description: Place where the goods/services are supplied to. (If not given, <code>place of contact</code> given for the contact will be taken)
+      type: string
+      example: TN
+      x-node_available_in:
+        - in
+      x-node_unavailable_in: []
+    product_type:
+      description: Enter goods/services
+      type: string
+      example: goods
+    hsn_or_sac:
+      description: Add HSN/SAC code for your goods/services
+      type: string
+      example: 80540
+      x-node_available_in:
+        - in
+      x-node_unavailable_in: []
+    sat_item_key_code:
+      description: Add SAT Item Key Code for your goods/services. Download the <a href= http://omawww.sat.gob.mx/tramitesyservicios/Paginas/documentos/catCFDI_V_4_07122022.xls  >CFDI Catalogs.</a>
+      type: string
+      example: 71121206
+      x-node_available_in:
+        - mx
+      x-node_unavailable_in: []
+    unitkey_code:
+      description: Add Unit Key Code for your goods/services. Download the <a href= http://omawww.sat.gob.mx/tramitesyservicios/Paginas/documentos/catCFDI_V_4_07122022.xls  >CFDI Catalogs.</a>
+      type: string
+      example: box
+      x-node_available_in:
+        - mx
+      x-node_unavailable_in: []
+    warehouse_id:
+      description: ID of the warehouse
+      type: string
+      example: 90300000072378
+    warehouse_name:
+      description: Name of the warehouse.
+      type: string
+    project_id:
+      description: ID of the project
+      type: string
+      example: 90300000087378
+    project_name:
+      description: Name of the project.
+      type: string
+      example: Sample Project
+    item_order:
+      description: Enter order of the item
+      type: integer
+      example: 0
+    discount:
+      description: Enter discount percentage.
+      type: number
+      format: double
+      example: 10
+    item_custom_fields:
+      description: Enter custom field information
+      type: array
+      items:
+        type: string
+    serial_numbers:
+      description: Enter serial number
+      type: string
+    street2:
+      type: string
+      example: McMillan Avenue
+    vat_reg_no:
+      description: Enter VAT registration number.
+      type: string
+    is_pre_gst:
+      description: Applicable for transactions that fall before july 1, 2017
+      type: boolean
+      example: true
+      x-node_available_in:
+        - in
+      x-node_unavailable_in: []
+    transaction_id:
+      description: The transaction ID associated with the credit notes.
+      type: string
+      example: '903000002072369'
+    transaction_type:
+      description: Type of transaction made
+      type: string
+      example: email
+    comment_id:
+      description: The unique ID for the comment generated by the server.
+      type: string
+      example: '982000000570001'
+    commented_by_id:
+      description: Search Comments by ID
+      type: string
+      example: '982000000554041'
+    commented_by:
+      description: The name of the user who commented.
+      type: string
+      example: David Sujin
+    comment_type:
+      description: Type of comment made
+      type: string
+      example: system
+    date_description:
+      description: Number of days since the comment was made.
+      type: string
+      example: 7 hours ago
+    time:
+      description: Time of the comment
+      type: string
+      example: 10:43 PM
+    operation_type:
+      description: Operation performed on the credit note.
+      type: string
+      example: Updated
+    creditnote_refund_id:
+      description: ID of the Credit Note refunded
+      type: string
+      example: '982000000567158'
+    amount_bcy:
+      description: Amount in base currency
+      type: integer
+      example: 10
+    amount_fcy:
+      description: Amount in foreign currency
+      type: integer
+      example: 10
+    page:
+      description: Number of pages
+      type: integer
+      example: 1
+    per_page:
+      description: Values per page
+      type: integer
+      example: 200
+    report_name:
+      description: Name of the report run
+      type: string
+      example: Credit Notes Refund
+    has_more_page:
+      description: Boolean to check if the credit note has more pages
+      type: boolean
+      example: false
+    sort_order:
+      description: Order used for sorting
+      type: string
+      example: D
+    sort_column:
+      description: Sort credit notes by following columns customer_name, creditnote_number, balance, total, date and created_time. Allowed Values <code>customer_name</code> <code>creditnote_number</code> <code>balance</code> <code>total</code> <code>date</code> and <code>created_time</code>
+      type: string
+      example: created_time
+    refund_mode:
+      description: The method of refund.
+      type: string
+      example: cash
+    customer_id:
+      description: Customer ID of the customer for whom the credit note is raised.
+      type: string
+      example: '903000000000099'
+    customer_name:
+      description: Name of the customer to whom the credit note is raised. <code>Maximum Length of the name [100]</code>
+      type: string
+      example: Bowman Furniture
+    email:
+      description: Email address of the customer.
+      type: string
+      example: test@zylker.org
+    total:
+      description: Total credits raised in this credit note.
+      type: number
+      format: double
+      example: 450
+    item_name:
+      description: Search credit notes by item name. <code>Maximum length [100]</code>
+      type: string
+      example: kit
+    balance:
+      description: The unapplied/existing credits.
+      type: number
+      format: double
+      example: 10
+    item_id:
+      description: Unique string generated for the item to which a refund is to be made.
+      type: string
+      example: '90300000081501'
+    description:
+      description: A small description about the item.
+      type: string
+      example: 500GB, USB 2.0 interface 1400 rpm, protective hard case.
+    code:
+      description: Unique code for the creditnote line item.
+      type: string
+      example: basic-monthly
+    amount_applied:
+      description: The total amount applied for redemption from the credit note on an invoice.
+      type: number
+      format: double
+      example: 41.82
+    name:
+      description: Name of the credit note item.
+      type: string
+      example: Hard Drive
+    type:
+      description: Type of the creditnote line item.
+      type: integer
+      example: 1
+    account_id:
+      description: Unique ID to denote the account.
+      type: string
+      example: '903000000000388'
+    account_name:
+      description: Name of the account.
+      type: string
+      example: Sales
+    tax_id:
+      description: Unique to denote the tax associate dto the creditnote
+      type: string
+      example: '903000000000356'
+    tds_tax_id:
+      description: Unique ID to denote the TDS tax associated to the creditnote
+      type: string
+      example: '903000000000357'
+      x-node_available_in:
+        - mx
+      x-node_unavailable_in: []
+    is_inclusive_tax:
+      description: Used to specify whether the line item rates are inclusive or exclusive of tax.
+      type: boolean
+      example: false
+      x-node_available_in: []
+      x-node_unavailable_in:
+        - us
+    quantity:
+      description: Quantity of the item included.
+      type: integer
+      format: int32
+      example: 1
+    rate:
+      description: The rate of the item included.
+      type: number
+      format: double
+      example: 100
+    item_total:
+      description: Total credits raised by this item. This would be the multiplicative product of item price and quantity.
+      type: number
+      format: double
+      example: 100
+    template_id:
+      description: Unique ID of the creditnote template used
+      type: string
+      example: '90300000001336'
+    template_name:
+      description: Name of the default template of the creditnote used
+      type: string
+      example: Standard Template
+    avatax_use_code:
+      description: Used to group like customers for exemption purposes. It is a custom value that links customers to a tax rule. Select from Avalara [standard codes][1] or enter a custom code. <code>Maximum length [25]</code>
+      type: string
+      x-node_available_in:
+        - Avalara Integration
+      x-node_unavailable_in: []
+    avatax_exempt_no:
+      description: Exemption certificate number of the customer. <code>Maximum length [25]</code>
+      type: string
+      x-node_available_in:
+        - Avalara Integration
+      x-node_unavailable_in: []
+    invoice_id:
+      description: Invoice ID of the required invoice.
+      type: string
+      example: '90300000079426'
+    invoice_number:
+      description: Invoice number of the required invoice.
+      type: string
+      example: INV-384
+    amount:
+      description: Amount of the invoice.
+      type: number
+      format: double
+      example: 450
+    currency_code:
+      description: Customer's currency code. This currency code is used in credit notes.
+      type: string
+      example: USD
+    currency_symbol:
+      description: Customer's currency symbol.
+      type: string
+      example: $
+    index:
+      description: Index of the custom field. It can hold any value from 1 to 10.
+      type: integer
+      example: 1
+    label:
+      description: Label of the custom field.
+      type: string
+      example: label
+    value:
+      description: Value of the custom field.
+      type: string
+      example: 129890
+    reference_number:
+      description: Reference number generated for the payment. A string of your choice can also be used as the reference number. <code>Maximum Length [100]</code>
+      type: string
+      example: INV-384
+    from:
+      description: The email ID from which the credit note is to be mailed.
+      type: string
+      example: gator@zillum.com
+    to_mail_ids:
+      description: The email IDs to which the credit note is to be mailed.
+      type: array
+      items:
+        type: string
+      example:
+        - test@zylker.org
+        - test1@zylker.org
+    cc_mail_ids:
+      description: The email IDs that have to be copied when the credit note is to be mailed.
+      type: array
+      items:
+        type: string
+      example:
+        - test@zylker.org
+    subject:
+      description: The subject of the email. <code>Maximum length [1000]</code>
+      type: string
+      example: Credit note for subscription.
+    item_description:
+      description: description for the item. Variants <code>item_description_startswith</code> and <code>item_description_contains</code>. <code>Maximum length [100]</code>
+      type: string
+      example: ''
+    body:
+      description: The body/content of the email. <code>Maximum length [5000]</code>
+      type: string
+      example: Please find attached the credit note for your subscription.
+    created_time:
+      description: Time at which the credit note was created.
+      type: string
+      example: 2016-06-05T02:30:08-0700
+    updated_time:
+      description: Time at which the credit note details were last updated.
+      type: string
+      example: 2016-07-05T02:30:08-0700
+    from_mail_id_alias:
+      description: The email ID from which the credit note is to be mailed.
+      type: string
+      example: true
+    to_mail_ids_alias:
+      description: The email IDs to which the credit note is to be mailed.
+      type: array
+      items:
+        type: string
+      example: true
+    cc_mail_ids_alias:
+      description: The email IDs that have to be copied when the credit note is to be mailed.
+      type: array
+      items:
+        type: string
+      example: true
+    subject_alias:
+      description: The subject of the email.
+      type: string
+      example: true
+    body_alias:
+      description: The body of the email.
+      type: string
+      example: true
+    contact_persons:
+      description: Contact Persons associated with the credit note.
+      type: array
+      items:
+        type: string
+      example:
+        - '903000006532'
+    exchange_rate:
+      description: Exchange rate for the currency associated with the customer.
+      type: string
+      example: '5.5'
+    avatax_tax_code:
+      description: A tax code is a unique label used to group Items (products, services, or charges) together. <code>Maximum length [25]</code>
+      type: string
+      x-node_available_in:
+        - Avalara Integration
+      x-node_unavailable_in: []
+    notes:
+      description: A short note for the credit note. <code>Maximum length [5000]</code>
+      type: string
+      example: Offer for the referral
+    terms:
+      description: Terms & condition to be displayed in the credit note. <code>Maximum length [10000]</code>
+      type: string
+      example: Can be added for refund only if purchased again
+    data_type:
+      description: Data type of the custom field.
+      type: string
+      example: text
+    vat_treatment:
+      description: (Optional) VAT treatment for the credit notes. VAT treatment denotes the location of the customer, if the customer resides in UK then the VAT treatment is <code>uk</code>. If the customer is in an EU country & VAT registered, you are resides in Northen Ireland and selling Goods then his VAT treatment is <code>eu_vat_registered</code>, if he resides outside of the UK then his VAT treatment is <code>overseas</code> (For Pre Brexit, this can be split as <code>eu_vat_registered</code>, <code>eu_vat_not_registered</code> and <code>non_eu</code>).
+      type: string
+      example: overseas
+      x-node_available_in:
+        - uk
+      x-node_unavailable_in: []
+    tax_treatment:
+      description: VAT treatment for the Estimate.Allowed Values:</br><code>home_country_mexico</code>,<code>border_region_mexico</code>,<code>non_mexico</code> supported only for <b>MX</b>.
+      type: string
+      example: vat_registered
+      x-node_available_in:
+        - mx
+      x-node_unavailable_in: []
+    tax_authority_id:
+      description: Unique ID of the tax authority. Tax authority depends on the location of the customer. For example, if the customer is located in NY, then the tax authority is NY tax authority.
+      type: string
+      example: '903000006345'
+      x-node_available_in:
+        - us
+        - ca
+      x-node_unavailable_in: []
+    tax_exemption_id:
+      description: Unique ID of the tax exemption.
+      type: string
+      example: '903000006345'
+      x-node_available_in:
+        - in
+        - us
+        - ca
+      x-node_unavailable_in: []
+    tax_exemption_code:
+      description: Unique code of the tax exemption.
+      type: string
+      example: GST FREE
+      x-node_available_in:
+        - in
+        - us
+        - ca
+      x-node_unavailable_in: []
+    tax_name:
+      description: Unique name for tax.
+      type: string
+      example: Basic Tax
+    tax_percentage:
+      description: Percentage of tax to be charged
+      type: string
+      example: 10%
+    tax_amount:
+      description: Tax amount applied to the subscription.
+      type: string
+      example: '2.50'
+    creditnote_invoice_id:
+      type: string
+      example: '982000000567172'
+    credited_amount:
+      description: The total amount that is credited.
+      type: number
+      format: double
+      example: 12.02
+    print:
+      description: 'Export credit note pdf with default print option. Allowed Values: <code>true</code>, <code>false</code>, <code>on</code> and <code>off</code>'
+      type: boolean
+      example: true
+    accept:
+      description: 'You can get credit note details as json/pdf/html. Default format is html. Allowed Values: <code>json</code>, <code>pdf</code> and <code>html</code>'
+      type: string
+    address:
+      description: Billing address for the invoice
+      type: string
+      example: 4900 Hopyard Rd, Suite 310
+    city:
+      description: City of the customer's billing address.
+      type: string
+      example: Pleasanton
+    state:
+      description: State of the customer's billing address.
+      type: string
+      example: CA
+    zip:
+      description: Zip code of the customer's billing address.
+      type: string
+      example: 94588
+    country:
+      description: Country of the customer's billing address.
+      type: string
+      example: U.S.A
+    fax:
+      description: Customer's fax number.
+      type: string
+      example: +1-925-924-9600
+    attachments:
+      description: The files to be attached with the email.
+      type: string
+      format: binary
+    mailhistory_id:
+      description: ID of the email history with the contact
+      type: string
+      example: 982000000570005
+    template-id:
+      description: ID of the template used
+      type: string
+      example: 982000000010019
+    template_type:
+      description: Type of the template used
+      type: string
+      example: professional
+    invoices:
+      description: List of invoices used for a credit redemption
+      type: array
+      items:
+        type: object
+        properties:
+          invoice_id:
+            $ref: '#/components/schemas/invoice_id'
+          invoice_number:
+            $ref: '#/components/schemas/invoice_number'
+          amount:
+            $ref: '#/components/schemas/amount'
+    customfield_id:
+      description: Unique ID of the custom field
+      type: integer
+      format: int64
+      example: 439910000000236000
+    show_on_pdf:
+      description: Enable/Disable show this custom field on pdf for that invoice
+      type: boolean
+      example: true
+    show_in_all_pdf:
+      description: Enable/Disable show this custom field on all the pdf
+      example: true
+    custom_fields:
+      description: Custom fields for a credit note.
+      type: array
+      items:
+        type: object
+        properties:
+          customfield_id:
+            $ref: '#/components/schemas/customfield_id'
+          data_type:
+            $ref: '#/components/schemas/data_type'
+          label:
+            $ref: '#/components/schemas/label'
+          show_on_pdf:
+            $ref: '#/components/schemas/show_on_pdf'
+          show_in_all_pdf:
+            $ref: '#/components/schemas/show_in_all_pdf'
+          value:
+            $ref: '#/components/schemas/value'
+    taxes:
+      description: Details of the taxes associated with the subscription.
+      type: array
+      items:
+        type: object
+        properties:
+          tax_id:
+            $ref: '#/components/schemas/tax_id'
+          tax_name:
+            $ref: '#/components/schemas/tax_name'
+          tax_amount:
+            $ref: '#/components/schemas/tax_amount'
+    line_items:
+      description: Items present in a credit note
+      type: array
+      items:
+        type: object
+        properties:
+          item_id:
+            $ref: '#/components/schemas/item_id'
+          item_name:
+            $ref: '#/components/schemas/item_name'
+          description:
+            $ref: '#/components/schemas/description'
+          name:
+            $ref: '#/components/schemas/name'
+          type:
+            $ref: '#/components/schemas/type'
+          quantity:
+            $ref: '#/components/schemas/quantity'
+          tax_id:
+            $ref: '#/components/schemas/tax_id'
+          tds_tax_id:
+            $ref: '#/components/schemas/tds_tax_id'
+          rate:
+            $ref: '#/components/schemas/rate'
+          item_total:
+            $ref: '#/components/schemas/item_total'
+          product_type:
+            $ref: '#/components/schemas/product_type'
+          hsn_or_sac:
+            $ref: '#/components/schemas/hsn_or_sac'
+          project_id:
+            $ref: '#/components/schemas/project_id'
+          sat_item_key_code:
+            $ref: '#/components/schemas/sat_item_key_code'
+          unitkey_code:
+            $ref: '#/components/schemas/unitkey_code'
+    create-a-credit-note-request:
+      required:
+        - customer_id
+        - date
+        - creditnote_number
+        - line_items
+      type: object
+      properties:
+        customer_id:
+          $ref: '#/components/schemas/customer_id'
+        contact_persons:
+          $ref: '#/components/schemas/contact_persons'
+        date:
+          $ref: '#/components/schemas/date'
+        exchange_rate:
+          $ref: '#/components/schemas/exchange_rate'
+        line_items:
+          description: Items present in a credit note
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                $ref: '#/components/schemas/item_id'
+              description:
+                $ref: '#/components/schemas/description'
+              name:
+                $ref: '#/components/schemas/name'
+              type:
+                $ref: '#/components/schemas/type'
+              quantity:
+                $ref: '#/components/schemas/quantity'
+              tax_id:
+                $ref: '#/components/schemas/tax_id'
+              tds_tax_id:
+                $ref: '#/components/schemas/tds_tax_id'
+              tax_exemption_id:
+                $ref: '#/components/schemas/tax_exemption_id'
+              avatax_tax_code:
+                $ref: '#/components/schemas/avatax_tax_code'
+              avatax_use_code:
+                $ref: '#/components/schemas/avatax_use_code'
+              rate:
+                $ref: '#/components/schemas/rate'
+              item_total:
+                $ref: '#/components/schemas/item_total'
+              product_type:
+                $ref: '#/components/schemas/product_type'
+              hsn_or_sac:
+                $ref: '#/components/schemas/hsn_or_sac'
+              project_id:
+                $ref: '#/components/schemas/project_id'
+              sat_item_key_code:
+                $ref: '#/components/schemas/sat_item_key_code'
+              unitkey_code:
+                $ref: '#/components/schemas/unitkey_code'
+        creditnote_number:
+          $ref: '#/components/schemas/creditnote_number'
+        gst_treatment:
+          $ref: '#/components/schemas/gst_treatment'
+        tax_treatment:
+          $ref: '#/components/schemas/tax_treatment'
+        cfdi_usage:
+          $ref: '#/components/schemas/cfdi_usage'
+        cfdi_reference_type:
+          $ref: '#/components/schemas/cfdi_reference_type'
+        gst_no:
+          $ref: '#/components/schemas/gst_no'
+        place_of_supply:
+          $ref: '#/components/schemas/place_of_supply'
+        ignore_auto_number_generation:
+          $ref: '#/components/schemas/ignore_auto_number_generation'
+        reference_number:
+          $ref: '#/components/schemas/reference_number'
+        custom_fields:
+          description: Custom fields for a credit note.
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                $ref: '#/components/schemas/label'
+              value:
+                $ref: '#/components/schemas/value'
+        notes:
+          $ref: '#/components/schemas/notes'
+        terms:
+          $ref: '#/components/schemas/terms'
+        template_id:
+          $ref: '#/components/schemas/template_id'
+        tax_authority_id:
+          $ref: '#/components/schemas/tax_authority_id'
+        tax_exemption_id:
+          $ref: '#/components/schemas/tax_exemption_id'
+        avatax_use_code:
+          $ref: '#/components/schemas/avatax_use_code'
+        avatax_tax_code:
+          $ref: '#/components/schemas/avatax_tax_code'
+        avatax_exempt_no:
+          $ref: '#/components/schemas/avatax_exempt_no'
+        vat_treatment:
+          $ref: '#/components/schemas/vat_treatment'
+    create-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note has been created.
+          readOnly: true
+        creditnote:
+          $ref: '#/components/schemas/creditnote-response'
+    list-credit-notes-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        creditnotes:
+          type: array
+          items:
+            type: object
+            properties:
+              creditnote_id:
+                $ref: '#/components/schemas/creditnote_id'
+              creditnote_number:
+                $ref: '#/components/schemas/creditnote_number'
+              status:
+                $ref: '#/components/schemas/status'
+              reference_number:
+                $ref: '#/components/schemas/reference_number'
+              date:
+                $ref: '#/components/schemas/date'
+              total:
+                $ref: '#/components/schemas/total'
+              balance:
+                $ref: '#/components/schemas/balance'
+              customer_id:
+                $ref: '#/components/schemas/customer_id'
+              customer_name:
+                $ref: '#/components/schemas/customer_name'
+              currency_id:
+                description: ID of the contact's currency
+                type: string
+                example: '982000000567240'
+              currency_code:
+                $ref: '#/components/schemas/currency_code'
+              created_time:
+                $ref: '#/components/schemas/created_time'
+              last_modified_time:
+                description: Date of last modification to a contact
+                type: string
+                example: 2016-06-05T02:30:08-0700
+              is_emailed:
+                description: To check if the contact has been mailed
+                type: boolean
+                example: true
+    update-a-credit-note-request:
+      required:
+        - customer_id
+        - date
+        - creditnote_number
+        - line_items
+      type: object
+      properties:
+        customer_id:
+          $ref: '#/components/schemas/customer_id'
+        contact_persons:
+          $ref: '#/components/schemas/contact_persons'
+        date:
+          $ref: '#/components/schemas/date'
+        exchange_rate:
+          $ref: '#/components/schemas/exchange_rate'
+        line_items:
+          description: Items present in a credit note
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                $ref: '#/components/schemas/item_id'
+              description:
+                $ref: '#/components/schemas/description'
+              name:
+                $ref: '#/components/schemas/name'
+              type:
+                $ref: '#/components/schemas/type'
+              quantity:
+                $ref: '#/components/schemas/quantity'
+              tax_id:
+                $ref: '#/components/schemas/tax_id'
+              tds_tax_id:
+                $ref: '#/components/schemas/tds_tax_id'
+              tax_exemption_id:
+                $ref: '#/components/schemas/tax_exemption_id'
+              avatax_tax_code:
+                $ref: '#/components/schemas/avatax_tax_code'
+              avatax_use_code:
+                $ref: '#/components/schemas/avatax_use_code'
+              rate:
+                $ref: '#/components/schemas/rate'
+              item_total:
+                $ref: '#/components/schemas/item_total'
+              product_type:
+                $ref: '#/components/schemas/product_type'
+              hsn_or_sac:
+                $ref: '#/components/schemas/hsn_or_sac'
+              project_id:
+                $ref: '#/components/schemas/project_id'
+              sat_item_key_code:
+                $ref: '#/components/schemas/sat_item_key_code'
+              unitkey_code:
+                $ref: '#/components/schemas/unitkey_code'
+        creditnote_number:
+          $ref: '#/components/schemas/creditnote_number'
+        gst_treatment:
+          $ref: '#/components/schemas/gst_treatment'
+        tax_treatment:
+          $ref: '#/components/schemas/tax_treatment'
+        cfdi_usage:
+          $ref: '#/components/schemas/cfdi_usage'
+        cfdi_reference_type:
+          $ref: '#/components/schemas/cfdi_reference_type'
+        gst_no:
+          $ref: '#/components/schemas/gst_no'
+        place_of_supply:
+          $ref: '#/components/schemas/place_of_supply'
+        ignore_auto_number_generation:
+          $ref: '#/components/schemas/ignore_auto_number_generation'
+        reference_number:
+          $ref: '#/components/schemas/reference_number'
+        custom_fields:
+          description: Custom fields for a credit note.
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                $ref: '#/components/schemas/label'
+              value:
+                $ref: '#/components/schemas/value'
+        notes:
+          $ref: '#/components/schemas/notes'
+        terms:
+          $ref: '#/components/schemas/terms'
+        template_id:
+          $ref: '#/components/schemas/template_id'
+        tax_authority_id:
+          $ref: '#/components/schemas/tax_authority_id'
+        tax_exemption_id:
+          $ref: '#/components/schemas/tax_exemption_id'
+        avatax_use_code:
+          $ref: '#/components/schemas/avatax_use_code'
+        avatax_tax_code:
+          $ref: '#/components/schemas/avatax_tax_code'
+        avatax_exempt_no:
+          $ref: '#/components/schemas/avatax_exempt_no'
+        vat_treatment:
+          $ref: '#/components/schemas/vat_treatment'
+    update-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note has been updated.
+          readOnly: true
+        creditnote:
+          description: A credit note is a promise given to acontact for an amount
+          type: object
+          properties:
+            creditnote_id:
+              $ref: '#/components/schemas/creditnote_id'
+            creditnote_number:
+              $ref: '#/components/schemas/creditnote_number'
+            date:
+              $ref: '#/components/schemas/date'
+            status:
+              $ref: '#/components/schemas/status'
+            customer_id:
+              $ref: '#/components/schemas/customer_id'
+            product_type:
+              $ref: '#/components/schemas/product_type'
+            serial_numbers:
+              $ref: '#/components/schemas/serial_numbers'
+            customer_name:
+              $ref: '#/components/schemas/customer_name'
+            custom_fields:
+              $ref: '#/components/schemas/custom_fields'
+            reference_number:
+              $ref: '#/components/schemas/reference_number'
+            email:
+              $ref: '#/components/schemas/email'
+            total:
+              $ref: '#/components/schemas/total'
+            balance:
+              $ref: '#/components/schemas/balance'
+            line_items:
+              description: Items to be included in a credt note
+              type: array
+              items:
+                type: object
+                properties:
+                  item_id:
+                    $ref: '#/components/schemas/item_id'
+                  description:
+                    $ref: '#/components/schemas/description'
+                  name:
+                    $ref: '#/components/schemas/name'
+                  type:
+                    $ref: '#/components/schemas/type'
+                  quantity:
+                    $ref: '#/components/schemas/quantity'
+                  tax_id:
+                    $ref: '#/components/schemas/tax_id'
+                  tds_tax_id:
+                    $ref: '#/components/schemas/tds_tax_id'
+                  rate:
+                    $ref: '#/components/schemas/rate'
+                  item_total:
+                    $ref: '#/components/schemas/item_total'
+                  product_type:
+                    $ref: '#/components/schemas/product_type'
+                  hsn_or_sac:
+                    $ref: '#/components/schemas/hsn_or_sac'
+                  project_id:
+                    $ref: '#/components/schemas/project_id'
+                  project_name:
+                    $ref: '#/components/schemas/project_name'
+                  sat_item_key_code:
+                    $ref: '#/components/schemas/sat_item_key_code'
+                  unitkey_code:
+                    $ref: '#/components/schemas/unitkey_code'
+            invoices:
+              description: Details of invoice associated with a credit note
+              type: array
+              items:
+                type: object
+                properties:
+                  invoice_id:
+                    $ref: '#/components/schemas/invoice_id'
+                  invoice_number:
+                    $ref: '#/components/schemas/invoice_number'
+                  amount:
+                    $ref: '#/components/schemas/amount'
+            taxes:
+              description: Taxes associated wit the subscription.
+              type: array
+              items:
+                type: object
+                properties:
+                  tax_id:
+                    $ref: '#/components/schemas/tax_id'
+                  tax_name:
+                    $ref: '#/components/schemas/tax_name'
+                  tax_amount:
+                    $ref: '#/components/schemas/tax_amount'
+            currency_code:
+              $ref: '#/components/schemas/currency_code'
+            currency_symbol:
+              $ref: '#/components/schemas/currency_symbol'
+            billing_address:
+              description: Billing address is the official communication address of a contact
+              type: object
+              properties:
+                address:
+                  $ref: '#/components/schemas/address'
+                city:
+                  $ref: '#/components/schemas/city'
+                state:
+                  $ref: '#/components/schemas/state'
+                zip:
+                  $ref: '#/components/schemas/zip'
+                country:
+                  $ref: '#/components/schemas/country'
+                fax:
+                  $ref: '#/components/schemas/fax'
+            shipping_address:
+              description: Shipping address of a contact is the address used to exchange goods/information in physical form through physical mail
+              type: object
+              properties:
+                address:
+                  $ref: '#/components/schemas/address'
+                city:
+                  $ref: '#/components/schemas/city'
+                state:
+                  $ref: '#/components/schemas/state'
+                zip:
+                  $ref: '#/components/schemas/zip'
+                country:
+                  $ref: '#/components/schemas/country'
+                fax:
+                  $ref: '#/components/schemas/fax'
+            created_time:
+              $ref: '#/components/schemas/created_time'
+            updated_time:
+              $ref: '#/components/schemas/updated_time'
+            template_id:
+              $ref: '#/components/schemas/template_id'
+            template_name:
+              $ref: '#/components/schemas/template_name'
+            notes:
+              $ref: '#/components/schemas/notes'
+            terms:
+              $ref: '#/components/schemas/terms'
+    get-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        creditnote:
+          description: A promisory note issued to a contact promising a sum of his money that we hold
+          type: object
+          properties:
+            creditnote_id:
+              $ref: '#/components/schemas/creditnote_id'
+            creditnote_number:
+              $ref: '#/components/schemas/creditnote_number'
+            date:
+              $ref: '#/components/schemas/date'
+            status:
+              $ref: '#/components/schemas/status'
+            customer_id:
+              $ref: '#/components/schemas/customer_id'
+            product_type:
+              $ref: '#/components/schemas/product_type'
+            serial_numbers:
+              $ref: '#/components/schemas/serial_numbers'
+            customer_name:
+              $ref: '#/components/schemas/customer_name'
+            custom_fields:
+              $ref: '#/components/schemas/custom_fields'
+            reference_number:
+              $ref: '#/components/schemas/reference_number'
+            email:
+              $ref: '#/components/schemas/email'
+            total:
+              $ref: '#/components/schemas/total'
+            balance:
+              $ref: '#/components/schemas/balance'
+            line_items:
+              description: Items to be included in a credt note
+              type: array
+              items:
+                type: object
+                properties:
+                  item_id:
+                    $ref: '#/components/schemas/item_id'
+                  description:
+                    $ref: '#/components/schemas/description'
+                  name:
+                    $ref: '#/components/schemas/name'
+                  type:
+                    $ref: '#/components/schemas/type'
+                  quantity:
+                    $ref: '#/components/schemas/quantity'
+                  tax_id:
+                    $ref: '#/components/schemas/tax_id'
+                  tds_tax_id:
+                    $ref: '#/components/schemas/tds_tax_id'
+                  rate:
+                    $ref: '#/components/schemas/rate'
+                  item_total:
+                    $ref: '#/components/schemas/item_total'
+                  product_type:
+                    $ref: '#/components/schemas/product_type'
+                  hsn_or_sac:
+                    $ref: '#/components/schemas/hsn_or_sac'
+                  project_id:
+                    $ref: '#/components/schemas/project_id'
+                  project_name:
+                    $ref: '#/components/schemas/project_name'
+                  sat_item_key_code:
+                    $ref: '#/components/schemas/sat_item_key_code'
+                  unitkey_code:
+                    $ref: '#/components/schemas/unitkey_code'
+            invoices:
+              description: List of invoices used for a credit redemption
+              type: array
+              items:
+                type: object
+                properties:
+                  invoice_id:
+                    $ref: '#/components/schemas/invoice_id'
+                  invoice_number:
+                    $ref: '#/components/schemas/invoice_number'
+                  amount:
+                    $ref: '#/components/schemas/amount'
+            taxes:
+              description: Taxes associated wit the subscription.
+              type: array
+              items:
+                type: object
+                properties:
+                  tax_id:
+                    $ref: '#/components/schemas/tax_id'
+                  tax_name:
+                    $ref: '#/components/schemas/tax_name'
+                  tax_amount:
+                    $ref: '#/components/schemas/tax_amount'
+            currency_code:
+              $ref: '#/components/schemas/currency_code'
+            currency_symbol:
+              $ref: '#/components/schemas/currency_symbol'
+            created_time:
+              $ref: '#/components/schemas/created_time'
+            updated_time:
+              $ref: '#/components/schemas/updated_time'
+            billing_address:
+              description: Address for communication.
+              type: object
+              properties:
+                address:
+                  $ref: '#/components/schemas/address'
+                city:
+                  $ref: '#/components/schemas/city'
+                state:
+                  $ref: '#/components/schemas/state'
+                zip:
+                  $ref: '#/components/schemas/zip'
+                country:
+                  $ref: '#/components/schemas/country'
+                fax:
+                  $ref: '#/components/schemas/fax'
+            shipping_address:
+              description: address for physical exchange of items
+              type: object
+              properties:
+                address:
+                  $ref: '#/components/schemas/address'
+                city:
+                  $ref: '#/components/schemas/city'
+                state:
+                  $ref: '#/components/schemas/state'
+                zip:
+                  $ref: '#/components/schemas/zip'
+                country:
+                  $ref: '#/components/schemas/country'
+                fax:
+                  $ref: '#/components/schemas/fax'
+            template_id:
+              $ref: '#/components/schemas/template_id'
+            template_name:
+              $ref: '#/components/schemas/template_name'
+            notes:
+              $ref: '#/components/schemas/notes'
+            terms:
+              $ref: '#/components/schemas/terms'
+    delete-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note has been deleted.
+          readOnly: true
+    email-a-credit-note-request:
+      required:
+        - to_mail_ids
+        - subject
+        - body
+      type: object
+      properties:
+        to_mail_ids:
+          $ref: '#/components/schemas/to_mail_ids'
+        cc_mail_ids:
+          $ref: '#/components/schemas/cc_mail_ids'
+        subject:
+          $ref: '#/components/schemas/subject'
+        body:
+          $ref: '#/components/schemas/body'
+    email-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Your creditnote has been sent.
+          readOnly: true
+    void-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note has been marked as void.
+          readOnly: true
+    open-a-voided-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Status of the credit note has been changed to open.
+          readOnly: true
+    email-history-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        email_history:
+          type: array
+          items:
+            type: object
+            properties:
+              mailhistory_id:
+                $ref: '#/components/schemas/mailhistory_id'
+              from:
+                $ref: '#/components/schemas/from'
+              to_mail_ids:
+                $ref: '#/components/schemas/to_mail_ids'
+              subject:
+                $ref: '#/components/schemas/subject'
+              date:
+                $ref: '#/components/schemas/date'
+    update-billing-address-request:
+      type: object
+      properties:
+        address:
+          description: Billing address of the contact
+          type: string
+          example: 4900 Hopyard Rd, Suite 310
+        city:
+          description: City of the contact
+          type: string
+          example: Pleasanton
+        state:
+          description: State of the contact's address
+          type: string
+          example: CA
+        zip:
+          description: ZIP code of a contacts billing address
+          type: string
+          example: 94588
+        country:
+          description: Country of a contact's billing address
+          type: string
+          example: USA
+        fax:
+          description: FAX number of a contact
+          type: string
+          example: +1-925-924-9600
+    update-billing-address-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Billing address updated
+          readOnly: true
+    update-shipping-address-request:
+      type: object
+      properties:
+        address:
+          description: Billing Address field
+          type: string
+          example: Suite 125, McMillan Avenue
+        city:
+          description: City of a contacts billing address
+          type: string
+          example: San Francisco
+        state:
+          description: State of a contct's billing address
+          type: string
+          example: CA
+        zip:
+          description: ZIP code of a billing address
+          type: string
+          example: 94134
+        country:
+          description: Country of a contacts billing address
+          type: string
+          example: USA
+        fax:
+          description: Customer's fax number.
+          type: string
+          example: +1-925-924-9600
+    update-shipping-address-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Shipping address updated
+          readOnly: true
+    list-credit-note-templates-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        templates:
+          type: array
+          items:
+            type: object
+            properties:
+              template_name:
+                $ref: '#/components/schemas/template_name'
+              template_id:
+                $ref: '#/components/schemas/template_id'
+              template_type:
+                $ref: '#/components/schemas/template_type'
+    update-a-credit-note-template-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note has been updated.
+          readOnly: true
+    list-invoices-credited-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        invoices_credited:
+          type: array
+          items:
+            type: object
+            properties:
+              creditnote_id:
+                $ref: '#/components/schemas/creditnote_id'
+              invoice_id:
+                $ref: '#/components/schemas/invoice_id'
+              creditnote_invoice_id:
+                $ref: '#/components/schemas/creditnote_invoice_id'
+              date:
+                $ref: '#/components/schemas/date'
+              invoice_number:
+                $ref: '#/components/schemas/invoice_number'
+              creditnote_number:
+                $ref: '#/components/schemas/creditnote_number'
+              credited_amount:
+                $ref: '#/components/schemas/credited_amount'
+    credit-to-an-invoice-request:
+      type: object
+      properties:
+        invoices:
+          description: List of invoices used for a credit redemption
+          type: array
+          items:
+            type: object
+            properties:
+              invoice_id:
+                $ref: '#/components/schemas/invoice_id'
+              amount_applied:
+                $ref: '#/components/schemas/amount_applied'
+    credit-to-an-invoice-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Credits have been applied to the invoice(s).
+          readOnly: true
+    delete-invoices-credited-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Credits applied to an invoice have been deleted.
+          readOnly: true
+    list-credit-note-comments-and-history-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Comments of the credit note are displayed successfully.
+          readOnly: true
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              comment_id:
+                $ref: '#/components/schemas/comment_id'
+              creditnote_id:
+                $ref: '#/components/schemas/creditnote_id'
+              description:
+                description: A short note on the credit note
+                type: string
+                example: Credits applied to invoice INV-00004
+              commented_by_id:
+                $ref: '#/components/schemas/commented_by_id'
+              commented_by:
+                $ref: '#/components/schemas/commented_by'
+              comment_type:
+                $ref: '#/components/schemas/comment_type'
+              date:
+                $ref: '#/components/schemas/date'
+              date_description:
+                $ref: '#/components/schemas/date_description'
+              time:
+                $ref: '#/components/schemas/time'
+              operation_type:
+                $ref: '#/components/schemas/operation_type'
+              transaction_id:
+                $ref: '#/components/schemas/transaction_id'
+              transaction_type:
+                $ref: '#/components/schemas/transaction_type'
+    add-a-comment-request:
+      type: object
+      properties:
+        description:
+          description: A short note on the credit applied
+          type: string
+          example: Credits applied to invoice INV-00004
+    add-a-comment-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: Comments added.
+          readOnly: true
+    delete-a-comment-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The comment has been deleted.
+          readOnly: true
+    list-credit-note-refunds-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The list of credit note refunds are displayed successfully.
+          readOnly: true
+        creditnote_refunds:
+          type: array
+          items:
+            type: object
+            properties:
+              creditnote_refund_id:
+                $ref: '#/components/schemas/creditnote_refund_id'
+              creditnote_id:
+                $ref: '#/components/schemas/creditnote_id'
+              date:
+                $ref: '#/components/schemas/date'
+              refund_mode:
+                $ref: '#/components/schemas/refund_mode'
+              reference_number:
+                $ref: '#/components/schemas/reference_number'
+              creditnote_number:
+                $ref: '#/components/schemas/creditnote_number'
+              customer_name:
+                $ref: '#/components/schemas/customer_name'
+              description:
+                description: A short note on the credit applied
+                type: string
+                example: Offer
+              amount_bcy:
+                $ref: '#/components/schemas/amount_bcy'
+              amount_fcy:
+                $ref: '#/components/schemas/amount_fcy'
+    list-refunds-of-a-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The refunds of the existing credit note are displayed successfully.
+          readOnly: true
+        creditnote_refunds:
+          type: array
+          items:
+            type: object
+            properties:
+              creditnote_refund_id:
+                $ref: '#/components/schemas/creditnote_refund_id'
+              creditnote_id:
+                $ref: '#/components/schemas/creditnote_id'
+              date:
+                $ref: '#/components/schemas/date'
+              refund_mode:
+                $ref: '#/components/schemas/refund_mode'
+              reference_number:
+                $ref: '#/components/schemas/reference_number'
+              creditnote_number:
+                $ref: '#/components/schemas/creditnote_number'
+              customer_name:
+                $ref: '#/components/schemas/customer_name'
+              description:
+                description: A short note on the credit note
+                type: string
+                example: Offer
+              amount_bcy:
+                $ref: '#/components/schemas/amount_bcy'
+              amount_fcy:
+                $ref: '#/components/schemas/amount_fcy'
+    refund-credit-note-request:
+      type: object
+      properties:
+        date:
+          $ref: '#/components/schemas/date'
+        refund_mode:
+          $ref: '#/components/schemas/refund_mode'
+        reference_number:
+          $ref: '#/components/schemas/reference_number'
+        amount:
+          $ref: '#/components/schemas/amount'
+        exchange_rate:
+          $ref: '#/components/schemas/exchange_rate'
+        description:
+          $ref: '#/components/schemas/description'
+    refund-credit-note-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note amount is refunded successfully.
+          readOnly: true
+        creditnote_refund:
+          description: Refund applied on a credit note
+          type: object
+          properties:
+            creditnote_refund_id:
+              $ref: '#/components/schemas/creditnote_refund_id'
+            creditnote_id:
+              $ref: '#/components/schemas/creditnote_id'
+            date:
+              $ref: '#/components/schemas/date'
+            refund_mode:
+              $ref: '#/components/schemas/refund_mode'
+            reference_number:
+              $ref: '#/components/schemas/reference_number'
+            amount:
+              $ref: '#/components/schemas/amount'
+            customer_name:
+              $ref: '#/components/schemas/customer_name'
+            description:
+              $ref: '#/components/schemas/description'
+    get-credit-note-refund-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The refund of the credit note is displayed successfully.
+          readOnly: true
+        creditnote_refund:
+          description: List of refund on a credit note
+          type: object
+          properties:
+            creditnote_refund_id:
+              $ref: '#/components/schemas/creditnote_refund_id'
+            creditnote_id:
+              $ref: '#/components/schemas/creditnote_id'
+            date:
+              $ref: '#/components/schemas/date'
+            refund_mode:
+              $ref: '#/components/schemas/refund_mode'
+            reference_number:
+              $ref: '#/components/schemas/reference_number'
+            amount:
+              $ref: '#/components/schemas/amount'
+            customer_name:
+              $ref: '#/components/schemas/customer_name'
+            description:
+              $ref: '#/components/schemas/description'
+    update-credit-note-refund-request:
+      type: object
+      properties:
+        date:
+          $ref: '#/components/schemas/date'
+        refund_mode:
+          $ref: '#/components/schemas/refund_mode'
+        reference_number:
+          $ref: '#/components/schemas/reference_number'
+        amount:
+          $ref: '#/components/schemas/amount'
+        exchange_rate:
+          $ref: '#/components/schemas/exchange_rate'
+        description:
+          $ref: '#/components/schemas/description'
+    update-credit-note-refund-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The credit note refund is updated successfully.
+          readOnly: true
+        creditnote_refund:
+          description: Refund applied on a credit note
+          type: object
+          properties:
+            creditnote_refund_id:
+              $ref: '#/components/schemas/creditnote_refund_id'
+            creditnote_id:
+              $ref: '#/components/schemas/creditnote_id'
+            date:
+              $ref: '#/components/schemas/date'
+            refund_mode:
+              $ref: '#/components/schemas/refund_mode'
+            reference_number:
+              $ref: '#/components/schemas/reference_number'
+            amount:
+              $ref: '#/components/schemas/amount'
+            customer_name:
+              $ref: '#/components/schemas/customer_name'
+            description:
+              $ref: '#/components/schemas/description'
+    delete-credit-note-refund-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The refund has been successfully deleted.
+          readOnly: true
+  securitySchemes:
+    Zoho_Auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://accounts.zoho.com/oauth/v2/auth
+          scopes:
+            ZohoInvoice.creditnotes.CREATE: Create Creditnotes
+            ZohoInvoice.creditnotes.UPDATE: Update Creditnotes
+            ZohoInvoice.creditnotes.READ: Read Creditnotes
+            ZohoInvoice.creditnotes.DELETE: Delete Creditnotes
