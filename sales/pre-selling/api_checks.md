@@ -10,7 +10,13 @@ Accès par clé API qu'il faut demander auprès de Dilicom.
 
 ### Contact d'entreprise Dilicom
 
+Mail envoyé le 13/01/2026 par la messagerie du site Dilicom.
+[Mail à Dilicom](./dilicom/260113_Dilicom.eml)
+Retour de Dilicom le 13/01/2026 : demande de conversation téléphonique pour le 14/01/2026 à 11h00. RdV validé par retour de mail le 13/01/2026.
+
 ### Résulat pour Dilicom
+
+API existante et documentée. En attente de la conversation téléphonique du 14/01/2026 pour plus de détails sur les modalités d'accès.
 
 ## Zoho
 
@@ -18,6 +24,7 @@ Accès par clé API qu'il faut demander auprès de Dilicom.
 
 Présence d'une API.
 Documentation téléchargée ici : [Fichiers de documentation](./zoho/)
+Création du credential Zoho pour [accès API](https://api-console.zoho.eu/)
 
 ### Contact d'entreprise Zoho
 
