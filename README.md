@@ -116,6 +116,27 @@ flowchart LR
 5. Flask lit l’état et affiche les écarts
 6. FastAPI valide et génère les mouvements
 
+## Avancement du projet
+
+```mermaid
+gantt
+    title Projet Sauvetage
+    dateFormat  DD-MM-YYYY
+    axisFormat  %d-%m
+    section Cadrage
+    Pré-vente :done, a1, 08-01-2026, 9d
+    Vente :active, a21, 14-01-2026, 7d
+    section Développement
+    Analyse :a2, after a1, 10d
+    Développement :crit, a3, after a2, 40d
+    section Tests
+    Tests unitaires :a4, after a3, 15d
+    Tests d'intégration :a5, after a4, 10d
+    section Déploiement
+    Déploiement :a6, after a5, 10d
+    Recette :a7, after a6, 7d
+```
+
 ## Contributeurs
 
 >_Rémi Verschuur | Audit-io : Lead Manager & Développeur Fullstack_
