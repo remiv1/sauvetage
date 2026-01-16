@@ -7,7 +7,13 @@ Projet d'outil centralisé pour une librairie :
 
 ## Branches
 
-- [`selling`](sales/pre-selling/260110_notes.md) : branche de pré-commercialisation du projet. CdC, définitions techniques, maquettes, prototypes, etc.
+- `selling` : Branche de pré-commercialisation du projet. CdC, définitions techniques, maquettes, prototypes, etc.
+  - pre-vente :
+    - [Notes de pré-vente](./sales/pre-selling/260110_notes.md)
+    - [Notes appel du 15/01/2026](./sales/pre-selling/260115_notes.md)
+    - [Vérification des APIs existantes](./sales/pre-selling/api_checks.md)
+  - vente :
+    - [Cahier des charges (*.pdf)](./sales/sale/CahierDesCharges_Site_Appli.pdf)
 - `erp` : Développement du projet ERP de base
   - `erp-stocks` : Module de gestion des stocks
   - `erp-accounting` : Module de comptabilité
