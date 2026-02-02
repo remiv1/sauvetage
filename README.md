@@ -7,7 +7,13 @@ Projet d'outil centralisé pour une librairie :
 
 ## Branches
 
-- [`selling`](sales/pre-selling/260110_notes.md) : branche de pré-commercialisation du projet. CdC, définitions techniques, maquettes, prototypes, etc.
+- `selling` : Branche de pré-commercialisation du projet. CdC, définitions techniques, maquettes, prototypes, etc.
+  - pre-vente :
+    - [Notes de pré-vente](./sales/pre-selling/260110_notes.md)
+    - [Notes appel du 15/01/2026](./sales/pre-selling/260115_notes.md)
+    - [Vérification des APIs existantes](./sales/pre-selling/api_checks.md)
+  - vente :
+    - [Cahier des charges (*.pdf)](./sales/sale/CahierDesCharges_Site_Appli.pdf)
 - `erp` : Développement du projet ERP de base
   - `erp-stocks` : Module de gestion des stocks
   - `erp-accounting` : Module de comptabilité
@@ -109,6 +115,27 @@ flowchart LR
 4. FastAPI écrit les résultats
 5. Flask lit l’état et affiche les écarts
 6. FastAPI valide et génère les mouvements
+
+## Avancement du projet
+
+```mermaid
+gantt
+    title Projet Sauvetage
+    dateFormat  DD-MM-YYYY
+    axisFormat  %d-%m
+    section Cadrage
+    Pré-vente :done, a1, 08-01-2026, 9d
+    Vente :active, a21, 14-01-2026, 7d
+    section Développement
+    Analyse :a2, after a1, 10d
+    Développement :crit, a3, after a2, 40d
+    section Tests
+    Tests unitaires :a4, after a3, 15d
+    Tests d'intégration :a5, after a4, 10d
+    section Déploiement
+    Déploiement :a6, after a5, 10d
+    Recette :a7, after a6, 7d
+```
 
 ## Contributeurs
 
