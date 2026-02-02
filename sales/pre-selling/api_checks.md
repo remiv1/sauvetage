@@ -7,6 +7,8 @@
 Présence d'une API.
 [Documentation API Dilicom](https://hub-dilicom.centprod.com/documentation/doku.php?id=hub_principal:examples_api_json)
 Accès par clé API qu'il faut demander auprès de Dilicom.
+Premier contact réalisé par mail le 13/01/2026.
+Deuxième contact par téléphone le 02/02/2026 : [Compte-rendu d'appel](./dilicom/260202_notes.md)
 
 ### Contact d'entreprise Dilicom
 
