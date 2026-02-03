@@ -1,0 +1,113 @@
+services:
+  app-front:
+    container_name: sauv-app
+    build:
+      context: ./app_front
+      dockerfile: ./Dockerfile.flask
+    env_file:
+      - .env.flask
+    volumes:
+      - sauv-documents-front:/home/root/app/documents
+    networks:
+      - sauv-network
+      - sauv-secure
+    depends_on:
+      - proxy
+      - db-main
+      - db-logs
+      - app-back
+    restart:
+      condition: on-failure
+    
+  app-back:
+    container_name: sauv-back
+    build:
+      context: ./app_back
+      dockerfile: ./Dockerfile.fast
+    env_file:
+      - .env.fast
+    volumes:
+      - sauv-documents-back:/home/root/app/documents
+    networks:
+      - sauv-secure
+    depends_on:
+      - proxy
+      - db-main
+      - db-logs
+    restart:
+      condition: on-failure
+
+  proxy:
+    container_name: sauv-proxy
+    build:
+      context: ./proxy
+      dockerfile: ./Dockerfile.traefik
+    env_file:
+      - .env.proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - sauv-network
+    volumes:
+      - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./proxy/acme.json:/acme.json
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart:
+      condition: always
+
+  db-main:
+    container_name: sauv-db-main
+    build:
+      context: ./databases/main
+      dockerfile: ./Dockerfile.postgres
+    env_file:
+      - .env.db_main
+    networks:
+      - sauv-network
+      - sauv-secure
+    volumes:
+      - db-main-data:/var/lib/postgresql/data
+    restart:
+      condition: on-failure
+
+  db-logs:
+    container_name: sauv-db-logs
+    build:
+      context: ./databases/logs
+      dockerfile: ./Dockerfile.mongo
+    env_file:
+      - .env.db_logs
+    networks:
+      - sauv-network
+      - sauv-secure
+    restart:
+      condition: on-failure
+    
+volumes:
+  db-main-data:
+    driver: local
+  
+  sauv-logs-data:
+    driver: local
+  
+  sauv-documents-front:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./documents/front
+      o: bind
+
+  sauv-documents-back:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./documents/back
+      o: bind
+
+networks:
+  sauv-network:
+    driver: bridge
+  sauv-secure:
+    driver: bridge
+

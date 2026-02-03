@@ -1,0 +1,24 @@
+FROM postgres:18.1-alpine
+
+# Installer envsubst (pour le script de génération)
+RUN apk add --no-cache gettext
+
+# Créer le répertoire pour les scripts d'initialisation
+WORKDIR /docker-entrypoint-initdb.d
+
+# Copier le script de génération et les templates
+COPY init/00_generate_models.sh .
+COPY init/*.sql.pattern .
+COPY init/*.sql .
+COPY .env.db_main ../.env
+
+# Exécuter le script de génération avant le démarrage
+RUN chmod +x 00_generate_models.sh && \
+    cd .. && \
+    ./init/00_generate_models.sh && \
+    cd docker-entrypoint-initdb.d && \
+    ls -la
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD pg_isready -U app -d sauvetage_main
