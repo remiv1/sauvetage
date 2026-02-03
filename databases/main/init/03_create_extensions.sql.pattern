@@ -1,0 +1,11 @@
+-- Activer les extensions nécessaires sur les deux bases
+
+\c ${POSTGRES_DB_USERS}
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+\c ${POSTGRES_DB_MAIN}
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+CREATE EXTENSION IF NOT EXISTS "jsonb_deep";

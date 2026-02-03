@@ -1,0 +1,15 @@
+-- Créer les deux bases de données
+CREATE DATABASE ${POSTGRES_DB_MAIN};
+CREATE DATABASE ${POSTGRES_DB_USERS};
+
+-- Connecter à la base users
+\c ${POSTGRES_DB_USERS}
+
+-- Créer le schéma auth
+CREATE SCHEMA IF NOT EXISTS auth_schema;
+
+-- Connecter à la base main
+\c ${POSTGRES_DB_MAIN}
+
+-- Créer le schéma app
+CREATE SCHEMA IF NOT EXISTS app_schema;

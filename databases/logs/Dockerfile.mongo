@@ -1,0 +1,21 @@
+FROM mongo:8.2-alpine
+
+# Installer des outils supplémentaires
+RUN apk add --no-cache bash
+
+# Créer les répertoires nécessaires
+WORKDIR /docker-entrypoint-initdb.d
+
+# Copier les scripts d'initialisation
+COPY init/00_generate_config.sh .
+COPY init/*.js.pattern .
+COPY init/mongod.conf ../mongod.conf
+COPY .env.db_logs ../.env
+
+# Rendre les scripts exécutables
+RUN chmod +x 00_generate_config.sh \
+    && cd .. && ./docker-entrypoint-initdb.d/00_generate_config.sh
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD mongosh --eval "db.adminCommand('ping')" || exit 1
