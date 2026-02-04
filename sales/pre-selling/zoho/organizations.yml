@@ -226,7 +226,7 @@ components:
       type: boolean
       example: true
     currency_id:
-      description: ID of the organisation curreency
+      description: ID of the organisation currency
       type: string
       example: '982000000000190'
     currency_code:
