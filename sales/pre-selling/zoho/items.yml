@@ -464,7 +464,7 @@ components:
       type: string
       example: Status.All
     report_name:
-      description: The displaying the  report name
+      description: The displaying the report name
       type: string
       example: Items
     hsn_or_sac:
