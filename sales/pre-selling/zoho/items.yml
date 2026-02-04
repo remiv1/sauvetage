@@ -385,7 +385,7 @@ components:
       x-node_unavailable_in:
         - us
     tax_name:
-      description: Name of te Tax Included
+      description: Name of the Tax Included
       type: string
       example: Sales Tax
     is_taxable:
