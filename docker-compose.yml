@@ -47,14 +47,19 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    networks:
-      - sauv-network
+    network_mode: host
+      #- sauv-network
     volumes:
-      - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./proxy/acme.json:/acme.json
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - sauv-traefik-pki:/app/pki:Z
+      - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro,Z
+      - ./proxy/dynamic:/etc/traefik/dynamic:ro,Z
     restart:
       condition: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   db-main:
     container_name: sauv-db-main
@@ -104,6 +109,9 @@ volumes:
       type: none
       device: ./documents/back
       o: bind
+
+  sauv-traefik-pki:
+    driver: local
 
 networks:
   sauv-network:

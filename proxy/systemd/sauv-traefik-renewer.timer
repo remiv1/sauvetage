@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer de renouvellement Traefik (tous les 3 mois)
+Requires=traefik-renew.service
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=13w  # 13 semaines = ~3 mois
+AccuracySec=1day
+Persistent=true
+
+[Install]
+WantedBy=timers.target
