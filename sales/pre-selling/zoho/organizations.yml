@@ -255,7 +255,7 @@ components:
       type: string
       example: ' '
     street_address2:
-      description: Continyed billing address of the organisation
+      description: Continued billing address of the organisation
       type: string
       example: ' '
     city:
