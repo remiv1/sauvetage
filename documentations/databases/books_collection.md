@@ -2,55 +2,62 @@
 
 ```mermaid
 erDiagram
+    GeneralObjects {
+        int id PK
+        int supplier_id FK
+        string type
+        string ean13
+        string name
+        text description
+        datetime created_at
+        datetime updated_at
+        last_inventory_timestamp datetime
+    }
     Books {
         int id PK
-        string isbn
-        string ean13
-        string title
+        int id_general_object FK
         string author
         string publisher
+        string diffuser
+        string editor
         string genre
         int publication_year
         int pages
         float price
-        int stock_quantity
-        json metadata
-        datetime created_at
-        datetime updated_at
     }
-    BookStockMovements {
+    Objects {
         int id PK
-        int book_id FK
+        int general_object_id FK
+        float price
+    }
+    ObjectStockMovements {
+        int id PK
+        int general_object_id FK
         string movement_type
         int quantity
-        datetime movement_date
+        datetime movement_timestamp
         float price_at_movement
         string source
         string destination
         text notes
     }
+    Tags {
+        int id PK
+        string name
+        text description
+    }
+    ObjectTags {
+        int id PK
+        int general_object_id FK
+        int tag_id FK
+    }
     Metadata {
         int id PK
-        int book_id FK
-        json dimensions
-        json weight
-        string language
-        string format
-        string age_recommendation
-        text back_cover_text
-        text description
-        json tags
-        json additional_images
-        json reviews
-        json awards
-        json related_books
-        json availability
-        json pricing
-        json external_links
+        int general_object_id FK
+        json semistructured_data
     }
     MediaFiles {
         int id PK
-        int metadata_id FK
         string file_name
         string file_type
         string alt_text
@@ -59,7 +66,38 @@ erDiagram
         boolean is_principal
     }
     %% Relations
-    Books ||--o{ BookStockMovements : "has movements"
-    Books ||--o{ Metadata : "has metadata"
-    MediaFiles ||--o| Metadata : "attached to"
+    GeneralObjects ||--o{ Books : "may be a"
+    GeneralObjects ||--o{ Objects : "may be a"
+    GeneralObjects ||--o{ ObjectStockMovements : "has movements"
+    GeneralObjects ||--o{ Metadata : "has metadata"
+    MediaFiles ||--o| Metadata : "may be linked to"
+    GeneralObjects ||--o{ ObjectTags : "has tags"
+    Tags ||--o{ ObjectTags : "is assigned to"
+```
+
+## Description des métadonnées
+
+```json
+{
+  "language": "string",
+  "dimensions": {
+    "height": "float",
+    "width": "float",
+    "depth": "float"
+  },
+  "weight": "float",
+  "edition": "string",
+  "awards": ["string"],
+  "reviews": [
+    {
+      "reviewer": "string",
+      "rating": "float",
+      "comment": "string"
+    }
+  ],
+  "links": [
+    "string1",
+    "string2"
+  ]
+}
 ```
