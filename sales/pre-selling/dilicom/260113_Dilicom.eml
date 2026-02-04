@@ -1,0 +1,215 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Return-Path: <serveur@dilicom.net>
+Received: from 10.1.3.1 (LHLO mta1.priv.ovhmail-u1.ea.mail.ovh.net)
+ (10.1.3.1) by mailstore99.priv.ovhmail-u1.ea.mail.ovh.net with LMTP; Tue,
+ 13 Jan 2026 13:01:14 +0000 (UTC)
+Received: from output4.mail.ovh.net (unknown [10.1.6.8])
+	by mta1.priv.ovhmail-u1.ea.mail.ovh.net (Postfix) with ESMTPS id 66575D6243A
+	for <rverschuur@audit-io.fr>; Tue, 13 Jan 2026 13:01:14 +0000 (UTC)
+Received: from vr43.mail.ovh.net (unknown [10.101.8.43])
+	by out4.mail.ovh.net (Postfix) with ESMTP id 4dr8WZ0GPTz5YYJ0
+	for <rverschuur@audit-io.fr>; Tue, 13 Jan 2026 13:01:14 +0000 (UTC)
+Received: from in44.mail.ovh.net (unknown [10.101.4.44])
+	by vr43.mail.ovh.net (Postfix) with ESMTP id 4dr8WY67gGz2Dbjn
+	for <rverschuur@audit-io.fr>; Tue, 13 Jan 2026 13:01:13 +0000 (UTC)
+Received: from smtphex.centprod.com (smtphex.centprod.com [185.23.132.143])
+	by in44.mail.ovh.net (Postfix) with ESMTPS id 4dr8WY5346z16HqD
+	for <rverschuur@audit-io.fr>; Tue, 13 Jan 2026 13:01:13 +0000 (UTC)
+Authentication-Results: mx.mail.ovh.net;
+    arc=none (no signatures found);
+    dkim=none (no signatures found);
+    dmarc=none policy.published-domain-policy=none policy.applied-disposition=none policy.evaluated-disposition=none (p=none,d=none,d.eval=none) policy.policy-from=p header.from=dilicom.net;
+    spf=pass smtp.mailfrom=serveur@dilicom.net smtp.helo=smtphex.centprod.com;
+    x-tls=pass smtp.version=TLSv1.2 smtp.cipher=ECDHE-RSA-AES256-GCM-SHA384 smtp.bits=256
+Received-SPF: pass
+    (dilicom.net: 185.23.132.143 is authorized to use 'serveur@dilicom.net' in 'mfrom' identity (mechanism 'ip4:185.23.132.143' matched))
+    receiver=in44.mail.ovh.net;
+    identity=mailfrom;
+    envelope-from="serveur@dilicom.net";
+    helo=smtphex.centprod.com;
+    client-ip=185.23.132.143
+Received: from kerio.nanterre.adpcl.com (unknown [150.175.11.166])
+	by smtphex.centprod.com (Postfix) with ESMTP id 750B220111;
+	Tue, 13 Jan 2026 14:01:13 +0100 (CET)
+X-Spam-Status: No, hits=0.0 required=3.5
+	tests=AWL: -0.315,BAYES_00: -1.665,HTML_MESSAGE: 0.001,
+	MIME_BASE64_NO_NAME: 0.224,MIME_HTML_ONLY: 0.001,NO_REAL_NAME: 0.961,
+	SUBJECT_ENCODED_TWICE: 1.723,CUSTOM_RULE_FROM: ALLOW,TOTAL_SCORE: 0.930
+X-Spam-Level: 
+Received: from localhost ([127.0.0.1])
+	by kerio.nanterre.adpcl.com;
+	Tue, 13 Jan 2026 14:01:12 +0100
+Date: Tue, 13 Jan 2026 14:01:12 +0100 (CET)
+From: serveur@dilicom.net
+To: service-clients@dilicom.fr
+Cc: rverschuur@audit-io.fr
+Message-ID: <998502310.206.1768309272126.JavaMail.dilicom@dlcweb1.centprod.com>
+Subject: =?utf-8?Q?R=C3=A9mi_Verschuur_-_Audit_IO_-_Nous_=C3=A9cri?=
+ =?utf-8?Q?re_-_Acc=C3=A8s_=C3=A0_des_cl=C3=A9_de_programmation?=
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+	boundary="----=_Part_204_572443525.1768309272116"
+X-OVH-Remote: 185.23.132.143 (smtphex.centprod.com)
+X-Ovh-Tracer-Id: 4762838084776425734
+X-VR-SPAMSTATE: OK
+X-VR-SPAMSCORE: 0
+X-VR-SPAMCAUSE: dmFkZTEf2gXtu+KkAnQ0JAlgyZ1nZ+OLJQCkoMTH68xL+tmkv35D6wrOJNPxuIVimqcLvKAiOkXDE68c7d+8B/UeX0k4fuRSZlt/2naQzY2odDEMTK5dd6oGgI3R7V0yBkYj7LL5sylW7l6EkeLWUIsMs6MKojdyZD7rmshvX5sHGHlrJU7RLI9fB+Q7MW3wK/01gEsn5R56GXZ5i/BS6sN5wTXAbtS/d14iaziDvlBFcXVO/7nCRY+3H+q7BwgHIbKh3+ROJrlFMaPuXrPKl3K1lPnmM2f8/VLn4TKDU4DVBPy4p1hD7fWAgtiTrnfPa9Yy9r3CM/ej0avfc6Lta8NF50YOQ05kzjV2sx1x+aPnzP/CKfDSGq+0JXd+rSaq1o+zxhJB8jSKJQEpFcMf4OT+obiFXVr0dae62FNL+uBWOSoJiB2hmjhqPlePe9+7oeHUNrkdbO5dBDbCnIjjt5Fali23qYrvFAYRCFdRj65QmABUXC13azXNMbAH5pIfUEYiuIjbJOFVsUMMeuoWNT5RT7ogss15MB3hEZh9Dj6f1ORIGYrgvsXBZDOlO0nzppsd5Mp7LBROIcg7gmFF819riGCZkRC7plktJXWg1i9ufLQFId3NzrRbumSjs+2Sce3yXaLfb174FmztXQlRb3qfPY4yZ5nbGRgoFy0U9mlUtrAQsA
+X-Ovh-Spam-Status: OK
+X-Ovh-Spam-Reason: vr: OK; dkim: disabled; spf: disabled
+X-Ovh-Message-Type: OK
+
+------=_Part_204_572443525.1768309272116
+Content-Type: multipart/related; 
+	boundary="----=_Part_205_1117202311.1768309272116"
+
+------=_Part_205_1117202311.1768309272116
+Content-Type: text/html;charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+<html>
+	<head></head>	
+	<body>
+<table style="font-family:Poppins,Arial,sans-serif;ertical-align:middle;font-weight:normal;font-size:12px;line-height:18px;color:#1E1F4D;font-style: normal;font-variant: normal;font-weight: medium;"
+		 cellpadding="0" cellspacing="0" border="0" width="100%">
+	<tr style=""><!--background-color:#26659f;height:85px;-->
+		<td colspan="4" style="padding-bottom:20px;">
+			<p style="margin:20px 0px 0px 40px;">
+			<img src="cid:logoSiteDilicom">
+			</p>
+		</td>
+	</tr>
+	<tr style="background-color:#1E1F4D;height:51px;">
+		<td colspan="4" style="vertical-align:middle;color:#FFFFFF;">
+			<p style="margin-top:15px;margin-left:40px;margin-bottom:20px;letter-spacing:0.3px;font-style: normal;font-variant: normal;font-weight: normal;">
+				WEB DILICOM - NOUS ECRIRE
+			</p> 
+		</td>
+		<td style="color:#FFFFFF;width:200px"></td>
+	</tr>
+	<tr>
+		<td colspan="4" style="padding-left:30px;padding-top:30px;padding-bottom:30px;max-width:870px;">
+			<p>
+				13/01/26
+				<br/>
+				Veuillez trouver ci-dessous le message post&eacute; par R&eacute;mi Verschuur depuis le site de DILICOM
+			</p>						
+		</td>
+	</tr>
+	<tr>
+		<td style="padding-top:10px;margin-bottom:10px;width:30px;">		
+		</td> 
+		<td style="padding-top:10px;padding-bottom:10px;padding-left:30px;width:200px;background-color:#1E1F4D;color:#FFFFFF;vertical-align:middle;">		
+			Message :
+		</td>     
+		<td style="width:4px;">	
+		<td style="padding-top:10px;padding-bottom:10px;padding-left:30px;vertical-align:middle;background-color:#EAEAEA";>
+			<div style="min-height:150px">
+				Bonjour,<br />Pour l'une de mes cliente, j'aurais aim&eacute; savoir quelle est la proc&eacute;dure pour acc&eacute;der &agrave; une authentification aux API du hub ou une cl&eacute; pour r&eacute;aliser la programmation afin de lui r&eacute;aliser une outil complet qui lui permette de connecter des fonctionnalit&eacute;s entre son stock, ses commandes, son site Internet et sa comptabilit&eacute;.<br />Dans l'attente de vous lire. Bien &agrave; vous,<br />R&eacute;mi Verschuur
+			</div>
+		</td>
+	</tr>
+	<tr style="height:4px;">	
+	<tr>
+		<td style="padding-top:10px;margin-bottom:10px;width:30px;">
+		</td>
+		<td style="padding-top:10px;padding-bottom:10px;padding-left:30px;width:200px;background-color:#1E1F4D;color:#FFFFFF;vertical-align:middle;">		
+			Coordonn&eacute;es :
+		</td>     
+		<td style="width:4px;">	
+		<td style="padding-top:10px;padding-bottom:10px;padding-left:30px;vertical-align:middle;background-color:#EAEAEA";>
+			<p style="margin-top:2px;margin-bottom:2px;">Monsieur R&eacute;mi Verschuur</p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">Fonction :</span> Prestataire informatique</p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">Etablissement/association :</span> Audit IO</p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">T&eacute;l&eacute;phone :</span> +33 6 86 27 96 05</p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">Email :</span> rverschuur@audit-io.fr</p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">Gln :</span> </p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">Siret / n&deg; d'association :</span> </p>
+			<p style="margin-top:2px;margin-bottom:2px;"><span style="font-weight: bold;color:#1E1F4D">Nombre de titres de votre catalogue :</span> </p>
+		</td>
+	</tr>
+	
+</table>
+</body>
+</html>
+------=_Part_205_1117202311.1768309272116
+Content-Type: image/x-png
+Content-Transfer-Encoding: base64
+Content-Disposition: inline
+Content-ID: <logoSiteDilicom>
+
+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
+
+------=_Part_205_1117202311.1768309272116--
+
+------=_Part_204_572443525.1768309272116--
+

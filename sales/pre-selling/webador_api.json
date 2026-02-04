@@ -1,0 +1,1010 @@
+{
+  "openapi": "3.1.0",
+  "servers": [
+    {
+      "url": "https://api.webador.com/v1"
+    }
+  ],
+  "info": {
+    "title": "JouwWeb / Webador public API",
+    "version": "v1.0.10",
+    "description": ""
+  },
+  "components": {
+    "schemas": {
+      "address": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 333777
+          },
+          "displayName": {
+            "type": "string",
+            "example": "OmniCorp Ltd."
+          },
+          "companyName": {
+            "type": "string",
+            "example": "OmniCorp Ltd.",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Aracely"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Rodrigues"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "female",
+              "male"
+            ],
+            "nullable": true
+          },
+          "streetAddress": {
+            "type": "string",
+            "example": "601 Cecilia St"
+          },
+          "postalCode": {
+            "type": "string",
+            "example": 78207
+          },
+          "city": {
+            "type": "string",
+            "example": "San Antonio"
+          },
+          "country": {
+            "type": "string",
+            "example": "US"
+          },
+          "countrySubdivision": {
+            "type": "string",
+            "example": "TX",
+            "nullable": true
+          }
+        }
+      },
+      "advancedShippingMethod": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 812739323
+          },
+          "title": {
+            "type": "string",
+            "example": "PostNL"
+          }
+        }
+      },
+      "coupon": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 999000
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-10T16:22:16+00:00"
+          },
+          "code": {
+            "type": "string",
+            "example": "COUPONCODE"
+          }
+        }
+      },
+      "customer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 555444
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-10T16:22:16+00:00"
+          },
+          "emailAddress": {
+            "type": "string",
+            "example": "a.rodrigues@omnico.co"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "example": "+31612345678",
+            "nullable": true
+          },
+          "paymentAddress": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/address"
+              }
+            ],
+            "nullable": true
+          },
+          "shippingAddress": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/address"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "orderProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 111888
+          },
+          "title": {
+            "type": "string",
+            "example": "Bananen crèmetaart / Met slagroom (+ €1,95)"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 3
+          },
+          "totalPrice": {
+            "type": "string",
+            "example": "29.85"
+          },
+          "totalTaxAmount": {
+            "type": "string",
+            "example": "5.18"
+          },
+          "taxPercentage": {
+            "type": "number",
+            "format": "float",
+            "example": 21,
+            "nullable": true
+          },
+          "unitPrice": {
+            "type": "string",
+            "example": "9.95"
+          },
+          "discount": {
+            "type": "string",
+            "example": "2.21"
+          },
+          "productNumber": {
+            "type": "string",
+            "example": "SKU8299"
+          },
+          "productVariant": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/productVariant"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 777666
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-10T16:22:16+00:00"
+          },
+          "orderNumber": {
+            "type": "integer",
+            "example": 2020000123
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "cancelled",
+              "shipped",
+              "picked_up"
+            ]
+          },
+          "totalPrice": {
+            "type": "string",
+            "example": "13.37"
+          },
+          "totalTaxAmount": {
+            "type": "string",
+            "example": "3.12"
+          },
+          "fixedDiscount": {
+            "type": "string",
+            "example": "8.23"
+          },
+          "fixedDiscountTaxAmount": {
+            "type": "string",
+            "example": "0.57"
+          },
+          "shippingCost": {
+            "type": "string",
+            "example": "2.50"
+          },
+          "shippingTaxAmount": {
+            "type": "string",
+            "example": "0.32"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "example": "mollie_applepay"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/customer"
+          },
+          "paymentAddress": {
+            "$ref": "#/components/schemas/address"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/address"
+          },
+          "orderProducts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/orderProduct"
+            }
+          },
+          "taxComposition": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/orderTax"
+            }
+          },
+          "taxNumber": {
+            "type": "string",
+            "example": "NL859426580B01",
+            "nullable": true
+          },
+          "kvkNumber": {
+            "type": "string",
+            "example": "73261505",
+            "nullable": true
+          },
+          "taxCountry": {
+            "type": "string",
+            "example": "NL",
+            "nullable": true
+          },
+          "taxCountrySubdivision": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "orderTax": {
+        "type": "object",
+        "properties": {
+          "percentage": {
+            "type": "number",
+            "format": "float",
+            "example": 21
+          },
+          "appliedPrice": {
+            "type": "string",
+            "example": "12.28"
+          },
+          "taxAmount": {
+            "type": "string",
+            "example": "2.58"
+          }
+        }
+      },
+      "product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 999666
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-10T16:22:16+00:00"
+          },
+          "title": {
+            "type": "string",
+            "example": "Bananen crèmetaart"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "https://f.eu1.jwwb.nl/image.jpg"
+            }
+          },
+          "taxOption": {
+            "$ref": "#/components/schemas/taxOption"
+          },
+          "primaryVariant": {
+            "$ref": "#/components/schemas/productVariant"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/productVariant"
+            }
+          }
+        }
+      },
+      "productVariant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 555111
+          },
+          "title": {
+            "type": "string",
+            "example": "Bananen crèmetaart — Vega"
+          },
+          "price": {
+            "type": "string",
+            "example": "19.95"
+          },
+          "oldPrice": {
+            "type": "string",
+            "example": "20.00"
+          },
+          "stock": {
+            "type": "integer",
+            "example": 24
+          },
+          "weight": {
+            "type": "integer",
+            "example": 1250
+          },
+          "productNumber": {
+            "type": "string",
+            "example": "SKU8299"
+          }
+        }
+      },
+      "simpleShippingMethod": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 83983
+          },
+          "title": {
+            "type": "string",
+            "example": "PostNL"
+          }
+        }
+      },
+      "taxCountryPercentage": {
+        "type": "object",
+        "properties": {
+          "countryCode": {
+            "type": "string",
+            "example": "FR"
+          },
+          "countrySubdivisionCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "percentage": {
+            "type": "number",
+            "format": "float",
+            "example": 5.5
+          },
+          "taxOnShipping": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "taxOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 886979
+          },
+          "title": {
+            "type": "string",
+            "example": "Standard VAT"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "float",
+            "example": 21,
+            "nullable": true
+          },
+          "taxOnShipping": {
+            "type": "boolean",
+            "example": true
+          },
+          "countryPercentages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/taxCountryPercentage"
+            }
+          }
+        }
+      },
+      "webshop": {
+        "type": "object",
+        "properties": {
+          "websiteId": {
+            "type": "integer",
+            "example": 886979
+          },
+          "taxOptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/taxOption"
+            }
+          },
+          "shippingAdvanced": {
+            "type": "boolean",
+            "example": true
+          },
+          "simpleShippingMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/simpleShippingMethod"
+            }
+          },
+          "advancedShippingMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/advancedShippingMethod"
+            }
+          },
+          "coupons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/coupon"
+            }
+          },
+          "paymentMethods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "stripe_card",
+              "mollie",
+              "local_prepaid"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          }
+        }
+      },
+      "website": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 886979
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-10T16:22:16+00:00"
+          },
+          "title": {
+            "type": "string",
+            "example": "Coole Website"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://coolewebsite.com"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://www.webador.com/v2/oauth/authorize",
+            "tokenUrl": "https://api.webador.com/v1/oauth/access-token",
+            "scopes": {
+              "websites:read": "List and view owned websites",
+              "webshop:read": "List and view webshop resources"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "website": {
+        "in": "path",
+        "name": "website",
+        "schema": {
+          "type": "integer"
+        },
+        "required": true
+      },
+      "limit": {
+        "in": "query",
+        "name": "limit",
+        "description": "Number of results to retrieve per page.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        },
+        "required": false
+      },
+      "page": {
+        "in": "query",
+        "name": "page",
+        "description": "Page number to retrieve.",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        },
+        "required": false
+      },
+      "after": {
+        "in": "query",
+        "name": "after",
+        "description": "Minimum creation time (in ISO 8601 format). You can specify just the date part as a shorthand for the start of\nthe day.\n",
+        "schema": {
+          "type": "string",
+          "example": "2020-10-28T18:17:18Z"
+        },
+        "required": false
+      },
+      "before": {
+        "in": "query",
+        "name": "before",
+        "description": "Maximum creation time (in ISO 8601 format). You can specify just the date part as a shorthand for the end of the\nday.\n",
+        "schema": {
+          "type": "string",
+          "example": "2020-10-28"
+        },
+        "required": false
+      },
+      "query": {
+        "in": "query",
+        "name": "query",
+        "description": "Filter results with a simple search query.",
+        "schema": {
+          "type": "string",
+          "example": "foo bar"
+        },
+        "required": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "topics"
+    },
+    {
+      "name": "websites"
+    },
+    {
+      "name": "webshop"
+    }
+  ],
+  "paths": {
+    "/spec.json#oauth": {
+      "options": {
+        "tags": [
+          "topics"
+        ],
+        "summary": "OAuth2 authorization flow",
+        "description": "## Summary\nWe support a [default OAuth2 authorization code flow](https://auth0.com/docs/flows/authorization-code-flow) to\nobtain access tokens. The user can be directed to the authorization URL of any of our editor backends\n([https://www.webador.com/v2/oauth/authorize](https://www.webador.com/v2/oauth/authorize) or\n[https://www.jouwweb.nl/v2/oauth/authorize](https://www.jouwweb.nl/v2/oauth/authorize)) to apply the expected\nbranding to the authorization page. The user will be able to log in and confirm the authorization after which\nthey are redirected to your application with the details necessary to request an access token. The authorization\ncode sent to the redirect URL can be exchanged for an access token via\n[https://api.webador.com/v1/oauth/access-token](https://api.webador.com/v1/oauth/access-token). Access tokens stay valid for an hour and can be refreshed via the\nsame endpoint for up to a month using the refresh token obtained alongside the access token.\n\n## Scopes\n| Scope | Description |\n| --- | --- |\n| websites:read | List and view owned websites |\n| webshop:read | List and view webshop resources |\n\n## Example flow\n### Redirect the user to the authorization page\nhttps://www.webador.com/v2/oauth/authorize?response_type=code&client_id={client_id}&scope=websites%3Aread%20webshop%3Aread&state={state}[&redirect_uri={redirect_uri}]\n\n- client_id: The client ID of your integration. Clients have to be manually created by us for the time being.\n- scope: Desired scopes, separated by spaces, to be authorized. The user will confirm these.\n- state: A random string created by you that is sent back unchanged after authorization and should be validated to prevent CSRF attacks. E.g., by storing it in the session before the initial redirect to us.\n- redirect_uri (optional): If your client specifies multiple possible redirect URIs you can specify the one to use with this parameter.\n\nThe user is redirected to your \"redirect_uri\" with ?code={code}&state={state} appended. You should only continue\nrequesting an access token when the \"state\" parameter matches the one you specified earlier.\n\n### Requesting an access token for your application\nSend a post request to https://api.webador.com/v1/oauth/access-token with the following parameters:\n\n- grant_type: \"authorization_code\" or \"refresh_token\".\n- code: The code obtained from the user authorization redirect (only when grant_type=\"authorization_code\").\n- refresh_token: The refresh token obtained from a prior access token request (only when grant_type=\"refresh_token\").\n- client_id: Your client ID.\n- client_secret: Your client's secret.\n\nYou will receive a JSON response with the following properties:\n\n- token_type: \"Bearer\"\n- expires_in: 3600\n- access_token: \"someLongAccessTokenString\"\n- refresh_token: \"someLongRefreshTokenString\"\n\n### Using the access token\nYou can use the access token in API requests by specifying it in the request headers:\n\nAuthorization: Bearer someLongAccessTokenString\n\nNote that the access token has a limited lifespan.\nYou can choose to refresh it when the lifetime has expired or every time before you start a (long-running) process.\nIn the last case you can get away with just storing the refresh token and keeping the access token in memory instead.\n\nRefresh tokens can be used once and you will always receive a new one.\nMake sure to store this new token!\nThey are valid for 3 months and will expire if not used within that time period.\n",
+        "responses": {
+          "2XX": {
+            "description": "N/A"
+          }
+        }
+      }
+    },
+    "/spec.json#rate-limiting": {
+      "options": {
+        "tags": [
+          "topics"
+        ],
+        "summary": "Rate limiting information",
+        "description": "Our API allows up to `300 requests/5 minutes/IP` or `100 request/5 minutes/user` for authenticated requests.\nInvalid requests (everything but 404 requests) count towards these limits.\nIf you surpass this limit, you will receive a 429 response with a \"Retry-After\" header indicating when the 5-minute interval is over.\nThis means you can theoretically access tokens for 300 different users and execute 100 API requests for each of those users every five minutes without being limited.\n",
+        "responses": {
+          "429": {
+            "description": "Blocked by rate limiting",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "example": "Fri, 06 Nov 2020 08:39:03 GMT"
+                },
+                "description": "Time (in RFC2616 format) after which the next request will be accepted."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop/customers": {
+      "get": {
+        "summary": "List webshop customers",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/after"
+          },
+          {
+            "$ref": "#/components/parameters/before"
+          },
+          {
+            "$ref": "#/components/parameters/query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of webshop customers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/customer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop/customers/{customer}": {
+      "get": {
+        "summary": "Retrieve a single webshop customer by ID",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          },
+          {
+            "in": "path",
+            "name": "customer",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single webshop customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/customer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop/orders": {
+      "get": {
+        "summary": "List webshop orders",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/after"
+          },
+          {
+            "$ref": "#/components/parameters/before"
+          },
+          {
+            "$ref": "#/components/parameters/query"
+          }
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of webshop orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/order"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop/orders/{order}": {
+      "get": {
+        "summary": "Retrieve a single webshop order by ID",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          },
+          {
+            "in": "path",
+            "name": "order",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single webshop order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/order"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop/products": {
+      "get": {
+        "summary": "List webshop products",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/after"
+          },
+          {
+            "$ref": "#/components/parameters/before"
+          },
+          {
+            "$ref": "#/components/parameters/query"
+          }
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of webshop products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop/products/{product}": {
+      "get": {
+        "summary": "Retrieve a single webshop product by ID.",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          },
+          {
+            "in": "path",
+            "name": "product",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single webshop product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/product"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}/webshop": {
+      "get": {
+        "summary": "Retrieve webshop details for a website.",
+        "description": "Scope required: \"webshop:read\"\n",
+        "tags": [
+          "webshop"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "webshop:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webshop details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webshop"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites": {
+      "get": {
+        "summary": "List all websites available to the authenticated user",
+        "description": "Scope required: \"websites:read\"\n",
+        "tags": [
+          "websites"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "websites:read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All available websites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/website"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/websites/{website}": {
+      "get": {
+        "summary": "Retrieve a single accessible website by ID",
+        "description": "Scope required: \"websites:read\"\n",
+        "tags": [
+          "websites"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "websites:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/website"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single website",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/website"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

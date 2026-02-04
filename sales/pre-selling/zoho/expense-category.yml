@@ -1,0 +1,448 @@
+openapi: 3.0.0
+info:
+  title: Expense Category
+  description: Expense Category represents a group of cumulative expense. For example, Rental Expense, Office Supplies etc.
+  contact: {}
+  version: 1.0.0
+servers:
+  - url: https://www.zohoapis.com/invoice/v3
+    description: API Endpoint
+tags:
+  - name: expense-category
+    description: Expense-Category Module
+paths:
+  /expensecategories:
+    post:
+      tags:
+        - expense-category
+      operationId: create_expense_category
+      summary: Create an expense category
+      description: Create an expense category.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create-an-expense-category-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/create-an-expense-category-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.CREATE
+    get:
+      tags:
+        - expense-category
+      operationId: list_expense_categories
+      summary: List expense categories
+      description: List expense categories along with pagination.
+      parameters:
+        - name: filter_by
+          in: query
+          description: 'Filter expense categories by status. Allowed Values: <code>ExpenseCategories.Active</code>, <code>ExpenseCategories.Inactive</code> and <code>ExpenseCategories.All</code>'
+          required: false
+          schema:
+            type: string
+          example: ExpenseCategories.Active
+        - name: sort_column
+          in: query
+          description: Sort expenses. Allowed Values <code>account_name</code>
+          required: false
+          schema:
+            type: string
+          example: account_name
+        - name: page
+          in: query
+          description: Page number to be fetched. Default value is 1.
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: per_page
+          in: query
+          description: Number of records to be fetched per page. Default value is 200.
+          required: false
+          schema:
+            type: integer
+            default: 200
+          example: 200
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list-expense-categories-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.READ
+    parameters:
+      - $ref: '#/components/parameters/organization_id'
+  /expensecategories/{category_id}:
+    put:
+      tags:
+        - expense-category
+      operationId: update_expense_category
+      summary: Update an expense category
+      description: Update an expense category.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update-an-expense-category-request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update-an-expense-category-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.UPDATE
+    get:
+      tags:
+        - expense-category
+      operationId: get_expense_category
+      summary: Get an expense category
+      description: Get the details of an expense category.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get-an-expense-category-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.READ
+    delete:
+      tags:
+        - expense-category
+      operationId: delete_expense_category
+      summary: Delete an expense category
+      description: Delete an existing expense category. Category which is associated with expense cannot be deleted.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete-an-expense-category-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.DELETE
+    parameters:
+      - name: category_id
+        in: path
+        required: true
+        description: Unique identifier of the category.
+        schema:
+          type: string
+        example: '982000000561057'
+      - $ref: '#/components/parameters/organization_id'
+  /expensecategories/{categoryid}/active:
+    post:
+      tags:
+        - expense-category
+      operationId: mark_expense_category_as_active
+      summary: Mark an expense category as active
+      description: Update an expense category status as active.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/mark-an-expense-category-as-active-request'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/mark-an-expense-category-as-active-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.CREATE
+    parameters:
+      - name: categoryid
+        in: path
+        required: true
+        description: Unique identifier of the category.
+        schema:
+          type: string
+        example: '982000000561057'
+      - $ref: '#/components/parameters/organization_id'
+  /expensecategories/{categoryid}/inactive:
+    post:
+      tags:
+        - expense-category
+      operationId: mark_expense_category_as_inactive
+      summary: Mark an expense category as inactive
+      description: Update an expense category status as inactive.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/mark-an-expense-category-as-inactive-request'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/mark-an-expense-category-as-inactive-response'
+      deprecated: false
+      security:
+        - Zoho_Auth:
+            - ZohoInvoice.settings.CREATE
+    parameters:
+      - name: categoryid
+        in: path
+        required: true
+        description: Unique identifier of the category.
+        schema:
+          type: string
+        example: '982000000561057'
+      - $ref: '#/components/parameters/organization_id'
+components:
+  parameters:
+    organization_id:
+      name: X-com-zoho-invoice-organizationid
+      description: ID of the organization
+      in: header
+      required: true
+      schema:
+        type: string
+      example: '10234695'
+  schemas:
+    gendoc-attributes-schema:
+      $ref: '#/components/schemas/expense_category-response'
+    expense_category-response:
+      description: Category of an expense
+      type: object
+      properties:
+        account_id:
+          $ref: '#/components/schemas/account_id'
+        account_name:
+          $ref: '#/components/schemas/account_name'
+        description:
+          $ref: '#/components/schemas/description'
+        status:
+          $ref: '#/components/schemas/status'
+        created_time:
+          $ref: '#/components/schemas/created_time'
+        last_modified_time:
+          $ref: '#/components/schemas/last_modified_time'
+    filter_by:
+      description: 'Filter expense categories by status. Allowed Values: <code>ExpenseCategories.Active</code>, <code>ExpenseCategories.Inactive</code> and <code>ExpenseCategories.All</code>'
+      type: string
+      example: ExpenseCategories.Active
+    sort_column:
+      description: Sort expenses. Allowed Values <code>account_name</code>
+      type: string
+      example: account_name
+    status:
+      description: Search expenses by expense status. Allowed Values <code>active</code>, <code>stopped</code> and <code>expired</code>
+      type: string
+      example: active
+    account_id:
+      description: ID of the account
+      type: string
+      example: 982000000561057
+    account_name:
+      description: Account name of the expenses.
+      type: string
+      example: Rent
+    description:
+      description: Describe the expense created.
+      type: string
+      example: ' '
+    page:
+      description: Current page number
+      type: string
+      example: 1
+    per_page:
+      description: Values per page
+      type: string
+      example: 100
+    created_time:
+      description: date when expense was created
+      type: string
+      example: 2013-11-18T02:17:40-0800
+    last_modified_time:
+      description: Date when the expense was last edited
+      type: string
+      example: 2013-12-18T02:17:40-0800
+    category_id:
+      description: ID of the expense category
+      type: string
+      example: '982000000561057'
+    create-an-expense-category-request:
+      type: object
+      properties:
+        account_name:
+          $ref: '#/components/schemas/account_name'
+        description:
+          $ref: '#/components/schemas/description'
+    create-an-expense-category-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The expense category has been created.
+          readOnly: true
+        expense_category:
+          $ref: '#/components/schemas/expense_category-response'
+    list-expense-categories-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        expense_accounts:
+          type: array
+          items:
+            type: object
+            properties:
+              account_id:
+                $ref: '#/components/schemas/account_id'
+              account_name:
+                $ref: '#/components/schemas/account_name'
+              description:
+                $ref: '#/components/schemas/description'
+              status:
+                $ref: '#/components/schemas/status'
+    update-an-expense-category-request:
+      type: object
+      properties:
+        account_name:
+          $ref: '#/components/schemas/account_name'
+        description:
+          $ref: '#/components/schemas/description'
+    update-an-expense-category-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The expense category has been created.
+          readOnly: true
+        expense_category:
+          description: Category of expense
+          type: object
+          properties:
+            account_id:
+              $ref: '#/components/schemas/account_id'
+            account_name:
+              $ref: '#/components/schemas/account_name'
+            description:
+              $ref: '#/components/schemas/description'
+            status:
+              $ref: '#/components/schemas/status'
+            created_time:
+              $ref: '#/components/schemas/created_time'
+            last_modified_time:
+              $ref: '#/components/schemas/last_modified_time'
+    get-an-expense-category-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: success
+          readOnly: true
+        expense_category:
+          description: Category of the expense
+          type: object
+          properties:
+            account_id:
+              $ref: '#/components/schemas/account_id'
+            account_name:
+              $ref: '#/components/schemas/account_name'
+            description:
+              $ref: '#/components/schemas/description'
+            status:
+              $ref: '#/components/schemas/status'
+            created_time:
+              $ref: '#/components/schemas/created_time'
+            last_modified_time:
+              $ref: '#/components/schemas/last_modified_time'
+    delete-an-expense-category-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The expense category is deleted successfully.
+          readOnly: true
+    mark-an-expense-category-as-active-request:
+      type: object
+      properties:
+        category_id:
+          $ref: '#/components/schemas/category_id'
+    mark-an-expense-category-as-active-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The expense is marked as active.
+          readOnly: true
+    mark-an-expense-category-as-inactive-request:
+      type: object
+      properties:
+        category_id:
+          $ref: '#/components/schemas/category_id'
+    mark-an-expense-category-as-inactive-response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+          readOnly: true
+        message:
+          type: string
+          example: The expense is marked as inactive.
+          readOnly: true
+  securitySchemes:
+    Zoho_Auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://accounts.zoho.com/oauth/v2/auth
+          scopes:
+            ZohoInvoice.settings.CREATE: Create Settings
+            ZohoInvoice.settings.UPDATE: Update Settings
+            ZohoInvoice.settings.READ: Read Settings
+            ZohoInvoice.settings.DELETE: Delete Settings
