@@ -1,0 +1,16 @@
+http:
+  services:
+    app-front:
+      loadBalancer:
+        servers:
+          - url: "http://sauv-app:5000"
+
+    app-back:
+      loadBalancer:
+        servers:
+          - url: "http://sauv-back:8000"
+
+    noop:
+      loadBalancer:
+        servers:
+          - url: "http://localhost"

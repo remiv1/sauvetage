@@ -1,0 +1,32 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: true
+
+ping:
+  entryPoint: web
+
+entryPoints:
+  web:
+    address: ":80"
+  
+  websecure:
+    address: ":443"
+    http:
+      tls: {} # Active TLS, utilisera les certificats définis plus bas
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+tls:
+  certificates:
+    - certFile: /app/pki/server-cert.pem
+      keyFile: /app/pki/server-key.pem
+
+log:
+  level: INFO
+  format: json

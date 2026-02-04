@@ -1,0 +1,12 @@
+[Unit]
+Description=Renouvellement des certificats Traefik
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'cd /home/remi-verschuur/Projets/sauvetage && docker-compose -f docker-compose.yml restart traefik'
+User=remi-verschuur
+
+[Install]
+WantedBy=multi-user.target
