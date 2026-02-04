@@ -202,7 +202,7 @@ components:
       type: string
       example: A
     applied_filter:
-      description: The filer applied.
+      description: The filter applied.
       type: string
       example: SalesOrPurchaseType.All
     sort_column:
