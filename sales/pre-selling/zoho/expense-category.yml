@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Expense Category
-  description: Expense Category represents a group of cumuative expense. For example, Rental Expense, Office Supplies etc.
+  description: Expense Category represents a group of cumulative expense. For example, Rental Expense, Office Supplies etc.
   contact: {}
   version: 1.0.0
 servers:
