@@ -4,9 +4,9 @@
 erDiagram
     Customers {
         int id PK
-        string customer_type
         string wpwc_id
         string henrri_id
+        string customer_type
         boolean is_active
         text notes
         datetime created_at
@@ -14,16 +14,17 @@ erDiagram
         datetime last_synced_wpwc_at
         datetime last_synced_henrri_at
     }
-    CustomerPart {
+    CustomerParts {
         int id PK
         int customer_id FK
         string first_name
         string last_name
+        date date_of_birth
     }
-    CustomerPro {
+    CustomerPros {
         int id PK
         int customer_id FK
-        string social_reason
+        string company_name
         string siret_number
         string vat_number
     }
@@ -77,6 +78,6 @@ erDiagram
     Customers ||--o{ CustomerMails : "has"
     Customers ||--o{ CustomerPhones : "has"
     Customers ||--o{ CustomerSyncLog : "has"
-    Customers ||--o| CustomerPart : "or is a"
-    Customers ||--o| CustomerPro : "or is a"
+    Customers ||--o| CustomerParts : "or is a"
+    Customers ||--o| CustomerPros : "or is a"
 ```
