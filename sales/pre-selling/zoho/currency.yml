@@ -220,7 +220,7 @@ paths:
         - currency
       operationId: get_exchange_rate
       summary: Get an exchange rate.
-      description: Get the details of an exchange rate that has been asscoiated to the currency.
+      description: Get the details of an exchange rate that has been associated to the currency.
       parameters:
         - name: exchange_rate_id
           in: path
