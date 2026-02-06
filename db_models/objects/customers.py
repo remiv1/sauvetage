@@ -1,14 +1,15 @@
 """Database model for Customers table."""
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy import Integer, String, DateTime, Text, Boolean, ForeignKey
-from db_models import Base
+from db_models import WorkingBase
+from db_models.objects import QueryMixin
 
 CUSTOMER_PK = "customers.id"
 
-class Customers(Base):
+class Customers(WorkingBase, QueryMixin):
     """Modèle de base de données pour la table client.
     
     Cette base de données est source unique de vérité.
@@ -114,28 +115,16 @@ class Customers(Base):
             "addresses": addresses,
         }
 
-    @classmethod
-    def get_by(cls, *, session: Any, filter_tuple: Tuple[str, Any]) -> "Customers | None":
-        """Récupère un client par son WPWC ID."""
-        if not filter_tuple or len(filter_tuple) != 2:
-            return None
-        return session.query(cls).filter_by(**{filter_tuple[0]: filter_tuple[1]}).first()
-
-    @classmethod
-    def get_all(cls, *, session: Any) -> list["Customers"]:
-        """Récupère tous les clients."""
-        return session.query(cls).all()
-
-class CustomerParts(Base):
+class CustomerParts(WorkingBase, QueryMixin):
     """Database model for Customer Parts table."""
 
     __tablename__ = "customer_parts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
-                                    comment="Identifiant unique")
+                                    comment="Identifiant Part unique")
     customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK),
                                              nullable=False, unique=True,
-                                             comment="Identifiant du client associé")
+                                             comment="Id client associé à part")
 
     # Données personnelles
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -171,7 +160,7 @@ class CustomerParts(Base):
             date_of_birth=datetime.fromisoformat(date_of_birth) if date_of_birth else None
         )
 
-class CustomerPros(Base):
+class CustomerPros(WorkingBase, QueryMixin):
     """Database model for Customer Pros table."""
 
     __tablename__ = "customer_pros"
@@ -180,6 +169,8 @@ class CustomerPros(Base):
                                     comment="Identifiant unique")
     customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK), nullable=False,
                                              unique=True, comment="Identifiant du client associé")
+
+    # Données professionnelles
     company_name: Mapped[str] = mapped_column(String(200), nullable=False,
                                               comment="Nom de l'entreprise")
     siret_number: Mapped[str | None] = mapped_column(String(14), nullable=False, unique=True,
@@ -187,6 +178,7 @@ class CustomerPros(Base):
     vat_number: Mapped[str | None] = mapped_column(String(50), nullable=True, unique=True,
                                                   comment="Numéro de TVA intracommunautaire")
 
+    # Relations
     customer = relationship("Customers", back_populates="pro", uselist=False)
 
     def __repr__(self) -> str:
@@ -214,26 +206,54 @@ class CustomerPros(Base):
             vat_number=data.get("vat_number")
         )
 
-class CustomerAddresses(Base):
+class CustomerAddresses(WorkingBase, QueryMixin):
     """Database model for Customer Addresses table."""
 
     __tablename__ = "customer_addresses"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    customer_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    address_line1: Mapped[str] = mapped_column(String(200), nullable=False)
-    address_line2: Mapped[str] = mapped_column(String(200), nullable=True)
-    city: Mapped[str] = mapped_column(String(100), nullable=False)
-    state: Mapped[str] = mapped_column(String(100), nullable=False)
-    postal_code: Mapped[str] = mapped_column(String(20), nullable=False)
-    country: Mapped[str] = mapped_column(String(100), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
+                                    comment="Identifiant unique")
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK), nullable=False,
+                                             comment="Identifiant du client associé")
+
+    # Données d'adresse
+    address_name: Mapped[str | None] = mapped_column(String(100), nullable=True,
+                                                     comment="Nom d'adresse (ex: home, work)")
+    address_line1: Mapped[str] = mapped_column(String(200), nullable=False,
+                                               comment="Ligne d'adresse 1")
+    address_line2: Mapped[str] = mapped_column(String(200), nullable=True,
+                                               comment="Ligne d'adresse 2")
+    city: Mapped[str] = mapped_column(String(100), nullable=False, comment="Ville")
+    state: Mapped[str] = mapped_column(String(100), nullable=False, comment="État/Région")
+    postal_code: Mapped[str] = mapped_column(String(20), nullable=False, comment="Code postal")
+    country: Mapped[str] = mapped_column(String(100), nullable=False, comment="Pays",
+                                         default="France")
+
+    # Données de facturation/livraison
+    is_billing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                              comment="Indique si c'est une adresse de facturation")
+    is_shipping: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False,
+                                               comment="Indique si c'est une adresse de livraison")
+
+    # Soft delete
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                            comment="Indique si l'adresse est active ou supprimée")
+
+    # Metadonnées audit
     created_at: Mapped[datetime] = mapped_column(DateTime,
-                                                 default=lambda: datetime.now(timezone.utc))
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de création de l'adresse")
+    updated_at: Mapped[datetime] = mapped_column(DateTime,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 onupdate=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de dernière mise à jour")
 
     customer = relationship("Customers", back_populates="addresses")
 
     def __repr__(self) -> str:
         return f"<CustomerAddress(id={self.id}, customer_id={self.customer_id}, " \
+            + f"address_name={self.address_name}, " \
+            + f"address_line1={self.address_line1}, address_line2={self.address_line2}, " \
             + f"city={self.city}, country={self.country})>"
 
     def to_dict(self) -> dict[str, Any]:
@@ -241,13 +261,17 @@ class CustomerAddresses(Base):
         return {
             "id": self.id,
             "customer_id": self.customer_id,
+            "address_name": self.address_name,
             "address_line1": self.address_line1,
             "address_line2": self.address_line2,
             "city": self.city,
             "state": self.state,
             "postal_code": self.postal_code,
             "country": self.country,
+            "is_billing": self.is_billing,
+            "is_shipping": self.is_shipping,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     @classmethod
@@ -255,35 +279,45 @@ class CustomerAddresses(Base):
         """Crée un objet CustomerAddress à partir d'un dictionnaire."""
         return cls(
             customer_id=data.get("customer_id", 0),
+            address_name=data.get("address_name"),
             address_line1=data.get("address_line1", ""),
             address_line2=data.get("address_line2", ""),
             city=data.get("city", ""),
             state=data.get("state", ""),
             postal_code=data.get("postal_code", ""),
-            country=data.get("country", "")
+            country=data.get("country", ""),
+            is_billing=data.get("is_billing", True),
+            is_shipping=data.get("is_shipping", False)
         )
 
-    @classmethod
-    def get_by_customer_id(cls, session: Any, customer_id: int) -> list["CustomerAddresses"]:
-        """Récupère les adresses d'un client par son ID."""
-        return session.query(cls).filter_by(customer_id=customer_id).all()
-
-    @classmethod
-    def get_all(cls, session: Any) -> list["CustomerAddresses"]:
-        """Récupère toutes les adresses des clients."""
-        return session.query(cls).all()
-
-class CustomerMails(Base):
+class CustomerMails(WorkingBase, QueryMixin):
     """Database model for Customer Mails table."""
 
     __tablename__ = "customer_mails"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    customer_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime,
-                                                 default=lambda: datetime.now(timezone.utc))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
+                                    comment="Identifiant mail unique")
+    customer_id: Mapped[int] = mapped_column(Integer, nullable=False,
+                                             comment="Id client associé à ce mail")
 
+    # Données d'e-mail
+    email_name: Mapped[str | None] = mapped_column(String(100), nullable=True,
+                                                  comment="Nom de l'e-mail (ex: perso, pro)")
+    email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False,
+                                       comment="Adresse e-mail du client")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                            comment="Indique si l'e-mail est actif ou supprimé")
+
+    # Metadonnées audit
+    created_at: Mapped[datetime] = mapped_column(DateTime,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de création de l'e-mail")
+    updated_at: Mapped[datetime] = mapped_column(DateTime,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 onupdate=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de dernière mise à jour de l'e-mail")
+
+    # Relations
     customer = relationship("Customers", back_populates="mails")
 
     def __repr__(self) -> str:
@@ -294,8 +328,11 @@ class CustomerMails(Base):
         return {
             "id": self.id,
             "customer_id": self.customer_id,
+            "email_name": self.email_name,
             "email": self.email,
+            "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     @classmethod
@@ -303,43 +340,55 @@ class CustomerMails(Base):
         """Crée un objet CustomerMail à partir d'un dictionnaire."""
         return cls(
             customer_id=data.get("customer_id", 0),
-            email=data.get("email", "")
+            email_name=data.get("email_name"),
+            email=data.get("email", ""),
+            is_active=data.get("is_active", True)
         )
 
-    @classmethod
-    def get_by_customer_id(cls, session: Any, customer_id: int) -> list["CustomerMails"]:
-        """Récupère les mails d'un client par son ID."""
-        return session.query(cls).filter_by(customer_id=customer_id).all()
-
-    @classmethod
-    def get_all(cls, session: Any) -> list["CustomerMails"]:
-        """Récupère tous les mails des clients."""
-        return session.query(cls).all()
-
-class CustomerPhones(Base):
+class CustomerPhones(WorkingBase, QueryMixin):
     """Database model for Customer Phones table."""
 
     __tablename__ = "customer_phones"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    customer_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    phone_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime,
-                                                 default=lambda: datetime.now(timezone.utc))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
+                                    comment="Identifiant téléphone unique")
+    customer_id: Mapped[int] = mapped_column(Integer, nullable=False,
+                                             comment="Id client associé à ce téléphone")
 
+    # Données de téléphone
+    phone_name: Mapped[str | None] = mapped_column(String(100), nullable=True,
+                                                  comment="Nom du téléphone (ex: mobile, fixe)")
+    phone_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False,
+                                              comment="Numéro de téléphone du client")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                            comment="Indique si le téléphone est actif ou supprimé")
+
+    # Metadonnées audit
+    created_at: Mapped[datetime] = mapped_column(DateTime,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de création du téléphone")
+    updated_at: Mapped[datetime] = mapped_column(DateTime,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 onupdate=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de dernière MàJ du téléphone")
+
+    # Relations
     customer = relationship("Customers", back_populates="phones")
 
     def __repr__(self) -> str:
-        return f"<CustomerPhone(id={self.id}, customer_id={self.customer_id}, "\
-            + f"phone_number={self.phone_number})>"
+        return f"<CustomerPhone(id={self.id}, customer_id={self.customer_id}, " \
+            + f"phone_name={self.phone_name}, phone_number={self.phone_number})>"
 
     def to_dict(self) -> dict[str, Any]:
         """Convertit l'objet CustomerPhone en dictionnaire."""
         return {
             "id": self.id,
             "customer_id": self.customer_id,
+            "phone_name": self.phone_name,
             "phone_number": self.phone_number,
+            "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     @classmethod
@@ -347,21 +396,12 @@ class CustomerPhones(Base):
         """Crée un objet CustomerPhone à partir d'un dictionnaire."""
         return cls(
             customer_id=data.get("customer_id", 0),
-            phone_number=data.get("phone_number", "")
+            phone_name=data.get("phone_name"),
+            phone_number=data.get("phone_number", ""),
+            is_active=data.get("is_active", True)
         )
 
-    @classmethod
-    def get_by_customer_id(cls, session: Any, customer_id: int) -> list["CustomerPhones"]:
-        """Récupère les numéros de téléphone d'un client par son ID."""
-        return session.query(cls).filter_by(customer_id=customer_id).all()
-
-    @classmethod
-    def get_all(cls, session: Any) -> list["CustomerPhones"]:
-        """Récupère tous les numéros de téléphone des clients."""
-        return session.query(cls).all()
-
-
-class CustomerSyncLog(Base):
+class CustomerSyncLog(WorkingBase):
     """Database model for Customer Synchronization Log.
     
     Tracks all synchronization events between the main database and external systems
@@ -427,22 +467,3 @@ class CustomerSyncLog(Base):
             fields_synced=data.get("fields_synced"),
             error_message=data.get("error_message")
         )
-
-    @classmethod
-    def get_by_customer_id(cls, session: Any, customer_id: int) -> list["CustomerSyncLog"]:
-        """Récupère les logs de synchronisation d'un client."""
-        return session.query(cls).filter_by(customer_id=customer_id).all()
-
-    @classmethod
-    def get_by_external_id(cls, session: Any, external_id: str,
-                           external_system: str) -> list["CustomerSyncLog"]:
-        """Récupère les logs de synchronisation par ID externe et système."""
-        return session.query(cls).filter_by(
-            external_id=external_id,
-            external_system=external_system
-        ).all()
-
-    @classmethod
-    def get_all(cls, session: Any) -> list["CustomerSyncLog"]:
-        """Récupère tous les logs de synchronisation."""
-        return session.query(cls).all()
