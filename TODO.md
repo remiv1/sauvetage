@@ -3,6 +3,6 @@
 - [x] Créer le proxy inversé Traefik
 - [x] Modifier le modèle Customers
 - [x] Modifier les Customers pour pouvoir être Pro ou Part.
-- [ ] Réprendre la partie Adresses, Mails, Phones, SyncLog.
-- [ ] Modifier les méthodes to_dict et from_dict sur les objets restants.
+- [x] Réprendre la partie Adresses, Mails, Phones, SyncLog.
+- [x] Modifier les méthodes to_dict et from_dict sur les objets restants.
 - [ ] Créer les objets Objets, Livres, Autres objets, etc.
