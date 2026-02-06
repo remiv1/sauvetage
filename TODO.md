@@ -5,4 +5,6 @@
 - [x] Modifier les Customers pour pouvoir être Pro ou Part.
 - [x] Réprendre la partie Adresses, Mails, Phones, SyncLog.
 - [x] Modifier les méthodes to_dict et from_dict sur les objets restants.
-- [ ] Créer les objets Objets, Livres, Autres objets, etc.
+- [x] Créer les objets Objets, Livres, Autres objets, etc.
+- [ ] Créer les modèles de commandes clients et fournisseurs.
+- [ ] Créer le modèle de factures clients.

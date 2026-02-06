@@ -9,6 +9,7 @@ erDiagram
         string ean13
         string name
         text description
+        float price
         datetime created_at
         datetime updated_at
         last_inventory_timestamp datetime
@@ -23,14 +24,13 @@ erDiagram
         string genre
         int publication_year
         int pages
-        float price
     }
-    Objects {
+    OtherObjects {
         int id PK
         int general_object_id FK
         float price
     }
-    ObjectStockMovements {
+    InventoryMovements {
         int id PK
         int general_object_id FK
         string movement_type
@@ -67,8 +67,8 @@ erDiagram
     }
     %% Relations
     GeneralObjects ||--o{ Books : "may be a"
-    GeneralObjects ||--o{ Objects : "may be a"
-    GeneralObjects ||--o{ ObjectStockMovements : "has movements"
+    GeneralObjects ||--o{ OtherObjects : "may be a"
+    GeneralObjects ||--o{ InventoryMovements : "has movements"
     GeneralObjects ||--o{ Metadata : "has metadata"
     MediaFiles ||--o| Metadata : "may be linked to"
     GeneralObjects ||--o{ ObjectTags : "has tags"
