@@ -22,16 +22,14 @@ class Shipment(WorkingBase, QueryMixin):
     # Metadonnées audit
     create_source: Mapped[str] = mapped_column(String(50), nullable=False,
                                                comment="Source de l'envoi")
-    created_at: Mapped[datetime] = mapped_column(DateTime,
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
                                                  default=lambda: datetime.now(timezone.utc),
-                                                 nullable=False,
                                                  comment="Date de création de l'envoi")
-    update_source: Mapped[str] = mapped_column(String(50), nullable=False,
+    update_source: Mapped[str] = mapped_column(String(50), nullable=True,
                                                comment="Source de la dernière mise à jour")
-    updated_at: Mapped[datetime] = mapped_column(DateTime,
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  onupdate=lambda: datetime.now(timezone.utc),
-                                                 nullable=False,
                                                  comment="Date dernière mise à jour de l'envoi")
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True,
                                                             comment="Dernière synchronisation")

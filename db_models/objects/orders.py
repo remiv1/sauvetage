@@ -44,6 +44,7 @@ class Order(WorkingBase, QueryMixin):
     delivery_address = relationship("CustomerAddresses", foreign_keys=[delivery_address_id])
     order_lines = relationship("OrderLine", back_populates="order", cascade="all, delete-orphan")
     invoices = relationship("Invoice", back_populates="order")
+    shipments = relationship("Shipment", back_populates="order")
 
     def __repr__(self) -> str:
         return f"<Order(id={self.id}, reference={self.reference}, status={self.status})>"

@@ -1,14 +1,35 @@
-"""Modèle de données pour les utilisateurs."""
+"""Modèle de données pour les utilisateurs. Contient 2 classes :
+    - Users : Représente un utilisateur avec ses données de base et ses permissions.
+    - UsersPasswords : Représente les mots de passe des utilisateurs, avec une relation vers
+        la classe Users. Permet de gérer l'historique des mots de passe et leur validité.
+"""
 
 from typing import Dict, Any
 from datetime import datetime, timezone
 from sqlalchemy import Integer, String, Boolean, DateTime
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 from db_models import SecureBase
 from db_models.objects import QueryMixin
 
+CASCADE_OPTIONS = "all, delete-orphan"
+ADMIN = "1"
+COMPTABLE = "2"
+COMMERCIAL = "3"
+LOGISTIQUE = "4"
+SUPPORT = "5"
+INFORMATIQUE = "6"
+RH = "7"
+DIRECTION = "8"
+SUPER_ADMIN = "9"
+
 class Users(SecureBase, QueryMixin):
-    """Modèle pour les utilisateurs."""
+    """
+    Modèle pour les utilisateurs. Contient les méthodes :
+        - __repr__ : Représentation textuelle de l'utilisateur.
+        - to_dict : Convertit l'objet User en dictionnaire.
+        - from_dict : Crée un objet User à partir d'un dictionnaire.
+        - by : Permet de faire des requêtes personnalisées sur les utilisateurs.
+    """
     __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
@@ -19,8 +40,12 @@ class Users(SecureBase, QueryMixin):
                                           comment="Nom d'utilisateur")
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False,
                                        comment="Adresse email de l'utilisateur")
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True,
-                                            comment="Indique si l'utilisateur est actif")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                            comment="Utilisateur actif ?")
+    nb_failed_logins: Mapped[int] = mapped_column(Integer, nullable=False, default=0,
+                                            comment="Nombre de tentatives de connexion échouées")
+    is_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False,
+                                            comment="Compte de l'utilisateur verrouillé ?")
     # La gestion des droits se fait par une chaine de caractères avec des nombres accolés
     # Par exemple "1" admin, "2" comptable, "3" commercial, "4" logistique, "5" support,
     # "6" informatique, "7" RH, "8" direction, "9" super admin
@@ -35,6 +60,9 @@ class Users(SecureBase, QueryMixin):
                                                  default=lambda: datetime.now(timezone.utc),
                                                  onupdate=lambda: datetime.now(timezone.utc),
                                                  comment="Date de dernière MàJ de l'utilisateur")
+
+    # Relations
+    passwords = relationship("UsersPasswords", back_populates="user", cascade=CASCADE_OPTIONS)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username}, email={self.email}, " \
@@ -62,7 +90,12 @@ class Users(SecureBase, QueryMixin):
         )
 
 class UsersPasswords(SecureBase):
-    """Modèle pour les mots de passe des utilisateurs."""
+    """
+    Modèle pour les mots de passe des utilisateurs.
+    Contient les méthodes :
+        - __repr__ : Représentation textuelle du mot de passe.
+        - to_dict : Convertit l'objet UserPassword en dictionnaire.
+    """
     __tablename__ = 'users_passwords'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
@@ -72,48 +105,26 @@ class UsersPasswords(SecureBase):
     password_hash: Mapped[str] = mapped_column(String, nullable=False,
                                                comment="Hash du mot de passe de l'utilisateur")
     from_date: Mapped[datetime] = mapped_column(DateTime, nullable=False,
-                                              default=lambda: datetime.now(timezone.utc),
-                                              comment="Date de début de validité du mot de passe")
+                                                default=lambda: datetime.now(timezone.utc),
+                                                comment="Date de début de validité du mot de passe")
     to_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True,
                                                      comment="Date fin de validité du mot de passe")
+
+    # Relations
+    user = relationship("Users", back_populates="passwords")
 
     def __repr__(self) -> str:
         return f"<UserPassword(id={self.id}, user_id={self.user_id})>"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convertit l'objet UserPassword en dictionnaire."""
+        """
+        Convertit l'objet UserPassword en dictionnaire.
+        Returns:
+            Dict[str, Any]: Un dictionnaire représentant l'objet UserPassword.
+        """
         return {
             "id": self.id,
             "user_id": self.user_id,
             "from_date": self.from_date.isoformat() if self.from_date else None,
             "to_date": self.to_date.isoformat() if self.to_date else None
-        }
-
-class UsersSessions(SecureBase):
-    """Modèle pour les sessions des utilisateurs."""
-    __tablename__ = 'users_sessions'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
-                                    comment="Identifiant unique de la session")
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False,
-                                         comment="Identifiant de l'utilisateur associé")
-    session_token: Mapped[str] = mapped_column(String, nullable=False,
-                                               comment="Token de session de l'utilisateur")
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
-                                                 default=lambda: datetime.now(timezone.utc),
-                                                 comment="Date de création de la session")
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
-                                                 comment="Date d'expiration de la session")
-
-    def __repr__(self) -> str:
-        return f"<UserSession(id={self.id}, user_id={self.user_id})>"
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convertit l'objet UserSession en dictionnaire."""
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "session_token": self.session_token,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None
         }
