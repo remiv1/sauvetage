@@ -80,6 +80,15 @@ class UsersPasswords(SecureBase):
     def __repr__(self) -> str:
         return f"<UserPassword(id={self.id}, user_id={self.user_id})>"
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet UserPassword en dictionnaire."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "from_date": self.from_date.isoformat() if self.from_date else None,
+            "to_date": self.to_date.isoformat() if self.to_date else None
+        }
+
 class UsersSessions(SecureBase):
     """Modèle pour les sessions des utilisateurs."""
     __tablename__ = 'users_sessions'
@@ -98,3 +107,13 @@ class UsersSessions(SecureBase):
 
     def __repr__(self) -> str:
         return f"<UserSession(id={self.id}, user_id={self.user_id})>"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet UserSession en dictionnaire."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "session_token": self.session_token,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None
+        }
