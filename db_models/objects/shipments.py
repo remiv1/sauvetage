@@ -1,46 +1,39 @@
-"""Module de données pour les factures."""
+"""Modèle de données pour les envois."""
 
-from typing import Any
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
+from sqlalchemy import String, Integer, DateTime
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
-class Invoice(WorkingBase, QueryMixin):
-    """Modèle de données pour une facture."""
+CASCADE_OPTIONS = "all, delete-orphan"
 
-    __tablename__ = "invoices"
+class Shipment(WorkingBase, QueryMixin):
+    """Modèle de données pour un envoi."""
+
+    __tablename__ = "shipments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
-    order_id: Mapped[int] = mapped_column(Integer, ForeignKey("orders.id"), nullable=False)
-    total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False,
-                                                 comment="Montant total de la facture")
+    carrier: Mapped[str] = mapped_column(String(50), nullable=False)
+    tracking_number: Mapped[str] = mapped_column(String(50), nullable=True)
 
     # Metadonnées audit
     create_source: Mapped[str] = mapped_column(String(50), nullable=False,
-                                               comment="Source de la facture")
+                                               comment="Source de l'envoi")
     created_at: Mapped[datetime] = mapped_column(DateTime,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  nullable=False,
-                                                 comment="Date de création de la facture")
+                                                 comment="Date de création de l'envoi")
     update_source: Mapped[str] = mapped_column(String(50), nullable=False,
                                                comment="Source de la dernière mise à jour")
     updated_at: Mapped[datetime] = mapped_column(DateTime,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  onupdate=lambda: datetime.now(timezone.utc),
                                                  nullable=False,
-                                                 comment="Date dernière mise à jour de la facture")
+                                                 comment="Date dernière mise à jour de l'envoi")
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True,
                                                             comment="Dernière synchronisation")
 
     # Relations
-    order = relationship("Order", back_populates="invoices")
-    order_lines = relationship("OrderLine", back_populates="invoice")
-
-
-@event.listens_for(Invoice, "before_delete")
-def _prevent_invoice_delete(_mapper: Any, _connection: Any,    # type: ignore
-                            _target: "Invoice") -> None:
-    raise ValueError("Une suppression de facture est interdite.")
+    order_lines = relationship("OrderLine", back_populates="shipment")

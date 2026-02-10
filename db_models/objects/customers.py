@@ -55,6 +55,7 @@ class Customers(WorkingBase, QueryMixin):
     mails = relationship("CustomerMails", back_populates="customer", uselist=True)
     phones = relationship("CustomerPhones", back_populates="customer", uselist=True)
     sync_logs = relationship("CustomerSyncLog", back_populates="customer", uselist=True)
+    orders = relationship("Order", back_populates="customer", uselist=True)
 
     def __repr__(self) -> str:
         """
@@ -297,7 +298,8 @@ class CustomerMails(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant mail unique")
-    customer_id: Mapped[int] = mapped_column(Integer, nullable=False,
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK),
+                                             nullable=False,
                                              comment="Id client associé à ce mail")
 
     # Données d'e-mail
@@ -352,7 +354,8 @@ class CustomerPhones(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant téléphone unique")
-    customer_id: Mapped[int] = mapped_column(Integer, nullable=False,
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK),
+                                             nullable=False,
                                              comment="Id client associé à ce téléphone")
 
     # Données de téléphone
@@ -411,7 +414,8 @@ class CustomerSyncLog(WorkingBase):
     __tablename__ = "customer_sync_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    customer_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK),
+                                             nullable=False)
 
     # Synchronization details
     sync_source: Mapped[str] = mapped_column(String(50), nullable=False)  # wpwc, henrri
