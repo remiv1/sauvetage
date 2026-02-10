@@ -1,6 +1,6 @@
 """Module de données pour les factures."""
 
-from typing import Any
+from typing import Any, Dict
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
@@ -39,6 +39,29 @@ class Invoice(WorkingBase, QueryMixin):
     order = relationship("Order", back_populates="invoices")
     order_lines = relationship("OrderLine", back_populates="invoice")
 
+    def __repr__(self) -> str:
+        return f"<Invoice(id={self.id}, reference={self.reference}, " \
+               + f"total_amount={self.total_amount})>"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet Invoice en dictionnaire."""
+        return {
+            "id": self.id,
+            "reference": self.reference,
+            "order_id": self.order_id,
+            "total_amount": float(self.total_amount),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Invoice":
+        """Crée un objet Invoice à partir d'un dictionnaire."""
+        return cls(
+            reference=data.get("reference", ""),
+            order_id=data.get("order_id"),
+            total_amount=data.get("total_amount", 0.0)
+        )
 
 @event.listens_for(Invoice, "before_delete")
 def _prevent_invoice_delete(_mapper: Any, _connection: Any,    # type: ignore

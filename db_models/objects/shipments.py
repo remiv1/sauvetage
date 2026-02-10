@@ -1,5 +1,6 @@
 """Modèle de données pour les envois."""
 
+from typing import Any, Dict
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import String, Integer, DateTime
@@ -37,3 +38,27 @@ class Shipment(WorkingBase, QueryMixin):
 
     # Relations
     order_lines = relationship("OrderLine", back_populates="shipment")
+
+    def __repr__(self) -> str:
+        return f"<Shipment(id={self.id}, reference={self.reference}, carrier={self.carrier}, " \
+               f"tracking_number={self.tracking_number})>"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet Shipment en dictionnaire."""
+        return {
+            "id": self.id,
+            "reference": self.reference,
+            "carrier": self.carrier,
+            "tracking_number": self.tracking_number,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Shipment":
+        """Crée un objet Shipment à partir d'un dictionnaire."""
+        return cls(
+            reference=data.get("reference", ""),
+            carrier=data.get("carrier", ""),
+            tracking_number=data.get("tracking_number")
+        )

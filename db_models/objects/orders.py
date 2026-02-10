@@ -45,6 +45,33 @@ class Order(WorkingBase, QueryMixin):
     order_lines = relationship("OrderLine", back_populates="order", cascade="all, delete-orphan")
     invoices = relationship("Invoice", back_populates="order")
 
+    def __repr__(self) -> str:
+        return f"<Order(id={self.id}, reference={self.reference}, status={self.status})>"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet Order en dictionnaire."""
+        return {
+            "id": self.id,
+            "reference": self.reference,
+            "customer_id": self.customer_id,
+            "invoice_address_id": self.invoice_address_id,
+            "delivery_address_id": self.delivery_address_id,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Order":
+        """Crée un objet Order à partir d'un dictionnaire."""
+        return cls(
+            reference=data.get("reference", ""),
+            customer_id=data.get("customer_id"),
+            invoice_address_id=data.get("invoice_address_id"),
+            delivery_address_id=data.get("delivery_address_id"),
+            status=data.get("status", "")
+        )
+
 class OrderLine(WorkingBase, QueryMixin):
     """Modèle de données pour une ligne de commande."""
 
@@ -85,6 +112,38 @@ class OrderLine(WorkingBase, QueryMixin):
     invoice = relationship("Invoice", back_populates="order_lines")
     shipment = relationship("Shipment", back_populates="order_lines")
 
+    def __repr__(self) -> str:
+        return f"<OrderLine(id={self.id}, order_id={self.order_id}, " \
+               f"general_object_id={self.general_object_id}, quantity={self.quantity}, " \
+               f"unit_price={self.unit_price}, vat_rate={self.vat_rate})>"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet OrderLine en dictionnaire."""
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "invoice_id": self.invoice_id,
+            "shipment_id": self.shipment_id,
+            "general_object_id": self.general_object_id,
+            "quantity": self.quantity,
+            "unit_price": float(self.unit_price),
+            "vat_rate": float(self.vat_rate),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "OrderLine":
+        """Crée un objet OrderLine à partir d'un dictionnaire."""
+        return cls(
+            order_id=data.get("order_id"),
+            invoice_id=data.get("invoice_id"),
+            shipment_id=data.get("shipment_id"),
+            general_object_id=data.get("general_object_id"),
+            quantity=data.get("quantity", 0),
+            unit_price=data.get("unit_price", 0.0),
+            vat_rate=data.get("vat_rate", 0.0)
+        )
 
 @event.listens_for(OrderLine, "before_delete")
 def _prevent_invoiced_order_line_delete(_mapper: Any, _connection: Any, # type: ignore
