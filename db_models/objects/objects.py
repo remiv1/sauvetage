@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import Any, Dict
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, JSON, LargeBinary, Boolean
+from sqlalchemy import Integer, String, Numeric, DateTime, ForeignKey, JSON, LargeBinary, Boolean
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
@@ -25,7 +25,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
     ean13: Mapped[str] = mapped_column(String, comment="Code EAN13 de l'objet")
     name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom de l'objet")
     description: Mapped[str] = mapped_column(String, comment="Description de l'objet")
-    price: Mapped[float] = mapped_column(Float, nullable=False, comment="Prix de l'objet")
+    price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, comment="Prix de l'objet")
 
     # Méta-données de suivi
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
@@ -48,6 +48,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
     metadata = relationship("Metadatas", back_populates="general_object",
                             cascade=CASCADE_OPTIONS)
     object_tags = relationship("ObjectTags", back_populates="general_object",
+                               cascade=CASCADE_OPTIONS)
+    order_lines = relationship("OrderLine", back_populates="general_object",
                                cascade=CASCADE_OPTIONS)
 
     def __repr__(self) -> str:
@@ -112,7 +114,7 @@ class Books(WorkingBase, QueryMixin):
                                                  comment="Date de dernière mise à jour du livre")
 
     # Relations
-    general_object = relationship("GeneralObject", back_populates="book")
+    general_object = relationship("GeneralObjects", back_populates="books")
 
     def __repr__(self) -> str:
         return f"<Book(id={self.id})>"
@@ -166,7 +168,7 @@ class OtherObjects(WorkingBase, QueryMixin):
                                                  onupdate=lambda: datetime.now(timezone.utc),
                                                  comment="Date de dernière MàJ de l'objet autre")
     # Relations
-    general_object = relationship("GeneralObject", back_populates="other_objects")
+    general_object = relationship("GeneralObjects", back_populates="other_objects")
 
     def __repr__(self) -> str:
         return f"<OtherObject(id={self.id})>"
@@ -252,7 +254,7 @@ class ObjectTags(WorkingBase, QueryMixin):
                                                  comment="Date de dernière MàJ de l'association")
 
     # Relations
-    general_object = relationship("GeneralObject", back_populates="object_tags")
+    general_object = relationship("GeneralObjects", back_populates="object_tags")
     tag = relationship("Tags", back_populates="object_tags")
 
     def __repr__(self) -> str:
@@ -299,7 +301,7 @@ class Metadatas(WorkingBase, QueryMixin):
                                                  comment="Date de dernière MàJ de la métadonnée")
 
     # Relations
-    general_object = relationship("GeneralObject", back_populates="metadata")
+    general_object = relationship("GeneralObjects", back_populates="metadata")
     media_files = relationship("MediaFiles", back_populates="metadata", cascade=CASCADE_OPTIONS)
 
     def __repr__(self) -> str:

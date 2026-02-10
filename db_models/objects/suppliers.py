@@ -31,7 +31,7 @@ class Suppliers(WorkingBase):
                                                  comment="Date de dernière MàJ du fournisseur")
 
     # Relations
-    objects = relationship("GeneralObject", back_populates="supplier")
+    objects = relationship("GeneralObjects", back_populates="supplier")
 
     def __repr__(self) -> str:
         return f"<Supplier(id={self.id}, name={self.name}, contact_email={self.contact_email}, " \
