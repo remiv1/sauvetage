@@ -15,6 +15,20 @@
 -[X] Début de création des modèles de données SQLAlchemy pour les entités principales
 -[X] Création de la base d'initialisation Alembic pour migrations de schéma
 -[X] Création d'un conteneur pour la boutique en ligne (WordPress + WooCommerce) afin d'utiliser les API REST
+-[X] Refactorisation de `AuthService` pour utiliser Flask-Session avec PostgreSQL pour la gestion des sessions côté serveur
+-[X] Suppression du modèle `UsersSessions` et mise à jour des dépendances associées
+-[X] Ajout de la classe `PasswordHasher` pour le hachage et la vérification des mots de passe
+-[X] Implémentation de `UserService` pour la gestion des utilisateurs (création, activation, désactivation, permissions)
+-[X] Ajout de la classe `ObjectsRepository` avec des méthodes pour interagir avec les objets vendus par la librairie
+-[X] Création de nouveaux dépôts pour la gestion des utilisateurs, des fournisseurs, des expéditions et des commandes
+-[X] Ajout des services d'authentification et de gestion des utilisateurs
+-[X] Ajout des méthodes `to_dict` et `from_dict` pour les modèles Invoice, Order, OrderLine, Shipment, UsersPasswords et UsersSessions
+-[X] Ajout des modèles de données pour les commandes, factures, envois et utilisateurs, avec mise à jour des relations entre entités
+-[X] Ajout des modèles pour les mouvements d'inventaire et les fournisseurs
+-[X] Ajout de nouveaux modèles pour les clients, adresses, mails et téléphones, ainsi qu'une classe générique pour les méthodes communes
+-[X] Mise à jour de la documentation sur la gestion des stocks
+-[X] Ajout de la gestion des webhooks WooCommerce dans le README du proxy
+-[X] Ajout de la configuration Traefik avec PKI interne et scripts de génération de certificats
 
 ## 📊 Partie Vente (Dossier sales)
 
@@ -31,6 +45,6 @@
 
 ---
 
-**Dernière mise à jour** : 3 février 2026
+**Dernière mise à jour** : 10 février 2026
 
 > _Note : Cette roadmap est un document vivant et sera mise à jour régulièrement en fonction de l'avancement du projet et des priorités changeantes._
