@@ -37,6 +37,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                                  comment="Date de dernière mise à jour de l'objet")
     last_inventory_timestamp: Mapped[datetime] = mapped_column(DateTime,
                                                                comment="Dernier inventaire")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True,
+                                            comment="Indique si l'objet est actif pour la vente")
 
     # Relations
     supplier = relationship("Suppliers", back_populates="objects")
@@ -70,7 +72,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_inventory_timestamp": self.last_inventory_timestamp.isoformat() \
-                                        if self.last_inventory_timestamp else None
+                                        if self.last_inventory_timestamp else None,
+            "is_active": self.is_active
         }
 
     @classmethod
@@ -82,7 +85,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
             ean13=data.get("ean13"),
             name=data.get("name", ""),
             description=data.get("description"),
-            price=data.get("price", 0.0)
+            price=data.get("price", 0.0),
+            is_active=data.get("is_active", True)
         )
 
 class Books(WorkingBase, QueryMixin):
@@ -338,6 +342,7 @@ class MediaFiles(WorkingBase, QueryMixin):
     file_type: Mapped[str] = mapped_column(String, comment="Type du fichier média (ex: image/jpeg)")
     alt_text: Mapped[str] = mapped_column(String, comment="Texte alternatif pour le fichier média")
     file_data: Mapped[bytes] = mapped_column(LargeBinary, comment="Données brutes du fichier média")
+    file_link: Mapped[str] = mapped_column(String, comment="Lien vers le fichier média ext.")
 
     # Meta-données de suivi
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
