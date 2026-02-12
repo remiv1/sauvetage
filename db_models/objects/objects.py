@@ -9,7 +9,6 @@ from db_models.objects import QueryMixin
 
 CASCADE_OPTIONS = "all, delete-orphan"
 GENERAL_OBJECT_PK = "general_objects.id"
-METADATA_PK = "metadatas.id"
 
 class GeneralObjects(WorkingBase, QueryMixin):
     """Modèle pour les objets généraux mis en vente."""
@@ -335,7 +334,7 @@ class MediaFiles(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du fichier média")
-    metadata_id: Mapped[int] = mapped_column(Integer, ForeignKey(METADATA_PK),
+    general_object_id: Mapped[int] = mapped_column(Integer, ForeignKey(GENERAL_OBJECT_PK),
                                             nullable=False,
                                             comment="Identifiant de la métadonnée associée")
     file_name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom du fichier média")
