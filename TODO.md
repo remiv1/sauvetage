@@ -8,4 +8,5 @@
 - [x] Créer les objets Objets, Livres, Autres objets, etc.
 - [x] Créer les modèles de commandes clients et fournisseurs.
 - [x] Créer le modèle de factures clients.
+- [x] Comprendre la refactorisation proposée par copilot pour update_object.
 - [ ] Créer les repositories pour les inventaires, les factures et les objets.
