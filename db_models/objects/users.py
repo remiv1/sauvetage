@@ -6,7 +6,7 @@
 
 from typing import Dict, Any
 from datetime import datetime, timezone
-from sqlalchemy import Integer, String, Boolean, DateTime
+from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from db_models import SecureBase
 from db_models.objects import QueryMixin
@@ -75,19 +75,15 @@ class Users(SecureBase, QueryMixin):
             "username": self.username,
             "email": self.email,
             "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "nb_failed_logins": self.nb_failed_logins,
+            "is_locked": self.is_locked,
+            "permissions": self.permissions
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Users":
         """Crée un objet User à partir d'un dictionnaire."""
-        return cls(
-            username=data.get("username", ""),
-            email=data.get("email", ""),
-            is_active=data.get("is_active", True),
-            permissions=data.get("permissions", "")
-        )
+        return cls(**data)
 
 class UsersPasswords(SecureBase):
     """
@@ -100,7 +96,8 @@ class UsersPasswords(SecureBase):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du mot de passe")
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False,
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
+                                         nullable=False,
                                          comment="Identifiant de l'utilisateur associé")
     password_hash: Mapped[str] = mapped_column(String, nullable=False,
                                                comment="Hash du mot de passe de l'utilisateur")

@@ -9,4 +9,35 @@
 - [x] Créer les modèles de commandes clients et fournisseurs.
 - [x] Créer le modèle de factures clients.
 - [x] Comprendre la refactorisation proposée par copilot pour update_object.
-- [ ] Créer les repositories pour les inventaires, les factures et les objets.
+- [x] Créer les repositories pour les inventaires, les factures et les objets.
+- [ ] Créer la migration propre avec les modèles réalisés.
+- [ ] Création des test unitaires
+  - [ ] Pour les objets de la base de données.
+    - [ ] customers
+    - [ ] inventory
+    - [ ] invoices
+    - [ ] objects
+    - [ ] orders
+    - [ ] shipments
+    - [ ] suppliers
+  - [ ] Pour les repositories de la base de données.
+    - [ ] customers
+    - [ ] inventory
+    - [ ] invoices
+    - [ ] orders
+    - [ ] shipments
+    - [ ] suppliers
+    - [ ] tags
+    - [ ] user
+    - [ ] objects
+      - [ ] books
+      - [ ] media
+      - [ ] metadatas
+      - [ ] object_tags
+      - [ ] objects
+      - [ ] other_objects
+  - [ ] Pour la sécurité
+    - [ ] secur_sauv
+  - [ ] Pour les services
+    - [ ] auth
+    - [ ] user
