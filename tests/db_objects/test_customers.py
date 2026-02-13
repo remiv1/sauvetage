@@ -1,38 +1,50 @@
-from unittest.mock import Mock
-from mock.mock import Mock
+"""Test unitaire pour la classe Customers dans db_models.objects.customers."""
+
+from os.path import join, dirname, abspath
 import pytest
 import pandas as pd
-from pytest_mock import MockerFixture
 from db_models.objects.customers import Customers
 
+DATA_PATH = join(abspath(join(dirname(__file__), '..')), 'fake_datas')
+
 @pytest.fixture
-def customer_data() -> pd.DataFrame:
+def data_customer() -> pd.DataFrame:
     """Fixture pour créer un DataFrame de données de clients simulées."""
-    data = {
-        "wpwc_id": ["az974hdpr672oje39", "bzeof3972foej038éfiFJSIFOé&"],
-        "henrri_id": ["pzeof3972foej038éfiFJSIFOé&", "qzeof3972foej038éfiFJSIFOé&"],
-        "customer_type": ["pro", "particulier"],
-        "is_active": [True, False]
-    }
-    return pd.DataFrame(data)
+    print(f"Loading data from {join(DATA_PATH, 'customers/customers.csv')}")
+    df = pd.read_csv(join(DATA_PATH, 'customers/customers.csv'))  # type: ignore
+    df.columns = df.columns.str.strip()  # Supprime les espaces autour des noms de colonnes
+    return df
 
 @pytest.fixture
-def mock_session(mocker: MockerFixture) -> Mock:
-    """Fixture pour créer une session de base de données simulée."""
-    return mocker.Mock()
+def part_data() -> pd.DataFrame:
+    """Fixture pour créer un DataFrame de données de clients simulées."""
+    return pd.read_csv(join(DATA_PATH, 'customers/part.csv'))  # type: ignore
 
-def test_customer_to_dict() -> None:
-    """Test de la méthode to_dict de la classe Customers."""
+@pytest.fixture
+def pro_data() -> pd.DataFrame:
+    """Fixture pour créer un DataFrame de données de clients simulées."""
+    return pd.read_csv(join(DATA_PATH, 'customers/pro.csv'))   # type: ignore
+
+def test_customer_to_dict(customer_data: pd.DataFrame) -> None:
+    """Test de la méthode to_dict de la classe Customers avec des données issues de la fixture."""
+    # On récupère une ligne de données du DataFrame
+    customer_row = customer_data.iloc[0]
+
+    # Création de l'objet Customers à partir des données de la ligne
     customer = Customers(
-        wpwc_id="az974hdpr672oje39",
-        henrri_id="pzeof3972foej038éfiFJSIFOé&",
-        customer_type="pro",
-        is_active=True
+        wpwc_id=customer_row["wpwc_id"],
+        henrri_id=customer_row["henrri_id"],
+        customer_type=customer_row["customer_type"],
+        is_active=customer_row["is_active"]
     )
+
+    # Conversion de l'objet en dictionnaire
     customer_dict = customer.to_dict()
-    assert customer_dict["wpwc_id"] == "az974hdpr672oje39"
-    assert customer_dict["henrri_id"] == "pzeof3972foej038éfiFJSIFOé&"
-    assert customer_dict["customer_type"] == "pro"
-    assert customer_dict["is_active"] is True
+
+    # Vérifications des valeurs
+    assert customer_dict["wpwc_id"] == customer_row["wpwc_id"]
+    assert customer_dict["henrri_id"] == customer_row["henrri_id"]
+    assert customer_dict["customer_type"] == customer_row["customer_type"]
+    assert customer_dict["is_active"] == customer_row["is_active"]
     assert "created_at" not in customer_dict
     assert "updated_at" not in customer_dict

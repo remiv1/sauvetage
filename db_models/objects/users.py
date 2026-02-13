@@ -107,6 +107,15 @@ class UsersPasswords(SecureBase):
     to_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True,
                                                      comment="Date fin de validité du mot de passe")
 
+    # Méta-données de suivi
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
+                                        default=lambda: datetime.now(timezone.utc),
+                                        comment="Date de création du mot de passe")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 onupdate=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de dernière MàJ du mot de passe")
+
     # Relations
     user = relationship("Users", back_populates="passwords")
 
