@@ -3,7 +3,7 @@
 from typing import Any, Dict
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
+from sqlalchemy import String, Integer, DateTime, Numeric, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
@@ -14,9 +14,10 @@ class Invoice(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
-    order_id: Mapped[int] = mapped_column(Integer, ForeignKey("orders.id"), nullable=False)
     total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False,
                                                  comment="Montant total de la facture")
+    vat_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False,
+                                               comment="Montant de la TVA de la facture")
 
     # Metadonnées audit
     create_source: Mapped[str] = mapped_column(String(50), nullable=False,
@@ -25,12 +26,11 @@ class Invoice(WorkingBase, QueryMixin):
                                                  default=lambda: datetime.now(timezone.utc),
                                                  nullable=False,
                                                  comment="Date de création de la facture")
-    update_source: Mapped[str] = mapped_column(String(50), nullable=False,
+    update_source: Mapped[str] = mapped_column(String(50), nullable=True,
                                                comment="Source de la dernière mise à jour")
-    updated_at: Mapped[datetime] = mapped_column(DateTime,
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  onupdate=lambda: datetime.now(timezone.utc),
-                                                 nullable=False,
                                                  comment="Date dernière mise à jour de la facture")
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True,
                                                             comment="Dernière synchronisation")
@@ -47,7 +47,7 @@ class Invoice(WorkingBase, QueryMixin):
         return {
             "id": self.id,
             "reference": self.reference,
-            "order_id": self.order_id,
+            "order_lines": [ol.to_dict() for ol in self.order_lines] if self.order_lines else None,
             "total_amount": float(self.total_amount),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
@@ -56,11 +56,7 @@ class Invoice(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Invoice":
         """Crée un objet Invoice à partir d'un dictionnaire."""
-        return cls(
-            reference=data.get("reference", ""),
-            order_id=data.get("order_id"),
-            total_amount=data.get("total_amount", 0.0)
-        )
+        return cls(**data)
 
 @event.listens_for(Invoice, "before_delete")
 def _prevent_invoice_delete(_mapper: Any, _connection: Any,    # type: ignore

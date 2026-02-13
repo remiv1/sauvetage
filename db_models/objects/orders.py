@@ -28,7 +28,7 @@ class Order(WorkingBase, QueryMixin):
                                                  default=lambda: datetime.now(timezone.utc),
                                                  nullable=False,
                                                  comment="Date de création de la commande")
-    update_source: Mapped[str] = mapped_column(String(50), nullable=False,
+    update_source: Mapped[str] = mapped_column(String(50), nullable=True,
                                                comment="Source de la dernière mise à jour")
     updated_at: Mapped[datetime] = mapped_column(DateTime,
                                                  default=lambda: datetime.now(timezone.utc),
@@ -98,9 +98,9 @@ class OrderLine(WorkingBase, QueryMixin):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  comment="Date de création de la ligne de commande")
-    update_source: Mapped[str] = mapped_column(String(50), nullable=False,
+    update_source: Mapped[str] = mapped_column(String(50), nullable=True,
                                                comment="Source last MaJ de la ligne de commande")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  onupdate=lambda: datetime.now(timezone.utc),
                                                  comment="Date last MaJ de la ligne de commande")

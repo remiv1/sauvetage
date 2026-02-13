@@ -19,7 +19,7 @@ from db_models.objects.users import Users   # type: ignore # pylint: disable=unu
 @pytest.fixture(scope="session")
 def engine() -> Engine:
     """Crée un moteur SQLite en mémoire"""
-    return create_engine("sqlite:///tests/fake_datas/test_db.sqlite")
+    return create_engine("sqlite:///tests/fixtures/test_db.sqlite")
 
 @pytest.fixture(scope="function")
 def db_session(engine: Engine) -> Session:  # pylint: disable=redefined-outer-name # type: ignore
@@ -42,4 +42,4 @@ def db_session(engine: Engine) -> Session:  # pylint: disable=redefined-outer-na
 def cleanup_db():
     """Méthode de cleanup"""
     yield
-    os.remove("tests/fake_datas/test_db.sqlite")
+    os.remove("tests/fixtures/test_db.sqlite")
