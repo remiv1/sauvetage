@@ -36,7 +36,6 @@ class Invoice(WorkingBase, QueryMixin):
                                                             comment="Dernière synchronisation")
 
     # Relations
-    order = relationship("Order", back_populates="invoices")
     order_lines = relationship("OrderLine", back_populates="invoice")
 
     def __repr__(self) -> str:

@@ -1,50 +1,49 @@
 """Test unitaire pour la classe Customers dans db_models.objects.customers."""
 
-from os.path import join, dirname, abspath
-import pytest
-import pandas as pd
 from db_models.objects.customers import Customers
+from db_models.objects.orders import Order, OrderLine
+from db_models.objects.objects import GeneralObjects, Books, OtherObjects, MediaFiles, ObjMetadatas, Tags, ObjectTags
+from db_models.objects.shipments import Shipment
+from db_models.objects.inventory import InventoryMovements
+from db_models.objects.invoices import Invoice
+from db_models.objects.suppliers import Suppliers
+from db_models.objects.users import Users
+from tests.fake_datas.sqlite_fixture import db_session, engine
 
-DATA_PATH = join(abspath(join(dirname(__file__), '..')), 'fake_datas')
-
-@pytest.fixture
-def data_customer() -> pd.DataFrame:
-    """Fixture pour créer un DataFrame de données de clients simulées."""
-    print(f"Loading data from {join(DATA_PATH, 'customers/customers.csv')}")
-    df = pd.read_csv(join(DATA_PATH, 'customers/customers.csv'))  # type: ignore
-    df.columns = df.columns.str.strip()  # Supprime les espaces autour des noms de colonnes
-    return df
-
-@pytest.fixture
-def part_data() -> pd.DataFrame:
-    """Fixture pour créer un DataFrame de données de clients simulées."""
-    return pd.read_csv(join(DATA_PATH, 'customers/part.csv'))  # type: ignore
-
-@pytest.fixture
-def pro_data() -> pd.DataFrame:
-    """Fixture pour créer un DataFrame de données de clients simulées."""
-    return pd.read_csv(join(DATA_PATH, 'customers/pro.csv'))   # type: ignore
-
-def test_customer_to_dict(customer_data: pd.DataFrame) -> None:
+def test_customer_creation(db_session) -> None:
     """Test de la méthode to_dict de la classe Customers avec des données issues de la fixture."""
-    # On récupère une ligne de données du DataFrame
-    customer_row = customer_data.iloc[0]
+    customer = Customers(wpwc_id="1", henrri_id="2", customer_type="pro", is_active=True)
+    db_session.add(customer)
+    db_session.commit()
+    assert db_session.query(Customers).count() == 1
 
-    # Création de l'objet Customers à partir des données de la ligne
-    customer = Customers(
-        wpwc_id=customer_row["wpwc_id"],
-        henrri_id=customer_row["henrri_id"],
-        customer_type=customer_row["customer_type"],
-        is_active=customer_row["is_active"]
-    )
+def test_customer_read(db_session) -> None:
+    """Test pour vérifier que le client créé est bien retrouvé"""
+    customer = Customers(wpwc_id="1", henrri_id="2", customer_type="pro", is_active=True)
+    db_session.add(customer)
+    db_session.commit()
+    customer = db_session.query(Customers).where(Customers.id==1).first()
+    new_customer = Customers(wpwc_id="ojg54561", henrri_id="oe65v06b5g106e", customer_type="part")
+    db_session.add(new_customer)
+    db_session.commit()
 
-    # Conversion de l'objet en dictionnaire
-    customer_dict = customer.to_dict()
+    assert customer.id == 1
+    assert customer.customer_type == 'pro'
+    assert customer.is_active == True
 
-    # Vérifications des valeurs
-    assert customer_dict["wpwc_id"] == customer_row["wpwc_id"]
-    assert customer_dict["henrri_id"] == customer_row["henrri_id"]
-    assert customer_dict["customer_type"] == customer_row["customer_type"]
-    assert customer_dict["is_active"] == customer_row["is_active"]
-    assert "created_at" not in customer_dict
-    assert "updated_at" not in customer_dict
+def test_new_customer_write(db_session) -> None:
+    """test de lecture du client rentré précédemment et de modification"""
+    customer = Customers(wpwc_id="1", henrri_id="2", customer_type="pro", is_active=True)
+    db_session.add(customer)
+    db_session.commit()
+    customer = db_session.query(Customers).where(Customers.id==1).first()
+    new_customer = Customers(wpwc_id="ojg54561", henrri_id="oe65v06b5g106e", customer_type="part")
+    db_session.add(new_customer)
+    db_session.commit()
+    customer = db_session.query(Customers).where(Customers.id==2).first()
+    customer.is_active = False
+    db_session.add(customer)
+    db_session.commit()
+    customer = db_session.query(Customers).where(Customers.id==2).first()
+    assert customer.is_active == False
+    assert customer.customer_type == 'part'

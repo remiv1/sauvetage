@@ -46,9 +46,11 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                  cascade=CASCADE_OPTIONS)
     inventory_movements = relationship("InventoryMovements", back_populates="general_object",
                                     cascade=CASCADE_OPTIONS)
-    metadata = relationship("Metadatas", back_populates="general_object",
+    obj_metadata = relationship("ObjMetadatas", back_populates="general_object",
                             cascade=CASCADE_OPTIONS)
     object_tags = relationship("ObjectTags", back_populates="general_object",
+                               cascade=CASCADE_OPTIONS)
+    media_files = relationship("MediaFiles", back_populates="general_object",
                                cascade=CASCADE_OPTIONS)
     order_lines = relationship("OrderLine", back_populates="general_object",
                                cascade=CASCADE_OPTIONS)
@@ -282,9 +284,9 @@ class ObjectTags(WorkingBase, QueryMixin):
             tag_id=data.get("tag_id")
         )
 
-class Metadatas(WorkingBase, QueryMixin):
+class ObjMetadatas(WorkingBase, QueryMixin):
     """Modèle pour les métadonnées associées aux objets."""
-    __tablename__ = 'metadatas'
+    __tablename__ = 'obj_metadatas'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de la métadonnée")
@@ -304,14 +306,13 @@ class Metadatas(WorkingBase, QueryMixin):
                                                  comment="Date de dernière MàJ de la métadonnée")
 
     # Relations
-    general_object = relationship("GeneralObjects", back_populates="metadata")
-    media_files = relationship("MediaFiles", back_populates="metadata", cascade=CASCADE_OPTIONS)
+    general_object = relationship("GeneralObjects", back_populates="obj_metadata")
 
     def __repr__(self) -> str:
-        return f"<Metadata(id={self.id}, general_object_id={self.general_object_id})>"
+        return f"<ObjMetadata(id={self.id}, general_object_id={self.general_object_id})>"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convertit l'objet Metadata en dictionnaire."""
+        """Convertit l'objet ObjMetadata en dictionnaire."""
         return {
             "id": self.id,
             "general_object_id": self.general_object_id,
@@ -321,8 +322,8 @@ class Metadatas(WorkingBase, QueryMixin):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Metadatas":
-        """Crée un objet Metadata à partir d'un dictionnaire."""
+    def from_dict(cls, data: Dict[str, Any]) -> "ObjMetadatas":
+        """Crée un objet ObjMetadata à partir d'un dictionnaire."""
         return cls(
             general_object_id=data.get("general_object_id"),
             semistructured_data=data.get("semistructured_data")
@@ -351,4 +352,4 @@ class MediaFiles(WorkingBase, QueryMixin):
                                             comment="Indique si c'est l'image principale")
 
     # Relations
-    metadata = relationship("Metadatas", back_populates="media_files")
+    general_object = relationship("GeneralObjects", back_populates="media_files")

@@ -10,9 +10,9 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects.objects import (
-    GeneralObjects, Books, OtherObjects, ObjectTags, Metadatas, MediaFiles)
+    GeneralObjects, Books, OtherObjects, ObjectTags, ObjMetadatas, MediaFiles)
 from db_models.repositories.objects import (BooksRepository, OtherObjectsRepository,
-                                            MetadatasRepository, ObjectTagsRepository,
+                                            ObjMetadatasRepository, ObjectTagsRepository,
                                             MediaRepository)
 
 class ObjectsRepository(BaseRepository):
@@ -24,7 +24,7 @@ class ObjectsRepository(BaseRepository):
     - create : pour créer un nouvel objet.
     - update : pour mettre à jour un objet existant.
     - update_complete : pour mettre à jour un objet avec tous ses éléments liés
-                        (books, other_objects, metadata, object_tags, media).
+                        (books, other_objects, obj_metadata, object_tags, media).
     - delete : pour supprimer un objet (soft delete).
     """
     def __init__(self, *args: Any, **kwargs: str) -> None:
@@ -34,7 +34,7 @@ class ObjectsRepository(BaseRepository):
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
         self.book_repo = BooksRepository(self.session)
         self.other_object_repo = OtherObjectsRepository(self.session)
-        self.metadata_repo = MetadatasRepository(self.session)
+        self.obj_metadata_repo = ObjMetadatasRepository(self.session)
         self.object_tags_repo = ObjectTagsRepository(self.session)
         self.media_repo = MediaRepository(self.session)
 
@@ -45,13 +45,13 @@ class ObjectsRepository(BaseRepository):
                          joinedload(self.model.books),
                          joinedload(self.model.other_objects),
                          joinedload(self.model.inventory_movements),
-                         joinedload(self.model.metadata),
+                         joinedload(self.model.obj_metadata),
                          joinedload(self.model.object_tags)))
 
     def get_all(self) -> Sequence["GeneralObjects"]:
         """
         Récupère tous les objets actifs avec tous les éléments liés :
-        (supplier, books, other_objects, inventory_movements, metadata, object_tags).
+        (supplier, books, other_objects, inventory_movements, obj_metadata, object_tags).
         Returns:
             List[GeneralObjects]: Une liste de tous les objets actifs avec leurs éléments liés.
         """
@@ -91,11 +91,11 @@ class ObjectsRepository(BaseRepository):
                                book: Optional[Books]=None,
                                other_object: Optional[OtherObjects]=None,
                                object_tags: Optional[List[ObjectTags]]=None,
-                               metadata: Optional[List[Metadatas]]=None,
+                               obj_metadata: Optional[List[ObjMetadatas]]=None,
                                media: Optional[List[MediaFiles]]=None) -> GeneralObjects:
         """
         Crée un nouvel objet avec tous ses éléments liés
-        (books, other_objects, metadata, object_tags, media).
+        (books, other_objects, obj_metadata, object_tags, media).
         """
         try:
             if book:
@@ -107,10 +107,10 @@ class ObjectsRepository(BaseRepository):
                 for ot in object_tags:
                     ot.general_object_id = general_object.id
                 self.object_tags_repo.create_list([ot.to_dict() for ot in object_tags])
-            if metadata:
-                for m in metadata:
+            if obj_metadata:
+                for m in obj_metadata:
                     m.general_object_id = general_object.id
-                self.metadata_repo.create_list([m.to_dict() for m in metadata])
+                self.obj_metadata_repo.create_list([m.to_dict() for m in obj_metadata])
             if media:
                 for m in media:
                     m.general_object_id = general_object.id
@@ -146,7 +146,7 @@ class ObjectsRepository(BaseRepository):
                 "general": {"name": "Nouveau titre", "price": 12.9},
                 "book": {"author": "X", "pages": 320},
                 "other_object": {"some_field": "val"},
-                "metadata": {"semistructured_data": {...}},
+                "obj_metadata": {"semistructured_data": {...}},
                 "object_tags": ["tag1", "tag2"],
                 "media": [
                     {"metadata_id": 1, "file_name": "cover.jpg", "is_principal": True},
@@ -166,9 +166,9 @@ class ObjectsRepository(BaseRepository):
         if "other_object" in update_payload:
             self.other_object_repo.update(update_payload["other_object"],
                                           other_object=general_object.other_objects)
-        if "metadata" in update_payload:
-            self.metadata_repo.update_list([update_payload["metadata"]],
-                                           metadatas=general_object.metadata)
+        if "obj_metadata" in update_payload:
+            self.obj_metadata_repo.update_list([update_payload["obj_metadata"]],
+                                           obj_metadatas=general_object.obj_metadata)
         if "object_tags" in update_payload:
             self.object_tags_repo.update_list(update_payload["object_tags"],
                                               object_tags=general_object.object_tags)

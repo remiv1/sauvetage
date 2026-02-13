@@ -51,7 +51,7 @@ erDiagram
         int general_object_id FK
         int tag_id FK
     }
-    Metadata {
+    ObjMetadata {
         int id PK
         int general_object_id FK
         json semistructured_data
@@ -69,8 +69,8 @@ erDiagram
     GeneralObjects ||--o{ Books : "may be a"
     GeneralObjects ||--o{ OtherObjects : "may be a"
     GeneralObjects ||--o{ InventoryMovements : "has movements"
-    GeneralObjects ||--o{ Metadata : "has metadata"
-    MediaFiles ||--o| Metadata : "may be linked to"
+    GeneralObjects ||--o{ ObjMetadata : "has obj_metadata"
+    MediaFiles ||--o| ObjMetadata : "may be linked to"
     GeneralObjects ||--o{ ObjectTags : "has tags"
     Tags ||--o{ ObjectTags : "is assigned to"
 ```
