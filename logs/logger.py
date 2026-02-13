@@ -60,7 +60,7 @@ class MongoDBLogger:
     def log(self, *, level: str, message: str, log_type: str = 'logs',
             user_id: Optional[str] = None, action: Optional[str] = None,
             resource_type: Optional[str] = None, resource_id: Optional[str] = None,
-            metadata: Optional[Dict[str, Any]] = None, ip_address: Optional[str] = None) -> str:
+            obj_metadata: Optional[Dict[str, Any]] = None, ip_address: Optional[str] = None) -> str:
         """Enregistrer un log dans MongoDB"""
 
         if level not in self.levels:
@@ -79,7 +79,7 @@ class MongoDBLogger:
             'action': action,
             'resource_type': resource_type,
             'resource_id': resource_id,
-            'metadata': metadata or {},
+            'obj_metadata': obj_metadata or {},
             'ip_address': ip_address
         }
 
@@ -93,29 +93,30 @@ class MongoDBLogger:
 
     def log_user_action(self, *, user_id: str, action: str, resource_type: Optional[str] = None,
                         resource_id: Optional[str] = None,
-                        metadata: Optional[Dict[str, Any]] = None, ip_address: Optional[str] = None
-                        ) -> str:
+                        obj_metadata: Optional[Dict[str, Any]] = None,
+                        ip_address: Optional[str] = None) -> str:
         """Enregistrer une action utilisateur"""
         return self.log(level=self.levels[1], message=f"Utilisateur {user_id} a effectué: {action}",
                         log_type=self.log_types[0], user_id=user_id, action=action,
-                        resource_type=resource_type, resource_id=resource_id, metadata=metadata,
-                        ip_address=ip_address)
+                        resource_type=resource_type, resource_id=resource_id,
+                        obj_metadata=obj_metadata, ip_address=ip_address)
 
     def log_client_event(self, *, client_id: str, event: str,
-                         metadata: Optional[Dict[str, Any]] = None) -> str:
+                         obj_metadata: Optional[Dict[str, Any]] = None) -> str:
         """Enregistrer un événement client"""
         return self.log(level=self.levels[1], message=f"Événement client {client_id}: {event}",
                         log_type=self.log_types[2], resource_type='client', resource_id=client_id,
-                        metadata=metadata)
+                        obj_metadata=obj_metadata)
 
     def log_error(self, *, message: str, exception: Optional[Exception] = None,
-                  user_id: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> str:
+                  user_id: Optional[str] = None,
+                  obj_metadata: Optional[Dict[str, Any]] = None) -> str:
         """Enregistrer une erreur"""
         if exception:
             message = f"{message} - {str(exception)}"
 
         return self.log(level=self.levels[3], message=message, log_type=self.log_types[1],
-                        user_id=user_id, metadata=metadata)
+                        user_id=user_id, obj_metadata=obj_metadata)
 
     def search_logs(self, *, log_type: str = 'logs', level: Optional[str] = None,
                     user_id: Optional[str] = None, limit: int = 100) -> List[Any]:
