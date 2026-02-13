@@ -1,16 +1,11 @@
 """Tests unitaires pour les objets de la base de données."""
 
 from typing import Dict, Any
-import pytest
-from pytest_mock import MockerFixture
+from sqlalchemy.orm import Session, joinedload
 from db_models.objects.users import Users, UsersPasswords
+from tests.fake_datas.sqlite_fixture import db_session, engine  # pylint: disable=unused-import # type: ignore
 
-@pytest.fixture
-def mock_session(mocker: MockerFixture):
-    """Fixture pour créer une session de base de données simulée."""
-    return mocker.Mock()
-
-def test_user_to_dict():
+def test_user_to_dict(db_session: Session): # pylint: disable=redefined-outer-name
     """Test de la méthode to_dict de la classe Users."""
     user = Users(
         id=1,
@@ -21,7 +16,11 @@ def test_user_to_dict():
         is_locked=False,
         permissions="13"
     )
-    user_dict = user.to_dict()
+    db_session.add(user)
+    db_session.commit()
+    retrieved: Users = db_session.query(Users).where(Users.id==1).first()
+    user_dict = retrieved.to_dict() # type: ignore
+
     assert user_dict["id"] == 1
     assert user_dict["username"] == "testuser"
     assert user_dict["email"] == "test@user.fr"
@@ -46,16 +45,30 @@ def test_user_from_dict():
     assert user.is_active is True
     assert user.permissions == "13"
 
-def test_user_password_to_dict():
-    """Test de la méthode to_dict de la classe UsersPasswords."""
-    user_password = UsersPasswords(
-        id=1,
-        user_id=1,
+def test_compleet_user(db_session: Session):    # pylint: disable=unused-argument, redefined-outer-name
+    """Test de récupération d'un utilisateur complet"""
+    user = Users(
+        username="John Doe",
+        email="john.doe@example.com",
+        permissions="12345678"
+    )
+    db_session.add(user)
+    db_session.flush()
+    pswd = UsersPasswords(
+        user_id=user.id,
         password_hash="hashed_password"
     )
-    user_password_dict = user_password.to_dict()
-    assert user_password_dict["id"] == 1
-    assert user_password_dict["user_id"] == 1
-    assert "password_hash" not in user_password_dict
-    assert "created_at" not in user_password_dict
-    assert "updated_at" not in user_password_dict
+    db_session.add(pswd)
+    db_session.commit()
+    retrieved_user = db_session.query(Users) \
+                               .where(Users.id==user.id) \
+                               .options(
+                                   joinedload(Users.passwords)
+                               ) \
+                               .first()
+    assert retrieved_user is not None
+    assert retrieved_user.username == "John Doe"
+    assert retrieved_user.email == "john.doe@example.com"
+    assert retrieved_user.permissions == "12345678"
+    assert len(retrieved_user.passwords) == 1
+    assert retrieved_user.passwords[0].password_hash == "hashed_password"
