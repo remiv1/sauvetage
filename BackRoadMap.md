@@ -29,6 +29,11 @@
 -[X] Mise à jour de la documentation sur la gestion des stocks
 -[X] Ajout de la gestion des webhooks WooCommerce dans le README du proxy
 -[X] Ajout de la configuration Traefik avec PKI interne et scripts de génération de certificats
+-[X] Création d'un système de fixtures pytest robuste avec `conftest.py` pour enregistrement global des fixtures
+-[X] Correction et amélioration des fixtures pour les commandes, factures et envois
+-[X] Mise en place d'une structure de test robuste avec gestion correcte des dépendances entre fixtures
+-[X] Tests avec création d'une base SQLite en mémoire pour les tests unitaires et nettoyage par une méthode de cleanup à la fin des tests
+-[X] Validation complète de la suite de tests (7 tests passants)
 
 ## 📊 Partie Vente (Dossier sales)
 
@@ -45,6 +50,6 @@
 
 ---
 
-**Dernière mise à jour** : 10 février 2026
+**Dernière mise à jour** : 13 février 2026
 
 > _Note : Cette roadmap est un document vivant et sera mise à jour régulièrement en fonction de l'avancement du projet et des priorités changeantes._

@@ -7,10 +7,10 @@ RUN apk add --no-cache gettext
 WORKDIR /docker-entrypoint-initdb.d
 
 # Copier le script de génération et les templates
-COPY init/00_generate_models.sh .
-COPY init/*.sql.pattern .
-COPY init/*.sql .
-COPY .env.db_main ../.env
+COPY ./init/00_generate_models.sh .
+COPY ./init/*.sql.pattern .
+COPY ./init/*.sql .
+COPY ./.env.db_main ../.env
 
 # Exécuter le script de génération avant le démarrage
 RUN chmod +x 00_generate_models.sh && \
