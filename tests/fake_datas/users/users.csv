@@ -1,4 +1,0 @@
-id, username, email, is_active, nb_failed_logins, is_locked, permissions, created_at, updated_at
-1, johndoe, john@doe.fr, True, 0, False, admin, 2024-01-01 12:00:00, 2024-01-01 12:00:00
-2, janedoe, jane@doe.fr, True, 1, False, user, 2024-01-02 12:00:00, 2024-01-02 12:00:00
-3, bobsmith, bob@smith.fr, False, 3, True, user, 2024-01-03 12:00:00, 2024-01-03 12:00:00
