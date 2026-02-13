@@ -4,19 +4,19 @@ FROM docker.io/library/traefik:v3.6.7
 RUN apk add --no-cache openssl bash
 
 # Copier les scripts
-COPY scripts/init-pki.sh /usr/local/bin/
-COPY scripts/generate-certs.sh /usr/local/bin/
-COPY scripts/entrypoint.sh /usr/local/bin/
+COPY ./scripts/init-pki.sh /usr/local/bin/
+COPY ./scripts/generate-certs.sh /usr/local/bin/
+COPY ./scripts/entrypoint.sh /usr/local/bin/
 
 # Rendre les scripts exécutables
 RUN chmod +x /usr/local/bin/*.sh
 
 # Copier la configuration Traefik (avec permissions lisibles)
-COPY traefik.yml /etc/traefik/traefik.yml
+COPY ./traefik.yml /etc/traefik/traefik.yml
 RUN chmod 644 /etc/traefik/traefik.yml
 
 # Copier les fichiers dynamiques
-COPY dynamic/ /etc/traefik/dynamic/
+COPY ./dynamic/ /etc/traefik/dynamic/
 RUN chmod -R 644 /etc/traefik/dynamic/
 
 # Volume pour persister la PKI entre redémarrages

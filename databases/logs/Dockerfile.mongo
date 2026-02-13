@@ -1,4 +1,4 @@
-FROM mongo:8.2-alpine
+FROM mongo:8.2-noble
 
 # Installer des outils supplémentaires
 RUN apk add --no-cache bash
@@ -7,10 +7,10 @@ RUN apk add --no-cache bash
 WORKDIR /docker-entrypoint-initdb.d
 
 # Copier les scripts d'initialisation
-COPY init/00_generate_config.sh .
-COPY init/*.js.pattern .
-COPY init/mongod.conf ../mongod.conf
-COPY .env.db_logs ../.env
+COPY ./init/00_generate_config.sh .
+COPY ./init/*.js.pattern .
+COPY ./init/mongod.conf ../mongod.conf
+COPY ./.env.db_logs ../.env
 
 # Rendre les scripts exécutables
 RUN chmod +x 00_generate_config.sh \

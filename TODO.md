@@ -10,16 +10,17 @@
 - [x] Créer le modèle de factures clients.
 - [x] Comprendre la refactorisation proposée par copilot pour update_object.
 - [x] Créer les repositories pour les inventaires, les factures et les objets.
+- [ ] Premier build du compose
 - [ ] Créer la migration propre avec les modèles réalisés.
 - [ ] Création des test unitaires
-  - [ ] Pour les objets de la base de données.
-    - [ ] customers
-    - [ ] inventory
-    - [ ] invoices
-    - [ ] objects
-    - [ ] orders
-    - [ ] shipments
-    - [ ] suppliers
+  - [x] Pour les objets de la base de données.
+    - [x] customers
+    - [x] inventory
+    - [x] invoices
+    - [x] objects
+    - [x] orders
+    - [x] shipments
+    - [x] suppliers
   - [ ] Pour les repositories de la base de données.
     - [ ] customers
     - [ ] inventory
