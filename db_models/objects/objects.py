@@ -28,26 +28,29 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
     # Méta-données de suivi
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
-                                        default=lambda: datetime.now(timezone.utc),
-                                        comment="Date de création de l'objet")
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 comment="Date de création de l'objet")
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
                                                  default=lambda: datetime.now(timezone.utc),
                                                  onupdate=lambda: datetime.now(timezone.utc),
                                                  comment="Date de dernière mise à jour de l'objet")
-    last_inventory_timestamp: Mapped[datetime] = mapped_column(DateTime,
-                                                               comment="Dernier inventaire")
+    last_inventory_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False,
+                                                 default=lambda: datetime.now(timezone.utc),
+                                                 onupdate=lambda: datetime.now(timezone.utc),
+                                                 comment="Dernier inventaire")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True,
                                             comment="Indique si l'objet est actif pour la vente")
 
     # Relations
     supplier = relationship("Suppliers", back_populates="objects")
-    books = relationship("Books", back_populates="general_object", cascade=CASCADE_OPTIONS)
-    other_objects = relationship("OtherObjects", back_populates="general_object",
-                                 cascade=CASCADE_OPTIONS)
+    book = relationship("Books", uselist=False, back_populates="general_object",
+                        cascade=CASCADE_OPTIONS)
+    other_object = relationship("OtherObjects", uselist=False, back_populates="general_object",
+                                cascade=CASCADE_OPTIONS)
     inventory_movements = relationship("InventoryMovements", back_populates="general_object",
-                                    cascade=CASCADE_OPTIONS)
-    obj_metadata = relationship("ObjMetadatas", back_populates="general_object",
-                            cascade=CASCADE_OPTIONS)
+                                       cascade=CASCADE_OPTIONS)
+    obj_metadatas = relationship("ObjMetadatas", back_populates="general_object",
+                                 cascade=CASCADE_OPTIONS)
     object_tags = relationship("ObjectTags", back_populates="general_object",
                                cascade=CASCADE_OPTIONS)
     media_files = relationship("MediaFiles", back_populates="general_object",
@@ -80,15 +83,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GeneralObjects":
         """Crée un objet GeneralObject à partir d'un dictionnaire."""
-        return cls(
-            supplier_id=data.get("supplier_id", 0),
-            general_object_type=data.get("general_object_type", ""),
-            ean13=data.get("ean13"),
-            name=data.get("name", ""),
-            description=data.get("description"),
-            price=data.get("price", 0.0),
-            is_active=data.get("is_active", True)
-        )
+        return cls(**data)
 
 class Books(WorkingBase, QueryMixin):
     """Modèle pour les livres mis en vente."""
@@ -119,7 +114,7 @@ class Books(WorkingBase, QueryMixin):
                                                  comment="Date de dernière mise à jour du livre")
 
     # Relations
-    general_object = relationship("GeneralObjects", back_populates="books")
+    general_object = relationship("GeneralObjects", back_populates="book")
 
     def __repr__(self) -> str:
         return f"<Book(id={self.id})>"
@@ -143,16 +138,7 @@ class Books(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Books":
         """Crée un objet Book à partir d'un dictionnaire."""
-        return cls(
-            general_object_id=data.get("general_object_id", 0),
-            author=data.get("author"),
-            publisher=data.get("publisher"),
-            diffuser=data.get("diffuser"),
-            editor=data.get("editor"),
-            genre=data.get("genre"),
-            publication_year=data.get("publication_year"),
-            pages=data.get("pages")
-        )
+        return cls(**data)
 
 class OtherObjects(WorkingBase, QueryMixin):
     """Modèle pour les autres objets mis en vente."""
@@ -173,7 +159,7 @@ class OtherObjects(WorkingBase, QueryMixin):
                                                  onupdate=lambda: datetime.now(timezone.utc),
                                                  comment="Date de dernière MàJ de l'objet autre")
     # Relations
-    general_object = relationship("GeneralObjects", back_populates="other_objects")
+    general_object = relationship("GeneralObjects", back_populates="other_object")
 
     def __repr__(self) -> str:
         return f"<OtherObject(id={self.id})>"
@@ -190,9 +176,7 @@ class OtherObjects(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "OtherObjects":
         """Crée un objet OtherObject à partir d'un dictionnaire."""
-        return cls(
-            general_object_id=data.get("general_object_id", 0)
-        )
+        return cls(**data)
 
 class Tags(WorkingBase, QueryMixin):
     """Modèle pour les tags associés aux objets."""
@@ -232,10 +216,7 @@ class Tags(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Tags":
         """Crée un objet Tag à partir d'un dictionnaire."""
-        return cls(
-            name=data.get("name", ""),
-            description=data.get("description")
-        )
+        return cls(**data)
 
 class ObjectTags(WorkingBase, QueryMixin):
     """Modèle pour l'association entre les objets et les tags."""
@@ -279,10 +260,7 @@ class ObjectTags(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjectTags":
         """Crée un objet ObjectTag à partir d'un dictionnaire."""
-        return cls(
-            general_object_id=data.get("general_object_id"),
-            tag_id=data.get("tag_id")
-        )
+        return cls(**data)
 
 class ObjMetadatas(WorkingBase, QueryMixin):
     """Modèle pour les métadonnées associées aux objets."""
@@ -306,7 +284,7 @@ class ObjMetadatas(WorkingBase, QueryMixin):
                                                  comment="Date de dernière MàJ de la métadonnée")
 
     # Relations
-    general_object = relationship("GeneralObjects", back_populates="obj_metadata")
+    general_object = relationship("GeneralObjects", back_populates="obj_metadatas")
 
     def __repr__(self) -> str:
         return f"<ObjMetadata(id={self.id}, general_object_id={self.general_object_id})>"
@@ -324,10 +302,7 @@ class ObjMetadatas(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjMetadatas":
         """Crée un objet ObjMetadata à partir d'un dictionnaire."""
-        return cls(
-            general_object_id=data.get("general_object_id"),
-            semistructured_data=data.get("semistructured_data")
-        )
+        return cls(**data)
 
 class MediaFiles(WorkingBase, QueryMixin):
     """Modèle pour les fichiers médias associés aux métadonnées."""
@@ -339,10 +314,14 @@ class MediaFiles(WorkingBase, QueryMixin):
                                             nullable=False,
                                             comment="Identifiant de la métadonnée associée")
     file_name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom du fichier média")
-    file_type: Mapped[str] = mapped_column(String, comment="Type du fichier média (ex: image/jpeg)")
-    alt_text: Mapped[str] = mapped_column(String, comment="Texte alternatif pour le fichier média")
-    file_data: Mapped[bytes] = mapped_column(LargeBinary, comment="Données brutes du fichier média")
-    file_link: Mapped[str] = mapped_column(String, comment="Lien vers le fichier média ext.")
+    file_type: Mapped[str] = mapped_column(String, nullable=False,
+                                           comment="Type du fichier média (ex: image/jpeg)")
+    alt_text: Mapped[str] = mapped_column(String, nullable=False,
+                                          comment="Texte alternatif pour le fichier média")
+    file_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=True,
+                                             comment="Données brutes du fichier média")
+    file_link: Mapped[str] = mapped_column(String, nullable=True,
+                                           comment="Lien vers le fichier média ext.")
 
     # Meta-données de suivi
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
@@ -353,3 +332,25 @@ class MediaFiles(WorkingBase, QueryMixin):
 
     # Relations
     general_object = relationship("GeneralObjects", back_populates="media_files")
+
+    def __repr__(self) -> str:
+        return f"<MediaFile(id={self.id}, general_object_id={self.general_object_id}, " \
+               f"file_name={self.file_name})>"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet MediaFile en dictionnaire."""
+        return {
+            "id": self.id,
+            "general_object_id": self.general_object_id,
+            "file_name": self.file_name,
+            "file_type": self.file_type,
+            "alt_text": self.alt_text,
+            "file_link": self.file_link,
+            "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
+            "is_principal": self.is_principal
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MediaFiles":
+        """Crée un objet MediaFile à partir d'un dictionnaire."""
+        return cls(**data)

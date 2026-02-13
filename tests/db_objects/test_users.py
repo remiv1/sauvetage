@@ -3,7 +3,6 @@
 from typing import Dict, Any
 from sqlalchemy.orm import Session, joinedload
 from db_models.objects.users import Users, UsersPasswords
-from tests.fake_datas.sqlite_fixture import db_session, engine  # pylint: disable=unused-import # type: ignore
 
 def test_user_to_dict(db_session: Session): # pylint: disable=redefined-outer-name
     """Test de la méthode to_dict de la classe Users."""
