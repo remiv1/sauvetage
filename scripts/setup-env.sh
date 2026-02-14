@@ -21,7 +21,7 @@ cd "$PROJECT_ROOT"
 
 # Fonction pour générer un mot de passe sécurisé
 generate_password() {
-    openssl rand -base64 32
+    openssl rand -base64 32 | tr -d '='
 }
 
 # Fonction pour demander une valeur avec défault
@@ -62,13 +62,14 @@ prompt_yesno() {
 # ============================================================================
 # ÉTAPE 1 : PostgreSQL
 # ============================================================================
-echo -e "${BLUE}[1/5] Configuration PostgreSQL${NC}"
+echo -e "${BLUE}[1/6] Configuration PostgreSQL${NC}"
 echo ""
 
 echo -e "${YELLOW}Génération de mots de passe sécurisés...${NC}"
 PG_ROOT_PASSWORD=$(generate_password)
 PG_APP_PASSWORD=$(generate_password)
 PG_SECURE_PASSWORD=$(generate_password)
+PG_MIGR_PASSWORD=$(generate_password)
 
 echo -e "${GREEN}✓ Mots de passe générés${NC}"
 echo ""
@@ -89,6 +90,9 @@ POSTGRES_PASSWORD_APP=${PG_APP_PASSWORD}
 POSTGRES_USER_SECURE=secure
 POSTGRES_PASSWORD_SECURE=${PG_SECURE_PASSWORD}
 
+POSTGRES_USER_MIGR=migr
+POSTGRES_PASSWORD_MIGR=${PG_MIGR_PASSWORD}
+
 # Host et port
 POSTGRES_HOST=db-main
 POSTGRES_PORT=5432
@@ -107,9 +111,43 @@ chmod 600 "databases/main/.env.db_main"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
 # ============================================================================
-# ÉTAPE 2 : MongoDB
+# ÉTAPE 2 : Alembic Migrations
 # ============================================================================
-echo -e "${BLUE}[2/5] Configuration MongoDB${NC}"
+
+echo -e "${BLUE}[2/6] Configuration Alembic${NC}"
+echo ""
+
+# Créer le fichier environnement pour les migrations
+cat > "migrations/.env.migr" << EOF
+# PostgreSQL Configuration - Bases de données
+POSTGRES_DB_MAIN=sauvetage_main
+POSTGRES_DB_USERS=sauvetage_users
+
+# PostgreSQL Configuration - Superuser (postgres)
+POSTGRES_PASSWORD=${PG_ROOT_PASSWORD}
+
+# PostgreSQL Configuration - Utilisateurs et mots de passe
+POSTGRES_USER_MIGR=migr
+POSTGRES_PASSWORD_MIGR=${PG_MIGR_PASSWORD}
+
+# Host et port
+POSTGRES_HOST=db-main
+POSTGRES_PORT=5432
+
+# Backup
+PGBACKUP_ENABLED=true
+BACKUP_RETENTION_DAYS=30
+BACKUP_SCHEDULE="0 2 * * *"
+EOF
+
+echo -e "${GREEN}✓ migrations/.env.migr créé${NC}"
+chmod 600 "migrations/.env.migr"
+echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
+
+# ============================================================================
+# ÉTAPE 3 : MongoDB
+# ============================================================================
+echo -e "${BLUE}[3/6] Configuration MongoDB${NC}"
 echo ""
 
 echo -e "${YELLOW}Génération de mots de passe sécurisés...${NC}"
@@ -144,9 +182,9 @@ chmod 600 "databases/logs/.env.db_logs"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
 # ============================================================================
-# ÉTAPE 3 : Traefik Proxy
+# ÉTAPE 4 : Traefik Proxy
 # ============================================================================
-echo -e "${BLUE}[3/5] Configuration Traefik Proxy${NC}"
+echo -e "${BLUE}[4/6] Configuration Traefik Proxy${NC}"
 echo ""
 
 PROXY_STANDARD=$(prompt_yesno "  → Utiliser configuration standard?" "y")
@@ -173,9 +211,9 @@ echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 echo -e "${GREEN}✓ proxy/.env.proxy créé${NC}"
 
 # ============================================================================
-# ÉTAPE 4 : Backend FastAPI
+# ÉTAPE 5 : Backend FastAPI
 # ============================================================================
-echo -e "${BLUE}[4/5] Configuration Backend FastAPI${NC}"
+echo -e "${BLUE}[5/6] Configuration Backend FastAPI${NC}"
 echo ""
 
 BACKEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
@@ -195,9 +233,9 @@ echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 echo -e "${GREEN}✓ app_back/.env.fast créé${NC}"
 
 # ============================================================================
-# ÉTAPE 5 : Frontend Flask
+# ÉTAPE 6 : Frontend Flask
 # ============================================================================
-echo -e "${BLUE}[5/5] Configuration Frontend Flask${NC}"
+echo -e "${BLUE}[6/6] Configuration Frontend Flask${NC}"
 echo ""
 
 FRONTEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
@@ -260,6 +298,7 @@ echo ""
 
 echo -e "${GREEN}Fichiers créés :${NC}"
 echo "  ✓ databases/main/.env.db_main"
+echo "  ✓ migrations/.env.migr"
 echo "  ✓ databases/logs/.env.db_logs"
 echo "  ✓ proxy/.env.proxy"
 echo "  ✓ app_back/.env.fast"
@@ -268,5 +307,5 @@ echo ""
 
 echo -e "${YELLOW}Prochaines étapes:${NC}"
 echo "  1. Vérifier les fichiers .env créés"
-echo "  2. Lancer: ${GREEN}podman compose up${NC}"
+echo "  2. Lancer: podman compose up --build"
 echo ""

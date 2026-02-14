@@ -13,6 +13,7 @@ GENERAL_OBJECT_PK = "general_objects.id"
 class GeneralObjects(WorkingBase, QueryMixin):
     """Modèle pour les objets généraux mis en vente."""
     __tablename__ = 'general_objects'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de l'objet")
@@ -88,6 +89,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
 class Books(WorkingBase, QueryMixin):
     """Modèle pour les livres mis en vente."""
     __tablename__ = 'books'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du livre")
@@ -143,6 +145,7 @@ class Books(WorkingBase, QueryMixin):
 class OtherObjects(WorkingBase, QueryMixin):
     """Modèle pour les autres objets mis en vente."""
     __tablename__ = 'other_objects'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de l'autre objet")
@@ -181,6 +184,7 @@ class OtherObjects(WorkingBase, QueryMixin):
 class Tags(WorkingBase, QueryMixin):
     """Modèle pour les tags associés aux objets."""
     __tablename__ = 'tags'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du tag")
@@ -221,6 +225,7 @@ class Tags(WorkingBase, QueryMixin):
 class ObjectTags(WorkingBase, QueryMixin):
     """Modèle pour l'association entre les objets et les tags."""
     __tablename__ = 'object_tags'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de l'association objet-tag")
@@ -265,6 +270,7 @@ class ObjectTags(WorkingBase, QueryMixin):
 class ObjMetadatas(WorkingBase, QueryMixin):
     """Modèle pour les métadonnées associées aux objets."""
     __tablename__ = 'obj_metadatas'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de la métadonnée")
@@ -307,6 +313,7 @@ class ObjMetadatas(WorkingBase, QueryMixin):
 class MediaFiles(WorkingBase, QueryMixin):
     """Modèle pour les fichiers médias associés aux métadonnées."""
     __tablename__ = 'media_files'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du fichier média")

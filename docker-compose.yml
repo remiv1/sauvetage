@@ -72,6 +72,7 @@ services:
     networks:
       - sauv-network
       - sauv-secure
+      - sauv-migrations
     volumes:
       - db-main-data:/var/lib/postgresql
     restart: on-failure:5
@@ -117,4 +118,5 @@ networks:
     driver: bridge
   sauv-secure:
     driver: bridge
-
+  sauv-migrations:
+    driver: bridge
