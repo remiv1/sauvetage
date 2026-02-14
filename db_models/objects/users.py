@@ -31,6 +31,7 @@ class Users(SecureBase, QueryMixin):
         - by : Permet de faire des requêtes personnalisées sur les utilisateurs.
     """
     __tablename__ = 'users'
+    __table_args__ = {"schema": "auth_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de l'utilisateur")
@@ -92,6 +93,7 @@ class UsersPasswords(SecureBase):
         - __repr__ : Représentation textuelle du mot de passe.
         - to_dict : Convertit l'objet UserPassword en dictionnaire.
     """
+    __table_args__ = {"schema": "auth_schema"}
     __tablename__ = 'users_passwords'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,

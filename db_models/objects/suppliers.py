@@ -9,6 +9,7 @@ from db_models import WorkingBase
 class Suppliers(WorkingBase):
     """Modèle pour les fournisseurs."""
     __tablename__ = 'suppliers'
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du fournisseur")

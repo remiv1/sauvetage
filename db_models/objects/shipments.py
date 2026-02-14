@@ -13,6 +13,7 @@ class Shipment(WorkingBase, QueryMixin):
     """Modèle de données pour un envoi."""
 
     __tablename__ = "shipments"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)

@@ -11,6 +11,7 @@ class Order(WorkingBase, QueryMixin):
     """Modèle de données pour une commande."""
 
     __tablename__ = "orders"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
@@ -75,6 +76,7 @@ class OrderLine(WorkingBase, QueryMixin):
     """Modèle de données pour une ligne de commande."""
 
     __tablename__ = "order_lines"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de la ligne de commande")

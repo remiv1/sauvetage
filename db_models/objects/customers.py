@@ -19,6 +19,7 @@ class Customers(WorkingBase, QueryMixin):
     """
 
     __tablename__ = "customers"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du client")
@@ -120,6 +121,7 @@ class CustomerParts(WorkingBase, QueryMixin):
     """Database model for Customer Parts table."""
 
     __tablename__ = "customer_parts"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant Part unique")
@@ -165,6 +167,7 @@ class CustomerPros(WorkingBase, QueryMixin):
     """Database model for Customer Pros table."""
 
     __tablename__ = "customer_pros"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique")
@@ -211,6 +214,7 @@ class CustomerAddresses(WorkingBase, QueryMixin):
     """Database model for Customer Addresses table."""
 
     __tablename__ = "customer_addresses"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique")
@@ -295,6 +299,7 @@ class CustomerMails(WorkingBase, QueryMixin):
     """Database model for Customer Mails table."""
 
     __tablename__ = "customer_mails"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant mail unique")
@@ -351,6 +356,7 @@ class CustomerPhones(WorkingBase, QueryMixin):
     """Database model for Customer Phones table."""
 
     __tablename__ = "customer_phones"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant téléphone unique")
@@ -410,8 +416,8 @@ class CustomerSyncLog(WorkingBase):
     Tracks all synchronization events between the main database and external systems
     (WordPress/WooCommerce, Henrri).
     """
-
     __tablename__ = "customer_sync_logs"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK),

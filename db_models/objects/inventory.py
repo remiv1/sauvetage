@@ -11,6 +11,7 @@ class InventoryMovements(WorkingBase, QueryMixin):
     """Database model for Inventory Movements table."""
 
     __tablename__ = "inventory_movements"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     general_object_id: Mapped[int] = mapped_column(Integer, ForeignKey("general_objects.id"),

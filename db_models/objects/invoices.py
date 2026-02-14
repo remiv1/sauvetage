@@ -11,6 +11,7 @@ class Invoice(WorkingBase, QueryMixin):
     """Modèle de données pour une facture."""
 
     __tablename__ = "invoices"
+    __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
