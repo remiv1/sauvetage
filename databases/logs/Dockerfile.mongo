@@ -1,20 +1,24 @@
 FROM mongo:8.2-noble
 
 # Installer des outils supplémentaires
-RUN apk add --no-cache bash
+RUN apt-get update && apt-get install -y bash gettext
 
-# Créer les répertoires nécessaires
-WORKDIR /docker-entrypoint-initdb.d
+# Copier les fichiers d'environnement et scripts
+COPY .env.db_logs /tmp/.env.db_logs
+COPY init/00_generate_config.sh /tmp/00_generate_config.sh
+COPY init/*.js.pattern /tmp/
 
-# Copier les scripts d'initialisation
-COPY ./init/00_generate_config.sh .
-COPY ./init/*.js.pattern .
-COPY ./init/mongod.conf ../mongod.conf
-COPY ./.env.db_logs ../.env
+# Rendre exécutable et générer les fichiers JS
+RUN chmod +x /tmp/00_generate_config.sh && \
+    set -a && \
+    . /tmp/.env.db_logs && \
+    set +a && \
+    cd /tmp && \
+    ./00_generate_config.sh
 
-# Rendre les scripts exécutables
-RUN chmod +x 00_generate_config.sh \
-    && cd .. && ./docker-entrypoint-initdb.d/00_generate_config.sh
+# Copier les fichiers générés dans le répertoire d'initialisation
+RUN mkdir -p /docker-entrypoint-initdb.d && \
+    cp /tmp/*.js /docker-entrypoint-initdb.d/ 2>/dev/null || true
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
