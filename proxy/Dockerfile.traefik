@@ -1,7 +1,14 @@
-FROM docker.io/library/traefik:v3.6.7
+FROM alpine:3 AS builder
+RUN apk add --no-cache openssl bash curl
 
-# Installer openssl pour la génération des certificats
+# Retour sur l'image de traefik pour la construction finale
+FROM docker.io/library/traefik:v3
+
+# Installer les outils nécessaires pour PKI
 RUN apk add --no-cache openssl bash
+
+# Installation du fichier .env pour les variables d'environnement
+COPY ./.env.proxy /app/.env
 
 # Copier les scripts
 COPY ./scripts/init-pki.sh /usr/local/bin/

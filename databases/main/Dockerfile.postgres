@@ -1,22 +1,26 @@
-FROM postgres:18.1-alpine
+FROM postgres:18-bookworm
 
 # Installer envsubst (pour le script de génération)
-RUN apk add --no-cache gettext
+RUN apt-get update && apt-get install -y gettext
 
 # Créer le répertoire pour les scripts d'initialisation
 WORKDIR /docker-entrypoint-initdb.d
 
-# Copier le script de génération et les templates
-COPY ./init/00_generate_models.sh .
-COPY ./init/*.sql.pattern .
-COPY ./init/*.sql .
-COPY ./.env.db_main ../.env
+# Copier les fichiers
+COPY init/00_generate_models.sh .
+COPY init/*.sql.pattern .
+
+# Copier le fichier .env dans un emplacementtemporaire
+COPY .env.db_main /tmp/.env
 
 # Exécuter le script de génération avant le démarrage
 RUN chmod +x 00_generate_models.sh && \
-    cd .. && \
-    ./init/00_generate_models.sh && \
-    cd docker-entrypoint-initdb.d && \
+    set -a && \
+    . /tmp/.env && \
+    set +a && \
+    ./00_generate_models.sh && \
+    chmod 644 *.sql && \
+    rm 00_generate_models.sh *.pattern && \
     ls -la
 
 # Health check

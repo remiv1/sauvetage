@@ -2,10 +2,12 @@ services:
   app-front:
     container_name: sauv-app
     build:
-      context: ./app_front
-      dockerfile: ./Dockerfile.flask
+      context: .
+      dockerfile: app_front/Dockerfile.flask
     env_file:
-      - .env.flask
+      - ./databases/main/.env.db_main
+      - ./databases/logs/.env.db_logs
+      - ./app_front/.env.flask
     volumes:
       - sauv-documents-front:/home/root/app/documents
     networks:
@@ -16,16 +18,17 @@ services:
       - db-main
       - db-logs
       - app-back
-    restart:
-      condition: on-failure
+    restart: on-failure:5
     
   app-back:
     container_name: sauv-back
     build:
-      context: ./app_back
-      dockerfile: ./Dockerfile.fast
+      context: .
+      dockerfile: app_back/Dockerfile.fast
     env_file:
-      - .env.fast
+      - ./databases/main/.env.db_main
+      - ./databases/logs/.env.db_logs
+      - ./app_back/.env.fast
     volumes:
       - sauv-documents-back:/home/root/app/documents
     networks:
@@ -34,8 +37,7 @@ services:
       - proxy
       - db-main
       - db-logs
-    restart:
-      condition: on-failure
+    restart: on-failure:5
 
   proxy:
     container_name: sauv-proxy
@@ -43,18 +45,17 @@ services:
       context: ./proxy
       dockerfile: ./Dockerfile.traefik
     env_file:
-      - .env.proxy
+      - ./proxy/.env.proxy
     ports:
-      - "80:80"
-      - "443:443"
-    network_mode: host
-      #- sauv-network
+      - "8080:80"
+      - "8443:443"
+    networks:
+      - sauv-network
     volumes:
       - sauv-traefik-pki:/app/pki:Z
       - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro,Z
       - ./proxy/dynamic:/etc/traefik/dynamic:ro,Z
-    restart:
-      condition: always
+    restart: on-failure:5
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/ping"]
       interval: 10s
@@ -67,14 +68,13 @@ services:
       context: ./databases/main
       dockerfile: ./Dockerfile.postgres
     env_file:
-      - .env.db_main
+      - ./databases/main/.env.db_main
     networks:
       - sauv-network
       - sauv-secure
     volumes:
-      - db-main-data:/var/lib/postgresql/data
-    restart:
-      condition: on-failure
+      - db-main-data:/var/lib/postgresql
+    restart: on-failure:5
 
   db-logs:
     container_name: sauv-db-logs
@@ -82,12 +82,11 @@ services:
       context: ./databases/logs
       dockerfile: ./Dockerfile.mongo
     env_file:
-      - .env.db_logs
+      - ./databases/logs/.env.db_logs
     networks:
       - sauv-network
       - sauv-secure
-    restart:
-      condition: on-failure
+    restart: on-failure:5
     
 volumes:
   db-main-data:
