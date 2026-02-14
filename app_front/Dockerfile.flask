@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY db_models/ ../db_models
 COPY app_front/ /app/
+COPY logs/ ../logs
 
 # Rendre le script entrypoint exécutable
 RUN chmod +x /app/entrypoint.sh

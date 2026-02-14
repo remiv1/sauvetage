@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 
 COPY app_back/ /app/
 COPY db_models/ ../db_models
+COPY logs/ ../logs
 
 # Rendre l'entrypoint exécutable
 COPY app_back/entrypoint.sh /app/entrypoint.sh
