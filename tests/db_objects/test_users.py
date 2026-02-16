@@ -44,7 +44,7 @@ def test_user_from_dict():
     assert user.is_active is True
     assert user.permissions == "13"
 
-def test_compleet_user(db_session: Session):    # pylint: disable=unused-argument, redefined-outer-name
+def test_complete_user(db_session: Session):    # pylint: disable=unused-argument, redefined-outer-name
     """Test de récupération d'un utilisateur complet"""
     user = Users(
         username="John Doe",
