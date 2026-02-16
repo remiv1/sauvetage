@@ -25,8 +25,8 @@ fi
 
 # Affichage de la configuration
 echo "[ENTRYPOINT] Configuration:"
-echo "[ENTRYPOINT]   DATABASE_URL=$DATABASE_URL"
-echo "[ENTRYPOINT]   MONGODB_URL=$MONGODB_URL"
+echo "[ENTRYPOINT]   DATABASE_URL: [REDACTED]"
+echo "[ENTRYPOINT]   MONGODB_URL: [REDACTED]"
 echo "[ENTRYPOINT]   LOG_LEVEL=${LOG_LEVEL:-info}"
 echo "[ENTRYPOINT]   DEBUG=${DEBUG:-false}"
 
