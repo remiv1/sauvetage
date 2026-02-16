@@ -20,9 +20,8 @@ Projet d'outil centralisé pour une librairie :
   - `erp-billing` : Module de facturation
   - `erp-crm` : Module de gestion de la relation client
 - `ecommerce` : Développement du site e-commerce
-  - `ecommerce-frontend` : Développement de l'interface utilisateur du site e
-  - `ecommerce-backend` : Développement de la logique serveur et de la base de données
-- `integration` : Intégration des modules ERP avec le site e-commerce
+  - Développement Wordpress + WooCommerce
+  - Intégration avec l'ERP via API
 
 ## Architecture
 
@@ -124,8 +123,8 @@ gantt
     dateFormat  DD-MM-YYYY
     axisFormat  %d-%m
     section Cadrage
-    Pré-vente :done, a1, 08-01-2026, 9d
-    Vente :active, a21, 14-01-2026, 7d
+    Pré-vente :done, a1, 25-01-2026, 9d
+    Vente :active, a21, 28-01-2026, 7d
     section Développement
     Analyse :a2, after a1, 10d
     Développement :crit, a3, after a2, 40d

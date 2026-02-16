@@ -1,0 +1,31 @@
+# Configuration des pages de l'application. Annuaire des pages.
+[links]
+dashboard = "dashboard.toml"
+login = "login.toml"
+stock = "stock.toml"
+
+# ------------------------------------------------------------------------------
+# --- Configuration par défaut si la page n'est pas trouvée
+# ------------------------------------------------------------------------------
+# Paramètres
+[default.params]
+styles = ["css/base.css"]
+scripts = ["js/base.js"]
+# Clées
+[default.meta]
+title = "Sauvetage | Intranet"
+description = "Application de gestion de la librairie en ligne Editions du Sauvetage"
+keywords = "sauvetage, intranet, gestion, librairie"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[default.meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="main"
+# Pages spécifiques
+[default.layout]
+main_layout = "index.html"
+# Flags
+[default.flags]
+navbar = false
+searchbar = false

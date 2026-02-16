@@ -1,0 +1,25 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de tableau de bord
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+styles = ["css/dashboard.css", "css/base.css"]
+scripts = ["js/dashboard.js", "js/base.js"]
+# Clées
+[params.meta]
+title = "Tableau de bord | Intranet"
+description = "Page de tableau de bord de l'intranet"
+keywords = "tableau de bord, dashboard, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[params.meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="document"
+# Pages spécifiques
+[layout]
+main_layout = "index.html"
+# Flags
+[flags]
+navbar = true
+searchbar = true
