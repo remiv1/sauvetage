@@ -1,0 +1,3 @@
+"""Package v1 de l'API Sauvetage."""
+
+from .user import router as user_router # type: ignore
