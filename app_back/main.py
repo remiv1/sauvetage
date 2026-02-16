@@ -4,6 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from app_back.router import v1_api_router
 
 # Configuration
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -33,6 +34,9 @@ app = FastAPI(
     lifespan=lifespan,
     debug=DEBUG,
 )
+
+# Include API routers
+app.include_router(v1_api_router, prefix="/api")
 
 @app.get("/")
 async def read_root():
