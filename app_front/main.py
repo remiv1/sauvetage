@@ -1,44 +1,42 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
-import os
 from datetime import datetime, timezone
-
 from flask import Flask, jsonify
-
-# Configuration
-DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://app:pwd@db-main:5432/sauvetage_main"
+from app_front.utils.pages import render_page
+from app_front.config.flask_conf import (
+    DEBUG, LOG_LEVEL, DATABASE_URL, MONGODB_URL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger
 )
-MONGODB_URL = os.getenv(
-    "MONGODB_URL",
-    "mongodb://app:pwd@db-logs:27017/sauvetage_logs"
-)
-FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
 # Création de l'application Flask
 app = Flask(__name__)
 app.config["SECRET_KEY"] = FLASK_SECRET_KEY
 app.config["DEBUG"] = DEBUG
 
-print("[MAIN] Configuration Flask chargée")
-print(f"[MAIN] DEBUG={DEBUG}")
-print(f"[MAIN] LOG_LEVEL={LOG_LEVEL}")
-print(f"[MAIN] DATABASE_URL={DATABASE_URL}")
-print(f"[MAIN] MONGODB_URL={MONGODB_URL}")
+# Enregistrement des blueprints
+for bp in BLUEPRINTS:
+    app.register_blueprint(bp)
+
+log = f"""
+[MAIN] Application Flask initialisée avec succès
+[MAIN] Configuration :
+- DEBUG: {DEBUG}
+- LOG_LEVEL: {LOG_LEVEL}
+- DATABASE_URL: {DATABASE_URL}
+- MONGODB_URL: {MONGODB_URL}
+- FLASK_SECRET_KEY: {'***'
+                     if FLASK_SECRET_KEY != 'dev-secret-key-change-in-production'
+                     else FLASK_SECRET_KEY}
+- BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
+"""
+sauv_logger.log(level=LOG_LEVEL,
+                message=log,
+                action="app_start")
 
 
 @app.route("/")
 def root():
     """Endpoint racine du frontend"""
-    return jsonify({
-        "status": "ok",
-        "message": "Sauvetage Frontend API",
-        "version": "1.0.0",
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    })
+    return render_page("default")
 
 
 @app.route("/health")
@@ -83,8 +81,3 @@ def internal_error(_error: Exception):
         "message": "Internal server error",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }), 500
-
-
-if __name__ == "__main__":
-    # Développement uniquement (gunicorn utilisé en production)
-    app.run(host="0.0.0.0", port=5000, debug=DEBUG)
