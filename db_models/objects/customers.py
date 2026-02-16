@@ -7,7 +7,7 @@ from sqlalchemy import Integer, String, DateTime, Text, Boolean, ForeignKey
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
-CUSTOMER_PK = "customers.id"
+CUSTOMER_PK = "app_schema.customers.id"
 
 class Customers(WorkingBase, QueryMixin):
     """Modèle de base de données pour la table client.
