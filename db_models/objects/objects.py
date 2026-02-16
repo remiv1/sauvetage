@@ -8,7 +8,7 @@ from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
 CASCADE_OPTIONS = "all, delete-orphan"
-GENERAL_OBJECT_PK = "general_objects.id"
+GENERAL_OBJECT_PK = "app_schema.general_objects.id"
 
 class GeneralObjects(WorkingBase, QueryMixin):
     """Modèle pour les objets généraux mis en vente."""
@@ -19,7 +19,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                     comment="Identifiant unique de l'objet")
 
     # Données de base
-    supplier_id: Mapped[int] = mapped_column(Integer, ForeignKey('suppliers.id'), nullable=False,
+    supplier_id: Mapped[int] = mapped_column(Integer, ForeignKey('app_schema.suppliers.id'), nullable=False,
                                             comment="Identifiant du fournisseur de l'objet")
     general_object_type: Mapped[str] = mapped_column(String, nullable=False, comment="Type d'objet")
     ean13: Mapped[str] = mapped_column(String, comment="Code EAN13 de l'objet")
@@ -232,7 +232,7 @@ class ObjectTags(WorkingBase, QueryMixin):
     general_object_id: Mapped[int] = mapped_column(Integer, ForeignKey(GENERAL_OBJECT_PK),
                                                    nullable=False,
                                                    comment="Identifiant de l'objet général associé")
-    tag_id: Mapped[int] = mapped_column(Integer, ForeignKey('tags.id'), nullable=False,
+    tag_id: Mapped[int] = mapped_column(Integer, ForeignKey('app_schema.tags.id'), nullable=False,
                                         comment="Identifiant du tag associé")
 
     # Meta-données de suivi

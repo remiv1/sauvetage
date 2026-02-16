@@ -1,24 +1,40 @@
+"""env.py"""
+import sys
+import os
 from logging.config import fileConfig
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from alembic import context
 
-from migrations import context
+# Ajout du chemin du projet au sys.path
+sys.path.insert(0, '/app')
+
+# Import main base model après avoir chargé les variables
+from db_models import SecureBase    # pylint: disable=wrong-import-position
+from db_models.objects.users import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-config = context.config
+config = context.config # pylint: disable=no-member
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Construire l'URL SQLAlchemy avec les variables d'environnement
+database_url = (
+    f"postgresql+psycopg2://"
+    f"{os.getenv('POSTGRES_USER_MIGR')}:"
+    f"{os.getenv('POSTGRES_PASSWORD_MIGR')}@"
+    f"{os.getenv('POSTGRES_HOST')}:"
+    f"{os.getenv('POSTGRES_PORT')}/"
+    f"{os.getenv('POSTGRES_DB_USERS')}"
+)
+
+# Définir l'URL de la base de données
+config.set_main_option("sqlalchemy.url", database_url)
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+
+target_metadata = SecureBase.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -39,15 +55,15 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
+    context.configure(  # pylint: disable=no-member
         url=url,
         target_metadata=target_metadata,
-        literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table_schema="migr_users"
     )
 
-    with context.begin_transaction():
-        context.run_migrations()
+    with context.begin_transaction():   # pylint: disable=no-member
+        context.run_migrations()    # pylint: disable=no-member
 
 
 def run_migrations_online() -> None:
@@ -64,15 +80,17 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
+        context.configure(  # pylint: disable=no-member
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table_schema="migr_users"
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        with context.begin_transaction():   # pylint: disable=no-member
+            context.run_migrations()    # pylint: disable=no-member
 
 
-if context.is_offline_mode():
+if context.is_offline_mode():   # pylint: disable=no-member
     run_migrations_offline()
 else:
     run_migrations_online()

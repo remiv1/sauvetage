@@ -15,6 +15,8 @@ required_vars=(
     "POSTGRES_PASSWORD_APP"
     "POSTGRES_USER_SECURE"
     "POSTGRES_PASSWORD_SECURE"
+    "POSTGRES_USER_MIGR"
+    "POSTGRES_PASSWORD_MIGR"
 )
 
 for var in "${required_vars[@]}"; do
