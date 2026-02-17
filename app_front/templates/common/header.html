@@ -1,0 +1,21 @@
+<div class="banner active bg-primary">
+    <div class="header-container">
+        <h1 class="handscript y-center">
+            Editions du Sauvetage
+        </h1>
+        <form action="post" class="h1-menu">
+            <select name="h1-nav" id="menu">
+                <option value="home">Accueil</option>
+                <option value="dashboard">Tableau de Bord</option>
+                <option value="inventory">Inventaire</option>
+                <option value="stock">Stocks</option>
+                <option value="order">Commandes</option>
+                <option value="customer">Clients</option>
+                <option value="supplier">Fournisseurs</option>
+                {% if '1' in session['roles'] %}
+                <option value="admin">Administration</option>
+                {% endif %}
+            </select>
+        </form>
+    </div>
+</div>

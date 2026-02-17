@@ -162,6 +162,7 @@ cat > "databases/logs/.env.db_logs" << EOF
 # MongoDB Configuration
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=${MONGO_ADMIN_PASSWORD}
+MONGO_INITDB_DATABASE=sauvetage_logs
 
 # Base de données et utilisateur applicatif
 MONGO_DB_LOGS=sauvetage_logs

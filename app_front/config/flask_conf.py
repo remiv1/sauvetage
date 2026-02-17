@@ -8,8 +8,8 @@ from typing import List
 from os import getenv
 from flask import Blueprint
 from app_front.blueprints import (bp_customer, bp_dashboard, bp_inventory, bp_order,
-                                  bp_stock, bp_supplier, bp_admin)
-from logs.logger import MongoDBLogger
+                                  bp_stock, bp_supplier, bp_admin, bp_user)
+from logs.logger import get_logger
 
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
@@ -30,6 +30,7 @@ BLUEPRINTS: List[Blueprint] = [
     bp_order,
     bp_stock,
     bp_supplier,
-    bp_admin
+    bp_admin,
+    bp_user
 ]
-sauv_logger = MongoDBLogger()
+sauv_logger = get_logger()

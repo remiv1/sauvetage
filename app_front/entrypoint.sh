@@ -19,8 +19,10 @@ if [ -z "$MONGODB_URL" ]; then
         echo "[ENTRYPOINT] ERREUR: Variables MongoDB incomplètes"
         exit 1
     fi
-    export MONGODB_URL="mongodb://${MONGO_USER_APP}:${MONGO_PASSWORD_APP}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB_LOGS}"
-    echo "[ENTRYPOINT] MONGODB_URL construit depuis les variables BD"
+    # Encodage du mot de passe pour l'URL
+    MONGO_PASSWORD_APP_ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$MONGO_PASSWORD_APP'''))")
+    export MONGODB_URL="mongodb://${MONGO_USER_APP}:${MONGO_PASSWORD_APP_ENC}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB_LOGS}?authSource=${MONGO_DB_LOGS}"
+    echo "[ENTRYPOINT] MONGODB_URL construit depuis les variables BD (encodé, authSource ajouté)"
 fi
 
 if [ -z "$FLASK_SECRET_KEY" ]; then
@@ -45,4 +47,4 @@ exec gunicorn \
     --access-logfile - \
     --error-logfile - \
     --log-level info \
-    main:app
+    app_front.main:app

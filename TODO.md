@@ -10,8 +10,11 @@
 - [x] Créer le modèle de factures clients.
 - [x] Comprendre la refactorisation proposée par copilot pour update_object.
 - [x] Créer les repositories pour les inventaires, les factures et les objets.
-- [ ] Premier build du compose
-- [ ] Créer la migration propre avec les modèles réalisés.
+- [x] Premier build du compose
+- [x] Créer la migration propre avec les modèles réalisés.
+- [ ] Créer la connexion avec la base de données PostgreSQL
+- [ ] Passer la session de SQLAlchemy dans les repositories.
+- [ ] Faire la migration en démarrage de l'application backend pour que le front puisse fonctionner.
 - [ ] Création des test unitaires
   - [x] Pour les objets de la base de données.
     - [x] customers

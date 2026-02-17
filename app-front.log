@@ -1,0 +1,83 @@
+[4m>>>> Executing external compose provider "/usr/bin/podman-compose". Please see podman-compose(1) for how to disable this message. <<<<
+
+[0m[ENTRYPOINT] Démarrage du frontend Sauvetage
+[ENTRYPOINT] DATABASE_URL construit depuis les variables BD
+[ENTRYPOINT] MONGODB_URL construit depuis les variables BD (encodé, authSource ajouté)
+[ENTRYPOINT] Configuration:
+[ENTRYPOINT]   DATABASE_URL=postgresql://app:A82Os2XAeLu58l0LuuZO4koxcCnAqkJfzxX28cN+n/g@db-main:5432/sauvetage_main
+[ENTRYPOINT]   MONGODB_URL=mongodb://app:IxRUA/G%2BiCL910QSlhrTxvXdMfNk5RbnVJO3vm8l7wg@db-logs:27017/sauvetage_logs?authSource=sauvetage_logs
+[ENTRYPOINT]   LOG_LEVEL=info
+[ENTRYPOINT]   DEBUG=true
+[ENTRYPOINT] Démarrage de Gunicorn (4 workers)
+[2026-02-17 18:59:22 +0000] [1] [INFO] Starting gunicorn 25.0.1
+[2026-02-17 18:59:22 +0000] [1] [INFO] Listening at: http://0.0.0.0:5000 (1)
+[2026-02-17 18:59:22 +0000] [1] [INFO] Using worker: sync
+[2026-02-17 18:59:22 +0000] [3] [INFO] Booting worker with pid: 3
+[2026-02-17 18:59:22 +0000] [4] [INFO] Booting worker with pid: 4
+[2026-02-17 18:59:22 +0000] [5] [INFO] Booting worker with pid: 5
+[2026-02-17 18:59:22 +0000] [6] [INFO] Booting worker with pid: 6
+10.89.0.2 - - [17/Feb/2026:19:00:30 +0000] "GET /health HTTP/1.1" 200 134 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+[2026-02-17 19:00:37 +0000] [6] [ERROR] Error handling request /user/login
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 142, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 185, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app_front/blueprints/user/routes.py", line 21, in login
+    user_obj = UsersRepository()
+               ^^^^^^^^^^^^^^^^^
+  File "/app/db_models/repositories/user.py", line 31, in __init__
+    super().__init__(*args, **kwargs)
+TypeError: BaseRepository.__init__() missing 1 required positional argument: 'session'
+10.89.0.2 - - [17/Feb/2026:19:00:37 +0000] "GET /user/login HTTP/1.1" 500 0 "-" "-"
+[2026-02-17 19:00:38 +0000] [3] [ERROR] Error handling request /user/login
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 142, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 185, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app_front/blueprints/user/routes.py", line 21, in login
+    user_obj = UsersRepository()
+               ^^^^^^^^^^^^^^^^^
+  File "/app/db_models/repositories/user.py", line 31, in __init__
+    super().__init__(*args, **kwargs)
+TypeError: BaseRepository.__init__() missing 1 required positional argument: 'session'
+10.89.0.2 - - [17/Feb/2026:19:00:38 +0000] "GET /user/login HTTP/1.1" 500 0 "-" "-"

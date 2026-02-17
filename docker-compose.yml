@@ -88,6 +88,8 @@ services:
       - sauv-network
       - sauv-secure
     restart: on-failure:5
+    volumes:
+      - sauv-logs-data:/data/db
     
 volumes:
   db-main-data:

@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
-styles = ["css/login.css", "css/base.css"]
+styles = ["css/login.css", "css/main.css"]
 scripts = ["js/login.js", "js/base.js"]
 # Clées
 [meta]

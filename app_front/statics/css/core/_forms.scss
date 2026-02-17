@@ -1,0 +1,50 @@
+@use './variables' as variables;
+@use './mixins' as mixins;
+@use 'sass:color';
+
+form {
+    .form-group {
+        margin-bottom: variables.$space-md;
+    }
+
+    label {
+        display: block;
+        margin-bottom: variables.$space-xs;
+        font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+        @include mixins.input-base;
+    }
+
+    .password-wrapper {
+        position: relative;
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            user-select: none;
+        }
+    }
+
+    button,
+    input[type="submit"] {
+        background: variables.$primary-color;
+        color: white;
+        padding: variables.$space-sm variables.$space-md;
+        border: none;
+        border-radius: variables.$radius-md;
+        width: 100%;
+        cursor: pointer;
+        font-size: 1rem;
+
+        &:hover {
+            background: color.adjust(variables.$primary-color, $lightness: -10%);
+        }
+    }
+}
