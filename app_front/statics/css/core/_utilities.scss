@@ -1,0 +1,8 @@
+@use './variables' as variables;
+
+.mt-1 { margin-top: variables.$space-sm; }
+.mt-2 { margin-top: variables.$space-md; }
+.mt-3 { margin-top: variables.$space-lg; }
+
+.text-center { text-align: center; }
+.w-100 { width: 100%; }

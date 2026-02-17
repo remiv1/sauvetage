@@ -4,6 +4,7 @@ Classe MongoDBLogger pour enregistrer et gérer les logs.
     - initialisation avec paramètres de connexion
 """
 
+from urllib.parse import quote_plus
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 import os
@@ -36,10 +37,12 @@ class MongoDBLogger:
     def _connect(self) -> None:
         """Établir la connexion à MongoDB"""
         try:
+            username_enc = quote_plus(self.username)
+            password_enc = quote_plus(self.password)
             connection_string = (
-                f"mongodb://{self.username}:{self.password}@"
+                f"mongodb://{username_enc}:{password_enc}@"
                 f"{self.host}:{self.port}/{self.database}"
-                f"?authSource=admin&serverSelectionTimeoutMS={self.timeout}"
+                f"?authSource={self.database}&connectTimeoutMS={self.timeout}"
             )
 
             self.client = MongoClient(connection_string)

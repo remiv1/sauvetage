@@ -29,6 +29,7 @@ try {
         ]
     });
     print('✓ Utilisateur app créé');
+    print('user: ${MONGO_USER_APP}, password: ${MONGO_PASSWORD_APP}');
 } catch (e) {
     print('⚠ Utilisateur app existe déjà');
 }

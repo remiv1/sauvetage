@@ -1,0 +1,9 @@
+from typing import Any
+
+class FlaskForm:
+    def __init__(self) -> None: ...
+    def validate_on_submit(self) -> bool: ...
+    @property
+    def errors(self) -> dict[str, list[str]]: ...
+
+__all__: list[str]

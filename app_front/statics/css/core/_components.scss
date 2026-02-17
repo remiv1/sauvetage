@@ -1,0 +1,27 @@
+@use './variables' as variables;
+@use 'sass:color';
+
+.alert {
+    padding: variables.$space-sm variables.$space-md;
+    border-radius: variables.$radius-md;
+    margin-bottom: variables.$space-md;
+
+    &.alert-success { background: color.adjust(variables.$color-success, $lightness: 40%); }
+    &.alert-danger { background: color.adjust(variables.$color-danger, $lightness: 40%); }
+}
+
+.btn {
+    padding: variables.$space-sm variables.$space-md;
+    border-radius: variables.$radius-md;
+    cursor: pointer;
+    border: none;
+
+    &.btn-primary {
+        background: variables.$primary-color;
+        color: white;
+
+        &:hover {
+            background: color.adjust(variables.$primary-color, $lightness: 10%);
+        }
+    }
+}

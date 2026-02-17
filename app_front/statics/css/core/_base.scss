@@ -1,0 +1,22 @@
+@use './variables' as variables;
+
+body {
+    font-family: variables.$font-main;
+    background: variables.$gray-100;
+    color: variables.$gray-900;
+    margin: 0;
+}
+
+h1, h2, h3 {
+    font-weight: 600;
+    margin-bottom: variables.$space-md;
+}
+
+a {
+    color: variables.$primary-color;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
