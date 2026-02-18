@@ -1,4 +1,4 @@
-@use 'core/variables' as *;
+@use 'core/variables' as variables;
 @use 'core/mixins' as *;
 @use 'core/reset';
 @use 'core/base';
@@ -7,3 +7,16 @@
 @use 'core/components';
 @use 'core/utilities';
 
+.banner {
+    border-radius: 0px 0px variables.$radius-md variables.$radius-md;
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 80%;
+        height: 2px;
+        background: variables.$border-blue;
+        border-radius: inherit;
+    }
+}

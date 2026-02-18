@@ -25,3 +25,8 @@
         }
     }
 }
+
+.bg-primary {
+    background-color: variables.$primary-color;
+    color: variables.$border-white;
+}

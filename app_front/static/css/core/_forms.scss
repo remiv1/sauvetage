@@ -36,7 +36,8 @@ form {
     input[type="submit"] {
         background: variables.$primary-color;
         color: white;
-        padding: variables.$space-sm variables.$space-md;
+        max-height: 3rem;
+        padding: variables.$space-md variables.$space-md;
         border: none;
         border-radius: variables.$radius-md;
         width: 100%;
