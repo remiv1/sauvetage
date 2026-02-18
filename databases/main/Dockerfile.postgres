@@ -9,13 +9,17 @@ WORKDIR /docker-entrypoint-initdb.d
 # Copier les fichiers
 COPY init/00_generate_models.sh .
 COPY init/*.sql.pattern .
+COPY init/04_secure_hba.sh .
+COPY init/05_secure_conf.sh .
+COPY init/99_cleanup.sh .
+
+RUN chmod +x 00_generate_models.sh 04_secure_hba.sh 05_secure_conf.sh
 
 # Copier le fichier .env dans un emplacementtemporaire
 COPY .env.db_main /tmp/.env
 
 # Exécuter le script de génération avant le démarrage
-RUN chmod +x 00_generate_models.sh && \
-    set -a && \
+RUN set -a && \
     . /tmp/.env && \
     set +a && \
     ./00_generate_models.sh && \

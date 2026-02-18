@@ -1,14 +1,36 @@
 """Module principal de l'application FastAPI pour le backend de Sauvetage."""
 
 import os
+from os import getenv
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from app_back.router import v1_api_router
 
 # Configuration
-DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
+DEBUG = getenv("DEBUG", "false").lower() == "true"
+LOG_LEVEL = getenv("LOG_LEVEL", "info")
+MAIN = {
+    "index": "main",
+    "command": [
+        "alembic",
+        "-c",
+        getenv("ALEMBIC_CONFIG_MAIN", "/app/main/alembic.ini"),
+        "upgrade",
+        "head"
+    ]
+}
+SECURE = {
+    "index": "secure",
+    "command": [
+        "alembic",
+        "-c",
+        getenv("ALEMBIC_CONFIG_SECURE", "/app/users/alembic.ini"),
+        "upgrade",
+        "head"
+    ]
+}
 
 # Lifespan event handlers
 @asynccontextmanager
@@ -17,9 +39,19 @@ async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined
     # Startup
     print(f"Starting FastAPI application (DEBUG={DEBUG}, LOG_LEVEL={LOG_LEVEL})")
     try:
+        for i in [MAIN, SECURE]:
+            print(f"Application de la migration de la base de données {i['index']}...")
+            process = await asyncio.create_subprocess_exec(*i["command"])
+            returncode = await process.wait()
+            if returncode != 0:
+                raise RuntimeError(f"Migration failed with return code {returncode}")
+            print(f"Application de la migration de la base de données {i['index']} terminée")
+    except (OSError, RuntimeError) as e:
+        print(f"Warning: Could not initialize database connections: {e}")
+    try:
         # TODO: Initialize database connections here
-        print("Database connections initialized")
-    except (OSError) as e:
+        print("Database connections initialized successfully...")
+    except (OSError, RuntimeError) as e:
         print(f"Warning: Could not initialize database connections: {e}")
     yield
     # Shutdown

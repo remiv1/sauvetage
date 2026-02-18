@@ -15,10 +15,13 @@ class Order(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
-    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.customers.id"), nullable=False)
-    invoice_address_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.customer_addresses.id"),
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.customers.id"),
+                                             nullable=False)
+    invoice_address_id: Mapped[int] = mapped_column(Integer,
+                                                    ForeignKey("app_schema.customer_addresses.id"),
                                                     nullable=False, comment="Adresse de facturat°")
-    delivery_address_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.customer_addresses.id"),
+    delivery_address_id: Mapped[int] = mapped_column(Integer,
+                                                     ForeignKey("app_schema.customer_addresses.id"),
                                                      nullable=False, comment="Adresse de livraison")
     status: Mapped[str] = mapped_column(String(50), nullable=False)
 
@@ -80,12 +83,16 @@ class OrderLine(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique de la ligne de commande")
-    order_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.orders.id"), nullable=False)
-    invoice_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.invoices.id"), nullable=True,
+    order_id: Mapped[int] = mapped_column(Integer,
+                                          ForeignKey("app_schema.orders.id"), nullable=False)
+    invoice_id: Mapped[int] = mapped_column(Integer,
+                                            ForeignKey("app_schema.invoices.id"), nullable=True,
                                             comment="Facture associée à la ligne de commande")
-    shipment_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.shipments.id"), nullable=True,
+    shipment_id: Mapped[int] = mapped_column(Integer,
+                                             ForeignKey("app_schema.shipments.id"), nullable=True,
                                              comment="Envoi associé à la ligne de commande")
-    general_object_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.general_objects.id"),
+    general_object_id: Mapped[int] = mapped_column(Integer,
+                                                   ForeignKey("app_schema.general_objects.id"),
                                                    nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False,
                                           comment="Quantité commandée")

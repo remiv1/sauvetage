@@ -12,8 +12,8 @@
 - [x] Créer les repositories pour les inventaires, les factures et les objets.
 - [x] Premier build du compose
 - [x] Créer la migration propre avec les modèles réalisés.
-- [ ] Créer la connexion avec la base de données PostgreSQL
-- [ ] Passer la session de SQLAlchemy dans les repositories.
+- [x] Créer la connexion avec la base de données PostgreSQL
+- [x] Passer la session de SQLAlchemy dans les repositories.
 - [ ] Faire la migration en démarrage de l'application backend pour que le front puisse fonctionner.
 - [ ] Création des test unitaires
   - [x] Pour les objets de la base de données.

@@ -59,7 +59,7 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         dialect_opts={"paramstyle": "named"},
-        version_table_schema="migr_users"
+        version_table_schema="migr_users",
     )
 
     with context.begin_transaction():   # pylint: disable=no-member
@@ -83,7 +83,8 @@ def run_migrations_online() -> None:
         context.configure(  # pylint: disable=no-member
             connection=connection,
             target_metadata=target_metadata,
-            version_table_schema="migr_users"
+            version_table_schema="migr_users",
+            version_table="alembic_version"
         )
 
         with context.begin_transaction():   # pylint: disable=no-member
