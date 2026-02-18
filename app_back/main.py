@@ -1,6 +1,5 @@
 """Module principal de l'application FastAPI pour le backend de Sauvetage."""
 
-import os
 from os import getenv
 import asyncio
 from contextlib import asynccontextmanager

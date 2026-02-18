@@ -76,7 +76,8 @@ form button,
 form input[type=submit] {
   background: #00086f;
   color: white;
-  padding: 0.5rem 1rem;
+  max-height: 3rem;
+  padding: 1rem 1rem;
   border: none;
   border-radius: 20px;
   width: 100%;
@@ -114,6 +115,11 @@ form input[type=submit]:hover {
   background: rgb(0, 11.6756756757, 162);
 }
 
+.bg-primary {
+  background-color: #00086f;
+  color: #ffffff;
+}
+
 .mt-1 {
   margin-top: 0.5rem;
 }
@@ -132,6 +138,20 @@ form input[type=submit]:hover {
 
 .w-100 {
   width: 100%;
+}
+
+.banner {
+  border-radius: 0px 0px 20px 20px;
+}
+.banner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80%;
+  height: 2px;
+  background: #002bff;
+  border-radius: inherit;
 }
 
 /*# sourceMappingURL=main.css.map */
