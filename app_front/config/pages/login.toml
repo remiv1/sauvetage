@@ -18,7 +18,8 @@ direction="ltr"
 aria_role="form"
 # Pages spécifiques
 [layout]
-main_layout = "index.html"
+main_layout = "user/login.html"
+extend_layout = "index.html"
 # Flags
 [flags]
 navbar = false

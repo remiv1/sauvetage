@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="keywords" content="{{ params.meta.keywords | default('sauvetage, frontend, application') }}">
-    <meta name="description" content="{{ params.meta.description | default('Application frontend pour les Editions Sauvetage') }}">
-    <meta name="author" content="{{ params.meta.author | default('Rémi Verschuur') }}">
-    <meta name="robots" content="{{ params.meta.robots | default('noindex, nofollow') }}">
-    <meta name="language" content="{{ params.meta.accessibility.lang | default('fr') }}">
-    <meta name="direction" content="{{ params.meta.accessibility.direction | default('ltr') }}">
-    <meta name="aria-role" content="{{ params.meta.accessibility.aria_role | default('') }}">
+    <meta name="keywords" content="{{ meta.keywords | default('sauvetage, frontend, application') }}">
+    <meta name="description" content="{{ meta.description | default('Application frontend pour les Editions Sauvetage') }}">
+    <meta name="author" content="{{ meta.author | default('Rémi Verschuur') }}">
+    <meta name="robots" content="{{ meta.robots | default('noindex, nofollow') }}">
+    <meta name="language" content="{{ meta.accessibility.lang | default('fr') }}">
+    <meta name="direction" content="{{ meta.accessibility.direction | default('ltr') }}">
+    <meta name="aria-role" content="{{ meta.accessibility.aria_role | default('') }}">
 
     <!-- Titre de la page, injecté par les templates enfants -->
-    <title>{{ params.meta.title | default('Editions Sauvetage | Intranet') }}</title>
+    <title>{{ meta.title | default('Editions Sauvetage | Intranet') }}</title>
 
     <!-- Injection des styles suivant la page -->
     {% for style in params.styles | default([]) %}

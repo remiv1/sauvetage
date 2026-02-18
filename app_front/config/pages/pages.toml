@@ -25,6 +25,7 @@ aria_role="main"
 # Pages spécifiques
 [default.layout]
 main_layout = "index.html"
+extend_layout = ""
 # Flags
 [default.flags]
 navbar = false

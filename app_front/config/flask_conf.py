@@ -14,14 +14,7 @@ from logs.logger import get_logger
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
 LOG_LEVEL = getenv("LOG_LEVEL", "info").upper()
-DATABASE_URL = getenv(
-    "DATABASE_URL",
-    "postgresql://app:pwd@db-main:5432/sauvetage_main"
-)
-MONGODB_URL = getenv(
-    "MONGODB_URL",
-    "mongodb://app:pwd@db-logs:27017/sauvetage_logs"
-)
+
 FLASK_SECRET_KEY = getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 BLUEPRINTS: List[Blueprint] = [
     bp_customer,
