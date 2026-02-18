@@ -26,6 +26,7 @@ services:
       context: .
       dockerfile: app_back/Dockerfile.fast
     env_file:
+      - ./migrations/.env.migr
       - ./databases/main/.env.db_main
       - ./databases/logs/.env.db_logs
       - ./app_back/.env.fast
@@ -33,9 +34,9 @@ services:
       - sauv-documents-back:/home/root/app/documents
     networks:
       - sauv-secure
+      - sauv-migrations
     depends_on:
       - proxy
-      - db-main
       - db-logs
     restart: on-failure:5
 
@@ -76,6 +77,12 @@ services:
     volumes:
       - db-main-data:/var/lib/postgresql
     restart: on-failure:5
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-sauvetage_main} -h localhost || exit 1"]
+      interval: 15s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
 
   db-logs:
     container_name: sauv-db-logs

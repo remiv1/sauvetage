@@ -19,7 +19,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                     comment="Identifiant unique de l'objet")
 
     # Données de base
-    supplier_id: Mapped[int] = mapped_column(Integer, ForeignKey('app_schema.suppliers.id'), nullable=False,
+    supplier_id: Mapped[int] = mapped_column(Integer,
+                                             ForeignKey('app_schema.suppliers.id'), nullable=False,
                                             comment="Identifiant du fournisseur de l'objet")
     general_object_type: Mapped[str] = mapped_column(String, nullable=False, comment="Type d'objet")
     ean13: Mapped[str] = mapped_column(String, comment="Code EAN13 de l'objet")
