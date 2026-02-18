@@ -1,11 +1,13 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
 from datetime import datetime, timezone
-from flask import Flask, jsonify
+from flask import Flask, jsonify, session, request, redirect, url_for, g
 from app_front.utils.pages import render_page
 from app_front.config.flask_conf import (
-    DEBUG, LOG_LEVEL, DATABASE_URL, MONGODB_URL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger
-)
+    DEBUG, LOG_LEVEL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger)
+from app_front.config.db_conf import get_main_session, DATABASE_URL, MONGODB_URL
+from db_models.services.auth import AuthService
+from db_models.repositories.user import UsersRepository
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -23,15 +25,43 @@ log = f"""
 - LOG_LEVEL: {LOG_LEVEL}
 - DATABASE_URL: {DATABASE_URL}
 - MONGODB_URL: {MONGODB_URL}
-- FLASK_SECRET_KEY: {'***'
-                     if FLASK_SECRET_KEY != 'dev-secret-key-change-in-production'
-                     else FLASK_SECRET_KEY}
+- FLASK_SECRET_KEY: {'***'}
 - BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
 """
 sauv_logger.log(level=LOG_LEVEL,
                 message=log,
                 action="app_start")
 
+@app.before_request
+def before_request():
+    """Fonction exécutée avant chaque requête"""
+    # Si l'utilisateur est déjà connecté
+    g.db_session = get_main_session()
+    user_repo = UsersRepository(g.db_session)
+    auth_service = AuthService(user_repo=user_repo)
+    if 'user_id' in session:
+        # Vérifier la validité de la session
+        user = auth_service.validate_session()
+        if not user:
+            session.clear()  # Invalider la session si l'utilisateur n'est plus valide
+    if request.path.endswith("/login"):
+        # Si c'est une tentative de connexion, on ne fait rien ici
+        return None
+    if request.path.startswith("/static/"):
+        # Ignorer les requêtes pour les ressources statiques
+        return None
+    # Cas de l'utilisateur non loggué
+    return redirect(url_for("user.login"))
+
+@app.after_request
+def after_request(response):
+    """Fonction exécutée après chaque requête"""
+    sauv_logger.log(
+        level=LOG_LEVEL,
+        message=f"Requête {request.method} {request.path} - Status: {response.status_code}",
+        action="request_log"
+    )
+    return response
 
 @app.route("/")
 def root():

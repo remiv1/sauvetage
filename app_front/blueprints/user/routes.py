@@ -7,8 +7,9 @@
     - /user/<int:id>/delete : Route pour supprimer un utilisateur spécifique.
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, redirect, url_for, flash, g
 from app_front.blueprints.user.forms import LoginForm
+from app_front.utils.pages import render_page
 from db_models.repositories.user import UsersRepository
 from db_models.services.auth import AuthService
 
@@ -18,7 +19,7 @@ bp_user = Blueprint('user', __name__, url_prefix='/user')
 def login():
     """Route pour la connexion d'un utilisateur existant."""
     # Initialiser le service d'authentification avec le repository utilisateur
-    user_obj = UsersRepository()
+    user_obj = UsersRepository(g.db_session)
     auth_service = AuthService(user_obj)
 
     # Récupération du formulaire de connexion
@@ -40,4 +41,4 @@ def login():
             return redirect(url_for('home'))
 
     # Afficher le formulaire de connexion
-    return render_template('user/login.html', form=form)
+    return render_page('login', form=form)
