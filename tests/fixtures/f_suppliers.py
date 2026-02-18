@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy.orm import Session
 from db_models.objects.suppliers import Suppliers
-from tests.fixtures.sqlite_fixture import db_session, engine  # pylint: disable=unused-import
+from tests.fixtures.sqlite_fixture import db_session, engine  # pylint: disable=unused-import # type : ignore
 
 @pytest.fixture
 def supplier(db_session: Session) -> Suppliers: # pylint: disable=redefined-outer-name

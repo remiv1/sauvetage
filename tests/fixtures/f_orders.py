@@ -1,6 +1,5 @@
 """Module de fixtures pour les tests liés aux objets liées aux commandes"""
 
-from typing import List
 import pytest
 from sqlalchemy.orm import Session
 from db_models.objects.objects import GeneralObjects

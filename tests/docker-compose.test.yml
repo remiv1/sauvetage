@@ -1,0 +1,10 @@
+version: '3'
+services:
+  test-db:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.postgres.test
+    env_file:
+      - .env.db_test
+    ports:
+      - "5433:5432"
