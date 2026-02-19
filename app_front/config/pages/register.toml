@@ -4,7 +4,7 @@
 # Paramètres
 [params]
 styles = ["css/register.css", "css/main.css"]
-scripts = ["js/register.js", "js/base.js"]
+scripts = ["js/register.js", "js/main.js"]
 # Clées
 [meta]
 title = "Création de compte | Intranet"

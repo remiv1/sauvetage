@@ -23,11 +23,12 @@ class UserCreateForm(FlaskForm):
     username = StringField('Identifiant', validators=[DataRequired()])
     mail = EmailField('Email', validators=[DataRequired()])
     password = PasswordField('Mot de passe', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirmer le mot de passe', validators=[DataRequired()])
     submit = SubmitField('Créer un compte')
     permissions = SelectMultipleField(
         'Autorisations',
         choices=[
-            ('1', 'Administration'), ('2', 'Comptaabilité'), ('3', 'Commercial'),
+            ('1', 'Administration'), ('2', 'Comptabilité'), ('3', 'Commercial'),
             ('4', 'Logistique'), ('5', 'Support'), ('6', 'Informatique'),
             ('7', 'RH'), ('8', 'Direction'), ('9', 'Super Admin')
         ],
@@ -44,7 +45,7 @@ class UserEditForm(FlaskForm):
     permissions = SelectMultipleField(
         'Autorisations',
         choices=[
-            ('1', 'Administration'), ('2', 'Comptaabilité'), ('3', 'Commercial'),
+            ('1', 'Administration'), ('2', 'Comptabilité'), ('3', 'Commercial'),
             ('4', 'Logistique'), ('5', 'Support'), ('6', 'Informatique'),
             ('7', 'RH'), ('8', 'Direction'), ('9', 'Super Admin')
         ],

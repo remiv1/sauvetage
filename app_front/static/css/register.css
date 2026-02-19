@@ -471,35 +471,65 @@ textarea {
   max-width: 400px;
   margin: 0 auto;
   padding: 2rem;
-  background-color: rgb(0, 11.6756756757, 162);
+  background-color: #f5f5f5;
   border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
 }
-
-.register-title {
+.register-container__title {
   text-align: center;
-  color: #202020;
+  color: #00086f;
   margin-bottom: 2rem;
 }
-
-.register-form {
+.register-container__form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
-
-.register-form-group {
+.register-container__form__group {
   display: flex;
   flex-direction: column;
 }
+.register-container__form__group__checkbox {
+  /* flex row that wraps when overflowing; each <li> stays as a unit */
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* each list item (checkbox + label) is a compact inline group */
+}
+.register-container__form__group__checkbox li {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap; /* keep checkbox + its label together */
+}
+.register-container__form__group__checkbox input[type=checkbox] {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  vertical-align: middle;
+}
+.register-container__form__group__checkbox label {
+  margin: 0;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: pointer;
+}
 
-.register-form .form-control {
+.register-container__form .form-control {
   padding: 0.5rem;
   border: 1px solid #404040;
   border-radius: 10px;
 }
 
-.register-form .btn {
+.register-container__form .btn {
   margin-top: 1rem;
 }
 
