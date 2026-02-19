@@ -1,4 +1,4 @@
-FROM alpine:3 AS builder
+FROM docker.io/library/alpine:3 AS builder
 RUN apk add --no-cache openssl bash curl
 
 # Retour sur l'image de traefik pour la construction finale

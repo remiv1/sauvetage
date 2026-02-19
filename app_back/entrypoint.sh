@@ -14,7 +14,7 @@ if [ -z "$DATABASE_URL" ]; then
     echo "[ENTRYPOINT] DATABASE_URL construit depuis les variables BD"
 fi
 
-if [ -z "$DATABASE_SECURE_URL"]; then
+if [ -z "$DATABASE_SECURE_URL" ]; then
     if [ -z "$POSTGRES_USER_SECURE" ] || [ -z "$POSTGRES_PASSWORD_SECURE" ] || [ -z "$POSTGRES_HOST" ] || [ -z "$POSTGRES_PORT" ] || [ -z "$POSTGRES_DB_USERS" ]; then
         echo "[ENTRYPOINT] ERREUR: Variables PostgreSQL sécurisées incompletes"
         exit 1
@@ -44,9 +44,6 @@ echo "Attente de PostgreSQL sur db-main:5432..."
 while ! nc -z db-main 5432; do
     sleep 5
 done
-
-echo "PostgreSQL est accessible !"
-exec "$@"
 
 # Demarrage de Gunicorn avec Uvicorn
 echo "[ENTRYPOINT] Demarrage de Gunicorn (4 workers)"

@@ -15,6 +15,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth_schema TO ${PO
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth_schema
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${POSTGRES_USER_SECURE};
 
+-- Définir le search_path par défaut pour les rôles utilisateurs sur la base users
+ALTER ROLE ${POSTGRES_USER_SECURE} SET search_path TO auth_schema,public;
+ALTER ROLE ${POSTGRES_USER_APP} SET search_path TO auth_schema,public;
+
 -- App (RO)
 GRANT CONNECT ON DATABASE ${POSTGRES_DB_USERS} TO ${POSTGRES_USER_APP};
 GRANT USAGE ON SCHEMA auth_schema TO ${POSTGRES_USER_APP};
@@ -47,6 +51,10 @@ GRANT CREATE ON SCHEMA app_schema TO ${POSTGRES_USER_MIGR};
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA app_schema
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${POSTGRES_USER_APP};
+
+-- Définir le search_path par défaut pour les rôles utilisateurs sur la base main
+ALTER ROLE ${POSTGRES_USER_APP} SET search_path TO app_schema,public;
+ALTER ROLE ${POSTGRES_USER_SECURE} SET search_path TO app_schema,public;
 
 -- Secure (RO minimal)
 GRANT CONNECT ON DATABASE ${POSTGRES_DB_MAIN} TO ${POSTGRES_USER_SECURE};
