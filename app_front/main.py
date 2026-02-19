@@ -44,8 +44,8 @@ def before_request():
         user = auth_service.validate_session()
         if not user:
             session.clear()  # Invalider la session si l'utilisateur n'est plus valide
-    if request.path.endswith("/login"):
-        # Si c'est une tentative de connexion, on ne fait rien ici
+    if request.path.endswith("/login") or request.path.endswith("/register"):
+        # Si c'est une tentative de connexion ou d'enregistrement, on ne fait rien ici
         return None
     if request.path.startswith("/static/"):
         # Ignorer les requêtes pour les ressources statiques

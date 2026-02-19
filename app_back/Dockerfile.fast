@@ -7,8 +7,8 @@ ENV PYTHONPATH=/app
 
 COPY app_back/requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir uvicorn[standard]
+RUN pip install -r requirements.txt && \
+    pip install uvicorn[standard]
 
 COPY app_back/ app_back/
 COPY db_models/ db_models/
