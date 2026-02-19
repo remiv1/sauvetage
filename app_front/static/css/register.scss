@@ -11,34 +11,72 @@
     max-width: 400px;
     margin: 0 auto;
     padding: 2rem;
-    background-color: variables.$primary-color-light;
+    background-color: variables.$gray-100;
     border-radius: variables.$radius-md;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: variables.$shadow-medium;
+
+    &__title {
+        text-align: center;
+        color: variables.$primary-color;
+        margin-bottom: variables.$space-lg;
+    }
+    
+    &__form {
+        display: flex;
+        flex-direction: column;
+        gap: variables.$space-md;
+        
+        &__group {
+            display: flex;
+            flex-direction: column;
+
+            &__checkbox {
+                /* flex row that wraps when overflowing; each <li> stays as a unit */
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: variables.$space-sm;
+                align-items: center;
+                margin: 0;
+                padding: 0;
+                list-style: none;
+
+                /* each list item (checkbox + label) is a compact inline group */
+                li {
+                    display: flex;
+                    align-items: center;
+                    gap: variables.$space-xs;
+                    margin: 0;
+                    padding: 0;
+                    white-space: nowrap; /* keep checkbox + its label together */
+                }
+
+                input[type="checkbox"] {
+                    flex: 0 0 auto;
+                    width: 20px;
+                    height: 20px;
+                    margin: 0;
+                    vertical-align: middle;
+                }
+
+                label {
+                    margin: 0;
+                    display: inline-block;
+                    vertical-align: middle;
+                    cursor: pointer;
+                }
+            }
+        }
+    }
 }
 
-.register-title {
-    text-align: center;
-    color: variables.$text-dark;
-    margin-bottom: variables.$space-lg;
-}
 
-.register-form {
-    display: flex;
-    flex-direction: column;
-    gap: variables.$space-md;
-}
-
-.register-form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.register-form .form-control {
+.register-container__form .form-control {
     padding: variables.$space-sm;
     border: 1px solid variables.$gray-700;
     border-radius: variables.$radius-sm;
 }
 
-.register-form .btn {
+.register-container__form .btn {
     margin-top: variables.$space-md;
 }

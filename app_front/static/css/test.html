@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="keywords" content="connexion, login, intranet">
-    <meta name="description" content="Page de connexion à l'intranet">
+    <meta name="keywords" content="création de compte, inscription, intranet">
+    <meta name="description" content="Page de création de compte utilisateur à l'intranet">
     <meta name="author" content="Rémi Verschuur">
     <meta name="robots" content="noindex, nofollow">
     <meta name="language" content="fr">
@@ -12,39 +12,116 @@
     <meta name="aria-role" content="form">
 
     <!-- Titre de la page, injecté par les templates enfants -->
-    <title>Connexion | Intranet</title>
+    <title>Création de compte | Intranet</title>
 
     <!-- Injection des styles suivant la page -->
-    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="register.css">
     <link rel="stylesheet" href="main.css">
 </head>
 <body>
-<header>
+    <header>
+        <div class="banner active bg-primary">
+            <div class="header-container">
+                <h1 class="main-title handscript y-center">
+                    Editions du Sauvetage
+                </h1>
+            <div class="menu">
+                <button class="menu__toggle" aria-label="Toggle menu">Accueil</button>
+                <ul class="menu__list">
+                    <li class="menu__list__item"><a href="#">Accueil</a></li>
+                    <li class="menu__list__item"><a href="#">Tableau de Bord</a></li>
+                    <li class="menu__list__item"><a href="#">Inventaire</a></li>
+                    <li class="menu__list__item"><a href="#">Stocks</a></li>
+                    <li class="menu__list__item"><a href="#">Commandes</a></li>
+                    <li class="menu__list__item"><a href="#">Clients</a></li>
+                    <li class="menu__list__item"><a href="#">Fournisseurs</a></li>
+                    
+                </ul>
+            </div>
+        </div>
+    </div>
 </header>
 <main>
-    <div class="login-container pb-5">
-        <h2 class="login-title">Connexion</h2>
-        <form class="login-form" method="POST">
-            <input id="csrf_token" name="csrf_token" type="hidden" value="IjliMGVlZTFhOTZjOGQ4ZDBhYWJlMWUyMGQxMDkyODM5M2YxZGUzMDQi.aZa7Rw.XNsYpXQ6C-AzLwRURGu9NZDKB-s">
-            <div class="form-group login-form-group mb-3">
+    <div class="register-container pb-5">
+        <h2 class="register-container__title">Inscription</h2>
+        <form class="register-container__form" method="POST">
+            <input id="csrf_token" name="csrf_token" type="hidden" value="IjliMGVlZTFhOTZjOGQ4ZDBhYWJlMWUyMGQxMDkyODM5M2YxZGUzMDQi.aZdarg.37ADgH17_UehMVGe8Z-KzSSrLUY">
+
+            <div class="form-group register-container__form__group mb-1">
                 <label class="form-label" for="username">Identifiant</label>
                 <input class="form-control" id="username" name="username" placeholder="Nom d'utilisateur" required="" type="text" value="">
             </div>
 
-            <div class="form-group login-form-group mb-3">
+            <div class="form-group register-container__form__group mb-1">
+                <label class="form-label" for="mail">Email</label>
+                <input class="form-control" id="mail" name="mail" placeholder="Adresse e-mail" required="" type="email" value="">
+            </div>
+
+            <div class="form-group register-container__form__group mb-1">
                 <label class="form-label" for="password">Mot de passe</label>
                 <input class="form-control" id="password" name="password" placeholder="Mot de passe" required="" type="password" value="">
             </div>
-            <div class="form-group login-form-group mb-3">
-                <input class="btn btn-primary" id="submit" name="submit" type="submit" value="Se connecter">
+
+            <div class="form-group register-container__form__group mb-1">
+                <label class="form-label" for="confirm_password">Confirmer le mot de passe</label>
+                <input class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirmez le mot de passe" required="" type="password" value="">
+            </div>
+
+            <div class="form-group register-container__form__group mb-1">
+                <label class="form-label checkbox-label" for="permissions">Autorisations</label>
+                <ul class="form-control register-container__form__group__checkbox" id="permissions">
+                    <li>
+                        <input id="permissions-0" name="permissions" type="checkbox" value="1">
+                        <label for="permissions-0">Administration</label>
+                    </li>
+                    <li>
+                        <input id="permissions-1" name="permissions" type="checkbox" value="2">
+                        <label for="permissions-1">Comptabilité</label>
+                    </li>
+                    <li>
+                        <input id="permissions-2" name="permissions" type="checkbox" value="3">
+                        <label for="permissions-2">Commercial</label>
+                    </li>
+                    <li>
+                        <input id="permissions-3" name="permissions" type="checkbox" value="4">
+                        <label for="permissions-3">Logistique</label>
+                    </li>
+                    <li>
+                        <input id="permissions-4" name="permissions" type="checkbox" value="5">
+                        <label for="permissions-4">Support</label>
+                    </li>
+                    <li>
+                        <input id="permissions-5" name="permissions" type="checkbox" value="6">
+                        <label for="permissions-5">Informatique</label>
+                    </li>
+                    <li>
+                        <input id="permissions-6" name="permissions" type="checkbox" value="7">
+                        <label for="permissions-6">RH</label>
+                    </li>
+                    <li>
+                        <input id="permissions-7" name="permissions" type="checkbox" value="8">
+                        <label for="permissions-7">Direction</label>
+                    </li>
+                    <li>
+                        <input id="permissions-8" name="permissions" type="checkbox" value="9">
+                        <label for="permissions-8">Super Admin</label>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="form-group register-container__form__group mb-1">
+                <input class="btn btn-primary" id="submit" name="submit" type="submit" value="S'inscrire">
             </div>
         </form>
     </div>
 </main>
 <footer>
     <div>
+    
     </div>
 </footer>
-<script src="main.js"></script>
+<!-- Injection des scripts suivant la page -->
+<script src="register.js"></script>
+<script src="/static/js/main.js"></script>
 </body>
 </html>

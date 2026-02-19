@@ -3,14 +3,15 @@
 dashboard = "dashboard.toml"
 login = "login.toml"
 stock = "stock.toml"
+register = "register.toml"
 
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée
 # ------------------------------------------------------------------------------
 # Paramètres
 [default.params]
-styles = ["css/base.css"]
-scripts = ["js/base.js"]
+styles = ["css/main.css"]
+scripts = ["js/main.js"]
 # Clées
 [default.meta]
 title = "Sauvetage | Intranet"
