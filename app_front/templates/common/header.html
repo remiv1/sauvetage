@@ -1,21 +1,24 @@
-<div class="banner active bg-primary">
-    <div class="header-container">
-        <h1 class="handscript y-center">
-            Editions du Sauvetage
-        </h1>
-        <form action="post" class="h1-menu">
-            <select name="h1-nav" id="menu">
-                <option value="home">Accueil</option>
-                <option value="dashboard">Tableau de Bord</option>
-                <option value="inventory">Inventaire</option>
-                <option value="stock">Stocks</option>
-                <option value="order">Commandes</option>
-                <option value="customer">Clients</option>
-                <option value="supplier">Fournisseurs</option>
-                {% if '1' in session['roles'] %}
-                <option value="admin">Administration</option>
-                {% endif %}
-            </select>
-        </form>
+    <div class="banner active bg-primary">
+        <div class="header-container">
+            <h1 class="main-title handscript y-center">
+                Editions du Sauvetage
+            </h1>
+            {% if session %}
+            <div class="menu">
+                <button class="menu__toggle" aria-label="Toggle menu">Accueil</button>
+                <ul class="menu__list">
+                    <li class="menu__list__item"><a href="#">Accueil</a></li>
+                    <li class="menu__list__item"><a href="#">Tableau de Bord</a></li>
+                    <li class="menu__list__item"><a href="#">Inventaire</a></li>
+                    <li class="menu__list__item"><a href="#">Stocks</a></li>
+                    <li class="menu__list__item"><a href="#">Commandes</a></li>
+                    <li class="menu__list__item"><a href="#">Clients</a></li>
+                    <li class="menu__list__item"><a href="#">Fournisseurs</a></li>
+                    {% if session and '1' in session['roles'] %}
+                    <li class="menu__list__item"><a href="#">Administration</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
     </div>
-</div>

@@ -15,6 +15,7 @@
 
 @mixin input-base {
     width: 100%;
+    max-width: 100%;
     padding: variables.$space-sm variables.$space-md;
     border: 1px solid variables.$border-blue;
     border-radius: variables.$radius-sm;
@@ -25,4 +26,10 @@
         outline: none;
         box-shadow: 0 0 0 3px rgba(variables.$primary-color, 0.2);
     }
+}
+
+@mixin inline-container {
+    display: inline-flex;
+    width: 100%;
+    max-width: 100%;
 }

@@ -3,32 +3,38 @@
 {% block title %}Editions Sauvetage - Login{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2>Connexion</h2>
+    <div class="login-container pb-5">
+        {# Message Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% if first_user is None %}
+        <h2 class="login-title">Connexion</h2>
+        <form class="login-form" method="POST">
+            {{ form.hidden_tag() }}
 
-    {# Message Flash #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
-            {% endfor %}
+            <div class="form-group login-form-group mb-3">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control", placeholder="Nom d'utilisateur") }}
+            </div>
+
+            <div class="form-group login-form-group mb-3">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="Mot de passe") }}
+            </div>
+            <div class="form-group login-form-group mb-3">
+                {{ form.submit(class="btn btn-primary", value="Se connecter") }}
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-info mt-3">
+            Aucun utilisateur n'existe encore. Veuillez créer un compte administrateur.
+            <a href="{{ url_for('user.register') }}" class="btn btn-primary">Créer un compte</a>
+        </div>
         {% endif %}
-    {% endwith %}
-
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control", placeholder="Nom d'utilisateur") }}
-        </div>
-
-        <div class="mb-3">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", placeholder="Mot de passe") }}
-        </div>
-        <div class="mb-3">
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
-    </form>
-</div>
+    </div>
 {% endblock %}

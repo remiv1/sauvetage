@@ -1,22 +1,111 @@
 @use 'core/variables' as variables;
-@use 'core/mixins' as *;
-@use 'core/reset';
+@use 'core/mixins' as mixins;
 @use 'core/base';
 @use 'core/layout';
 @use 'core/forms';
 @use 'core/components';
 @use 'core/utilities';
+@use 'core/reset';
 
 .banner {
     border-radius: 0px 0px variables.$radius-md variables.$radius-md;
-    &::after {
-        content: '';
+    border-bottom: 8px solid variables.$border-blue;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: variables.$space-md variables.$space-md;
+    color: variables.$text-light;
+}
+
+.main-title {
+    margin: 0;
+    padding: variables.$space-lg 0 variables.$space-lg variables.$space-md;
+}
+
+// ------------------------------------------------------
+// Menu déroulant (dropdown)
+// ------------------------------------------------------
+
+.menu {
+    position: relative;
+    // Bouton principal
+    &__toggle {
+        background: variables.$primary-color-dark;
+        border: 1px solid variables.$primary-color-light;
+        padding: variables.$space-md;
+        border-radius: variables.$radius-md;
+        cursor: pointer;
+        font-size: 1rem;
+        color: variables.$text-light;
+        display: flex;
+        justify-content: space-between; /* Ajoute un espacement entre le texte et l'élément ::after */
+        align-items: center; /* Aligne verticalement le texte et le ::after */
+        gap: 0.4rem;
+        width: 250px;
+
+        &::after {
+            content: '';
+            display: inline-block;
+            width: 16px; /* Largeur du V */
+            height: 20px; /* Hauteur du V */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            margin-left: auto; /* Pousse le ::after à droite */
+        }
+
+        &:hover {
+            background: variables.$primary-color-light;
+        }
+    }
+
+  // Liste déroulante (dropdown)
+    &__list {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 80%;
-        height: 2px;
-        background: variables.$border-blue;
-        border-radius: inherit;
+        right: 0;
+        top: calc(100% + 4px);
+        background: variables.$primary-color-dark;
+        border: 1px solid variables.$primary-color-light;
+        border-radius: variables.$radius-md;
+        padding: 0.5rem 0;
+        margin: 0;
+        list-style: none;
+        width: 250px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+        display: none; // caché par défaut
+
+        // Items
+        &__item {
+            padding: variables.$space-md variables.$space-sm;
+            cursor: pointer;
+
+            &:hover {
+                background: variables.$primary-color-light;
+                color: variables.$text-light;
+                border-radius: variables.$radius-sm;
+            }
+        }
+    }
+
+    // État ouvert
+    &--open {
+        .menu__list {
+            display: block;
+            &__item {
+                padding: variables.$space-md variables.$space-sm;
+                cursor: pointer;
+
+                &:hover {
+                    background: variables.$primary-color-light;
+                    color: variables.$text-light;
+                    border-radius: variables.$radius-sm;
+                }
+            }
+        }
     }
 }
