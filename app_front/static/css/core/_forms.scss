@@ -5,31 +5,20 @@
 form {
     .form-group {
         margin-bottom: variables.$space-md;
+        width: 100%;
     }
 
     label {
         display: block;
         margin-bottom: variables.$space-xs;
         font-weight: 500;
+        max-width: 100%;
     }
 
     input[type="text"],
     input[type="password"],
     input[type="email"] {
         @include mixins.input-base;
-    }
-
-    .password-wrapper {
-        position: relative;
-
-        .toggle-password {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            user-select: none;
-        }
     }
 
     button,

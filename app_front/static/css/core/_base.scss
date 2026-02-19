@@ -1,17 +1,37 @@
 @use './variables' as variables;
 
 body {
-    font-family: variables.$font-main;
+    font-family: variables.$font-primary;
     background: variables.$gray-100;
     color: variables.$gray-900;
     margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    header, footer {
+        flex-shrink: 0;
+    }
+    main {
+        flex-grow: 1;
+    }
 }
 
-h1, h2, h3 {
-    font-weight: 600;
-    margin-bottom: variables.$space-md;
+// Titres
+h1 {
+    font-size: 4rem;
+    font-family: variables.$font-title;
+}
+h2 {
+    font-size: 3rem;
+    font-family: variables.$font-title;
+}
+h3 {
+    font-size: 2rem;
+    font-family: variables.$font-title;
 }
 
+// Liens
 a {
     color: variables.$primary-color;
     text-decoration: none;
