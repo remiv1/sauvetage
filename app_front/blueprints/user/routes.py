@@ -8,8 +8,9 @@
 """
 
 from flask import Blueprint, redirect, url_for, flash, g
-from app_front.blueprints.user.forms import LoginForm
+from app_front.blueprints.user.forms import LoginForm, UserCreateForm
 from app_front.utils.pages import render_page
+from app_front.config.db_conf import get_secure_session
 from db_models.repositories.user import UsersRepository
 from db_models.services.auth import AuthService
 
@@ -20,6 +21,7 @@ def login():
     """Route pour la connexion d'un utilisateur existant."""
     # Initialiser le service d'authentification avec le repository utilisateur
     user_obj = UsersRepository(g.db_session)
+    first_user = user_obj.no_users_exist()
     auth_service = AuthService(user_obj)
 
     # Récupération du formulaire de connexion
@@ -41,4 +43,25 @@ def login():
             return redirect(url_for('home'))
 
     # Afficher le formulaire de connexion
-    return render_page('login', form=form)
+    return render_page('login', form=form, first_user=first_user)
+
+@bp_user.route('/register', methods=['GET', 'POST'])
+def register():
+    """Route pour la création d'un nouvel utilisateur."""
+    form = UserCreateForm()
+    user_obj = UsersRepository(get_secure_session())
+
+    if form.validate_on_submit():
+        user_input = form.username.data or ""
+        mail_input = form.mail.data or ""
+        pwd_input = form.password.data or ""
+        permissions_input = form.permissions.data or []
+        user_obj.create_user(
+            username=user_input,
+            mail=mail_input,
+            password=pwd_input,
+            permissions=permissions_input
+        )
+        flash('Utilisateur créé avec succès.', 'success')
+        return redirect(url_for('user.login'))
+    return render_page('register', form=form)
