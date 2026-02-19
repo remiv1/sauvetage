@@ -1,0 +1,44 @@
+{% extends layout.extend_layout %}
+
+{% block title %}Editions Sauvetage - Inscription{% endblock %}
+
+{% block content %}
+    <div class="register-container pb-5">
+        {# Message Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <h2 class="register-title">Inscription</h2>
+        <form class="register-form" method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group register-form-group mb-3">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control", placeholder="Nom d'utilisateur") }}
+            </div>
+
+            <div class="form-group register-form-group mb-3">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control", placeholder="Adresse e-mail") }}
+            </div>
+
+            <div class="form-group register-form-group mb-3">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="Mot de passe") }}
+            </div>
+
+            <div class="form-group register-form-group mb-3">
+                {{ form.confirm_password.label(class="form-label") }}
+                {{ form.confirm_password(class="form-control", placeholder="Confirmez le mot de passe") }}
+            </div>
+
+            <div class="form-group register-form-group mb-3">
+                {{ form.submit(class="btn btn-primary", value="S'inscrire") }}
+            </div>
+        </form>
+    </div>
+{% endblock %}

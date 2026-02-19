@@ -106,3 +106,29 @@ class UsersRepository(BaseRepository):
             self.session.commit()
             return True
         return False
+
+    def no_users_exist(self) -> bool:
+        """Vérifie s'il n'existe aucun utilisateur dans la base de données.
+        Returns:
+            bool: True s'il n'existe aucun utilisateur, False sinon.
+        """
+        stmt = select(Users).limit(1)
+        result = self.session.execute(stmt).scalar_one_or_none()
+        return result is None
+
+    def create_user(self, **kwargs) -> Users:
+        """Crée un nouvel utilisateur à partir d'un formulaire.
+        Args:
+            kwargs: Les informations de l'utilisateur.
+        Returns:
+            Users: L'utilisateur créé.
+        """
+        user = Users(
+            username=kwargs.get('username', ''),
+            mail=kwargs.get('mail', ''),
+            permissions=kwargs.get('permissions', [])
+        )
+        self.session.add(user)
+        self.session.commit()
+        self.new_password(user=user, password=kwargs.get('password', ''))
+        return user
