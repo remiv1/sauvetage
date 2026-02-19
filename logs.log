@@ -1,0 +1,366 @@
+-----------------------------------
+Logs app-back
+-----------------------------------
+
+[4m>>>> Executing external compose provider "/usr/bin/podman-compose". Please see podman-compose(1) for how to disable this message. <<<<
+
+[0m[ENTRYPOINT] Demarrage du backend Sauvetage
+[ENTRYPOINT] DATABASE_URL construit depuis les variables BD
+[ENTRYPOINT] DATABASE_SECURE_URL construit depuis les variables BD
+[ENTRYPOINT] MONGODB_URL construit depuis les variables BD
+[ENTRYPOINT] Configuration:
+[ENTRYPOINT]   DATABASE_URL: [REDACTED]
+[ENTRYPOINT]   MONGODB_URL: [REDACTED]
+[ENTRYPOINT]   LOG_LEVEL=info
+[ENTRYPOINT]   DEBUG=true
+Attente de PostgreSQL sur db-main:5432...
+[ENTRYPOINT] Demarrage de Gunicorn (4 workers)
+[2026-02-19 16:17:19 +0000] [1] [INFO] Starting gunicorn 25.0.1
+[2026-02-19 16:17:19 +0000] [1] [INFO] Listening at: http://0.0.0.0:8000 (1)
+[2026-02-19 16:17:19 +0000] [1] [INFO] Using worker: uvicorn.workers.UvicornWorker
+[2026-02-19 16:17:19 +0000] [3] [INFO] Booting worker with pid: 3
+[2026-02-19 16:17:19 +0000] [4] [INFO] Booting worker with pid: 4
+[2026-02-19 16:17:19 +0000] [5] [INFO] Booting worker with pid: 5
+[2026-02-19 16:17:19 +0000] [6] [INFO] Booting worker with pid: 6
+[2026-02-19 16:17:20 +0000] [3] [INFO] Started server process [3]
+[2026-02-19 16:17:20 +0000] [6] [INFO] Started server process [6]
+[2026-02-19 16:17:20 +0000] [4] [INFO] Started server process [4]
+[2026-02-19 16:17:20 +0000] [3] [INFO] Waiting for application startup.
+[2026-02-19 16:17:20 +0000] [4] [INFO] Waiting for application startup.
+[2026-02-19 16:17:20 +0000] [6] [INFO] Waiting for application startup.
+[2026-02-19 16:17:20 +0000] [5] [INFO] Started server process [5]
+[2026-02-19 16:17:20 +0000] [5] [INFO] Waiting for application startup.
+[2026-02-19 16:17:20 +0000] [4] [INFO] Application startup complete.
+[2026-02-19 16:17:20 +0000] [6] [INFO] Application startup complete.
+[2026-02-19 16:17:20 +0000] [3] [INFO] Application startup complete.
+[2026-02-19 16:17:20 +0000] [5] [INFO] Application startup complete.
+
+
+-----------------------------------
+Logs app-front
+-----------------------------------
+
+[4m>>>> Executing external compose provider "/usr/bin/podman-compose". Please see podman-compose(1) for how to disable this message. <<<<
+
+[0m[ENTRYPOINT] Démarrage du frontend Sauvetage
+[ENTRYPOINT] DATABASE_URL construit depuis les variables BD
+[ENTRYPOINT] SECURE_DATABASE_URL construit depuis les variables BD (encodé)
+[ENTRYPOINT] MONGODB_URL construit depuis les variables BD (encodé, authSource ajouté)
+[ENTRYPOINT] Configuration:
+[ENTRYPOINT]   DATABASE_URL=postgresql://app:A82Os2XAeLu58l0LuuZO4koxcCnAqkJfzxX28cN+n/g@db-main:5432/sauvetage_main
+[ENTRYPOINT]   SECURE_DATABASE_URL=postgresql://secure:G/nRPD7oF2RVbEamVbW1tuIin2vjac0njhP3b5lFLl8@db-main:5432/sauvetage_users
+[ENTRYPOINT]   MONGODB_URL=mongodb://app:IxRUA/G%2BiCL910QSlhrTxvXdMfNk5RbnVJO3vm8l7wg@db-logs:27017/sauvetage_logs?authSource=sauvetage_logs
+[ENTRYPOINT]   LOG_LEVEL=info
+[ENTRYPOINT]   DEBUG=true
+[ENTRYPOINT] Démarrage de Gunicorn (4 workers)
+[2026-02-19 16:17:34 +0000] [1] [INFO] Starting gunicorn 25.0.1
+[2026-02-19 16:17:34 +0000] [1] [INFO] Listening at: http://0.0.0.0:5000 (1)
+[2026-02-19 16:17:34 +0000] [1] [INFO] Using worker: sync
+[2026-02-19 16:17:34 +0000] [4] [INFO] Booting worker with pid: 4
+[2026-02-19 16:17:34 +0000] [5] [INFO] Booting worker with pid: 5
+[2026-02-19 16:17:34 +0000] [6] [INFO] Booting worker with pid: 6
+[2026-02-19 16:17:34 +0000] [7] [INFO] Booting worker with pid: 7
+[2026-02-19 16:19:39 +0000] [4] [ERROR] Error handling request /user/login
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedTable: relation "auth_schema.users" does not exist
+LINE 2: FROM auth_schema.users 
+             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 142, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 185, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app_front/blueprints/user/routes.py", line 24, in login
+    first_user = user_obj.no_users_exist()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/db_models/repositories/user.py", line 116, in no_users_exist
+    result = self.session.execute(stmt).scalar_one_or_none()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable) relation "auth_schema.users" does not exist
+LINE 2: FROM auth_schema.users 
+             ^
+
+[SQL: SELECT auth_schema.users.id, auth_schema.users.username, auth_schema.users.email, auth_schema.users.is_active, auth_schema.users.nb_failed_logins, auth_schema.users.is_locked, auth_schema.users.permissions, auth_schema.users.created_at, auth_schema.users.updated_at 
+FROM auth_schema.users 
+ LIMIT %(param_1)s]
+[parameters: {'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+10.89.0.2 - - [19/Feb/2026:16:19:39 +0000] "GET /user/login HTTP/1.1" 500 0 "-" "-"
+10.89.0.2 - - [19/Feb/2026:16:19:39 +0000] "GET /favicon.ico HTTP/1.1" 302 209 "https://localhost:8443/user/login" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+[2026-02-19 16:19:39 +0000] [5] [ERROR] Error handling request /user/login
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedTable: relation "auth_schema.users" does not exist
+LINE 2: FROM auth_schema.users 
+             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 142, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/usr/local/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 185, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app_front/blueprints/user/routes.py", line 24, in login
+    first_user = user_obj.no_users_exist()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/db_models/repositories/user.py", line 116, in no_users_exist
+    result = self.session.execute(stmt).scalar_one_or_none()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable) relation "auth_schema.users" does not exist
+LINE 2: FROM auth_schema.users 
+             ^
+
+[SQL: SELECT auth_schema.users.id, auth_schema.users.username, auth_schema.users.email, auth_schema.users.is_active, auth_schema.users.nb_failed_logins, auth_schema.users.is_locked, auth_schema.users.permissions, auth_schema.users.created_at, auth_schema.users.updated_at 
+FROM auth_schema.users 
+ LIMIT %(param_1)s]
+[parameters: {'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+10.89.0.2 - - [19/Feb/2026:16:19:39 +0000] "GET /user/login HTTP/1.1" 500 0 "-" "-"
+
+
+-----------------------------------
+Logs db-main
+-----------------------------------
+
+[4m>>>> Executing external compose provider "/usr/bin/podman-compose". Please see podman-compose(1) for how to disable this message. <<<<
+
+[0mThe files belonging to this database system will be owned by user "postgres".
+This user must also own the server process.
+
+The database cluster will be initialized with locale "en_US.utf8".
+The default database encoding has accordingly been set to "UTF8".
+The default text search configuration will be set to "english".
+
+Data page checksums are enabled.
+
+fixing permissions on existing directory /var/lib/postgresql/18/docker ... ok
+creating subdirectories ... ok
+selecting dynamic shared memory implementation ... posix
+selecting default "max_connections" ... 100
+selecting default "shared_buffers" ... 128MB
+selecting default time zone ... Etc/UTC
+creating configuration files ... ok
+running bootstrap script ... ok
+performing post-bootstrap initialization ... ok
+syncing data to disk ... ok
+
+
+Success. You can now start the database server using:
+
+    pg_ctl -D /var/lib/postgresql/18/docker -l logfile start
+
+initdb: warning: enabling "trust" authentication for local connections
+initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+waiting for server to start....2026-02-19 16:16:57.849 UTC [50] LOG:  starting PostgreSQL 18.2 (Debian 18.2-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+2026-02-19 16:16:57.852 UTC [50] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-02-19 16:16:57.860 UTC [56] LOG:  database system was shut down at 2026-02-19 16:16:55 UTC
+2026-02-19 16:16:57.864 UTC [50] LOG:  database system is ready to accept connections
+ done
+server started
+
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/01_db_build.sql
+CREATE DATABASE
+CREATE DATABASE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+You are now connected to database "sauvetage_users" as user "postgres".
+CREATE SCHEMA
+CREATE SCHEMA
+ALTER SCHEMA
+ALTER DATABASE
+You are now connected to database "sauvetage_main" as user "postgres".
+CREATE SCHEMA
+CREATE SCHEMA
+ALTER SCHEMA
+ALTER DATABASE
+
+
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/02_create_users.sql
+You are now connected to database "sauvetage_users" as user "postgres".
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER ROLE
+ALTER ROLE
+GRANT
+GRANT
+GRANT
+ALTER DEFAULT PRIVILEGES
+GRANT
+GRANT
+You are now connected to database "sauvetage_main" as user "postgres".
+ALTER SCHEMA
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER ROLE
+ALTER ROLE
+GRANT
+
+
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/03_create_extensions.sql
+You are now connected to database "sauvetage_users" as user "postgres".
+CREATE EXTENSION
+CREATE EXTENSION
+You are now connected to database "sauvetage_main" as user "postgres".
+CREATE EXTENSION
+CREATE EXTENSION
+CREATE EXTENSION
+
+
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/04_secure_hba.sh
+
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/05_secure_conf.sh
+
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/99_cleanup.sh
+[INFO] Nettoyage des fichiers SQL sensibles...
+/docker-entrypoint-initdb.d/01_db_build.sql
+/docker-entrypoint-initdb.d/02_create_users.sql
+/docker-entrypoint-initdb.d/03_create_extensions.sql
+[INFO] Nettoyage terminé.
+
+waiting for server to shut down....2026-02-19 16:16:59.466 UTC [50] LOG:  received fast shutdown request
+2026-02-19 16:16:59.470 UTC [50] LOG:  aborting any active transactions
+2026-02-19 16:16:59.471 UTC [50] LOG:  background worker "logical replication launcher" (PID 59) exited with exit code 1
+2026-02-19 16:16:59.471 UTC [54] LOG:  shutting down
+2026-02-19 16:16:59.474 UTC [54] LOG:  checkpoint starting: shutdown immediate
+2026-02-19 16:16:59.857 UTC [87] FATAL:  the database system is shutting down
+.2026-02-19 16:17:00.877 UTC [54] LOG:  checkpoint complete: wrote 1914 buffers (11.7%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=0.056 s, sync=1.296 s, total=1.406 s; sync files=610, longest=0.008 s, average=0.003 s; distance=8958 kB, estimate=8958 kB; lsn=0/2016F48, redo lsn=0/2016F48
+2026-02-19 16:17:00.923 UTC [50] LOG:  database system is shut down
+ done
+server stopped
+
+PostgreSQL init process complete; ready for start up.
+
+2026-02-19 16:17:00.994 UTC [1] LOG:  starting PostgreSQL 18.2 (Debian 18.2-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+2026-02-19 16:17:00.994 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-02-19 16:17:00.994 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-02-19 16:17:01.007 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-02-19 16:17:01.021 UTC [94] LOG:  database system was shut down at 2026-02-19 16:17:00 UTC
+2026-02-19 16:17:01.029 UTC [1] LOG:  database system is ready to accept connections
+2026-02-19 16:19:39.191 UTC [147] ERROR:  relation "auth_schema.users" does not exist at character 273
+2026-02-19 16:19:39.191 UTC [147] STATEMENT:  SELECT auth_schema.users.id, auth_schema.users.username, auth_schema.users.email, auth_schema.users.is_active, auth_schema.users.nb_failed_logins, auth_schema.users.is_locked, auth_schema.users.permissions, auth_schema.users.created_at, auth_schema.users.updated_at 
+	FROM auth_schema.users 
+	 LIMIT 1
+2026-02-19 16:19:39.263 UTC [148] ERROR:  relation "auth_schema.users" does not exist at character 273
+2026-02-19 16:19:39.263 UTC [148] STATEMENT:  SELECT auth_schema.users.id, auth_schema.users.username, auth_schema.users.email, auth_schema.users.is_active, auth_schema.users.nb_failed_logins, auth_schema.users.is_locked, auth_schema.users.permissions, auth_schema.users.created_at, auth_schema.users.updated_at 
+	FROM auth_schema.users 
+	 LIMIT 1

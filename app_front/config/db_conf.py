@@ -22,6 +22,7 @@ def get_main_session():
 
     engine = create_engine(
         DATABASE_URL,
+        connect_args={"options": "-csearch_path=app_schema,public,auth_schema"},
         echo=False,
         pool_size=10,
         max_overflow=20,
@@ -40,6 +41,7 @@ def get_secure_session():
 
     engine = create_engine(
         SECURE_DATABASE_URL,
+        connect_args={"options": "-csearch_path=auth_schema,public"},
         echo=False,
         pool_size=10,
         max_overflow=20,
