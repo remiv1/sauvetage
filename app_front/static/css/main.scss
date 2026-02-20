@@ -90,6 +90,9 @@
                 border-radius: variables.$radius-sm;
             }
         }
+        &.open {
+            display: block;
+        }
     }
 
     // État ouvert

@@ -68,6 +68,7 @@ async def create_user(request: Request):
     """Création d'un nouvel utilisateur."""
     # Récupération de la session sécurisée
     session = get_secure_session()
+    user_obj = UsersRepository(session)
 
     # Récupération des données du formulaire
     data = await request.json()
@@ -88,7 +89,10 @@ async def create_user(request: Request):
         new_user = Users(username=username, email=email, permissions=permissions)
         session.add(new_user)
         session.flush()
-        new_password = UsersPasswords(user_id=new_user.id, password_hash=password)
+        hash_pwd = user_obj.hash_password(password)
+        del password
+        new_password = UsersPasswords(user_id=new_user.id, password_hash=hash_pwd)
+        del hash_pwd
         session.add(new_password)
         session.commit()
     # Rollback en cas d'erreur (ex: violation de contrainte) et retour d'une erreur claire
