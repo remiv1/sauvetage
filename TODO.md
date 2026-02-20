@@ -15,33 +15,11 @@
 - [x] Créer la connexion avec la base de données PostgreSQL
 - [x] Passer la session de SQLAlchemy dans les repositories.
 - [ ] Faire la migration en démarrage de l'application backend pour que le front puisse fonctionner.
-- [ ] Création des test unitaires
-  - [x] Pour les objets de la base de données.
-    - [x] customers
-    - [x] inventory
-    - [x] invoices
-    - [x] objects
-    - [x] orders
-    - [x] shipments
-    - [x] suppliers
+- [ ] Recommencer les tests unitaires avec db qui supporte PostegreSQL.
+  - [ ] Pour les objets de la base de données.
   - [ ] Pour les repositories de la base de données.
-    - [ ] customers
-    - [ ] inventory
-    - [ ] invoices
-    - [ ] orders
-    - [ ] shipments
-    - [ ] suppliers
-    - [ ] tags
-    - [ ] user
-    - [ ] objects
-      - [ ] books
-      - [ ] media
-      - [ ] metadatas
-      - [ ] object_tags
-      - [ ] objects
-      - [ ] other_objects
   - [ ] Pour la sécurité
-    - [ ] secur_sauv
   - [ ] Pour les services
-    - [ ] auth
-    - [ ] user
+  - [ ] Pour les routes
+- [ ] Refaire les tests d'intégration.
+- [ ] Refaire les tests d'acceptation.

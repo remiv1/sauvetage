@@ -112,6 +112,6 @@ class UsersRepository(BaseRepository):
         Returns:
             bool: True s'il n'existe aucun utilisateur, False sinon.
         """
-        stmt = select(Users).limit(1)
-        result = self.session.execute(stmt).scalar_one_or_none()
+        stmt = select(Users)
+        result = self.session.execute(stmt)
         return result is None

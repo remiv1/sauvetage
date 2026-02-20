@@ -533,4 +533,58 @@ textarea {
   margin-top: 1rem;
 }
 
+.password-criteria {
+  background: #f5f5f5;
+  border: 1px solid #606060;
+  border-radius: 20px;
+  padding: 1rem;
+  font-size: 0.7rem;
+}
+
+.criterion {
+  margin: 0.25rem 0;
+  padding: 0.25rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+.criterion.invalid {
+  color: hsl(354.0659340659, 100%, -4.3137254902%);
+  background: rgb(255, 131, 143.2637362637);
+  font-style: italic;
+}
+.criterion.valid {
+  color: hsl(133.7614678899, 100%, -18.6274509804%);
+  background: rgb(58, 255, 103.1834862385);
+  font-style: normal;
+}
+
+.email-error {
+  display: none;
+  color: #d32f2f;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-input-wrapper .form-control {
+  flex: 1;
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+.password-toggle:hover {
+  opacity: 0.7;
+}
+
 /*# sourceMappingURL=register.css.map */

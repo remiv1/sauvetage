@@ -13,6 +13,18 @@
             {% endif %}
         {% endwith %}
         <h2 class="register-container__title">Inscription</h2>
+        {% for error in form.username.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.email.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.password.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.confirm_password.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
         <form class="register-container__form" method="POST">
             {{ form.hidden_tag() }}
 
@@ -22,24 +34,42 @@
             </div>
 
             <div class="form-group register-container__form__group mb-3">
-                {{ form.mail.label(class="form-label") }}
-                {{ form.mail(class="form-control", placeholder="Adresse e-mail") }}
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control", placeholder="Adresse e-mail") }}
+                <div id="email-error" class="email-error"></div>
             </div>
 
             <div class="form-group register-container__form__group mb-3">
                 {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control", placeholder="Mot de passe") }}
+                <div class="password-input-wrapper">
+                    {{ form.password(class="form-control", placeholder="Mot de passe") }}
+                    <span class="password-toggle" id="password-toggle">👁️</span>
+                </div>
+                
+                <div class="password-criteria mt-3">
+                    <p id="password-length" class="criterion invalid">✗ Au moins 15 caractères</p>
+                    <p id="password-uppercase" class="criterion invalid">✗ Une lettre majuscule (A-Z)</p>
+                    <p id="password-lowercase" class="criterion invalid">✗ Une lettre minuscule (a-z)</p>
+                    <p id="password-number" class="criterion invalid">✗ Un chiffre (0-9)</p>
+                    <p id="password-special" class="criterion invalid">✗ Un caractère spécial (!@#$%^&*)</p>
+                </div>
             </div>
 
             <div class="form-group register-container__form__group mb-3">
                 {{ form.confirm_password.label(class="form-label") }}
-                {{ form.confirm_password(class="form-control", placeholder="Confirmez le mot de passe") }}
+                <div class="password-input-wrapper">
+                    {{ form.confirm_password(class="form-control", placeholder="Confirmez le mot de passe") }}
+                    <span class="password-toggle" id="confirm-password-toggle">👁️</span>
+                </div>
+                <div id="password-match" class="password-match invalid" style="margin-top: 0.5rem;">❌ Les mots de passe ne correspondent pas</div>
             </div>
 
+            {% if first_user == false %}
             <div class="form-group register-container__form__group__checkbox mb-3">
                 {{ form.permissions.label(class="form-label checkbox-label") }}
                 {{ form.permissions(class="form-control register-container__form__group__checkbox") }}
             </div>
+            {% endif %}
 
             <div class="form-group register-container__form__group mb-3">
                 {{ form.submit(class="btn btn-primary", value="S'inscrire") }}

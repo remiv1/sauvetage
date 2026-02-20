@@ -80,3 +80,63 @@
 .register-container__form .btn {
     margin-top: variables.$space-md;
 }
+
+.password-criteria {
+    background: variables.$gray-100;
+    border: 1px solid variables.$gray-600;
+    border-radius: variables.$radius-md;
+    padding: variables.$space-md;
+    font-size: 0.7rem;
+}
+
+.criterion {
+    margin: variables.$space-xs 0;
+    padding: variables.$space-xs;
+    border-radius: variables.$radius-sm;
+    transition: all 0.3s ease;
+
+    &.invalid {
+        color: variables.$danger-color;
+        background: variables.$danger-bg;
+        font-style: italic;
+    }
+
+    &.valid {
+        color: variables.$success-color;
+        background: variables.$success-bg;
+        font-style: normal;
+    }
+}
+
+
+
+.email-error {
+    display: none;
+    color: #d32f2f;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    
+    .form-control {
+        flex: 1;
+        padding-right: 3rem; // Espace pour l'oeil
+    }
+}
+
+.password-toggle {
+    position: absolute;
+    right: 1rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    user-select: none;
+    transition: opacity 0.2s ease;
+    
+    &:hover {
+        opacity: 0.7;
+    }
+}

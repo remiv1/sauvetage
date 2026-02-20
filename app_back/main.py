@@ -5,11 +5,12 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from app_back.router import v1_api_router
 from app_back.migration import run_migrations_with_lock
+from logs.logger import get_logger
 
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
 LOG_LEVEL = getenv("LOG_LEVEL", "info")
-
+sauv_logger = get_logger()
 # Exécution des migrations avec advisory lock PostgreSQL.
 # Chaque worker Gunicorn importe ce module, mais seul le premier
 # à obtenir le lock exécutera réellement les migrations.
@@ -21,7 +22,7 @@ app = FastAPI(
     title="Sauvetage Backend API",
     description="Backend API for Sauvetage application",
     version="1.0.0",
-    debug=DEBUG,
+    debug=True,
 )
 
 # Include API routers
