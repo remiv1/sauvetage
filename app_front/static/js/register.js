@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const passwordInput = form.querySelector('input[name="password"]');
     const confirmPasswordInput = form.querySelector('input[name="confirm_password"]');
-    const emailInput = form.querySelector('input[name="mail"]');
+    const emailInput = form.querySelector('input[name="email"]');
     
     if (!passwordInput || !confirmPasswordInput || !emailInput) return; // Sortir si les champs n'existent pas
 

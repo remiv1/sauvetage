@@ -45,6 +45,15 @@ class UsersRepository(BaseRepository):
         user = self.session.execute(stmt).scalar_one_or_none()
         return user
 
+    def hash_password(self, password: str) -> str:
+        """Hash un mot de passe en utilisant bcrypt.
+        Args:
+            password (str): Le mot de passe en clair à hasher.
+        Returns:
+            str: Le mot de passe hashé.
+        """
+        return self._hasher.hash(password)
+
     def validate_password(self, user: Users, password: str) -> bool:
         """Valide un mot de passe pour un utilisateur donné.
         Args:
