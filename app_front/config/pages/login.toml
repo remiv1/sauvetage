@@ -4,7 +4,7 @@
 # Paramètres
 [params]
 styles = ["css/login.css", "css/main.css"]
-scripts = ["js/login.js", "js/base.js"]
+scripts = ["js/login.js", "js/main.js"]
 # Clées
 [meta]
 title = "Connexion | Intranet"

@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from flask import Flask, jsonify, session, request, redirect, url_for, g
 from app_front.utils.pages import render_page
+from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
     DEBUG, LOG_LEVEL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger)
 from app_front.config.db_conf import get_main_session, DATABASE_URL, MONGODB_URL
@@ -44,13 +45,11 @@ def before_request():
         user = auth_service.validate_session()
         if not user:
             session.clear()  # Invalider la session si l'utilisateur n'est plus valide
-    if request.path.endswith("/login") or request.path.endswith("/register"):
-        # Si c'est une tentative de connexion ou d'enregistrement, on ne fait rien ici
-        return None
-    if request.path.startswith("/static/"):
-        # Ignorer les requêtes pour les ressources statiques
+    if is_allowed(request.path):
+        print("Accès à une page autorisée, aucune redirection nécessaire.")
         return None
     # Cas de l'utilisateur non loggué
+    print(f"page demandée : {request.path} --> redirection vers login")
     return redirect(url_for("user.login"))
 
 @app.after_request

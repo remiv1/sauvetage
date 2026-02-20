@@ -7,21 +7,23 @@
     - /user/<int:id>/delete : Route pour supprimer un utilisateur spécifique.
 """
 
-import os
+from typing import Dict, Any, Tuple
 import requests
 from flask import Blueprint, redirect, url_for, flash, session
 from app_front.blueprints.user.forms import LoginForm, UserCreateForm
 from app_front.utils.pages import render_page
+from app_front.config import API_URL
 
 bp_user = Blueprint('user', __name__, url_prefix='/user')
-API_URL = os.getenv('API_URL', 'http://app-back:8000/api/v1')
 
 @bp_user.route('/login', methods=['GET', 'POST'])
 def login():
     """Route pour la connexion d'un utilisateur existant."""
     # Initialiser le service d'authentification avec le repository utilisateur
     no_users_str = f"{API_URL}/users/no-user"
-    no_users = requests.get(no_users_str, timeout=10).json().get("exists", False)
+    response = requests.get(no_users_str, timeout=10)
+    response_data = response.json()
+    no_users = response_data.get("exists", False)
 
     # Récupération du formulaire de connexion
     form = LoginForm()
@@ -67,7 +69,7 @@ def register():
             "permissions": "".join(permissions_input)
         }
         response = requests.post(f"{API_URL}/users/create", json=user, timeout=10)
-        if response.status_code != 200:
+        if response.status_code != 201:
             flash(f"Erreur lors de la création de l'utilisateur : {response.text}", 'danger')
             return render_page('register', form=form)
         flash(f'Utilisateur {user["username"]} créé avec succès.', 'success')

@@ -33,7 +33,7 @@
         {% else %}
         <div class="alert alert-info mt-3">
             Aucun utilisateur n'existe encore. Veuillez créer un compte administrateur.
-            <a href="{{ url_for('user.register') }}" class="btn btn-primary">Créer un compte</a>
+            <a href="{{ url_for('admin.create_first_user') }}" class="btn btn-primary">Créer un compte</a>
         </div>
         {% endif %}
     </div>
