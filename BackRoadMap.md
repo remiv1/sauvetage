@@ -50,6 +50,17 @@
 
 ---
 
-**Dernière mise à jour** : 13 février 2026
+## 🆕 Évolutions depuis le 13/02/2026
+
+- **Gestion des utilisateurs :** implémentation complète de l'authentification (création, connexion, vérification d'existence), pages et formulaires `login` / `register`, pages de modification et changement de mot de passe, et utilitaires front (`routes`, `forms`, `templates`, `js`).
+- **Sécurité des mots de passe :** ajout du hachage et de la vérification des mots de passe côté dépôt (`UsersRepository`) et intégration lors de la création et modification d'utilisateurs.
+- **Refactorisation front-end :** réorganisation des assets SCSS/JS (`core/`), séparation des styles et scripts utilisateur (`app_front/static/css/user`, `app_front/static/js/user`), et modernisation des templates associés.
+- **Migrations & DB :** création des migrations initiales (Alembic) pour `main` et `users`, automatisation de l'application des migrations au démarrage de l'`app-back` et ajout des scripts d'initialisation SQL pour les environnements de test et production.
+- **Tests & CI :** ajout d'une infra de tests (Dockerfile pour tests, `docker-compose.test.yml`, scripts d'init) permettant d'exécuter la suite avec une base SQLite/Postgres et préparation d'un workflow GitHub Actions pour déploiement/tests.
+- **Docker et scripts d'exploitation :** mise à jour des `Dockerfile` pour front/back, ajout/ajustement de scripts d'initialisation (`setup-env.sh`, `start_sequence.sh`, `cleanup.sh`, récupération de logs) et génération de fichiers de logs pour faciliter le debug.
+- **Améliorations back :** ajout de `app_back/db_connection` et de nouvelles routes API (`app_back/v1/user.py`), corrections de bugs (recherche du premier utilisateur) et refactor des repositories (`db_models/repositories/user.py`).
+- **Observabilité & logs :** création/ajout de logs de migration et fichiers de logs front/back pour faciliter les diagnostics.
+
+**Dernière mise à jour** : 21 février 2026
 
 > _Note : Cette roadmap est un document vivant et sera mise à jour régulièrement en fonction de l'avancement du projet et des priorités changeantes._
