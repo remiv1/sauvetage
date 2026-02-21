@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Register JS loaded');
     const form = document.querySelector('.register-container__form');
     if (!form) return; // Sortir si le formulaire n'existe pas
 

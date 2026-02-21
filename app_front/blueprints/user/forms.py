@@ -41,7 +41,6 @@ class UserEditForm(FlaskForm):
     """Formulaire d'édition de compte utilisateur."""
     username = StringField('Identifiant', validators=[DataRequired()])
     mail = EmailField('Email', validators=[DataRequired()])
-    submit = SubmitField('Mettre à jour')
     permissions = SelectMultipleField(
         'Autorisations',
         choices=[
@@ -52,6 +51,7 @@ class UserEditForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False)
     )
+    submit = SubmitField('Mettre à jour')
 
 class UserPasswordChangeForm(FlaskForm):
     """Formulaire de changement de mot de passe pour les utilisateurs."""

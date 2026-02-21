@@ -1,0 +1,26 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de création de compte utilisateur ---
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+styles = ["css/user/register.css", "css/main.css"]
+scripts = ["js/user/register.js", "js/main.js"]
+# Clées
+[meta]
+title = "Création de compte | Intranet"
+description = "Page de création de compte utilisateur à l'intranet"
+keywords = "création de compte, inscription, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="form"
+# Pages spécifiques
+[layout]
+main_layout = "user/register.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = false
+searchbar = false

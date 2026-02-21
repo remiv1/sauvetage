@@ -79,7 +79,7 @@ def logout():
     """Route pour la déconnexion de l'utilisateur connecté."""
     session.clear()
     flash('Déconnexion réussie.', 'success')
-    return redirect(url_for('home'))
+    return redirect(url_for('user.login'))
 
 @permission_required(ALL, _and=False)
 @bp_user.route('/<username>/change-password', methods=['GET', 'POST'])
@@ -96,7 +96,6 @@ def chg_pwd(username):
             or (new_password.strip() == ""):
             message = "Les nouveaux mots de passe ne correspondent pas ou sont vides."
             flash(message, 'danger')
-            #TODO: Créer le fichier TOML de la page de changement de mot de passe et le template
             return render_page('change_password', form=form, username=username)
         try:
             ok = change_password(

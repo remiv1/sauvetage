@@ -1,9 +1,10 @@
 # Configuration des pages de l'application. Annuaire des pages.
 [links]
 dashboard = "dashboard.toml"
-login = "login.toml"
+login = "user/login.toml"
 stock = "stock.toml"
-register = "register.toml"
+register = "user/register.toml"
+change_password = "user/change_password.toml"
 
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée
