@@ -1,45 +1,41 @@
 """Blueprint pour les fonctionnalités d'administration"""
 
-import requests
 from flask import Blueprint, redirect, url_for, flash
 from app_front.blueprints.admin.forms import FirstUserForm
-from app_front.config import API_URL
 from app_front.utils.pages import render_page
+from app_front.blueprints.user.utils import create_user, check_no_users
 
 bp_admin = Blueprint("admin", __name__, url_prefix="/admin")
 
 @bp_admin.route("/first-user", methods=["GET", "POST"])
 def create_first_user():
     """Route pour créer le premier utilisateur admin"""
-    no_users_str = f"{API_URL}/users/no-user"
-    first_user = requests.get(no_users_str, timeout=10).json().get("exists", False)
-    print(f"First user exists: {first_user}")
-    form = FirstUserForm()
+    first_user = check_no_users()
     if first_user is False:
         return redirect(url_for("user.login"))
+    form = FirstUserForm()
     if form.validate_on_submit():
         password = form.password.data
         confirm_password = form.confirm_password.data
-        if password != confirm_password:
+        username = form.username.data
+        email = form.email.data
+        if (password != confirm_password) \
+            or (password is None) \
+            or (username is None) \
+            or (email is None):
             message = "Les mots de passe ne correspondent pas."
             form.password.errors = list(form.password.errors) + [message]
             return redirect(url_for("admin.create_first_user"))
-        user = {
-            "username": form.username.data,
-            "email": form.email.data,
-            "password": form.password.data,
-            "permissions": "9"
-        }
-        response = requests.post(f"{API_URL}/users/create",
-                                 json=user,
-                                 timeout=10)
-        ok = response.json().get("valid", False)
-        message = response.json().get("error", "Erreur lors de la création de l'utilisateur.")
-        if response.status_code // 100 == 2 and ok:
-            print(response.json())
+        ok = create_user(
+            username=username,
+            email=email,
+            password=password,
+            permissions="9"
+            )
+        if ok:
+            message = f"Premier utilisateur '{username}' créé avec succès."
             flash(message, "success")
             return redirect(url_for("user.login"))
-        else:
-            form.username.errors = list(form.username.errors) + [message]
-            return render_page('register', form=form, first_user=first_user)
+        message = "Une erreur est survenue lors de la création du premier utilisateur."
+        flash(message, "danger")
     return render_page('register', form=form, first_user=first_user)

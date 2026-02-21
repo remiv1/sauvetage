@@ -63,7 +63,7 @@ def after_request(response):
     return response
 
 @app.route("/")
-def root():
+def home():
     """Endpoint racine du frontend"""
     return render_page("default")
 

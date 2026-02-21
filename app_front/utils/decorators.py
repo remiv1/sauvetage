@@ -26,6 +26,7 @@ INFORMATIQUE = '6'
 RH = '7'
 DIRECTION = '8'
 SUPER_ADMIN = '9'
+ALL = [ADMIN, COMPTA, COMMERCIAL, LOGISTIQUE, SUPPORT, INFORMATIQUE, RH, DIRECTION, SUPER_ADMIN]
 
 def permission_required(permission: List[str] | str,
                         _and: bool = True

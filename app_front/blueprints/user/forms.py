@@ -55,6 +55,7 @@ class UserEditForm(FlaskForm):
 
 class UserPasswordChangeForm(FlaskForm):
     """Formulaire de changement de mot de passe pour les utilisateurs."""
-    password = PasswordField('Nouveau mot de passe', validators=[DataRequired()])
-    password_confirm = PasswordField('Confirmer le mot de passe', validators=[DataRequired()])
+    old_password = PasswordField('Ancien mot de passe', validators=[DataRequired()])
+    new_password = PasswordField('Nouveau mot de passe', validators=[DataRequired()])
+    new_password_confirm = PasswordField('Confirmer le mot de passe', validators=[DataRequired()])
     submit = SubmitField('Changer le mot de passe')
