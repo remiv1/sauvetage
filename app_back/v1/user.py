@@ -1,12 +1,12 @@
 """Module de routage pour les utilisateurs (users) de l'application Sauvetage."""
 
+from urllib.parse import unquote
 from typing import Any, Dict
 from fastapi import APIRouter, Request
 from sqlalchemy import select
 from app_back.db_connection.config import get_secure_session
 from db_models.objects.users import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
-from db_models.services.auth import AuthService
 
 router = APIRouter(
     prefix="/users",
@@ -26,30 +26,33 @@ def read_users(username: str):
         "mail": user.mail if user else None,
         "error": None if user else f"Utilisateur non trouvé : {username}"
     }
+    if user is None:
+        raise ValueError(f"Utilisateur non trouvé : {username}")
     return return_dict
 
-@router.post("/login/{username}/{password}")
-def log_user(username: str, clear_password: str):
+@router.post("/login")
+async def log_user(request: Request):
     """Recherche d'un utilisateur par le username."""
+    data = await request.json()
+    username = data.get("username")
+    clear_password = data.get("password")
+
     user_obj = UsersRepository(get_secure_session())
-    session = get_secure_session()
-    auth = AuthService(user_repo=user_obj)
-    ok, user = auth.login(username, clear_password)
+    user = user_obj.get_by_username(username)
+    ok = user_obj.validate_password(user=user, password=clear_password)
 
     return_dict: Dict[str, Any] = {
         "valid": (user is not None and not user.is_locked and ok),
         "username": user.username if user else None,
         "permissions": user.permissions if (user and ok) else None,
-        "mail": user.mail if (user and ok) else None
+        "mail": user.email if (user and ok) else None
     }
     if user and user.is_locked:
         return_dict["error"] = "Compte vérouillé après 3 erreurs de connexion."
     elif user and ok:
         pass    # type: ignore
     elif user:
-        user.failed_logins += 1
-        user.is_locked = user.failed_logins >= 3
-        session.commit()
+        user_obj.add_failed_login(user)
         return_dict["error"] = "Mot de passe incorrect."
     else:
         return_dict["error"] = f"Utilisateur non trouvé : {username}"
@@ -61,7 +64,7 @@ def exists_first():
     """Vérifie s'il n'existe aucun utilisateur dans la base de données."""
     user_obj = UsersRepository(get_secure_session())
     no_user = user_obj.no_users_exists()
-    return {"exists": no_user is not None}
+    return {"exists": no_user}
 
 @router.post("/create")
 async def create_user(request: Request):
@@ -103,4 +106,49 @@ async def create_user(request: Request):
                 }
     return {"valid": True,
             "message": f"Utilisateur {username} créé avec succès."
+            }
+
+@router.post("/change-password")
+async def change_password(request: Request):
+    """Change le mot de passe d'un utilisateur spécifique."""
+    data = await request.json()
+    username = data.get("username")
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+
+    user_obj = UsersRepository(get_secure_session())
+    user = user_obj.get_by_username(username)
+    if not user:
+        raise ValueError(f"Utilisateur non trouvé : {username}")
+    auth = user_obj.validate_password(user = user, password = old_password)
+    if not auth:
+        raise ValueError("Mot de passe actuel incorrect.")
+    ok = user_obj.new_password(user=user, password=new_password)
+    if not ok:
+        raise ValueError("Échec du changement de mot de passe. Vérifiez les informations fournies.")
+    return {"valid": True,
+            "message": f"Mot de passe changé avec succès pour l'utilisateur {username}."}
+
+@router.post("/modify/{username}")
+async def modify_user(username: str, request: Request):
+    """Modifie les informations d'un utilisateur spécifique."""
+    data = await request.json()
+    username = unquote(username)
+    email = data.get("email")
+    permissions = data.get("permissions")
+
+    user_obj = UsersRepository(get_secure_session())
+    user = user_obj.get_by_username(username)
+    if not user:
+        raise ValueError(f"Utilisateur non trouvé : {username}")
+    try:
+        user_obj.modify_user(user=user, email=email, permissions=permissions)
+    except (ValueError, TypeError) as e:
+        message = f"Erreur lors de la modification de l'utilisateur : {str(e)}"
+        raise ValueError(message) from e
+    return {"valid": True,
+            "message": f"Utilisateur {username} modifié avec succès.",
+            "username": user.username,
+            "email": user.email,
+            "permissions": user.permissions
             }

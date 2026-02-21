@@ -12,7 +12,7 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        {% if first_user is none %}
+        {% if first_user is false %}
         <h2 class="login-title">Connexion</h2>
         <form class="login-form" method="POST">
             {{ form.hidden_tag() }}

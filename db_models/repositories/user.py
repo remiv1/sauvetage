@@ -45,6 +45,20 @@ class UsersRepository(BaseRepository):
         user = self.session.execute(stmt).scalar_one_or_none()
         return user
 
+    def modify_user(self, user: Users, email: str, permissions: str) -> Users:
+        """Modifie les informations d'un utilisateur donné.
+        Args:
+            user (Users): L'utilisateur à modifier.
+            email (str): Le nouvel email de l'utilisateur.
+            permissions (str): Les nouvelles permissions de l'utilisateur.
+        Returns:
+            Users: L'utilisateur modifié.
+        """
+        user.email = email
+        user.permissions = permissions
+        self.session.commit()
+        return user
+
     def hash_password(self, password: str) -> str:
         """Hash un mot de passe en utilisant bcrypt.
         Args:
@@ -122,5 +136,5 @@ class UsersRepository(BaseRepository):
             bool: True s'il n'existe aucun utilisateur, False sinon.
         """
         stmt = select(Users)
-        result = self.session.execute(stmt)
+        result = self.session.execute(stmt).scalar()
         return result is None
