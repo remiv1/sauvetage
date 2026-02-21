@@ -1,15 +1,15 @@
 # ------------------------------------------------------------------------------
-# --- Configuration page de création de compte utilisateur ---
+# --- Configuration page de modification de compte utilisateur ---
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
-styles = ["css/register.css", "css/main.css"]
-scripts = ["js/register.js", "js/main.js"]
+styles = ["css/user/register.css", "css/main.css"]
+scripts = ["js/user/modify.js", "js/main.js"]
 # Clées
 [meta]
-title = "Création de compte | Intranet"
-description = "Page de création de compte utilisateur à l'intranet"
-keywords = "création de compte, inscription, intranet"
+title = "Modification de compte | Intranet"
+description = "Page de modification de compte utilisateur à l'intranet"
+keywords = "modification de compte, édition, intranet"
 author = "Rémi Verschuur"
 robots = "noindex, nofollow"
 [meta.accessibility]

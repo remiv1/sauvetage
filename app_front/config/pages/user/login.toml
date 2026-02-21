@@ -1,0 +1,26 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de connexion
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+styles = ["css/user/login.css", "css/main.css"]
+scripts = ["js/user/login.js", "js/main.js"]
+# Clées
+[meta]
+title = "Connexion | Intranet"
+description = "Page de connexion à l'intranet"
+keywords = "connexion, login, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="form"
+# Pages spécifiques
+[layout]
+main_layout = "user/login.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = false
+searchbar = false

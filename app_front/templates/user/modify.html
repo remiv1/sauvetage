@@ -1,0 +1,51 @@
+{% extends layout.extend_layout %}
+
+{% block title %}Editions Sauvetage - Modification de compte{% endblock %}
+
+{% block content %}
+    <div class="register-container pb-5">
+        {# Message Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <h2 class="register-container__title">Modification de compte</h2>
+        {% for error in form.username.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.mail.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.permissions.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        <form class="register-container__form" method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control", placeholder="Nom d'utilisateur") }}
+            </div>
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.mail.label(class="form-label") }}
+                {{ form.mail(class="form-control", placeholder="Adresse e-mail") }}
+                <div id="email-error" class="email-error"></div>
+            </div>
+
+            {% if first_user == false %}
+            <div class="form-group register-container__form__group__checkbox mb-3">
+                {{ form.permissions.label(class="form-label checkbox-label") }}
+                {{ form.permissions(class="form-control register-container__form__group__checkbox") }}
+            </div>
+            {% endif %}
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.submit(class="btn btn-primary", value="Mettre à jour") }}
+            </div>
+        </form>
+    </div>
+{% endblock %}

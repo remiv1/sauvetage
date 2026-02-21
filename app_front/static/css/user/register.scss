@@ -1,11 +1,11 @@
-@use 'core/variables' as variables;
-@use 'core/mixins' as mixins;
-@use 'core/base';
-@use 'core/layout';
-@use 'core/forms';
-@use 'core/components';
-@use 'core/utilities';
-@use 'core/reset';
+@use '../core/variables' as variables;
+@use '../core/mixins' as mixins;
+@use '../core/base';
+@use '../core/layout';
+@use '../core/forms';
+@use '../core/components';
+@use '../core/utilities';
+@use '../core/reset';
 
 .register-container {
     max-width: 400px;
