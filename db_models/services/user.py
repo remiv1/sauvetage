@@ -31,7 +31,7 @@ class UserService:
         self.user_repo = UsersRepository(session)
 
     def create_user(self, *, username: str, email: str, password: str,
-					permissions: str) -> Users:
+                    permissions: str) -> Users:
         """
         Cree un utilisateur et initialise son mot de passe.
         Args:
