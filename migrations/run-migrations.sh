@@ -55,8 +55,15 @@ fi
 set -a
 source "$ENV_FILE_HOST"
 set +a
-echo "✅ Variables d'environnement chargées depuis $ENV_FILE :"
-echo "$(cat "$ENV_FILE_HOST" | grep -v '^#' | xargs)"
+echo "✅ Variables d'environnement chargées depuis $ENV_FILE"
+echo "📋 Configuration:"
+echo "   POSTGRES_HOST=${POSTGRES_HOST}"
+echo "   POSTGRES_PORT=${POSTGRES_PORT}"
+echo "   POSTGRES_DB_MAIN=${POSTGRES_DB_MAIN}"
+echo "   POSTGRES_DB_USERS=${POSTGRES_DB_USERS}"
+echo "   POSTGRES_USER_MIGR: [REDACTED]"
+echo "   POSTGRES_PASSWORD: [REDACTED]"
+echo "   POSTGRES_PASSWORD_MIGR: [REDACTED]"
 
 # Vérifier que le répertoire de migrations existe
 if [ ! -d "$MIGRATION_DIR_HOST" ]; then
