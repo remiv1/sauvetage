@@ -3,8 +3,8 @@
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
-styles = ["css/dashboard.css", "css/base.css"]
-scripts = ["js/dashboard.js", "js/base.js"]
+styles = ["css/dashboard/dashboard.css", "css/base.css"]
+scripts = ["js/dashboard/dashboard.js", "js/base.js"]
 # Clées
 [params.meta]
 title = "Tableau de bord | Intranet"
