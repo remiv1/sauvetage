@@ -42,4 +42,6 @@ def db_session(engine: Engine) -> Session:  # pylint: disable=redefined-outer-na
 def cleanup_db():
     """Méthode de cleanup"""
     yield
-    os.remove("tests/fixtures/test_db.sqlite")
+    db_path = "tests/fixtures/test_db.sqlite"
+    if os.path.exists(db_path):
+        os.remove(db_path)
