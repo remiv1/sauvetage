@@ -1,0 +1,37 @@
+{% extends 'index.html' %}
+{% block content %}
+    <div class="dashboard-container">
+        <div class="tabs-row">
+        <button class="tab" data-target="orders">Commandes</button>
+        <button class="tab active" data-target="stocks">Stocks</button>
+        <button class="tab" data-target="finances">Finances</button>
+    </div>
+
+    <div class="tab-content">
+        <section id="orders" class="panel hidden">
+            <h2>Dernières commandes</h2>
+            <div id="orders-table" class="table-wrap">Chargement...</div>
+        </section>
+
+        <section id="stocks" class="panel">
+            <h2>Distribution du stock</h2>
+            <div class="charts-row">
+                <canvas id="stocks-donut" width="400" height="300"></canvas>
+                <div id="stocks-legend" class="legend"></div>
+            </div>
+            <div class="kpis-row">
+                <div class="kpi">Total Articles<br><span id="kpi-total">—</span></div>
+                <div class="kpi">Valeur Totale<br><span id="kpi-value">—</span></div>
+                <div class="kpi">Catégories<br><span id="kpi-cat">—</span></div>
+            </div>
+        </section>
+
+        <section id="finances" class="panel hidden">
+            <h2>Comptabilité annuelle</h2>
+            <canvas id="finances-bar" width="900" height="300"></canvas>
+        </section>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}

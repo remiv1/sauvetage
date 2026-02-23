@@ -1,0 +1,111 @@
+@import url("https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap");
+/* Dashboard styles (top-level SCSS file) - will compile to css/dashboard.css */
+.dashboard-container {
+  padding: 2rem;
+}
+
+.tabs-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  flex: 1;
+  padding: 1.1rem 1.5rem;
+  background: #e0e0e0;
+  border-radius: 40px;
+  border: 3px solid #000000;
+  font-size: 1.6rem;
+  font-family: "Asap", sans-serif;
+  cursor: pointer;
+  color: #202020;
+  transition: background 180ms ease, transform 120ms ease;
+}
+.tab:hover {
+  transform: translateY(-2px);
+}
+
+.tab.active {
+  background: rgb(227.72, 227.72, 227.72);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tab:focus {
+  outline: none;
+}
+
+.tab-content {
+  background: transparent;
+}
+
+.panel {
+  padding: 1rem 0;
+}
+
+.hidden {
+  display: none;
+}
+
+.charts-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.legend {
+  flex: 1;
+}
+
+.legend-row {
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.legend-row .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.kpis-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.kpi {
+  flex: 1;
+  background: linear-gradient(90deg, #f5f5f5, #fff);
+  padding: 1rem;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.table-wrap {
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 900px) {
+  .tabs-row {
+    flex-direction: column;
+  }
+  .tab {
+    font-size: 1.1rem;
+  }
+  .charts-row {
+    flex-direction: column;
+  }
+}
+
+/*# sourceMappingURL=dashboard.css.map */

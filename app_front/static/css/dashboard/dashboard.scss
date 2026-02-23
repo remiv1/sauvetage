@@ -1,0 +1,47 @@
+@use 'sass:color';
+@use '../core/variables' as variables;
+
+/* Dashboard styles (top-level SCSS file) - will compile to css/dashboard.css */
+.dashboard-container{
+  padding: variables.$space-lg;
+}
+.tabs-row{
+  display:flex;
+  justify-content:space-between;
+  gap: variables.$space-md;
+  margin-bottom: variables.$space-md;
+}
+.tab{
+  flex:1;
+  padding: 1.1rem 1.5rem;
+  background: variables.$gray-200;
+  border-radius: variables.$radius-lg;
+  border: 3px solid variables.$gray-900;
+  font-size: 1.6rem;
+  font-family: variables.$font-primary;
+  cursor:pointer;
+  color: variables.$text-dark;
+  transition: background 180ms ease, transform 120ms ease;
+  &:hover{ transform: translateY(-2px) }
+}
+.tab.active{
+  background: color.scale(variables.$gray-200, $lightness: 12%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.tab:focus{outline:none}
+.tab-content{background:transparent}
+.panel{padding: variables.$space-md 0}
+.hidden{display:none}
+.charts-row{display:flex;gap:variables.$space-md;align-items:center}
+.legend{flex:1}
+.legend-row{padding:0.25rem 0;display:flex;align-items:center;gap:0.6rem}
+.legend-row .dot{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:8px}
+.kpis-row{display:flex;gap:variables.$space-md;margin-top:variables.$space-md}
+.kpi{flex:1;background: linear-gradient(90deg, #{variables.$gray-100}, #fff);padding:variables.$space-md;border-radius:variables.$radius-sm;text-align:center;font-weight:700;box-shadow: variables.$shadow-soft}
+.table-wrap{background:#fff;padding:variables.$space-sm;border-radius:6px;box-shadow: variables.$shadow-soft}
+
+@media (max-width:900px){
+  .tabs-row{flex-direction:column}
+  .tab{font-size:1.1rem}
+  .charts-row{flex-direction:column}
+}
