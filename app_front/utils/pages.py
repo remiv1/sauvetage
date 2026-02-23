@@ -14,7 +14,7 @@ def load_page_params(page_name: str) -> Dict[str, Any]:
               paramètres par défaut.
     """
     # Chargement du fichier de base et des liens vers la page spécifique
-    base = toml.load("config/pages.toml")
+    base = toml.load("config/pages/pages.toml")
     links = base.get("links", {})
 
     # Récupération du chemin du fichier de configuration de la page

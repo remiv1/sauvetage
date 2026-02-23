@@ -18,7 +18,7 @@ direction="ltr"
 aria_role="document"
 # Pages spécifiques
 [layout]
-main_layout = "index.html"
+main_layout = "dashboard/dashboard.html"
 # Flags
 [flags]
 navbar = true
