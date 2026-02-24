@@ -26,24 +26,15 @@ def finances():
         - pending_shipment: en attente d'envoi
     """
     #TODO: To implement
+    months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
+              'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+    charges = [30, 35, 38, 42, 39, 45, 40, 36, 44, 48, 46, 50]
+    ressources = [45, 52, 48, 61, 55, 67, 58, 49, 62, 72, 66, 76]
     return jsonify(
             {
-            "months": [
-                'Janvier',
-                'Février',
-                'Mars',
-                'Avril',
-                'Mai',
-                'Juin',
-                'Juillet',
-                'Août',
-                'Septembre',
-                'Octobre',
-                'Novembre',
-                'Décembre'
-            ],
-            "charges": [30, 35, 38, 42, 39, 45, 40, 36, 44, 48, 46, 50],
-            "ressources": [45, 52, 48, 61, 55, 67, 58, 49, 62, 72, 66, 76]
+            "months": months,
+            "charges": charges,
+            "ressources": ressources
         }
     )
 
@@ -59,24 +50,27 @@ def commandes():
     - range (A, S, T, M, W) : Annual, Semestrial, Trimestrial, Monthly, Weekly (optional)
     """
     #TODO: To implement
-    return jsonify(
-        [
-            {
-                "name": "M Rémi Verschuur",
-                "date": "01/01/2026",
-                "amount": 1253,
-                "availability": "Disponible",
-                "status": "En cours"
-            },
-            {
-                "name": "M Christian de la Pellequirole",
-                "date": "03/01/2026",
-                "amount": 126.32,
-                "availability": "Disponible",
-                "status": "Annulée"
-            }
-        ]
-    )
+    names = ["M Rémi Verschuur", "M Christian de la Pellequirole", "Mme Sophie Martin",
+             "M Jean Dupont", "Mme Marie Curie", "M Paul Durand", "Mme Claire Lefevre",
+             "M Jacques Moreau", "Mme Isabelle Dubois", "M François Petit"]
+    order_dates = ["01/01/2026", "03/01/2026", "05/01/2026", "07/01/2026", "09/01/2026",
+                   "11/01/2026", "13/01/2026", "15/01/2026", "17/01/2026", "19/01/2026"]
+    amounts = [1253, 126.32, 789.45, 456.78, 234.56, 890.12, 345.67, 678.90, 123.45, 567.89]
+    availabilities = ["Disponible", "Indisponible", "Disponible", "Indisponible", "Disponible",
+                      "Partielle", "Disponible", "Indisponible", "Disponible", "Partielle"]
+    status = ["En cours", "Annulée", "En cours", "Expédiée", "En cours", "Annulée",
+                "Expédiée", "En cours", "Expédiée", "En cours"]
+    orders = []
+    for i, _ in enumerate(names):
+        orders.append({
+            "name": names[i],
+            "date": order_dates[i],
+            "amount": amounts[i],
+            "availability": availabilities[i],
+            "status": status[i]
+        })
+
+    return jsonify(orders)
 
 @bp_dashboard_data.route("/stock", methods=["GET"])
 def stock():
@@ -89,18 +83,13 @@ def stock():
     - range
     """
     #TODO: To implement
+    labels = ['Livres Ados', 'Petite enfance', 'Jeunesse', 'Spiritualité', 'Foyer', 'Objets']
+    values = [503, 652, 498, 395, 198, 760]
     return jsonify(
         {
-            "labels": [
-                'Livres Ados',
-                'Petite enfance',
-                'Jeunesse',
-                'Spiritualité',
-                'Foyer',
-                'Objets'
-            ],
-            "values": [503, 652, 498, 395, 198, 760],
-            "value_total": 55300,
-            "items_total": 3006
+            "labels": labels,
+            "values": values,
+            "value_total": sum(values),
+            "items_total": len(labels)
         }
     )
