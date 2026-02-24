@@ -2,6 +2,7 @@
 
 from .admin.routes import bp_admin # type: ignore
 from .customer.routes import bp_customer # type: ignore
+from .customer.routes_data import bp_customer_data # type: ignore
 from .dashboard.routes import bp_dashboard # type: ignore
 from .dashboard.routes_data import bp_dashboard_data # type: ignore
 from .inventory.routes import bp_inventory # type: ignore

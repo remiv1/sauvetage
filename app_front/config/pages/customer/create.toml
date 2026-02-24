@@ -1,0 +1,21 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de création de client
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Clients"
+styles = ["css/customer/customer.css", "css/main.css"]
+modules = ["js/customer/customer.js"]
+# Clées
+[meta]
+title = "Nouveau client | Intranet"
+keywords = "client, création, formulaire"
+# Pages spécifiques
+[layout]
+main_layout = "customer/create.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = true
+searchbar = false
+userbar = true

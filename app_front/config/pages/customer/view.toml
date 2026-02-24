@@ -1,0 +1,21 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de vue d'un client
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Clients"
+styles = ["css/customer/customer.css", "css/main.css"]
+modules = ["js/customer/view.js"]
+# Clées
+[meta]
+title = "Fiche client | Intranet"
+keywords = "client, fiche, détail, adresses, emails, téléphones"
+# Pages spécifiques
+[layout]
+main_layout = "customer/view.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = true
+searchbar = true
+userbar = true

@@ -1,0 +1,95 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+    <div class="customer-container">
+        {# Messages Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="customer-container__title">Nouveau Client</h2>
+
+        {# Erreurs du formulaire #}
+        {% for field in form %}
+            {% if field.errors %}
+                {% for error in field.errors %}
+                    <div class="alert alert-danger mb-2">{{ field.label.text }} : {{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+
+        <form class="customer-form" method="POST" id="customer-create-form">
+            {{ form.hidden_tag() }}
+
+            {# Sélection du type de client #}
+            <div class="form-group customer-type-group mb-3">
+                {{ form.customer_type.label(class="form-label") }}
+                <div class="type-toggle">
+                    <button type="button" class="toggle-btn active" data-value="part" id="toggle-part">
+                        Particulier
+                    </button>
+                    <button type="button" class="toggle-btn" data-value="pro" id="toggle-pro">
+                        Professionnel
+                    </button>
+                </div>
+                {{ form.customer_type(class="form-control hidden", id="customer-type") }}
+            </div>
+
+            {# Section Particulier #}
+            <div id="section-part" class="form-section">
+                <h3 class="section-title">Informations personnelles</h3>
+
+                <div class="form-group mb-3">
+                    {{ form.civil_title.label(class="form-label") }}
+                    {{ form.civil_title(class="form-control select-styled", id="civil-title") }}
+                </div>
+
+                <div class="form-row two-cols">
+                    <div class="form-group mb-3">
+                        {{ form.first_name.label(class="form-label") }}
+                        {{ form.first_name(class="form-control", placeholder="Prénom", id="first-name") }}
+                    </div>
+                    <div class="form-group mb-3">
+                        {{ form.last_name.label(class="form-label") }}
+                        {{ form.last_name(class="form-control", placeholder="Nom de famille", id="last-name") }}
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    {{ form.date_of_birth.label(class="form-label") }}
+                    {{ form.date_of_birth(class="form-control", placeholder="AAAA-MM-JJ", type="date", id="date-of-birth") }}
+                </div>
+            </div>
+
+            {# Section Professionnel #}
+            <div id="section-pro" class="form-section hidden">
+                <h3 class="section-title">Informations entreprise</h3>
+
+                <div class="form-group mb-3">
+                    {{ form.company_name.label(class="form-label") }}
+                    {{ form.company_name(class="form-control", placeholder="Raison sociale", id="company-name") }}
+                </div>
+
+                <div class="form-row two-cols">
+                    <div class="form-group mb-3">
+                        {{ form.siret_number.label(class="form-label") }}
+                        {{ form.siret_number(class="form-control", placeholder="XXX XXX XXX XXXXX", id="siret-number") }}
+                    </div>
+                    <div class="form-group mb-3">
+                        {{ form.vat_number.label(class="form-label") }}
+                        {{ form.vat_number(class="form-control", placeholder="FR XX XXXXXXXXX", id="vat-number") }}
+                    </div>
+                </div>
+            </div>
+
+            {# Bouton de soumission #}
+            <div class="form-group mt-3">
+                {{ form.submit(class="btn btn-primary w-100", value="Créer le client") }}
+            </div>
+        </form>
+    </div>
+{% endblock %}

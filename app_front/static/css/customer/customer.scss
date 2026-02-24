@@ -1,0 +1,480 @@
+@use 'sass:color';
+@use '../core/variables' as variables;
+@use '../core/mixins' as mixins;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Customer Styles — Création & Fiche Client
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Conteneur principal ─────────────────────────────────────────────────── */
+.customer-container {
+    max-width: 860px;
+    margin: variables.$space-lg auto;
+    padding: 0 variables.$space-lg variables.$space-lg;
+
+    &__title {
+        font-family: variables.$font-title;
+        font-size: 3rem;
+        color: variables.$primary-color;
+        margin-bottom: variables.$space-md;
+    }
+}
+
+/* ── Type Toggle (Part / Pro) ────────────────────────────────────────────── */
+.customer-type-group {
+    margin-bottom: variables.$space-lg;
+}
+
+.type-toggle {
+    display: inline-flex;
+    border: 2px solid variables.$primary-color;
+    border-radius: variables.$radius-md;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    padding: variables.$space-sm variables.$space-lg;
+    border: none;
+    background: variables.$gray-100;
+    color: variables.$primary-color;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: variables.$font-primary;
+    transition: background 0.25s, color 0.25s;
+
+    &.active {
+        background: variables.$primary-color;
+        color: variables.$text-light;
+    }
+
+    &:hover:not(.active) {
+        background: variables.$gray-200;
+    }
+}
+
+/* ── Formulaire de création ──────────────────────────────────────────────── */
+.customer-form {
+    @include mixins.card;
+}
+
+.form-section {
+    animation: fadeIn 0.3s ease;
+}
+
+.section-title {
+    font-family: variables.$font-title;
+    font-size: 2rem;
+    color: variables.$primary-color;
+    margin-bottom: variables.$space-md;
+    padding-bottom: variables.$space-sm;
+    border-bottom: 2px solid variables.$secondary-color;
+}
+
+.form-row {
+    display: flex;
+    gap: variables.$space-md;
+
+    &.two-cols > .form-group {
+        flex: 1;
+    }
+
+    &.three-cols > .form-group {
+        flex: 1;
+    }
+}
+
+.select-styled {
+    appearance: auto;
+}
+
+.input-error {
+    border-color: variables.$color-danger !important;
+    box-shadow: 0 0 0 3px rgba(variables.$color-danger, 0.15) !important;
+}
+
+/* ── Fiche Client — Carte info ───────────────────────────────────────────── */
+.customer-info-card {
+    @include mixins.card;
+    margin-bottom: variables.$space-lg;
+}
+
+.customer-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: variables.$space-md;
+    margin-bottom: variables.$space-sm;
+}
+
+.customer-actions {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-sm;
+}
+
+.customer-meta {
+    display: flex;
+    gap: variables.$space-lg;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: variables.$gray-600;
+    margin-bottom: variables.$space-sm;
+
+    .meta-item strong {
+        color: variables.$text-dark;
+    }
+}
+
+.customer-detail-row {
+    display: flex;
+    gap: variables.$space-lg;
+    flex-wrap: wrap;
+    padding-top: variables.$space-sm;
+    border-top: 1px solid variables.$gray-200;
+    font-size: 0.9rem;
+
+    span strong {
+        color: variables.$primary-color;
+    }
+}
+
+/* ── Badges de statut ────────────────────────────────────────────────────── */
+.status-badge {
+    display: inline-block;
+    padding: variables.$space-xs variables.$space-sm;
+    border-radius: variables.$radius-md;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: variables.$success-bg;
+    color: variables.$success-color;
+}
+
+.status-inactive {
+    background: variables.$danger-bg;
+    color: variables.$danger-color;
+}
+
+.badge {
+    display: inline-block;
+    padding: variables.$space-xxs variables.$space-sm;
+    border-radius: variables.$radius-sm;
+    font-size: 0.75rem;
+    font-weight: 500;
+
+    &-billing {
+        background: variables.$info-bg;
+        color: variables.$info-color;
+    }
+
+    &-shipping {
+        background: variables.$warning-bg;
+        color: variables.$warning-color;
+    }
+
+    &-active {
+        background: variables.$success-bg;
+        color: variables.$success-color;
+    }
+
+    &-inactive {
+        background: variables.$danger-bg;
+        color: variables.$danger-color;
+    }
+}
+
+/* ── Onglets sous-sections ───────────────────────────────────────────────── */
+.customer-tabs-row {
+    display: flex;
+    min-width: 300px;
+    max-width: 500px;
+    border-radius: variables.$radius-md variables.$radius-md 0 0;
+    overflow: hidden;
+    border: 2px solid variables.$primary-color;
+    border-bottom: none;
+}
+
+.customer-tab {
+    flex: 1;
+    padding: variables.$space-sm variables.$space-md;
+    border: none;
+    background: variables.$gray-100;
+    color: variables.$primary-color;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: variables.$font-primary;
+    transition: background 0.2s, color 0.2s;
+
+    &.active {
+        background: variables.$primary-color;
+        color: variables.$text-light;
+    }
+
+    &:hover:not(.active) {
+        background: variables.$gray-200;
+    }
+}
+
+.customer-tab-content {
+    background: variables.$gray-100;
+    padding: variables.$space-lg;
+    border-radius: 0 variables.$radius-md variables.$radius-md variables.$radius-md;
+    border: 2px solid variables.$primary-color;
+}
+
+.customer-panel {
+    animation: fadeIn 0.3s ease;
+
+    h3 {
+        font-family: variables.$font-title;
+        font-size: 2rem;
+        color: variables.$primary-color;
+        margin: 0;
+    }
+}
+
+/* ── En-tête de panel ────────────────────────────────────────────────────── */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: variables.$space-md;
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn-add {
+    background: variables.$secondary-color;
+    color: variables.$text-light;
+    border: none;
+    padding: variables.$space-xs variables.$space-md;
+    border-radius: variables.$radius-sm;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s;
+
+    &:hover {
+        background: variables.$primary-color;
+    }
+}
+
+.btn-sm {
+    padding: variables.$space-xs variables.$space-sm;
+    font-size: 0.85rem;
+    border-radius: variables.$radius-sm;
+}
+
+.btn-delete {
+    background: variables.$color-danger;
+    color: variables.$text-light;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: color.adjust(variables.$color-danger, $lightness: -10%);
+    }
+}
+
+.btn-cancel {
+    background: variables.$gray-400;
+    color: variables.$text-light;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: variables.$gray-600;
+    }
+}
+
+.btn-toggle-status {
+    background: variables.$third-color;
+    color: variables.$text-light;
+    border: none;
+    cursor: pointer;
+    padding: variables.$space-xs variables.$space-sm;
+    border-radius: variables.$radius-sm;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: background 0.2s;
+
+    &:hover {
+        background: variables.$primary-color;
+    }
+}
+
+/* ── Formulaire inline (ajout) ───────────────────────────────────────────── */
+.add-form-container {
+    margin-bottom: variables.$space-lg;
+}
+
+.inline-add-form {
+    background: white;
+    padding: variables.$space-md;
+    border-radius: variables.$radius-sm + 5px;
+    box-shadow: variables.$shadow-soft;
+    border: 1px solid variables.$gray-200;
+
+    h4 {
+        font-family: variables.$font-title;
+        font-size: 1.6rem;
+        color: variables.$primary-color;
+        margin: 0 0 variables.$space-sm;
+    }
+}
+
+.form-actions {
+    display: flex;
+    gap: variables.$space-sm;
+    margin-top: variables.$space-sm;
+}
+
+/* ── Cartes d'items (adresses, emails, téléphones) ───────────────────────── */
+.items-list {
+    display: flex;
+    flex-direction: column;
+    gap: variables.$space-sm;
+}
+
+.item-card {
+    background: white;
+    border-radius: variables.$radius-sm + 5px;
+    padding: variables.$space-md variables.$space-md;
+    box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.06);
+    border: 1px solid variables.$gray-200;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+        box-shadow: variables.$shadow-medium;
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: variables.$space-sm;
+    }
+
+    &__title {
+        font-size: 1rem;
+        color: variables.$primary-color;
+    }
+
+    &__badges {
+        display: flex;
+        gap: variables.$space-xs;
+    }
+
+    &__body {
+        font-size: 0.9rem;
+        color: variables.$gray-700;
+        line-height: 1.5;
+
+        p {
+            margin: 0;
+        }
+
+        a {
+            color: variables.$secondary-color;
+            text-decoration: none;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: variables.$space-sm;
+    }
+}
+
+/* ── Textes utilitaires ──────────────────────────────────────────────────── */
+.empty-text {
+    color: variables.$gray-500;
+    font-style: italic;
+    padding: variables.$space-md 0;
+}
+
+.loading-text {
+    color: variables.$gray-500;
+    padding: variables.$space-md 0;
+}
+
+.hidden {
+    display: none;
+}
+
+/* ── Notifications ───────────────────────────────────────────────────────── */
+.fade-alert {
+    transition: opacity 0.4s ease;
+}
+
+.fade-out {
+    opacity: 0;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+    .customer-container {
+        padding: 0 variables.$space-sm variables.$space-lg;
+    }
+
+    .customer-form {
+        padding: variables.$space-md;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .customer-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .customer-meta {
+        flex-direction: column;
+        gap: variables.$space-sm;
+    }
+
+    .customer-detail-row {
+        flex-direction: column;
+        gap: variables.$space-sm;
+    }
+
+    .customer-tabs-row {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .customer-tab-content {
+        padding: variables.$space-md;
+        border-radius: 0 0 variables.$radius-md variables.$radius-md;
+    }
+
+    .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: variables.$space-sm;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+}
