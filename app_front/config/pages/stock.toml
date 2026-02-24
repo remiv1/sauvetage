@@ -23,3 +23,4 @@ main_layout = "index.html"
 [flags]
 navbar = false
 searchbar = true
+userbar = true

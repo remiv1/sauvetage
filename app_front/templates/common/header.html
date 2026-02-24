@@ -3,21 +3,26 @@
             <h1 class="main-title handscript y-center">
                 Editions du Sauvetage
             </h1>
-            {% if session %}
+            {% if flags and flags.navbar %}
             <div class="menu">
                 <button class="menu__toggle" aria-label="Toggle menu">Accueil</button>
                 <ul class="menu__list">
                     <li class="menu__list__item"><a href="#">Accueil</a></li>
-                    <li class="menu__list__item"><a href="#">Tableau de Bord</a></li>
+                    <li class="menu__list__item"><a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a></li>
                     <li class="menu__list__item"><a href="#">Inventaire</a></li>
                     <li class="menu__list__item"><a href="#">Stocks</a></li>
                     <li class="menu__list__item"><a href="#">Commandes</a></li>
                     <li class="menu__list__item"><a href="#">Clients</a></li>
                     <li class="menu__list__item"><a href="#">Fournisseurs</a></li>
-                    {% if session and '1' in session['roles'] %}
+                    {% if session and ('1' in session['permissions'] or '9' in session['permissions']) %}
                     <li class="menu__list__item"><a href="#">Administration</a></li>
                     {% endif %}
                 </ul>
+            </div>
+            {% endif %}
+            {% if flags and flags.userbar %}
+            <div class="userbar">
+                <!-- Contenu de la barre utilisateur -->
             </div>
             {% endif %}
         </div>

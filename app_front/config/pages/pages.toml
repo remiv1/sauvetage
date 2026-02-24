@@ -30,5 +30,6 @@ main_layout = "index.html"
 extend_layout = ""
 # Flags
 [default.flags]
+userbar = false
 navbar = false
 searchbar = false

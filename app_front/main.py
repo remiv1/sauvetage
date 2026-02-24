@@ -1,14 +1,12 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
 from datetime import datetime, timezone
-from flask import Flask, jsonify, session, request, redirect, url_for, g
+from flask import Flask, jsonify, session, request, redirect, url_for
 from app_front.utils.pages import render_page
 from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
     DEBUG, LOG_LEVEL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger)
-from app_front.config.db_conf import get_main_session, DATABASE_URL, MONGODB_URL
-from db_models.services.auth import AuthService
-from db_models.repositories.user import UsersRepository
+from app_front.config.db_conf import DATABASE_URL, MONGODB_URL
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -36,19 +34,14 @@ sauv_logger.log(level=LOG_LEVEL,
 @app.before_request
 def before_request():
     """Fonction exécutée avant chaque requête"""
-    # Si l'utilisateur est déjà connecté
-    g.db_session = get_main_session()
-    user_repo = UsersRepository(g.db_session)
-    auth_service = AuthService(user_repo=user_repo)
-    if 'user_id' in session:
-        # Vérifier la validité de la session
-        user = auth_service.validate_session()
-        if not user:
-            session.clear()  # Invalider la session si l'utilisateur n'est plus valide
+    # Si l'utilisateur est déjà connecté, ne pas rediriger
+    if 'username' in session:
+        return None
+    # Vérifier si la page demandée est autorisée sans authentification
     if is_allowed(request.path):
         print("Accès à une page autorisée, aucune redirection nécessaire.")
         return None
-    # Cas de l'utilisateur non loggué
+    # Sinon, rediriger vers la page de connexion
     print(f"page demandée : {request.path} --> redirection vers login")
     return redirect(url_for("user.login"))
 

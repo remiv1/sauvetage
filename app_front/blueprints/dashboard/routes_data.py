@@ -26,7 +26,26 @@ def finances():
         - pending_shipment: en attente d'envoi
     """
     #TODO: To implement
-    return jsonify({"key": "value"}), 200
+    return jsonify(
+            {
+            "months": [
+                'Janvier',
+                'Février',
+                'Mars',
+                'Avril',
+                'Mai',
+                'Juin',
+                'Juillet',
+                'Août',
+                'Septembre',
+                'Octobre',
+                'Novembre',
+                'Décembre'
+            ],
+            "charges": [30, 35, 38, 42, 39, 45, 40, 36, 44, 48, 46, 50],
+            "ressources": [45, 52, 48, 61, 55, 67, 58, 49, 62, 72, 66, 76]
+        }
+    )
 
 @bp_dashboard_data.route("/commandes", methods=["GET"])
 def commandes():
@@ -40,7 +59,24 @@ def commandes():
     - range (A, S, T, M, W) : Annual, Semestrial, Trimestrial, Monthly, Weekly (optional)
     """
     #TODO: To implement
-    return jsonify({"key": "value"}), 200
+    return jsonify(
+        [
+            {
+                "name": "M Rémi Verschuur",
+                "date": "01/01/2026",
+                "amount": 1253,
+                "availability": "Disponible",
+                "status": "En cours"
+            },
+            {
+                "name": "M Christian de la Pellequirole",
+                "date": "03/01/2026",
+                "amount": 126.32,
+                "availability": "Disponible",
+                "status": "Annulée"
+            }
+        ]
+    )
 
 @bp_dashboard_data.route("/stock", methods=["GET"])
 def stock():
@@ -53,4 +89,18 @@ def stock():
     - range
     """
     #TODO: To implement
-    return jsonify({"key": "value"}), 200
+    return jsonify(
+        {
+            "labels": [
+                'Livres Ados',
+                'Petite enfance',
+                'Jeunesse',
+                'Spiritualité',
+                'Foyer',
+                'Objets'
+            ],
+            "values": [503, 652, 498, 395, 198, 760],
+            "value_total": 55300,
+            "items_total": 3006
+        }
+    )
