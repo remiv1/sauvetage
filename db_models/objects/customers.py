@@ -135,6 +135,8 @@ class CustomerParts(WorkingBase, QueryMixin):
                                              comment="Id client associé à part")
 
     # Données personnelles
+    civil_title: Mapped[str | None] = mapped_column(String(20), nullable=True,
+                                                   comment="Civilité (ex: M., Mme, Dr)")
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     date_of_birth: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
