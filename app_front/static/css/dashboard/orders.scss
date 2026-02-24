@@ -84,8 +84,8 @@ tbody {
                 }
             }
             &.order-status {
-                .status-expedie {
-                    @include tables.expedie;
+                .status-expediee {
+                    @include tables.expediee;
                 }
                 .status-preparee {
                     @include tables.preparee;

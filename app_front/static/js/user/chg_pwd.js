@@ -2,16 +2,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('.register-container__form');
     if (!form) return; // Sortir si le formulaire n'existe pas
 
+    const oldPasswordInput = form.querySelector('input[name="old_password"]');
     const passwordInput = form.querySelector('input[name="new_password"]');
     const confirmPasswordInput = form.querySelector('input[name="new_password_confirm"]');
     
-    if (!passwordInput || !confirmPasswordInput ) return; // Sortir si les champs n'existent pas
+    if (!oldPasswordInput || !passwordInput || !confirmPasswordInput) return; // Sortir si les champs n'existent pas
 
     const passwordToggle = document.getElementById('old-password-toggle');
     const newPasswordToggle = document.getElementById('new-password-toggle');
     const confirmPasswordToggle = document.getElementById('new-password-confirm-toggle');
     const passwordMatchDiv = document.getElementById('new-password-match');
-    const emailErrorDiv = document.getElementById('email-error');
 
     const passwordCriteria = {
         length: document.querySelector('#password-length'),
@@ -21,34 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
         special: document.querySelector('#password-special')
     };
 
-    // Validation du mail
-    const validateEmail = (email) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    };
-
-    emailInput.addEventListener('blur', () => {
-        const email = emailInput.value.trim();
-        if (email && !validateEmail(email)) {
-            emailErrorDiv.textContent = '✗ Veuillez entrer une adresse e-mail valide';
-            emailErrorDiv.style.display = 'block';
-        } else {
-            emailErrorDiv.style.display = 'none';
-        }
-    });
-
-    emailInput.addEventListener('focus', () => {
-        emailErrorDiv.style.display = 'none';
-    });
-
     // Toggle affichage du mot de passe
     if (passwordToggle) {
         passwordToggle.addEventListener('click', () => {
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
+            if (oldPasswordInput.type === 'password') {
+                oldPasswordInput.type = 'text';
                 passwordToggle.textContent = '🙈';
             } else {
-                passwordInput.type = 'password';
+                oldPasswordInput.type = 'password';
                 passwordToggle.textContent = '👁️';
             }
         });
@@ -140,13 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', (event) => {
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
-            const email = emailInput.value.trim();
 
-            if (!validateEmail(email)) {
-                event.preventDefault();
-                emailErrorDiv.textContent = '✗ Veuillez entrer une adresse e-mail valide';
-                emailErrorDiv.style.display = 'block';
-            } else if (!validatePassword(password)) {
+            if (!validatePassword(password)) {
                 event.preventDefault();
                 alert('Le mot de passe ne respecte pas les critères requis.');
             } else if (password !== confirmPassword) {

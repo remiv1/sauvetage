@@ -33,7 +33,10 @@
                     <div class="userbar__dropdown" id="userbar-dropdown" role="menu" aria-labelledby="userbar-avatar">
                         <div class="userbar__item"><a href="{{ url_for('user.modify', username=session['username'] | urlencode) }}">Mon compte</a></div>
                         <div class="userbar__item"><a href="{{ url_for('user.chg_pwd', username=session['username'] | urlencode) }}">Changer le mot de passe</a></div>
+                        {% if session and ('1' in session['permissions'] or '9' in session['permissions']) %}
                         <div class="userbar__item"><a href="{{ url_for('admin.index') }}">Admin</a></div>
+                        {% endif %}
+                        <div class="userbar__item"><a href="{{ url_for('user.logout') }}">Déconnexion</a></div>
                     </div>
                 </div>
                 {% endif %}
