@@ -20,6 +20,74 @@
     color: variables.$text-light;
 }
 
+// Barre contenant menu + userbar
+.bars {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+}
+
+// Menu utilisateur (userbar)
+.userbar {
+    position: relative;
+    margin-left: 0.5rem;
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    &__avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: variables.$primary-color-light;
+        border: 3px solid variables.$text-light;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        cursor: pointer;
+        transition: box-shadow .18s;
+        position: relative;
+        z-index: 2;
+    }
+
+    &__dropdown {
+        position: absolute;
+        top: 110%;
+        right: 0;
+        min-width: 180px;
+        background: #fff;
+        color: variables.$primary-color-dark;
+        border: 2px solid variables.$primary-color-light;
+        border-radius: variables.$radius-md;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+        padding: 0.7rem 0;
+        display: none;
+        flex-direction: column;
+        z-index: 10;
+        font-size: 1.08rem;
+        font-weight: 400;
+        text-align: left;
+    }
+
+    &__dropdown.open {
+        display: flex;
+    }
+
+    &__item {
+        padding: 0.7rem 1.2rem;
+        cursor: pointer;
+        white-space: nowrap;
+        border-radius: variables.$radius-sm;
+        transition: background .15s, color .15s;
+        &:hover {
+            background: variables.$primary-color-light;
+            color: #fff;
+        }
+    }
+}
+
 .main-title {
     margin: 0;
     padding: variables.$space-lg 0 variables.$space-lg variables.$space-md;
@@ -81,7 +149,7 @@
 
         // Items
         &__item {
-            padding: variables.$space-md variables.$space-sm;
+            padding: variables.$space-md;
             cursor: pointer;
 
             &:hover {

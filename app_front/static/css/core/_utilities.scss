@@ -58,6 +58,11 @@
 .pr-3 { padding-right: variables.$space-lg; }
 .pr-4 { padding-right: variables.$space-xl; }
 .pr-5 { padding-right: variables.$space-xxl; }
+.p-1 { padding: variables.$space-sm; }
+.p-2 { padding: variables.$space-md; }
+.p-3 { padding: variables.$space-lg; }
+.p-4 { padding: variables.$space-xl; }
+.p-5 { padding: variables.$space-xxl; }
 
 // Alignement de texte
 .text-center { text-align: center; }

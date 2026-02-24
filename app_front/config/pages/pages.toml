@@ -5,12 +5,13 @@ login = "user/login.toml"
 stock = "stock.toml"
 register = "user/register.toml"
 change_password = "user/change_password.toml"
-
+modify = "user/modify.toml"
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée
 # ------------------------------------------------------------------------------
 # Paramètres
 [default.params]
+tab = "Accueil"
 styles = ["css/main.css"]
 scripts = ["js/main.js"]
 # Clées

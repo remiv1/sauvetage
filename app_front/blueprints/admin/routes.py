@@ -4,9 +4,17 @@ from flask import Blueprint, redirect, url_for, flash
 from app_front.blueprints.admin.forms import FirstUserForm
 from app_front.utils.pages import render_page
 from app_front.blueprints.user.utils import create_user, check_no_users
+from app_front.utils.decorators import permission_required, ADMIN, SUPER_ADMIN, ALL
 
 bp_admin = Blueprint("admin", __name__, url_prefix="/admin")
 
+@permission_required([ADMIN, SUPER_ADMIN], _and=False)
+@bp_admin.route("/")
+def index():
+    """Route pour la page d'administration"""
+    return render_page("admin_index")
+
+@permission_required(ALL, _and=False)
 @bp_admin.route("/first-user", methods=["GET", "POST"])
 def create_first_user():
     """Route pour créer le premier utilisateur admin"""

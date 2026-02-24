@@ -369,6 +369,26 @@ form input[type=submit]:hover {
   padding-right: 8rem;
 }
 
+.p-1 {
+  padding: 0.5rem;
+}
+
+.p-2 {
+  padding: 1rem;
+}
+
+.p-3 {
+  padding: 2rem;
+}
+
+.p-4 {
+  padding: 4rem;
+}
+
+.p-5 {
+  padding: 8rem;
+}
+
 .text-center {
   text-align: center;
 }
@@ -480,6 +500,68 @@ textarea {
   color: #f5f5f5;
 }
 
+.bars {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.userbar {
+  position: relative;
+  margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.userbar__avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgb(0, 11.6756756757, 162);
+  border: 3px solid #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: box-shadow 0.18s;
+  position: relative;
+  z-index: 2;
+}
+.userbar__dropdown {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  color: rgb(0, 4.3243243243, 60);
+  border: 2px solid rgb(0, 11.6756756757, 162);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 0.7rem 0;
+  display: none;
+  flex-direction: column;
+  z-index: 10;
+  font-size: 1.08rem;
+  font-weight: 400;
+  text-align: left;
+}
+.userbar__dropdown.open {
+  display: flex;
+}
+.userbar__item {
+  padding: 0.7rem 1.2rem;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 10px;
+  transition: background 0.15s, color 0.15s;
+}
+.userbar__item:hover {
+  background: rgb(0, 11.6756756757, 162);
+  color: #fff;
+}
+
 .main-title {
   margin: 0;
   padding: 2rem 0 2rem 1rem;
@@ -531,7 +613,7 @@ textarea {
   display: none;
 }
 .menu__list__item {
-  padding: 1rem 0.5rem;
+  padding: 1rem;
   cursor: pointer;
 }
 .menu__list__item:hover {

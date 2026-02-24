@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
+tab = "Administration"
 styles = ["css/user/register.css", "css/main.css"]
 scripts = ["js/user/modify.js", "js/main.js"]
 # Clées
@@ -18,10 +19,10 @@ direction="ltr"
 aria_role="form"
 # Pages spécifiques
 [layout]
-main_layout = "user/register.html"
+main_layout = "user/modify.html"
 extend_layout = "index.html"
 # Flags
 [flags]
-navbar = false
+navbar = true
 searchbar = false
 userbar = true

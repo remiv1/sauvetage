@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
+tab = "Tableau de bord"
 styles = [
     "css/dashboard/dashboard.css",
     "css/dashboard/orders.css",

@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
+tab = "Connexion"
 styles = ["css/user/login.css", "css/main.css"]
 scripts = ["js/user/login.js", "js/main.js"]
 # Clées

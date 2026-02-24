@@ -11,4 +11,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Userbar dropdown
+    const avatar = document.getElementById('userbar-avatar');
+    const dropdown = document.getElementById('userbar-dropdown');
+    if (avatar && dropdown) {
+        function closeDropdown(e) {
+            if (!dropdown.contains(e.target) && !avatar.contains(e.target)) {
+                dropdown.classList.remove('open');
+                avatar.setAttribute('aria-expanded', 'false');
+                document.removeEventListener('mousedown', closeDropdown);
+            }
+        }
+        avatar.addEventListener('click', () => {
+            const isOpen = dropdown.classList.toggle('open');
+            avatar.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (isOpen) {
+                setTimeout(() => document.addEventListener('mousedown', closeDropdown), 0);
+            } else {
+                document.removeEventListener('mousedown', closeDropdown);
+            }
+        });
+        avatar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                avatar.click();
+            }
+        });
+    }
 });

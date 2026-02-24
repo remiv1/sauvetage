@@ -23,7 +23,7 @@ def read_users(username: str):
         "valid": user is not None,
         "username": user.username if user else None,
         "permissions": user.permissions if user else None,
-        "mail": user.mail if user else None,
+        "email": user.email if user else None,
         "error": None if user else f"Utilisateur non trouvé : {username}"
     }
     if user is None:

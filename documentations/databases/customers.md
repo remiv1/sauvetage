@@ -45,7 +45,7 @@ erDiagram
     CustomerMails {
         int id PK
         int customer_id FK
-        string mail_type
+        string email_type
         string email
         datetime created_at
         boolean is_active
