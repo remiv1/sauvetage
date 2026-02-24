@@ -1,0 +1,81 @@
+@import url("https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap");
+.kpis {
+  flex: 1;
+  background: linear-gradient(90deg, #f5f5f5, #fff);
+  padding: 1rem;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+.kpis-row {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.kpis-row .kpi-items {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.02));
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.1), inset 0 2px 6px rgba(255, 255, 255, 0.45), inset 0 -6px 12px rgba(2, 6, 23, 0.04);
+  padding: 0.5rem;
+  flex: 1 1 220px;
+  min-width: 200px;
+  border-radius: 10px;
+  background: #a1d6ae;
+  color: #004d12;
+  font-weight: 400;
+  text-align: center;
+}
+.kpis-row .kpi-amount {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.02));
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.1), inset 0 2px 6px rgba(255, 255, 255, 0.45), inset 0 -6px 12px rgba(2, 6, 23, 0.04);
+  padding: 0.5rem;
+  flex: 1 1 220px;
+  min-width: 200px;
+  border-radius: 10px;
+  background: #bed2fa;
+  color: #001a99;
+  font-weight: 400;
+  text-align: center;
+}
+.kpis-row .kpi-categories {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.02));
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.1), inset 0 2px 6px rgba(255, 255, 255, 0.45), inset 0 -6px 12px rgba(2, 6, 23, 0.04);
+  padding: 0.5rem;
+  flex: 1 1 220px;
+  min-width: 200px;
+  border-radius: 10px;
+  background: #fbe0aa;
+  color: #8a4d00;
+  font-weight: 400;
+  text-align: center;
+}
+
+.charts-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  align-content: center;
+  justify-content: space-between;
+}
+
+.legend {
+  flex: 1;
+}
+.legend-row {
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.legend-row .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/*# sourceMappingURL=stocks.css.map */
