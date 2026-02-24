@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
+tab = "Stocks"
 styles = ["css/stock.css", "css/base.css"]
 scripts = ["js/stock.js", "js/base.js"]
 # Clées

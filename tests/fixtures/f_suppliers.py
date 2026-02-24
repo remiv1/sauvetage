@@ -10,7 +10,7 @@ def supplier(db_session: Session) -> Suppliers: # pylint: disable=redefined-oute
     """Fixture pour créer un fournisseur de test."""
     supplier = Suppliers(   # pylint: disable=redefined-outer-name
         name="Fournisseur Test",
-        contact_email="fournisseur@fournisseur.mail",
+        contact_email="fournisseur@fournisseur.email",
         contact_phone="01 02 03 04 05"
     )
     db_session.add(supplier)

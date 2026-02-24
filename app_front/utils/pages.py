@@ -35,4 +35,5 @@ def render_page(page_name: str, **context: Any) -> str:
     """Renders a page with its parameters and additional context."""
     params = load_page_params(page_name)
     return render_template(params.get("layout", {}).get("main_layout", "index.html"),
+                           tab=params.get("tab", page_name.capitalize()),
                            **params, **context)

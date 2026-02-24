@@ -17,9 +17,9 @@ class CustomersRepository(BaseRepository):
             Customers | None: Le client correspondant à l'adresse e-mail ou None s'il n'existe pas.
         """
         if complete:
-            stmt = self._get_complete_query().where(Customers.mails.any(email=email))
+            stmt = self._get_complete_query().where(Customers.emails.any(email=email))
         else:
-            stmt = select(Customers).where(Customers.mails.any(email=email))
+            stmt = select(Customers).where(Customers.emails.any(email=email))
 
         return self.session.execute(stmt).scalars().first()
 
@@ -51,7 +51,7 @@ class CustomersRepository(BaseRepository):
         return self.session.execute(stmt).scalars().all()
 
     def _get_complete_query(self) -> Select[Tuple[Customers]]:
-        """Récupère un client avec toutes ses relations (mails, phones, etc.) en fonction de son ID.
+        """Récupère un client avec toutes ses relations (emails, phones, etc.) en fonction de son ID.
         Args:
             customer_id (int): L'ID du client à rechercher.
         Returns:
@@ -63,7 +63,7 @@ class CustomersRepository(BaseRepository):
                 joinedload(Customers.part),
                 joinedload(Customers.pro),
                 selectinload(Customers.addresses),
-                selectinload(Customers.mails),
+                selectinload(Customers.emails),
                 selectinload(Customers.phones)
             )
         )

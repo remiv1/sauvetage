@@ -21,7 +21,7 @@ class LoginForm(FlaskForm):
 class UserCreateForm(FlaskForm):
     """Formulaire de création de compte utilisateur."""
     username = StringField('Identifiant', validators=[DataRequired()])
-    mail = EmailField('Email', validators=[DataRequired()])
+    email = EmailField('Email', validators=[DataRequired()])
     password = PasswordField('Mot de passe', validators=[DataRequired()])
     confirm_password = PasswordField('Confirmer le mot de passe', validators=[DataRequired()])
     submit = SubmitField('Créer un compte')
@@ -40,7 +40,7 @@ class UserCreateForm(FlaskForm):
 class UserEditForm(FlaskForm):
     """Formulaire d'édition de compte utilisateur."""
     username = StringField('Identifiant', validators=[DataRequired()])
-    mail = EmailField('Email', validators=[DataRequired()])
+    email = EmailField('Email', validators=[DataRequired()])
     permissions = SelectMultipleField(
         'Autorisations',
         choices=[

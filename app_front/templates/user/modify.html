@@ -2,8 +2,10 @@
 
 {% block title %}Editions Sauvetage - Modification de compte{% endblock %}
 
+{% set admin_permissions = (first_user or '1' in session['permissions'] or '9' in session['permissions']) and (user['username'] != session['username']) %}
+
 {% block content %}
-    <div class="register-container pb-5">
+    <div class="register-container mt-3">
         {# Message Flash #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -16,7 +18,7 @@
         {% for error in form.username.errors %}
             <div class="alert alert-danger mb-3">{{ error }}</div>
         {% endfor %}
-        {% for error in form.mail.errors %}
+        {% for error in form.email.errors %}
             <div class="alert alert-danger mb-3">{{ error }}</div>
         {% endfor %}
         {% for error in form.permissions.errors %}
@@ -27,16 +29,16 @@
 
             <div class="form-group register-container__form__group mb-3">
                 {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control", placeholder="Nom d'utilisateur") }}
+                {{ form.username(class="form-control", placeholder="Nom d'utilisateur", value=form.username.data) }}
             </div>
 
             <div class="form-group register-container__form__group mb-3">
-                {{ form.mail.label(class="form-label") }}
-                {{ form.mail(class="form-control", placeholder="Adresse e-mail") }}
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control", placeholder="Adresse e-mail", value=form.email.data) }}
                 <div id="email-error" class="email-error"></div>
             </div>
 
-            {% if first_user == false %}
+            {% if admin_permissions %}
             <div class="form-group register-container__form__group__checkbox mb-3">
                 {{ form.permissions.label(class="form-label checkbox-label") }}
                 {{ form.permissions(class="form-control register-container__form__group__checkbox") }}

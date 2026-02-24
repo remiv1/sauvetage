@@ -7,6 +7,7 @@
     - /user/<int:id>/delete : Route pour supprimer un utilisateur spécifique.
 """
 
+from urllib.parse import unquote
 from flask import Blueprint, redirect, url_for, flash, session
 from app_front.blueprints.user.forms import (
     LoginForm, UserCreateForm, UserPasswordChangeForm, UserEditForm
@@ -36,7 +37,7 @@ def login():
         data = log_user(user_input, pwd_input)
         success = data.get("valid", False)
         username = data.get("username", None)
-        mail = data.get("mail", None)
+        email = data.get("email", None)
         permissions = data.get("permissions", [])
         message = "Une erreur inconnue du développeur est survenue."
         error = data.get("error", message)
@@ -44,7 +45,7 @@ def login():
             flash(error, 'danger')
         else:
             session['username'] = username
-            session['mail'] = mail
+            session['email'] = email
             session['permissions'] = permissions
             flash('Connexion réussie.', 'success')
             return redirect(url_for('dashboard.index'))
@@ -60,12 +61,12 @@ def register():
 
     if form.validate_on_submit():
         user_input = form.username.data or ""
-        mail_input = form.mail.data or ""
+        email_input = form.email.data or ""
         pwd_input = form.password.data or ""
         permissions_input = form.permissions.data or []
         create_user(
             username=user_input,
-            email=mail_input,
+            email=email_input,
             password=pwd_input,
             permissions="".join(permissions_input)
             )
@@ -82,10 +83,11 @@ def logout():
     return redirect(url_for('user.login'))
 
 @permission_required(ALL, _and=False)
-@bp_user.route('/<username>/change-password', methods=['GET', 'POST'])
+@bp_user.route('/change-password/<username>', methods=['GET', 'POST'])
 def chg_pwd(username):
     """Route pour changer le mot de passe d'un utilisateur spécifique."""
     form = UserPasswordChangeForm()
+    username = unquote(username)
     if form.validate_on_submit():
         old_password = form.old_password.data
         new_password = form.new_password.data
@@ -114,22 +116,26 @@ def chg_pwd(username):
     return render_page('change_password', form=form, username=username)
 
 @permission_required([ADMIN, SUPER_ADMIN], _and=False)
-@bp_user.route('/<username>/modify', methods=['GET', 'POST'])
+@bp_user.route('/modify/<username>', methods=['GET', 'POST'])
 def modify(username):
     """Route pour éditer les informations d'un utilisateur spécifique."""
     form = UserEditForm()
+    username = unquote(username)
+    user = user_search(username=username)
     if form.validate_on_submit():
-        mail_input = form.mail.data
+        email_input = form.email.data
         permissions_input = form.permissions.data or []
-        if mail_input is None or mail_input.strip() == "":
+        if email_input is None or email_input.strip() == "":
             flash("L'email ne peut pas être vide.", 'danger')
-            return render_page('edit_user', form=form, username=username)
+            return render_page('modify', form=form, user=user)
         modify_user(
             username=username,
-            email=mail_input,
+            email=email_input,
             permissions="".join(permissions_input)
         )
         flash(f'Utilisateur {username} mis à jour avec succès.', 'success')
-        return redirect(url_for('user.modify', username=username))
-    user = user_search(username=username)
-    return render_page('edit_user', form=form, user=user)
+        return redirect(url_for('user.modify', username=username, form=form))
+    form.username.data = user.get("username", "")
+    form.email.data = user.get("email", "")
+    form.permissions.data = list(user.get("permissions", ""))
+    return render_page('modify', form=form, user=user)

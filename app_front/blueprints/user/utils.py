@@ -1,7 +1,7 @@
 """Module de gestion des routes liées aux utilisateurs."""
 
-import requests
 from urllib.parse import quote
+import requests
 from app_front.config import (
     NO_USERS_URL, LOGIN_URL, CREATE_USER_URL, SEARCH_USER_URL, CHANGE_PASSWORD_URL, MODIFY_USER_URL
     )

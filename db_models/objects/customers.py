@@ -53,7 +53,7 @@ class Customers(WorkingBase, QueryMixin):
     part = relationship("CustomerParts", back_populates="customer", uselist=False)
     pro = relationship("CustomerPros", back_populates="customer", uselist=False)
     addresses = relationship("CustomerAddresses", back_populates="customer", uselist=True)
-    mails = relationship("CustomerMails", back_populates="customer", uselist=True)
+    emails = relationship("CustomerMails", back_populates="customer", uselist=True)
     phones = relationship("CustomerPhones", back_populates="customer", uselist=True)
     sync_logs = relationship("CustomerSyncLog", back_populates="customer", uselist=True)
     orders = relationship("Order", back_populates="customer", uselist=True)
@@ -78,7 +78,7 @@ class Customers(WorkingBase, QueryMixin):
             "part": self.part.to_dict() if self.part else None,
             "pro": self.pro.to_dict() if self.pro else None,
             "addresses": [addr.to_dict() for addr in self.addresses] if self.addresses else None,
-            "mails": [mail.to_dict() for mail in self.mails] if self.mails else None,
+            "emails": [email.to_dict() for email in self.emails] if self.emails else None,
             "phones": [phone.to_dict() for phone in self.phones] if self.phones else None,
             "sync_logs": [log.to_dict() for log in self.sync_logs] if self.sync_logs else None
         }
@@ -110,11 +110,16 @@ class Customers(WorkingBase, QueryMixin):
             CustomerAddresses.from_dict(a) for a in data.get("addresses", [])
         ]
 
+        emails = [
+            CustomerMails.from_dict(e) for e in data.get("emails", [])
+        ]
+
         return {
             "customer": customer,
             "part": part,
             "pro": pro,
             "addresses": addresses,
+            "emails": emails,
         }
 
 class CustomerParts(WorkingBase, QueryMixin):
@@ -302,10 +307,10 @@ class CustomerMails(WorkingBase, QueryMixin):
     __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
-                                    comment="Identifiant mail unique")
+                                    comment="Identifiant email unique")
     customer_id: Mapped[int] = mapped_column(Integer, ForeignKey(CUSTOMER_PK),
                                              nullable=False,
-                                             comment="Id client associé à ce mail")
+                                             comment="Id client associé à cet email")
 
     # Données d'e-mail
     email_name: Mapped[str | None] = mapped_column(String(100), nullable=True,

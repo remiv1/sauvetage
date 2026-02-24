@@ -7,14 +7,14 @@
 Présence d'une API.
 [Documentation API Dilicom](https://hub-dilicom.centprod.com/documentation/doku.php?id=hub_principal:examples_api_json)
 Accès par clé API qu'il faut demander auprès de Dilicom.
-Premier contact réalisé par mail le 13/01/2026.
+Premier contact réalisé par email le 13/01/2026.
 Deuxième contact par téléphone le 02/02/2026 : [Compte-rendu d'appel](./dilicom/260202_notes.md)
 
 ### Contact d'entreprise Dilicom
 
 Mail envoyé le 13/01/2026 par la messagerie du site Dilicom.
 [Mail à Dilicom](./dilicom/260113_Dilicom.eml)
-Retour de Dilicom le 13/01/2026 : demande de conversation téléphonique pour le 14/01/2026 à 11h00. RdV validé par retour de mail le 13/01/2026.
+Retour de Dilicom le 13/01/2026 : demande de conversation téléphonique pour le 14/01/2026 à 11h00. RdV validé par retour de email le 13/01/2026.
 
 ### Résultat pour Dilicom
 

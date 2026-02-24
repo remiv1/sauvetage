@@ -25,7 +25,7 @@
 -[X] Ajout des méthodes `to_dict` et `from_dict` pour les modèles Invoice, Order, OrderLine, Shipment, UsersPasswords et UsersSessions
 -[X] Ajout des modèles de données pour les commandes, factures, envois et utilisateurs, avec mise à jour des relations entre entités
 -[X] Ajout des modèles pour les mouvements d'inventaire et les fournisseurs
--[X] Ajout de nouveaux modèles pour les clients, adresses, mails et téléphones, ainsi qu'une classe générique pour les méthodes communes
+-[X] Ajout de nouveaux modèles pour les clients, adresses, emails et téléphones, ainsi qu'une classe générique pour les méthodes communes
 -[X] Mise à jour de la documentation sur la gestion des stocks
 -[X] Ajout de la gestion des webhooks WooCommerce dans le README du proxy
 -[X] Ajout de la configuration Traefik avec PKI interne et scripts de génération de certificats

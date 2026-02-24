@@ -155,9 +155,9 @@ def upgrade() -> None:
     )
     op.create_table('customer_mails',   # pylint: disable=no-member
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False,
-                  comment='Identifiant mail unique'),
+                  comment='Identifiant email unique'),
         sa.Column('customer_id', sa.Integer(), nullable=False,
-                  comment='Id client associé à ce mail'),
+                  comment='Id client associé à cet email'),
         sa.Column('email_name', sa.String(length=100), nullable=True,
                   comment="Nom de l'e-mail (ex: perso, pro)"),
         sa.Column('email', sa.String(length=150), nullable=False,

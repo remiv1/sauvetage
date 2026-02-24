@@ -47,7 +47,7 @@ def complete_customer_pro(db_session: Session) -> Customers: # pylint: disable=r
             is_shipping=True
         )
     ]
-    mails = [
+    emails = [
         CustomerMails(
             customer_id=customer.id,
             email_name="Principal",
@@ -73,7 +73,7 @@ def complete_customer_pro(db_session: Session) -> Customers: # pylint: disable=r
     ]
     db_session.add(customer_pro)
     db_session.add_all(addresses)
-    db_session.add_all(mails)
+    db_session.add_all(emails)
     db_session.add_all(phones)
     db_session.commit()
     return customer
@@ -118,7 +118,7 @@ def complete_customer_part(db_session: Session) -> Customers: # pylint: disable=
             is_shipping=True
         )
     ]
-    mails = [
+    emails = [
         CustomerMails(
             customer_id=customer.id,
             email_name="Principal",
@@ -144,7 +144,7 @@ def complete_customer_part(db_session: Session) -> Customers: # pylint: disable=
     ]
     db_session.add(customer_part)
     db_session.add_all(addresses)
-    db_session.add_all(mails)
+    db_session.add_all(emails)
     db_session.add_all(phones)
     db_session.commit()
     return customer
