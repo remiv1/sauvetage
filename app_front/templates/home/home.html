@@ -82,6 +82,7 @@
         </a>
 
         <!-- Admin -->
+        {% if session and ('1' in session['permissions'] or '9' in session['permissions']) %}
         <a href="{{ url_for('admin.index', _external=False) }}" class="card card-admin">
             <div class="card-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -95,6 +96,7 @@
             <h2>Administration</h2>
             <p>Paramètres système</p>
         </a>
+        {% endif %}
 
         <!-- User Settings -->
         <a href="{{ url_for('user.modify', username=session['username'] | urlencode) }}" class="card card-user">
