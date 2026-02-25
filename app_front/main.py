@@ -58,7 +58,7 @@ def after_request(response):
 @app.route("/")
 def home():
     """Endpoint racine du frontend"""
-    return render_page("default")
+    return render_page("home")
 
 
 @app.route("/health")

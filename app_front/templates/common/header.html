@@ -8,15 +8,15 @@
                 <div class="menu">
                     <button class="menu__toggle" aria-label="{{ params.tab }}">{{ params.tab }}</button>
                     <ul class="menu__list">
-                        <li class="menu__list__item"><a href="#">Accueil</a></li>
+                        <li class="menu__list__item"><a href="{{ url_for('home') }}">Accueil</a></li>
                         <li class="menu__list__item"><a href="{{ url_for('dashboard.index') }}">Tableau de Bord</a></li>
-                        <li class="menu__list__item"><a href="#">Inventaire</a></li>
-                        <li class="menu__list__item"><a href="#">Stocks</a></li>
-                        <li class="menu__list__item"><a href="#">Commandes</a></li>
+                        <li class="menu__list__item"><a href="{{ url_for('inventory.index') }}">Inventaire</a></li>
+                        <li class="menu__list__item"><a href="{{ url_for('stock.index') }}">Stocks</a></li>
+                        <li class="menu__list__item"><a href="{{ url_for('order.index') }}">Commandes</a></li>
                         <li class="menu__list__item"><a href="{{ url_for('customer.index') }}">Clients</a></li>
-                        <li class="menu__list__item"><a href="#">Fournisseurs</a></li>
+                        <li class="menu__list__item"><a href="{{ url_for('supplier.index') }}">Fournisseurs</a></li>
                         {% if session and ('1' in session['permissions'] or '9' in session['permissions']) %}
-                        <li class="menu__list__item"><a href="#">Administration</a></li>
+                        <li class="menu__list__item"><a href="{{ url_for('admin.index') }}">Administration</a></li>
                         {% endif %}
                     </ul>
                 </div>
