@@ -1,0 +1,28 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de modification de compte utilisateur ---
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Administration"
+styles = ["css/user/register.css", "css/main.css"]
+scripts = ["js/user/modify.js", "js/main.js"]
+# Clées
+[meta]
+title = "Modification de compte | Intranet"
+description = "Page de modification de compte utilisateur à l'intranet"
+keywords = "modification de compte, édition, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="form"
+# Pages spécifiques
+[layout]
+main_layout = "user/modify.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = true
+searchbar = false
+userbar = true

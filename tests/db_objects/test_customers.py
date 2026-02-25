@@ -34,7 +34,7 @@ def test_create_complete_customer(db_session: Session, complete_customer_pro) ->
     assert created_customer.pro.siret_number == "12345678901234"
     assert created_customer.pro.vat_number == "FR01123456789"
     assert len(created_customer.addresses) == 2
-    assert len(created_customer.mails) == 2
+    assert len(created_customer.emails) == 2
     assert len(created_customer.phones) == 2
     assert created_customer.addresses[0].address_name == "Domicile"
     assert created_customer.addresses[0].is_billing is True
@@ -42,5 +42,5 @@ def test_create_complete_customer(db_session: Session, complete_customer_pro) ->
     assert created_customer.addresses[1].address_name == "Bureau"
     assert created_customer.addresses[1].is_billing is False
     assert created_customer.addresses[1].is_shipping is True
-    assert created_customer.mails[0].email_name == "Principal"
-    assert created_customer.mails[0].email == "john.doe@example.com"
+    assert created_customer.emails[0].email_name == "Principal"
+    assert created_customer.emails[0].email == "john.doe@example.com"

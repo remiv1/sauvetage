@@ -1,0 +1,102 @@
+@use '../core/variables' as variables;
+@use 'tables' as tables;
+
+table {
+    min-width: 100%;
+    border-collapse: collapse;
+    background: variables.$border-white;
+    border-radius: variables.$radius-sm;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+thead {
+    width: 100%;
+    background: variables.$primary-color;
+    color: variables.$text-light;
+    border-radius: 0;
+    
+    tr {
+        width: 100%;
+        border-radius: variables.$radius-sm variables.$radius-sm 0 0;
+
+        th {
+            padding: variables.$space-sm variables.$space-md;
+            text-align: left;
+            &:first-child {
+                border-top-left-radius: variables.$radius-sm;
+            }
+            &:last-child {
+                border-top-right-radius: variables.$radius-sm;
+            }
+        }
+    }
+}
+
+tfoot {
+    color: variables.$gray-700;
+    font-style: italic;
+    font-size: 0.875rem;
+
+    tr {
+        width: 100%;
+        padding: variables.$space-md;
+
+        td {
+            padding: variables.$space-sm variables.$space-md;
+            text-align: left;
+            &.orders-total {
+                color: variables.$primary-color-dark;
+            }
+        }
+    }
+}
+
+tbody {
+    tr {
+        border-bottom: 1px solid variables.$gray-300;
+
+        td {
+            padding: variables.$space-sm variables.$space-md;
+
+            &.order-name {
+                font-weight: bold;
+                color: variables.$primary-color-dark;
+            }
+            &.order-date {
+                color: variables.$gray-600;
+                font-size: 0.875rem;
+            }
+            &.order-amount {
+                color: variables.$primary-color;
+                font-weight: bold;
+                text-align: right;
+            }
+            &.order-availability {
+                .availability-disponible {
+                    @include tables.disponible;
+                }
+                .availability-partielle {
+                    @include tables.partielle;
+                }
+                .availability-indisponible {
+                    @include tables.indisponible;
+                }
+            }
+            &.order-status {
+                .status-expediee {
+                    @include tables.expediee;
+                }
+                .status-preparee {
+                    @include tables.preparee;
+                }
+                .status-en-cours {
+                    @include tables.en-cours;
+                }
+                .status-annulee {
+                    @include tables.annulee;
+                }
+            }
+        }
+    }
+}

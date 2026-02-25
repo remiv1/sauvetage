@@ -1,5 +1,6 @@
 gunicorn==25.0.1
 flask==3.1.2
+flask-wtf==1.2.2
 sqlalchemy==2.0.46
 pymongo==4.16.0
 pytest==9.0.2
@@ -8,3 +9,6 @@ mock==5.2.0
 pandas==3.0.0
 dotenv==0.9.9
 toml==0.10.2
+bcrypt==5.0.0
+psycopg2-binary==2.9.11
+requests==2.32.5

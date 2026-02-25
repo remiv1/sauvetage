@@ -11,12 +11,12 @@ sys.path.insert(0, '/app')
 
 # Import main base model après avoir chargé les variables
 from db_models import WorkingBase   # pylint: disable=wrong-import-position
-from db_models.objects.customers import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.customers import * # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.orders import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.invoices import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.shipments import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.suppliers import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.objects import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.objects import * # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.inventory import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 
 # this is the Alembic Config object, which provides access to the values within
@@ -60,6 +60,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         version_table_schema="migr_main"
     )
+    print("offline")
 
     with context.begin_transaction():   # pylint: disable=no-member
         context.run_migrations()    # pylint: disable=no-member
@@ -82,12 +83,13 @@ def run_migrations_online() -> None:
         context.configure(  # pylint: disable=no-member
             connection=connection,
             target_metadata=target_metadata,
-            version_table_schema="migr_main"
+            version_table_schema="migr_main",
+            version_table = "alembic_version",
         )
+        print("online")
 
         with context.begin_transaction():   # pylint: disable=no-member
             context.run_migrations()    # pylint: disable=no-member
-
 
 if context.is_offline_mode():   # pylint: disable=no-member
     run_migrations_offline()

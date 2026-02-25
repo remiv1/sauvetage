@@ -14,8 +14,9 @@ class InventoryMovements(WorkingBase, QueryMixin):
     __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    general_object_id: Mapped[int] = mapped_column(Integer, ForeignKey("app_schema.general_objects.id"),
-                                                    nullable=False, comment="ID de l'objet")
+    general_object_id: Mapped[int] = mapped_column(Integer,
+                                                   ForeignKey("app_schema.general_objects.id"),
+                                                   nullable=False, comment="ID de l'objet")
     movement_type: Mapped[str] = mapped_column(String, nullable=False,
                                             comment="Type de mouvement (in/out/reserved/inventory)")
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, comment="Quantité du mouvement")

@@ -1,0 +1,76 @@
+@use 'sass:color';
+@use '../core/variables' as variables;
+@use 'tables' as tables;
+
+/* Dashboard styles (top-level SCSS file) - will compile to css/dashboard.css */
+.dashboard-container{
+    padding: variables.$space-lg;
+}
+
+.tabs-row {
+    display:flex;
+    min-width: 300px;
+    max-width: 400px;
+    width: 50%;
+    justify-content:space-between;
+    gap: variables.$space-md;
+    margin-bottom: variables.$space-md;
+    background: None;
+    border: 1px solid variables.$gray-900;
+    border-radius: variables.$radius-lg;
+    padding: variables.$space-xxs;
+
+    .tab {
+        flex:1;
+        padding: 0.5rem 0.9rem;
+        background: none;
+        border-radius: variables.$radius-lg;
+        font-size: 1rem;
+        font-family: variables.$font-primary;
+        cursor:pointer;
+        color: variables.$text-dark;
+        transition: background 0.5s ease, transform 0.5s ease;
+
+        &:hover {
+            transform: scaleX(1.02);
+        }
+
+        &.active {
+            border: 3px solid variables.$primary-color;
+            background: variables.$gray-200;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        &:focus {
+            outline:none;
+        }
+
+        &-content {
+            background:variables.$gray-100;
+            padding:variables.$space-md;
+            border-radius:variables.$radius-md;
+            border: 3px solid variables.$gray-900;
+        }
+    }
+}
+
+.panel {
+    padding: variables.$space-md 0;
+}
+
+.hidden {
+    display:none;
+}
+
+.table-wrap{
+    background:#fff;
+    padding:variables.$space-sm;
+    border-radius:6px;
+    box-shadow: variables.$shadow-soft;
+}
+
+@media (max-width:600px){
+  .tabs-row{flex-direction:column}
+  .tab{font-size:1.1rem}
+  .charts-row{flex-direction:column}
+}

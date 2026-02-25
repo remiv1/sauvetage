@@ -98,7 +98,8 @@ class UsersPasswords(SecureBase):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
                                     comment="Identifiant unique du mot de passe")
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("auth_schema.users.id", ondelete="CASCADE"),
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("auth_schema.users.id",
+                                                             ondelete="CASCADE"),
                                          nullable=False,
                                          comment="Identifiant de l'utilisateur associé")
     password_hash: Mapped[str] = mapped_column(String, nullable=False,

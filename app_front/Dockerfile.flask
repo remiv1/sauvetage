@@ -1,15 +1,16 @@
-FROM python:3.12-slim-bookworm
+FROM docker.io/library/python:3.12-slim-bookworm
+
+RUN apt-get update && apt-get install -y netcat-openbsd
 
 WORKDIR /app
+ENV PYTHONPATH=/app
 
-COPY app_front/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY db_models/ ../db_models
-COPY app_front/ /app/
-COPY logs/ ../logs
+COPY app_front/ app_front/
+COPY db_models/ db_models/
+COPY logs/ logs/
 
 # Rendre le script entrypoint exécutable
-RUN chmod +x /app/entrypoint.sh
+RUN pip install -r app_front/requirements.txt \
+    && chmod +x app_front/entrypoint.sh
 
-ENTRYPOINT [ "/app/entrypoint.sh" ]
+ENTRYPOINT [ "app_front/entrypoint.sh" ]

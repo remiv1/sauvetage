@@ -1,0 +1,5 @@
+{
+  "include": ["app_front", "app_back", "db_models"],
+  "stubPath": "stubs",
+  "pythonVersion": "3.10"
+}

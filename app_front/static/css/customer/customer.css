@@ -1,0 +1,788 @@
+@charset "UTF-8";
+@import url("https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap");
+/* ═══════════════════════════════════════════════════════════════════════════
+   Customer Styles — Création & Fiche Client
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ── Conteneur principal ─────────────────────────────────────────────────── */
+.customer-container {
+  max-width: 860px;
+  margin: 2rem auto;
+  padding: 0 2rem 2rem;
+}
+.customer-container__title {
+  font-family: "Italianno", cursive;
+  font-size: 3rem;
+  color: #00086f;
+  margin-bottom: 1rem;
+}
+
+/* ── Type Toggle (Part / Pro) ────────────────────────────────────────────── */
+.customer-type-group {
+  margin-bottom: 2rem;
+}
+
+.type-toggle {
+  display: inline-flex;
+  border: 2px solid #00086f;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  padding: 0.5rem 2rem;
+  border: none;
+  background: #f5f5f5;
+  color: #00086f;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: "Asap", sans-serif;
+  transition: background 0.25s, color 0.25s;
+}
+.toggle-btn.active {
+  background: #00086f;
+  color: #f5f5f5;
+}
+.toggle-btn:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+/* ── Formulaire de création ──────────────────────────────────────────────── */
+.customer-form {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.form-section {
+  animation: fadeIn 0.3s ease;
+}
+
+.section-title {
+  font-family: "Italianno", cursive;
+  font-size: 2rem;
+  color: #00086f;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #002bff;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+.form-row.two-cols > .form-group {
+  flex: 1;
+}
+.form-row.three-cols > .form-group {
+  flex: 1;
+}
+
+.select-styled {
+  appearance: auto;
+}
+
+.input-error {
+  border-color: #b60012 !important;
+  box-shadow: 0 0 0 3px rgba(182, 0, 18, 0.15) !important;
+}
+
+/* ── Fiche Client — Carte info ───────────────────────────────────────────── */
+.customer-info-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+.customer-info-card--editing {
+  border: 2px solid #002bff;
+  box-shadow: 0 0 0 3px rgba(0, 43, 255, 0.12);
+}
+
+/* ── En-tête fiche + édition inline ──────────────────────────────────────── */
+.customer-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.customer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.customer-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: #606060;
+  margin-bottom: 0.5rem;
+}
+.customer-meta .meta-item strong {
+  color: #202020;
+}
+
+.customer-detail-row {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+.customer-detail-row span strong {
+  color: #00086f;
+}
+
+/* ── Badges de statut ────────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-active {
+  background: #a1d6ae;
+  color: #004d12;
+}
+
+.status-inactive {
+  background: #fab3b3;
+  color: #8a000f;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.badge-billing {
+  background: #bed2fa;
+  color: #001a99;
+}
+.badge-shipping {
+  background: #fbe0aa;
+  color: #8a4d00;
+}
+.badge-active {
+  background: #a1d6ae;
+  color: #004d12;
+}
+.badge-inactive {
+  background: #fab3b3;
+  color: #8a000f;
+}
+
+/* ── Onglets sous-sections ───────────────────────────────────────────────── */
+.customer-tabs-row {
+  display: flex;
+  min-width: 300px;
+  max-width: 500px;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  border: 2px solid #00086f;
+  border-bottom: none;
+}
+
+.customer-tab {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: #f5f5f5;
+  color: #00086f;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: "Asap", sans-serif;
+  transition: background 0.2s, color 0.2s;
+}
+.customer-tab.active {
+  background: #00086f;
+  color: #f5f5f5;
+}
+.customer-tab:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+.customer-tab-content {
+  background: #f5f5f5;
+  padding: 2rem;
+  border-radius: 0 20px 20px 20px;
+  border: 2px solid #00086f;
+}
+
+.customer-panel {
+  animation: fadeIn 0.3s ease;
+}
+.customer-panel h3 {
+  font-family: "Italianno", cursive;
+  font-size: 2rem;
+  color: #00086f;
+  margin: 0;
+}
+
+/* ── En-tête de panel ────────────────────────────────────────────────────── */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn-add {
+  background: #002bff;
+  color: #f5f5f5;
+  border: none;
+  padding: 0.25rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-add:hover {
+  background: #00086f;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 10px;
+}
+
+.btn-delete {
+  background: #b60012;
+  color: #f5f5f5;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-delete:hover {
+  background: rgb(131, 0, 12.956043956);
+}
+
+.btn-cancel {
+  background: #a0a0a0;
+  color: #f5f5f5;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-cancel:hover {
+  background: #606060;
+}
+
+.btn-toggle-status {
+  background: #4c69fd;
+  color: #f5f5f5;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-toggle-status:hover {
+  background: #00086f;
+}
+
+/* ── Formulaire inline (ajout) ───────────────────────────────────────────── */
+.add-form-container {
+  margin-bottom: 2rem;
+}
+
+.inline-add-form {
+  background: white;
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+.inline-add-form h4 {
+  font-family: "Italianno", cursive;
+  font-size: 1.6rem;
+  color: #00086f;
+  margin: 0 0 0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ── Cartes d'items (adresses, emails, téléphones) ───────────────────────── */
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1rem 1rem;
+  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e0e0e0;
+  transition: box-shadow 0.2s;
+}
+.item-card:hover {
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+.item-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.item-card__title {
+  font-size: 1rem;
+  color: #00086f;
+}
+.item-card__badges {
+  display: flex;
+  gap: 0.25rem;
+}
+.item-card__body {
+  font-size: 0.9rem;
+  color: #404040;
+  line-height: 1.5;
+}
+.item-card__body p {
+  margin: 0;
+}
+.item-card__body a {
+  color: #002bff;
+  text-decoration: none;
+}
+.item-card__body a:hover {
+  text-decoration: underline;
+}
+.item-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+.item-card--inactive {
+  opacity: 0.55;
+  border-left: 3px solid #a0a0a0;
+}
+.item-card--inactive:hover {
+  opacity: 0.75;
+}
+.item-card--editing {
+  border: 2px solid #002bff;
+  box-shadow: 0 0 0 3px rgba(0, 43, 255, 0.12);
+}
+
+/* ── Textes utilitaires ──────────────────────────────────────────────────── */
+.empty-text {
+  color: #808080;
+  font-style: italic;
+  padding: 1rem 0;
+}
+
+.loading-text {
+  color: #808080;
+  padding: 1rem 0;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ── Notifications ───────────────────────────────────────────────────────── */
+.fade-alert {
+  transition: opacity 0.4s ease;
+}
+
+.fade-out {
+  opacity: 0;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Page d'accueil — Cartes de choix
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ── Grille 3 colonnes ───────────────────────────────────────────────────── */
+.customer-cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+/* ── Carte individuelle ──────────────────────────────────────────────────── */
+.choice-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+.choice-card:hover {
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+}
+.choice-card__icon {
+  color: #002bff;
+  margin-bottom: 1rem;
+}
+.choice-card__title {
+  font-family: "Italianno", cursive;
+  font-size: 2.2rem;
+  color: #00086f;
+  margin-bottom: 0.5rem;
+}
+.choice-card__desc {
+  font-size: 0.9rem;
+  color: #606060;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+.choice-card__body {
+  width: 100%;
+}
+.choice-card__action {
+  display: inline-block;
+  margin-top: auto;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #002bff;
+  transition: color 0.2s;
+}
+.choice-card--link {
+  text-decoration: none;
+  cursor: pointer;
+}
+.choice-card--link:hover .choice-card__action {
+  color: #00086f;
+}
+
+/* ── Recherche rapide — Wrapper & Dropdown ────────────────────────────────── */
+.fast-search-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.fast-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+  max-height: 280px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fast-search-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background 0.15s;
+}
+.fast-search-item:last-child {
+  border-bottom: none;
+}
+.fast-search-item:hover, .fast-search-item--active {
+  background: #f5f5f5;
+}
+.fast-search-item__name {
+  font-weight: 600;
+  color: #202020;
+  font-size: 0.95rem;
+}
+.fast-search-item__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.1rem;
+}
+.fast-search-item__location {
+  font-size: 0.8rem;
+  color: #808080;
+}
+
+.fast-search-empty {
+  padding: 1rem;
+  text-align: center;
+  color: #808080;
+  font-style: italic;
+  list-style: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Page recherche avancée — Tableau de résultats
+   ═══════════════════════════════════════════════════════════════════════════ */
+.search-results-section {
+  margin-top: 2rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.search-results-count {
+  font-size: 0.85rem;
+  color: #808080;
+  font-weight: 600;
+}
+
+.search-table-wrap {
+  overflow-x: auto;
+}
+
+.search-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+.search-results-table thead {
+  background: #00086f;
+  color: #f5f5f5;
+}
+.search-results-table thead th {
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.search-results-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.search-results-table tbody tr:hover {
+  background: #f5f5f5;
+}
+.search-results-table tbody tr td {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: #202020;
+  vertical-align: middle;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Boutons icônes & édition inline (adresses, emails, téléphones)
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ── Bouton icône (petit cercle avec SVG) ────────────────────────────────── */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  color: #808080;
+  padding: 0;
+}
+.icon-btn svg {
+  pointer-events: none;
+}
+.icon-btn:hover {
+  transform: scale(1.12);
+}
+.icon-btn--edit {
+  color: #002bff;
+}
+.icon-btn--edit:hover {
+  background: rgba(0, 43, 255, 0.1);
+}
+.icon-btn--deactivate {
+  color: #b60012;
+}
+.icon-btn--deactivate:hover {
+  background: rgba(182, 0, 18, 0.1);
+}
+.icon-btn--restore {
+  color: #004d12;
+}
+.icon-btn--restore:hover {
+  background: rgba(0, 77, 18, 0.1);
+}
+.icon-btn--save {
+  color: #004d12;
+}
+.icon-btn--save:hover {
+  background: rgba(0, 77, 18, 0.12);
+}
+.icon-btn--cancel {
+  color: #808080;
+}
+.icon-btn--cancel:hover {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+/* ── Formulaire d'édition inline ─────────────────────────────────────────── */
+.item-edit-form .form-row {
+  margin-bottom: 0.25rem;
+}
+.item-edit-form input[type=text],
+.item-edit-form input[type=email],
+.item-edit-form input[type=tel] {
+  border: 2px solid #002bff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+}
+
+.inline-add-form input[type=text],
+.inline-add-form input[type=email],
+.inline-add-form input[type=tel] {
+  border: 2px solid #002bff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+}
+
+/* ── Section éléments inactifs ───────────────────────────────────────────── */
+.inactive-section {
+  margin-top: 1rem;
+  border-top: 1px dashed #c0c0c0;
+  padding-top: 0.5rem;
+}
+.inactive-section__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  color: #808080;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  transition: color 0.2s;
+}
+.inactive-section__toggle::before {
+  content: "▸";
+  display: inline-block;
+  transition: transform 0.2s;
+}
+.inactive-section__toggle.open::before {
+  transform: rotate(90deg);
+}
+.inactive-section__toggle:hover {
+  color: #404040;
+}
+.inactive-section__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+.inactive-section__list.hidden {
+  display: none;
+}
+
+/* ── Labels checkbox (facturation / livraison) ───────────────────────────── */
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #404040;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-label input[type=checkbox] {
+  accent-color: #002bff;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .customer-container {
+    padding: 0 0.5rem 2rem;
+  }
+  .customer-form {
+    padding: 1rem;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .customer-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .customer-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .customer-detail-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .customer-tabs-row {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .customer-tab-content {
+    padding: 1rem;
+    border-radius: 0 0 20px 20px;
+  }
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .form-actions {
+    flex-direction: column;
+  }
+  .customer-cards-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .search-results-table {
+    font-size: 0.8rem;
+  }
+  .search-results-table thead th,
+  .search-results-table tbody td {
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/*# sourceMappingURL=customer.css.map */
