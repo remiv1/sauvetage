@@ -2,20 +2,15 @@
 Ce module importe tous les modèles d'objets pour les rendre facilement accessibles à partir
 d'autres parties de l'application.
 """
-from typing import Any, TypeVar, Type
-from sqlalchemy import select
-from sqlalchemy.sql import Select
-
-T = TypeVar('T', bound="QueryMixin")
-
-class QueryMixin:
-    """Mixin pour ajouter une méthode de requête générique à un modèle SQLAlchemy."""
-    @classmethod
-    def by(cls: Type[T], **filters: Any) -> Select[Any]:
-        """Récupère un enregistrement en fonction de filtres dynamiques.
-        Args:
-            **filters: Filtres sous forme de paramètres nommés.
-        Returns:
-            Select[Any]: Le constructeur de requête SQLAlchemy pour la requête.
-        """
-        return select(cls).filter_by(**filters)
+from .common import QueryMixin
+from .customers import (
+    Customers, CustomerMails, CustomerPhones, CustomerAddresses, CustomerSyncLog,
+    CustomerParts, CustomerPros
+)
+from .orders import Order, OrderLine
+from .inventory import InventoryMovements
+from .invoices import Invoice
+from .shipments import Shipment
+from .users import Users
+from .objects import GeneralObjects, Books, OtherObjects, Tags, ObjectTags, ObjMetadatas, MediaFiles
+from .suppliers import Suppliers
