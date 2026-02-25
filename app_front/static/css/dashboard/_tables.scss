@@ -1,0 +1,61 @@
+@use '../core/variables' as variables;
+
+@mixin span {
+    display: block;
+    border-radius: variables.$radius-md;
+    padding: variables.$space-xs variables.$space-sm;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+@mixin disponible {
+    @include span;
+    background-color: variables.$success-bg;
+    border: 1px solid variables.$success-color;
+    color: variables.$success-color;
+}
+
+@mixin partielle {
+    @include span;
+    background-color: variables.$warning-bg;
+    border: 1px solid variables.$warning-color;
+    color: variables.$warning-color;
+}
+
+@mixin indisponible {
+    @include span;
+    background-color: variables.$danger-bg;
+    border: 1px solid variables.$danger-color;
+    color: variables.$danger-color;
+}
+
+@mixin expediee {
+    @include disponible;
+}
+
+@mixin preparee {
+    @include partielle;
+}
+
+@mixin en-cours {
+    @include span;
+    background-color: variables.$info-bg;
+    border: 1px solid variables.$info-color;
+    color: variables.$info-color;
+}
+
+@mixin annulee {
+    @include indisponible;
+}
+
+@mixin bombed {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.02));
+    box-shadow:
+        0 10px 20px rgba(2, 6, 23, 0.10),
+        inset 0 2px 6px rgba(255, 255, 255, 0.45),
+        inset 0 -6px 12px rgba(2, 6, 23, 0.04);
+    padding: variables.$space-sm;
+    flex: 1 1 220px;
+    min-width: 200px;
+    border-radius: variables.$radius-sm;
+}

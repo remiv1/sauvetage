@@ -1,0 +1,72 @@
+{% extends layout.extend_layout %}
+
+{% block title %}Editions Sauvetage - Changement de mot de passe{% endblock %}
+
+{% block content %}
+    <div class="register-container pb-5">
+        {# Message Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <h2 class="register-container__title">Changement de mot de passe</h2>
+        {% for error in form.old_password.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.new_password.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        {% for error in form.new_password_confirm.errors %}
+            <div class="alert alert-danger mb-3">{{ error }}</div>
+        {% endfor %}
+        <form class="register-container__form" method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.old_password.label(class="form-label") }}
+                <div class="password-input-wrapper">
+                    {{ form.old_password(class="form-control", placeholder="Ancien mot de passe") }}
+                    <span class="password-toggle" id="old-password-toggle">👁️</span>
+                </div>
+            </div>
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.new_password.label(class="form-label") }}
+                <div class="password-input-wrapper">
+                    {{ form.new_password(class="form-control", placeholder="Nouveau mot de passe") }}
+                    <span class="password-toggle" id="new-password-toggle">👁️</span>
+                </div>
+                <div class="password-criteria mt-3">
+                    <p id="password-length" class="criterion invalid">✗ Au moins 15 caractères</p>
+                    <p id="password-uppercase" class="criterion invalid">✗ Une lettre majuscule (A-Z)</p>
+                    <p id="password-lowercase" class="criterion invalid">✗ Une lettre minuscule (a-z)</p>
+                    <p id="password-number" class="criterion invalid">✗ Un chiffre (0-9)</p>
+                    <p id="password-special" class="criterion invalid">✗ Un caractère spécial (!@#$%^&*)</p>
+                </div>
+            </div>
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.new_password_confirm.label(class="form-label") }}
+                <div class="password-input-wrapper">
+                    {{ form.new_password_confirm(class="form-control", placeholder="Confirmez le mot de passe") }}
+                    <span class="password-toggle" id="new-password-confirm-toggle">👁️</span>
+                </div>
+                <div id="new-password-match" class="password-match invalid" style="margin-top: 0.5rem;">x Les mots de passe ne correspondent pas</div>
+            </div>
+
+            {% if first_user == false %}
+            <div class="form-group register-container__form__group__checkbox mb-3">
+                {{ form.permissions.label(class="form-label checkbox-label") }}
+                {{ form.permissions(class="form-control register-container__form__group__checkbox") }}
+            </div>
+            {% endif %}
+
+            <div class="form-group register-container__form__group mb-3">
+                {{ form.submit(class="btn btn-primary", value="Changer le mot de passe") }}
+            </div>
+        </form>
+    </div>
+{% endblock %}

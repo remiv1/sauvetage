@@ -14,7 +14,8 @@ def load_page_params(page_name: str) -> Dict[str, Any]:
               paramètres par défaut.
     """
     # Chargement du fichier de base et des liens vers la page spécifique
-    base = toml.load("config/pages/pages.toml")
+    base_path = join(abspath(join(dirname(__file__), "..")), "config", "pages", "pages.toml")
+    base = toml.load(base_path)
     links = base.get("links", {})
 
     # Récupération du chemin du fichier de configuration de la page
@@ -33,4 +34,6 @@ def load_page_params(page_name: str) -> Dict[str, Any]:
 def render_page(page_name: str, **context: Any) -> str:
     """Renders a page with its parameters and additional context."""
     params = load_page_params(page_name)
-    return render_template(params.get("layout", {}).get("main_layout", "index.html"), **context)
+    return render_template(params.get("layout", {}).get("main_layout", "index.html"),
+                           tab=params.get("tab", page_name.capitalize()),
+                           **params, **context)

@@ -1,0 +1,24 @@
+{% if customer.customer_type == 'pro' %}
+<form id="info-edit-form" class="item-edit-form">
+    <div class="form-group mb-2">
+        <label class="form-label" for="edit-company-name">Raison sociale</label>
+        <input type="text" id="edit-company-name" name="company_name"
+                class="form-control"
+                value="{{ customer.pro.company_name if customer.pro else '' }}" required>
+    </div>
+    <div class="form-row two-cols">
+        <div class="form-group mb-2">
+            <label class="form-label" for="edit-siret">Numéro SIRET</label>
+            <input type="text" id="edit-siret" name="siret_number"
+                    class="form-control"
+                    value="{{ customer.pro.siret_number if customer.pro else '' }}">
+        </div>
+        <div class="form-group mb-2">
+            <label class="form-label" for="edit-vat">Numéro de TVA</label>
+            <input type="text" id="edit-vat" name="vat_number"
+                    class="form-control"
+                    value="{{ customer.pro.vat_number if customer.pro else '' }}">
+        </div>
+    </div>
+</form>
+{% endif %}

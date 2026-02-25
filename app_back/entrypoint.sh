@@ -14,6 +14,15 @@ if [ -z "$DATABASE_URL" ]; then
     echo "[ENTRYPOINT] DATABASE_URL construit depuis les variables BD"
 fi
 
+if [ -z "$DATABASE_SECURE_URL" ]; then
+    if [ -z "$POSTGRES_USER_SECURE" ] || [ -z "$POSTGRES_PASSWORD_SECURE" ] || [ -z "$POSTGRES_HOST" ] || [ -z "$POSTGRES_PORT" ] || [ -z "$POSTGRES_DB_USERS" ]; then
+        echo "[ENTRYPOINT] ERREUR: Variables PostgreSQL sécurisées incompletes"
+        exit 1
+    fi
+    export DATABASE_SECURE_URL="postgresql://${POSTGRES_USER_SECURE}:${POSTGRES_PASSWORD_SECURE}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB_USERS}"
+    echo "[ENTRYPOINT] DATABASE_SECURE_URL construit depuis les variables BD"
+fi
+
 if [ -z "$MONGODB_URL" ]; then
     if [ -z "$MONGO_USER_APP" ] || [ -z "$MONGO_PASSWORD_APP" ] || [ -z "$MONGO_HOST" ] || [ -z "$MONGO_PORT" ] || [ -z "$MONGO_DB_LOGS" ]; then
         echo "[ENTRYPOINT] ERREUR: Variables MongoDB incompletes"
@@ -30,6 +39,12 @@ echo "[ENTRYPOINT]   MONGODB_URL: [REDACTED]"
 echo "[ENTRYPOINT]   LOG_LEVEL=${LOG_LEVEL:-info}"
 echo "[ENTRYPOINT]   DEBUG=${DEBUG:-false}"
 
+echo "Attente de PostgreSQL sur db-main:5432..."
+
+while ! nc -z db-main 5432; do
+    sleep 5
+done
+
 # Demarrage de Gunicorn avec Uvicorn
 echo "[ENTRYPOINT] Demarrage de Gunicorn (4 workers)"
 
@@ -40,4 +55,4 @@ exec gunicorn \
     --access-logfile - \
     --error-logfile - \
     --log-level info \
-    main:app
+    app_back.main:app

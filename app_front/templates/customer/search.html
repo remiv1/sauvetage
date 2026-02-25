@@ -1,0 +1,108 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="customer-container">
+
+    {# Messages Flash #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mb-3 fade-alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2 class="customer-container__title">Recherche avancée</h2>
+
+    {# ── Formulaire de recherche ─────────────────────────────────────────── #}
+    <div class="customer-form" id="search-form-card">
+        <h3 class="section-title">Critères de recherche</h3>
+
+        <form id="advanced-search-form">
+            {# Ligne 1 : Nom / Type #}
+            <div class="form-row two-cols">
+                <div class="form-group mb-3">
+                    <label class="form-label" for="search-name">Nom / Raison sociale</label>
+                    <input type="text" id="search-name" name="name" class="form-control"
+                           placeholder="Nom, prénom ou raison sociale…" />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="search-type">Type de client</label>
+                    <select id="search-type" name="customer_type" class="form-control select-styled">
+                        <option value="">Tous</option>
+                        <option value="part">Particulier</option>
+                        <option value="pro">Professionnel</option>
+                    </select>
+                </div>
+            </div>
+
+            {# Ligne 2 : Ville / Code postal #}
+            <div class="form-row two-cols">
+                <div class="form-group mb-3">
+                    <label class="form-label" for="search-city">Ville</label>
+                    <input type="text" id="search-city" name="city" class="form-control"
+                           placeholder="Ville…" />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="search-postal">Code postal</label>
+                    <input type="text" id="search-postal" name="postal_code" class="form-control"
+                           placeholder="Code postal…" />
+                </div>
+            </div>
+
+            {# Ligne 3 : Email / Téléphone #}
+            <div class="form-row two-cols">
+                <div class="form-group mb-3">
+                    <label class="form-label" for="search-email">Email</label>
+                    <input type="text" id="search-email" name="email" class="form-control"
+                           placeholder="Adresse email…" />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="search-phone">Téléphone</label>
+                    <input type="text" id="search-phone" name="phone" class="form-control"
+                           placeholder="Numéro de téléphone…" />
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="form-actions">
+                <button type="submit" class="btn-add">
+                    Rechercher
+                </button>
+                <button type="reset" class="btn-cancel btn-sm" id="search-reset-btn">
+                    Réinitialiser
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# ── Résultats (masqués tant qu'aucune recherche) ────────────────────── #}
+    <div id="search-results-section" class="search-results-section hidden">
+        <div class="panel-header">
+            <h3 class="section-title" id="search-results-title">Résultats</h3>
+            <span class="search-results-count" id="search-results-count"></span>
+        </div>
+
+        <div class="search-table-wrap">
+            <table class="search-results-table" id="search-results-table">
+                <thead>
+                    <tr>
+                        <th>Nom / Raison sociale</th>
+                        <th>Type</th>
+                        <th>Adresse</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Statut</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="search-results-body">
+                </tbody>
+            </table>
+        </div>
+
+        <p class="empty-text hidden" id="search-no-results">Aucun client trouvé pour ces critères.</p>
+    </div>
+
+</div>
+{% endblock %}

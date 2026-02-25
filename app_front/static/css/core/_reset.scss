@@ -1,0 +1,77 @@
+/* _reset.scss */
+
+/* Reset des marges, paddings et bordures */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Suppression des styles par défaut des listes */
+ul, ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Suppression des styles par défaut des liens */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Réinitialisation des titres et paragraphes */
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0;
+  font-weight: normal;
+}
+
+/* Réinitialisation des tableaux */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Réinitialisation des images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Réinitialisation des champs de formulaire */
+input, button, textarea, select {
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+/* Suppression des styles par défaut des boutons */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Réinitialisation des balises HTML5 */
+article, aside, details, figcaption, figure, footer, header, hgroup, main, nav, section, summary {
+  display: block;
+}
+
+/* Suppression des styles par défaut des citations */
+blockquote, q {
+  quotes: none;
+}
+blockquote:before, blockquote:after, q:before, q:after {
+  content: '';
+  content: none;
+}
+
+/* Suppression des styles par défaut des champs de formulaire */
+textarea {
+  resize: none;
+}

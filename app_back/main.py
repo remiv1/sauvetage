@@ -1,38 +1,28 @@
 """Module principal de l'application FastAPI pour le backend de Sauvetage."""
 
-import os
-from contextlib import asynccontextmanager
+from os import getenv
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from app_back.router import v1_api_router
+from app_back.migration import run_migrations_with_lock
+from logs.logger import get_logger
 
 # Configuration
-DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
-
-# Lifespan event handlers
-@asynccontextmanager
-async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined-outer-name
-    """Gère les événements de démarrage et d'arrêt de l'application."""
-    # Startup
-    print(f"Starting FastAPI application (DEBUG={DEBUG}, LOG_LEVEL={LOG_LEVEL})")
-    try:
-        # TODO: Initialize database connections here
-        print("Database connections initialized")
-    except (OSError) as e:
-        print(f"Warning: Could not initialize database connections: {e}")
-    yield
-    # Shutdown
-    print("Shutting down FastAPI application")
-    # TODO: Close database connections here
+DEBUG = getenv("DEBUG", "false").lower() == "true"
+LOG_LEVEL = getenv("LOG_LEVEL", "info")
+sauv_logger = get_logger()
+# Exécution des migrations avec advisory lock PostgreSQL.
+# Chaque worker Gunicorn importe ce module, mais seul le premier
+# à obtenir le lock exécutera réellement les migrations.
+# Les autres attendront la fin puis continueront sans migrer.
+run_migrations_with_lock(timeout=300)
 
 # Create FastAPI app
 app = FastAPI(
     title="Sauvetage Backend API",
     description="Backend API for Sauvetage application",
     version="1.0.0",
-    lifespan=lifespan,
-    debug=DEBUG,
+    debug=True,
 )
 
 # Include API routers
@@ -71,7 +61,6 @@ async def readiness_check():
     et 503 lorsqu'il n'est pas prêt (par exemple, si la connexion à la base de données échoue).
     """
     try:
-        # TODO: Check database connectivity
         return JSONResponse(
             status_code=200,
             content={

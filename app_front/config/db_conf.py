@@ -1,0 +1,36 @@
+"""Configuration de la base de données pour l'application Flask Sauvetage"""
+
+from os import getenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+DATABASE_URL = getenv(
+    "DATABASE_URL",
+    "postgresql://app:pwd@db-main:5432/sauvetage_main"
+)
+SECURE_DATABASE_URL = getenv(
+    "SECURE_DATABASE_URL",
+    "postgresql://app:pwd@db-secure:5432/sauvetage_secure"
+)
+MONGODB_URL = getenv(
+    "MONGODB_URL",
+    "mongodb://app:pwd@db-logs:27017/sauvetage_logs"
+)
+
+def get_main_session():
+    """Crée une session SQLAlchemy pour la base de données principale."""
+
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600
+    )
+    _session = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine
+    )
+    return _session()

@@ -162,6 +162,7 @@ cat > "databases/logs/.env.db_logs" << EOF
 # MongoDB Configuration
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=${MONGO_ADMIN_PASSWORD}
+MONGO_INITDB_DATABASE=sauvetage_logs
 
 # Base de données et utilisateur applicatif
 MONGO_DB_LOGS=sauvetage_logs
@@ -277,6 +278,9 @@ EBUSINESS_SECRET=${EBUSINESS_SECRET}
 
 # Gestion Flask
 FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+
+# Adresse de l'API FastAPI
+API_URL=http://app-back:8000/api/v1
 
 # Logging
 LOG_LEVEL=${FRONTEND_LOG_LEVEL}

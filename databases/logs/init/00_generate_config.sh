@@ -2,7 +2,13 @@
 
 # Script pour générer les fichiers de configuration MongoDB à partir des templates
 
+
 set -e
+
+echo "[DEBUG] Variables d'environnement utilisées :"
+for var in "${required_vars[@]}"; do
+    echo "  $var = '${!var}'"
+done
 
 INIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(dirname "$INIT_DIR")"
@@ -23,6 +29,9 @@ for var in "${required_vars[@]}"; do
     fi
 done
 
+echo "[DEBUG] INIT_DIR=$INIT_DIR"
+echo "[DEBUG] CONFIG_DIR=$CONFIG_DIR"
+
 # Générer mongod.conf à partir du template
 if [ -f "$CONFIG_DIR/mongod.conf.pattern" ]; then
     echo "Génération de mongod.conf..."
@@ -32,16 +41,25 @@ if [ -f "$CONFIG_DIR/mongod.conf.pattern" ]; then
 fi
 
 # Générer les fichiers JS d'initialisation à partir des templates
+
+js_count=0
 for template in "$INIT_DIR"/*.js.pattern; do
     if [ -f "$template" ]; then
         output="${template%.pattern}"
         echo "Génération de $(basename $output)..."
-        
-        # Remplacer tous les patterns ${VAR} par leurs valeurs
         envsubst < "$template" > "$output"
         chmod 644 "$output"
         echo "✓ $(basename $output) créé"
+        js_count=$((js_count+1))
     fi
 done
+
+if [ "$js_count" -eq 0 ]; then
+    echo "[WARN] Aucun fichier JS généré depuis les templates dans $INIT_DIR !"
+    ls -l "$INIT_DIR"
+else
+    echo "[DEBUG] Fichiers JS générés :"
+    ls -l "$INIT_DIR"/*.js
+fi
 
 echo "✓ Tous les fichiers de configuration MongoDB ont été générés avec succès"

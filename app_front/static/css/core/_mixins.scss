@@ -1,0 +1,35 @@
+@use './variables' as variables;
+
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin card {
+    background: white;
+    padding: variables.$space-lg;
+    border-radius: variables.$radius-md;
+    box-shadow: variables.$shadow-soft;
+}
+
+@mixin input-base {
+    width: 100%;
+    max-width: 100%;
+    padding: variables.$space-sm variables.$space-md;
+    border: 1px solid variables.$border-blue;
+    border-radius: variables.$radius-sm;
+    font-size: 1rem;
+
+    &:focus {
+        border-color: variables.$primary-color;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(variables.$primary-color, 0.2);
+    }
+}
+
+@mixin inline-container {
+    display: inline-flex;
+    width: 100%;
+    max-width: 100%;
+}

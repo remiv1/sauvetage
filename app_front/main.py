@@ -1,11 +1,12 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
 from datetime import datetime, timezone
-from flask import Flask, jsonify
+from flask import Flask, jsonify, session, request, redirect, url_for
 from app_front.utils.pages import render_page
+from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
-    DEBUG, LOG_LEVEL, DATABASE_URL, MONGODB_URL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger
-)
+    DEBUG, LOG_LEVEL, FLASK_SECRET_KEY, BLUEPRINTS, sauv_logger)
+from app_front.config.db_conf import DATABASE_URL, MONGODB_URL
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -23,18 +24,39 @@ log = f"""
 - LOG_LEVEL: {LOG_LEVEL}
 - DATABASE_URL: {DATABASE_URL}
 - MONGODB_URL: {MONGODB_URL}
-- FLASK_SECRET_KEY: {'***'
-                     if FLASK_SECRET_KEY != 'dev-secret-key-change-in-production'
-                     else FLASK_SECRET_KEY}
+- FLASK_SECRET_KEY: {'***'}
 - BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
 """
 sauv_logger.log(level=LOG_LEVEL,
                 message=log,
                 action="app_start")
 
+@app.before_request
+def before_request():
+    """Fonction exécutée avant chaque requête"""
+    # Si l'utilisateur est déjà connecté, ne pas rediriger
+    if 'username' in session:
+        return None
+    # Vérifier si la page demandée est autorisée sans authentification
+    if is_allowed(request.path):
+        print("Accès à une page autorisée, aucune redirection nécessaire.")
+        return None
+    # Sinon, rediriger vers la page de connexion
+    print(f"page demandée : {request.path} --> redirection vers login")
+    return redirect(url_for("user.login"))
+
+@app.after_request
+def after_request(response):
+    """Fonction exécutée après chaque requête"""
+    sauv_logger.log(
+        level=LOG_LEVEL,
+        message=f"Requête {request.method} {request.path} - Status: {response.status_code}",
+        action="request_log"
+    )
+    return response
 
 @app.route("/")
-def root():
+def home():
     """Endpoint racine du frontend"""
     return render_page("default")
 

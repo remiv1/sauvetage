@@ -1,0 +1,69 @@
+@use '../core/variables' as variables;
+@use 'tables' as tables;
+
+.kpis {
+    flex:1;
+    background: linear-gradient(90deg, #{variables.$gray-100}, #fff);
+    padding:variables.$space-md;
+    border-radius:variables.$radius-sm;
+    text-align:center;
+    font-weight:700;
+    box-shadow: variables.$shadow-soft;
+    
+    &-row {
+        display:flex;
+        flex-direction: row;
+        gap:variables.$space-md;
+        margin-top:variables.$space-md;
+        flex-wrap: wrap;
+        align-items: stretch;
+
+        .kpi-items {
+            @include tables.bombed;
+            background: variables.$success-bg;
+            color: variables.$success-color;
+            font-weight: 400;
+            text-align: center
+        }
+        .kpi-amount {
+            @include tables.bombed;
+            background: variables.$info-bg;
+            color: variables.$info-color;
+            font-weight: 400;
+            text-align: center;
+        }
+        .kpi-categories {
+            @include tables.bombed;
+            background: variables.$warning-bg;
+            color: variables.$warning-color;
+            font-weight: 400;
+            text-align: center;
+        }
+    }
+}
+
+.charts-row {
+    display: flex;
+    gap: variables.$space-md;
+    align-items: center;
+    align-content: center;
+    justify-content: space-between;
+}
+
+.legend {
+    flex:1;
+
+    &-row {
+        padding:0.25rem 0;
+        display:flex;
+        align-items:center;
+        gap:0.6rem;
+        .dot {
+            width:14px;
+            height:14px;
+            border-radius:50%;
+            display:inline-block;
+            margin-right:8px;
+        }
+    }
+}

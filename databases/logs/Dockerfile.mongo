@@ -1,10 +1,12 @@
-FROM mongo:8.2-noble
+FROM docker.io/library/mongo:8.2-noble
 
 # Installer des outils supplémentaires
 RUN apt-get update && apt-get install -y bash gettext
 
 # Copier les fichiers d'environnement et scripts
 COPY .env.db_logs /tmp/.env.db_logs
+COPY init/02_immutable_collections.js /docker-entrypoint-initdb.d/02_immutable_collections.js
+COPY init/03_collections_rotation.js /docker-entrypoint-initdb.d/03_collections_rotation.js
 COPY init/00_generate_config.sh /tmp/00_generate_config.sh
 COPY init/*.js.pattern /tmp/
 

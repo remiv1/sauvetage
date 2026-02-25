@@ -1,0 +1,139 @@
+@import url("https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap");
+table {
+  min-width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+thead {
+  width: 100%;
+  background: #00086f;
+  color: #f5f5f5;
+  border-radius: 0;
+}
+thead tr {
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+}
+thead tr th {
+  padding: 0.5rem 1rem;
+  text-align: left;
+}
+thead tr th:first-child {
+  border-top-left-radius: 10px;
+}
+thead tr th:last-child {
+  border-top-right-radius: 10px;
+}
+
+tfoot {
+  color: #404040;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+tfoot tr {
+  width: 100%;
+  padding: 1rem;
+}
+tfoot tr td {
+  padding: 0.5rem 1rem;
+  text-align: left;
+}
+tfoot tr td.orders-total {
+  color: rgb(0, 4.3243243243, 60);
+}
+
+tbody tr {
+  border-bottom: 1px solid #c0c0c0;
+}
+tbody tr td {
+  padding: 0.5rem 1rem;
+}
+tbody tr td.order-name {
+  font-weight: bold;
+  color: rgb(0, 4.3243243243, 60);
+}
+tbody tr td.order-date {
+  color: #606060;
+  font-size: 0.875rem;
+}
+tbody tr td.order-amount {
+  color: #00086f;
+  font-weight: bold;
+  text-align: right;
+}
+tbody tr td.order-availability .availability-disponible {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #a1d6ae;
+  border: 1px solid #004d12;
+  color: #004d12;
+}
+tbody tr td.order-availability .availability-partielle {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #fbe0aa;
+  border: 1px solid #8a4d00;
+  color: #8a4d00;
+}
+tbody tr td.order-availability .availability-indisponible {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #fab3b3;
+  border: 1px solid #8a000f;
+  color: #8a000f;
+}
+tbody tr td.order-status .status-expediee {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #a1d6ae;
+  border: 1px solid #004d12;
+  color: #004d12;
+}
+tbody tr td.order-status .status-preparee {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #fbe0aa;
+  border: 1px solid #8a4d00;
+  color: #8a4d00;
+}
+tbody tr td.order-status .status-en-cours {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #bed2fa;
+  border: 1px solid #001a99;
+  color: #001a99;
+}
+tbody tr td.order-status .status-annulee {
+  display: block;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  background-color: #fab3b3;
+  border: 1px solid #8a000f;
+  color: #8a000f;
+}
+
+/*# sourceMappingURL=orders.css.map */

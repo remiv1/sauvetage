@@ -1,16 +1,24 @@
 # Configuration des pages de l'application. Annuaire des pages.
 [links]
 dashboard = "dashboard.toml"
-login = "login.toml"
+login = "user/login.toml"
 stock = "stock.toml"
+register = "user/register.toml"
+change_password = "user/change_password.toml"
+modify = "user/modify.toml"
+customer_index = "customer/index.toml"
+customer_search = "customer/search.toml"
+customer_create = "customer/create.toml"
+customer_view = "customer/view.toml"
 
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée
 # ------------------------------------------------------------------------------
 # Paramètres
 [default.params]
-styles = ["css/base.css"]
-scripts = ["js/base.js"]
+tab = "Accueil"
+styles = ["css/main.css"]
+scripts = ["js/main.js"]
 # Clées
 [default.meta]
 title = "Sauvetage | Intranet"
@@ -25,7 +33,9 @@ aria_role="main"
 # Pages spécifiques
 [default.layout]
 main_layout = "index.html"
+extend_layout = ""
 # Flags
 [default.flags]
+userbar = false
 navbar = false
 searchbar = false

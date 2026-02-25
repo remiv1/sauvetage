@@ -1,0 +1,28 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de recherche de client
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Clients"
+styles = ["css/customer/customer.css", "css/main.css"]
+modules = ["js/customer/search.js", "js/main.js"]
+# Clées
+[meta]
+title = "Recherche de client | Intranet"
+description = "Page de recherche de clients dans l'intranet"
+keywords = "client, recherche, formulaire"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="document"
+# Pages spécifiques
+[layout]
+main_layout = "customer/search.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = true
+searchbar = false
+userbar = true

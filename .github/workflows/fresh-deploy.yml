@@ -1,0 +1,24 @@
+name: CI Fresh Deploy Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  fresh-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose (uses docker present on runner)
+        run: |
+          docker compose version || true
+
+      - name: Run orchestration script (docker compose)
+        env:
+          COMPOSE_CMD: "docker compose"
+        run: |
+          chmod +x ./scripts/start_sequence.sh
+          COMPOSE_CMD="docker compose" ./scripts/start_sequence.sh

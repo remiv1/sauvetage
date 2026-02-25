@@ -1,0 +1,20 @@
+@use './variables' as variables;
+@use './mixins' as mixins;
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: variables.$space-md;
+}
+
+.inline-container {
+    @include mixins.inline-container;
+}
+
+.card {
+    @include mixins.card;
+}
+
+.centered {
+    @include mixins.flex-center;
+}
