@@ -16,6 +16,7 @@ class Suppliers(WorkingBase):
 
     # Données de base du fournisseur
     name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom du fournisseur")
+    gln13: Mapped[str] = mapped_column(String, unique=True, comment="Code GLN du fournisseur")
     contact_email: Mapped[str] = mapped_column(String, comment="Email de contact du fournisseur")
     contact_phone: Mapped[str] = mapped_column(String,
                                                comment="Téléphone de contact du fournisseur")
@@ -43,6 +44,7 @@ class Suppliers(WorkingBase):
         return {
             "id": self.id,
             "name": self.name,
+            "gln13": self.gln13,
             "contact_email": self.contact_email,
             "contact_phone": self.contact_phone,
             "is_active": self.is_active,
@@ -53,9 +55,4 @@ class Suppliers(WorkingBase):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Suppliers":
         """Crée un objet Supplier à partir d'un dictionnaire."""
-        return cls(
-            name=data.get("name", ""),
-            contact_email=data.get("contact_email"),
-            contact_phone=data.get("contact_phone"),
-            is_active=data.get("is_active", True)
-        )
+        return cls(**data)

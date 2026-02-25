@@ -1,0 +1,35 @@
+{% if customer.customer_type == 'part' %}
+<form id="info-edit-form" class="item-edit-form">
+    <div class="form-group mb-2">
+        <label class="form-label" for="edit-civil-title">Civilité</label>
+        <select id="edit-civil-title" name="civil_title" class="form-control select-styled">
+            <option value="m" {% if customer.part and customer.part.civil_title == 'm' %}selected{% endif %}>M.</option>
+            <option value="mme" {% if customer.part and customer.part.civil_title == 'mme' %}selected{% endif %}>Mme</option>
+            <option value="mlle" {% if customer.part and customer.part.civil_title == 'mlle' %}selected{% endif %}>Mlle</option>
+            <option value="ab" {% if customer.part and customer.part.civil_title == 'ab' %}selected{% endif %}>Abbé</option>
+            <option value="sr" {% if customer.part and customer.part.civil_title == 'sr' %}selected{% endif %}>Sr</option>
+            <option value="dr" {% if customer.part and customer.part.civil_title == 'dr' %}selected{% endif %}>Dr</option>
+        </select>
+    </div>
+    <div class="form-row two-cols">
+        <div class="form-group mb-2">
+            <label class="form-label" for="edit-first-name">Prénom</label>
+            <input type="text" id="edit-first-name" name="first_name"
+                    class="form-control"
+                    value="{{ customer.part.first_name if customer.part else '' }}" required>
+        </div>
+        <div class="form-group mb-2">
+            <label class="form-label" for="edit-last-name">Nom</label>
+            <input type="text" id="edit-last-name" name="last_name"
+                    class="form-control"
+                    value="{{ customer.part.last_name if customer.part else '' }}" required>
+        </div>
+    </div>
+    <div class="form-group mb-2">
+        <label class="form-label" for="edit-dob">Date de naissance</label>
+        <input type="date" id="edit-dob" name="date_of_birth"
+                class="form-control"
+                value="{{ customer.part.date_of_birth[:10] if customer.part and customer.part.date_of_birth else '' }}">
+    </div>
+</form>
+{% endif %}
