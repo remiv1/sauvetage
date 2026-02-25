@@ -154,6 +154,7 @@ class CustomerParts(WorkingBase, QueryMixin):
         return {
             "id": self.id,
             "customer_id": self.customer_id,
+            "civil_title": self.civil_title,
             "first_name": self.first_name,
             "last_name": self.last_name,
             "date_of_birth": self.date_of_birth.isoformat() if self.date_of_birth else None,
@@ -280,6 +281,7 @@ class CustomerAddresses(WorkingBase, QueryMixin):
             "state": self.state,
             "postal_code": self.postal_code,
             "country": self.country,
+            "is_active": self.is_active,
             "is_billing": self.is_billing,
             "is_shipping": self.is_shipping,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -332,7 +334,7 @@ class CustomerMails(WorkingBase, QueryMixin):
                                                  comment="Date de dernière mise à jour de l'e-mail")
 
     # Relations
-    customer = relationship("Customers", back_populates="mails")
+    customer = relationship("Customers", back_populates="emails")
 
     def __repr__(self) -> str:
         return f"<CustomerMail(id={self.id}, customer_id={self.customer_id}, email={self.email})>"

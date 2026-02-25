@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
 from db_models import WorkingBase
-from db_models.objects import QueryMixin
+from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
 class Order(WorkingBase, QueryMixin):
     """Modèle de données pour une commande."""

@@ -97,7 +97,14 @@
 .customer-info-card {
     @include mixins.card;
     margin-bottom: variables.$space-lg;
+
+    &--editing {
+        border: 2px solid variables.$secondary-color;
+        box-shadow: 0 0 0 3px rgba(variables.$secondary-color, 0.12);
+    }
 }
+
+/* ── En-tête fiche + édition inline ──────────────────────────────────────── */
 
 .customer-header-row {
     display: flex;
@@ -393,7 +400,22 @@
     &__actions {
         display: flex;
         justify-content: flex-end;
+        gap: variables.$space-xs;
         margin-top: variables.$space-sm;
+    }
+
+    &--inactive {
+        opacity: 0.55;
+        border-left: 3px solid variables.$gray-400;
+
+        &:hover {
+            opacity: 0.75;
+        }
+    }
+
+    &--editing {
+        border: 2px solid variables.$secondary-color;
+        box-shadow: 0 0 0 3px rgba(variables.$secondary-color, 0.12);
     }
 }
 
@@ -426,6 +448,358 @@
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-5px); }
     to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Page d'accueil — Cartes de choix
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Grille 3 colonnes ───────────────────────────────────────────────────── */
+.customer-cards-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: variables.$space-lg;
+    margin-top: variables.$space-md;
+}
+
+/* ── Carte individuelle ──────────────────────────────────────────────────── */
+.choice-card {
+    @include mixins.card;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: variables.$space-lg variables.$space-md;
+    transition: box-shadow 0.25s, transform 0.25s;
+
+    &:hover {
+        box-shadow: variables.$shadow-medium;
+        transform: translateY(-3px);
+    }
+
+    &__icon {
+        color: variables.$secondary-color;
+        margin-bottom: variables.$space-md;
+    }
+
+    &__title {
+        font-family: variables.$font-title;
+        font-size: 2.2rem;
+        color: variables.$primary-color;
+        margin-bottom: variables.$space-sm;
+    }
+
+    &__desc {
+        font-size: 0.9rem;
+        color: variables.$gray-600;
+        margin-bottom: variables.$space-md;
+        line-height: 1.4;
+    }
+
+    &__body {
+        width: 100%;
+    }
+
+    &__action {
+        display: inline-block;
+        margin-top: auto;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: variables.$secondary-color;
+        transition: color 0.2s;
+    }
+
+    // Variante lien
+    &--link {
+        text-decoration: none;
+        cursor: pointer;
+
+        &:hover .choice-card__action {
+            color: variables.$primary-color;
+        }
+    }
+}
+
+/* ── Recherche rapide — Wrapper & Dropdown ────────────────────────────────── */
+.fast-search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.fast-search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: white;
+    border: 1px solid variables.$gray-200;
+    border-top: none;
+    border-radius: 0 0 variables.$radius-sm variables.$radius-sm;
+    box-shadow: variables.$shadow-medium;
+    max-height: 280px;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.fast-search-item {
+    padding: variables.$space-sm variables.$space-md;
+    cursor: pointer;
+    border-bottom: 1px solid variables.$gray-100;
+    transition: background 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover,
+    &--active {
+        background: variables.$gray-100;
+    }
+
+    &__name {
+        font-weight: 600;
+        color: variables.$text-dark;
+        font-size: 0.95rem;
+    }
+
+    &__meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: variables.$space-xxs;
+    }
+
+    &__location {
+        font-size: 0.8rem;
+        color: variables.$gray-500;
+    }
+}
+
+.fast-search-empty {
+    padding: variables.$space-md;
+    text-align: center;
+    color: variables.$gray-500;
+    font-style: italic;
+    list-style: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Page recherche avancée — Tableau de résultats
+   ═══════════════════════════════════════════════════════════════════════════ */
+.search-results-section {
+    margin-top: variables.$space-lg;
+    animation: fadeIn 0.3s ease;
+}
+
+.search-results-count {
+    font-size: 0.85rem;
+    color: variables.$gray-500;
+    font-weight: 600;
+}
+
+.search-table-wrap {
+    overflow-x: auto;
+}
+
+.search-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: variables.$radius-sm;
+    overflow: hidden;
+    box-shadow: variables.$shadow-soft;
+
+    thead {
+        background: variables.$primary-color;
+        color: variables.$text-light;
+
+        th {
+            padding: variables.$space-sm variables.$space-md;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+    }
+
+    tbody tr {
+        border-bottom: 1px solid variables.$gray-200;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &:hover {
+            background: variables.$gray-100;
+        }
+
+        td {
+            padding: variables.$space-sm variables.$space-md;
+            font-size: 0.9rem;
+            color: variables.$text-dark;
+            vertical-align: middle;
+        }
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Boutons icônes & édition inline (adresses, emails, téléphones)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Bouton icône (petit cercle avec SVG) ────────────────────────────────── */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+    color: variables.$gray-500;
+    padding: 0;
+
+    svg {
+        pointer-events: none;
+    }
+
+    &:hover {
+        transform: scale(1.12);
+    }
+
+    &--edit {
+        color: variables.$secondary-color;
+
+        &:hover {
+            background: rgba(variables.$secondary-color, 0.1);
+        }
+    }
+
+    &--deactivate {
+        color: variables.$color-danger;
+
+        &:hover {
+            background: rgba(variables.$color-danger, 0.1);
+        }
+    }
+
+    &--restore {
+        color: variables.$success-color;
+
+        &:hover {
+            background: rgba(variables.$success-color, 0.1);
+        }
+    }
+
+    &--save {
+        color: variables.$success-color;
+
+        &:hover {
+            background: rgba(variables.$success-color, 0.12);
+        }
+    }
+
+    &--cancel {
+        color: variables.$gray-500;
+
+        &:hover {
+            background: rgba(variables.$gray-500, 0.12);
+        }
+    }
+}
+
+
+
+/* ── Formulaire d'édition inline ─────────────────────────────────────────── */
+.item-edit-form {
+    .form-row {
+        margin-bottom: variables.$space-xs;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"] {
+        border: 2px solid variables.$secondary-color;
+        padding: variables.$space-xs variables.$space-sm;
+        border-radius: variables.$radius-sm;
+    }
+}
+
+.inline-add-form {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"] {
+        border: 2px solid variables.$secondary-color;
+        padding: variables.$space-xs variables.$space-sm;
+        border-radius: variables.$radius-sm;
+    }
+}
+
+/* ── Section éléments inactifs ───────────────────────────────────────────── */
+.inactive-section {
+    margin-top: variables.$space-md;
+    border-top: 1px dashed variables.$gray-300;
+    padding-top: variables.$space-sm;
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        gap: variables.$space-xs;
+        background: none;
+        border: none;
+        color: variables.$gray-500;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: variables.$space-xs 0;
+        transition: color 0.2s;
+
+        &::before {
+            content: '▸';
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+
+        &.open::before {
+            transform: rotate(90deg);
+        }
+
+        &:hover {
+            color: variables.$gray-700;
+        }
+    }
+
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: variables.$space-sm;
+        padding-top: variables.$space-sm;
+
+        &.hidden {
+            display: none;
+        }
+    }
+}
+
+/* ── Labels checkbox (facturation / livraison) ───────────────────────────── */
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: variables.$space-xs;
+    font-size: 0.85rem;
+    color: variables.$gray-700;
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+        accent-color: variables.$secondary-color;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
@@ -476,5 +850,19 @@
 
     .form-actions {
         flex-direction: column;
+    }
+
+    .customer-cards-row {
+        grid-template-columns: 1fr;
+        gap: variables.$space-md;
+    }
+
+    .search-results-table {
+        font-size: 0.8rem;
+
+        thead th,
+        tbody td {
+            padding: variables.$space-xs variables.$space-sm;
+        }
     }
 }

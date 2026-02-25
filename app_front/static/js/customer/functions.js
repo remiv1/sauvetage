@@ -40,17 +40,22 @@ export async function postJson(url, body) {
 }
 
 /**
- * Effectue une requête DELETE et retourne la réponse.
+ * Effectue une requête PATCH JSON et retourne la réponse.
  * @param {string} url - L'URL cible.
+ * @param {object} body - Le corps de la requête.
  * @returns {Promise<{ok: boolean, data: any}>}
  */
-export async function deleteJson(url) {
+export async function patchJson(url, body) {
     try {
-        const res = await fetch(url, { method: 'DELETE' });
+        const res = await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
         const data = await res.json();
         return { ok: res.ok, data };
     } catch (e) {
-        console.warn('[customer] Fetch DELETE échoué pour', url, e);
+        console.warn('[customer] Fetch PATCH échoué pour', url, e);
         return { ok: false, data: null };
     }
 }
