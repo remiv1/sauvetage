@@ -29,7 +29,7 @@ aria_role="document"
 [layout]
 main_layout = "dashboard/dashboard.html"
 extend_layout = "index.html"
-# Flags pour afficher ou non les éléments sur les commons
+# Flags
 [flags]
 navbar = true
 searchbar = true

@@ -1,0 +1,363 @@
+/* ============================================================
+   dashboard.css – Tableau de bord moderne (Éditions Sauvetage)
+   ============================================================ */
+
+/* ── Tokens ─────────────────────────────────────────────── */
+:root {
+  --db-bg:          #F0F4F8;
+  --db-surface:     #FFFFFF;
+  --db-border:      #D9E2EC;
+  --db-primary:     #4F46E5;
+  --db-primary-lt:  #EEF2FF;
+  --db-text:        #1E293B;
+  --db-text-muted:  #64748B;
+  --db-success:     #10B981;
+  --db-warning:     #F59E0B;
+  --db-danger:      #EF4444;
+  --db-info:        #3B82F6;
+  --db-radius:      10px;
+  --db-shadow:      0 1px 4px rgba(15, 23, 42, 0.08);
+  --db-shadow-md:   0 4px 16px rgba(15, 23, 42, 0.10);
+  --db-transition:  0.2s ease;
+}
+
+/* ── Reset léger ─────────────────────────────────────────── */
+.dashboard *,
+.dashboard *::before,
+.dashboard *::after {
+  box-sizing: border-box;
+}
+
+/* ── Conteneur principal ─────────────────────────────────── */
+.dashboard {
+  min-height: 100vh;
+  background: var(--db-bg);
+  padding: 1.5rem 2rem 3rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--db-text);
+}
+
+/* ── En-tête ─────────────────────────────────────────────── */
+.db-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.db-title {
+  font-size: 1.625rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.02em;
+  color: var(--db-text);
+}
+
+.db-subtitle {
+  font-size: 0.875rem;
+  color: var(--db-text-muted);
+  margin: 0;
+}
+
+.db-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--db-text);
+  cursor: pointer;
+  transition: background var(--db-transition), box-shadow var(--db-transition);
+  box-shadow: var(--db-shadow);
+}
+
+.db-refresh-btn:hover {
+  background: var(--db-primary-lt);
+  border-color: var(--db-primary);
+  color: var(--db-primary);
+}
+
+.db-refresh-btn.spinning .db-icon {
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Icône générique ─────────────────────────────────────── */
+.db-icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+/* ── Onglets ─────────────────────────────────────────────── */
+.db-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  padding: 0.35rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--db-shadow);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.db-tabs::-webkit-scrollbar { display: none; }
+
+.db-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--db-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--db-transition), color var(--db-transition);
+}
+
+.db-tab:hover {
+  background: var(--db-bg);
+  color: var(--db-text);
+}
+
+.db-tab.active {
+  background: var(--db-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.30);
+}
+
+.db-tab .db-icon {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* ── Panneaux ────────────────────────────────────────────── */
+.db-panels { position: relative; }
+
+.db-panel {
+  animation: fadeIn 0.25s ease;
+}
+
+.db-panel--hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Chargement ──────────────────────────────────────────── */
+.db-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 200px;
+  color: var(--db-text-muted);
+  font-size: 0.9rem;
+}
+
+.db-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--db-border);
+  border-top-color: var(--db-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Erreur ──────────────────────────────────────────────── */
+.db-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--db-radius);
+  color: #B91C1C;
+  font-size: 0.875rem;
+}
+
+/* ── Grille de KPI ───────────────────────────────────────── */
+.db-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+/* ── Carte KPI ───────────────────────────────────────────── */
+.db-kpi {
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--db-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--db-transition), transform var(--db-transition);
+}
+
+.db-kpi:hover {
+  box-shadow: var(--db-shadow-md);
+  transform: translateY(-1px);
+}
+
+.db-kpi__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--db-text-muted);
+}
+
+.db-kpi__value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--db-text);
+  letter-spacing: -0.03em;
+}
+
+.db-kpi__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.db-kpi__trend--up {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.db-kpi__trend--down {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.db-kpi__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--db-primary);
+  border-radius: var(--db-radius) 0 0 var(--db-radius);
+}
+
+/* ── Section tableau ─────────────────────────────────────── */
+.db-section {
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  box-shadow: var(--db-shadow);
+  overflow: hidden;
+}
+
+.db-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--db-border);
+}
+
+.db-section__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--db-text);
+  margin: 0;
+}
+
+.db-section__count {
+  font-size: 0.8rem;
+  color: var(--db-text-muted);
+}
+
+/* ── Tableau de données ──────────────────────────────────── */
+.db-table-wrap {
+  overflow-x: auto;
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.db-table th {
+  background: #F8FAFC;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--db-text-muted);
+  padding: 0.65rem 1.25rem;
+  text-align: left;
+  border-bottom: 1px solid var(--db-border);
+  white-space: nowrap;
+}
+
+.db-table td {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #F1F5F9;
+  color: var(--db-text);
+  vertical-align: middle;
+}
+
+.db-table tr:last-child td { border-bottom: none; }
+
+.db-table tbody tr:hover { background: #F8FAFC; }
+
+/* ── Badge de statut ─────────────────────────────────────── */
+.db-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.db-badge--ok,
+.db-badge--livree,
+.db-badge--actif { background: #D1FAE5; color: #065F46; }
+
+.db-badge--faible,
+.db-badge--en-cours { background: #FEF3C7; color: #92400E; }
+
+.db-badge--critique,
+.db-badge--annulee,
+.db-badge--inactif { background: #FEE2E2; color: #991B1B; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .dashboard { padding: 1rem 0.75rem 2rem; }
+  .db-kpi__value { font-size: 1.6rem; }
+  .db-tab { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+}
