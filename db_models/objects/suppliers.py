@@ -16,6 +16,7 @@ class Suppliers(WorkingBase):
 
     # Données de base du fournisseur
     name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom du fournisseur")
+    gln13: Mapped[str] = mapped_column(String, unique=True, comment="Code GLN du fournisseur")
     contact_email: Mapped[str] = mapped_column(String, comment="Email de contact du fournisseur")
     contact_phone: Mapped[str] = mapped_column(String,
                                                comment="Téléphone de contact du fournisseur")
