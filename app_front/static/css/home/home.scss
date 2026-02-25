@@ -1,0 +1,359 @@
+/* ============================================================================ */
+/* Page d'accueil - Home SCSS */
+/* ============================================================================ */
+
+// ============================================================================
+// VARIABLES
+// ============================================================================
+
+// Colors
+$color-dashboard: #3b82f6;
+$color-customer: #10b981;
+$color-order: #f59e0b;
+$color-stock: #8b5cf6;
+$color-inventory: #ec4899;
+$color-supplier: #06b6d4;
+$color-admin: #ef4444;
+$color-user: #6366f1;
+
+$text-dark: #1f2937;
+$text-light: #6b7280;
+$text-gradient: linear-gradient(135deg, #1f2937 0%, #4b5563 100%);
+$white: #ffffff;
+
+// Shadows
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+$shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+
+// Transitions
+$transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+// Spacing
+$spacing-xs: 0.5rem;
+$spacing-sm: 1rem;
+$spacing-md: 1.5rem;
+$spacing-lg: 2rem;
+$spacing-xl: 3rem;
+$spacing-2xl: 4rem;
+
+// Border radius
+$radius-sm: 1rem;
+
+// Font sizes
+$font-size-sm: 0.8rem;
+$font-size-base: 0.9rem;
+$font-size-lg: 1.1rem;
+$font-size-xl: 1.25rem;
+$font-size-2xl: 1.875rem;
+$font-size-3xl: 2.5rem;
+
+// Font weights
+$font-weight-normal: 500;
+$font-weight-bold: 700;
+$font-weight-black: 800;
+
+// ============================================================================
+// MIXINS
+// ============================================================================
+
+@mixin card-color-variant($color) {
+    border-color: $color;
+
+    .card-icon {
+        background-color: rgba($color, 0.1);
+        color: $color;
+    }
+
+    &:hover {
+        border-color: $color;
+        background: linear-gradient(135deg, rgba($color, 0.05) 0%, rgba($color, 0) 100%);
+    }
+}
+
+@mixin responsive-text($mobile-size, $tablet-size: null, $desktop-size: null) {
+    @if $desktop-size {
+        font-size: $desktop-size;
+
+        @media (max-width: 768px) {
+            font-size: $tablet-size;
+        }
+
+        @media (max-width: 480px) {
+            font-size: $mobile-size;
+        }
+    } @else if $tablet-size {
+        font-size: $tablet-size;
+
+        @media (max-width: 480px) {
+            font-size: $mobile-size;
+        }
+    } @else {
+        font-size: $mobile-size;
+    }
+}
+
+@mixin gradient-text($gradient) {
+    background: $gradient;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+// ============================================================================
+// ROOT STYLES
+// ============================================================================
+
+:root {
+    --color-dashboard: #{$color-dashboard};
+    --color-customer: #{$color-customer};
+    --color-order: #{$color-order};
+    --color-stock: #{$color-stock};
+    --color-inventory: #{$color-inventory};
+    --color-supplier: #{$color-supplier};
+    --color-admin: #{$color-admin};
+    --color-user: #{$color-user};
+
+    --shadow-sm: #{$shadow-sm};
+    --shadow-md: #{$shadow-md};
+    --shadow-lg: #{$shadow-lg};
+    --shadow-xl: #{$shadow-xl};
+
+    --transition: #{$transition};
+}
+
+// ============================================================================
+// LAYOUT
+// ============================================================================
+
+.home-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: $spacing-xl $spacing-lg;
+
+    @media (max-width: 768px) {
+        padding: $spacing-lg $spacing-sm;
+    }
+
+    @media (max-width: 480px) {
+        padding: $spacing-md $spacing-sm;
+    }
+}
+
+// ============================================================================
+// HEADER
+// ============================================================================
+
+.home-header {
+    text-align: center;
+    margin-bottom: $spacing-2xl;
+
+    @media (max-width: 480px) {
+        margin-bottom: $spacing-xl + $spacing-sm;
+    }
+
+    h1 {
+        font-size: $font-size-3xl;
+        font-weight: $font-weight-black;
+        color: $text-dark;
+        margin: 0 0 $spacing-sm 0;
+
+        @include gradient-text($text-gradient);
+
+        @media (max-width: 768px) {
+            font-size: $font-size-2xl;
+        }
+
+        @media (max-width: 480px) {
+            font-size: 1.5rem;
+        }
+    }
+
+    p {
+        font-size: $font-size-lg;
+        color: $text-light;
+        margin: 0;
+        font-weight: $font-weight-normal;
+
+        @media (max-width: 768px) {
+            font-size: $font-size-base;
+        }
+    }
+}
+
+// ============================================================================
+// GRID
+// ============================================================================
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: $spacing-lg;
+    margin-bottom: $spacing-lg;
+
+    @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: $spacing-xl - $spacing-sm;
+    }
+
+    @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+        gap: $spacing-sm;
+    }
+}
+
+// ============================================================================
+// CARD - BASE STYLES
+// ============================================================================
+
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-lg + $spacing-sm $spacing-md;
+    background: $white;
+    border-radius: $radius-sm;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    box-shadow: $shadow-md;
+    border: 2px solid transparent;
+    transition: $transition;
+    position: relative;
+    overflow: hidden;
+    z-index: -1;
+
+    @media (max-width: 768px) {
+        padding: $spacing-lg $spacing-sm;
+    }
+
+    @media (max-width: 480px) {
+        padding: $spacing-md $spacing-sm;
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba($white, 0.5) 0%, rgba($white, 0) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    &:hover {
+        transform: translateY(-8px);
+        box-shadow: $shadow-xl;
+    }
+}
+
+// ============================================================================
+// CARD - ICON
+// ============================================================================
+
+.card-icon {
+    width: 5rem;
+    height: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-sm;
+    margin-bottom: $spacing-md;
+    transition: $transition;
+    font-size: 2.5rem;
+
+    @media (max-width: 768px) {
+        width: 4rem;
+        height: 4rem;
+        margin-bottom: $spacing-sm;
+        font-size: 2rem;
+    }
+
+    @media (max-width: 480px) {
+        width: 3.5rem;
+        height: 3.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 1.75rem;
+    }
+
+    svg {
+        width: 100%;
+        height: 100%;
+        stroke-width: 1.5;
+    }
+}
+
+// ============================================================================
+// CARD - TEXT
+// ============================================================================
+
+.card h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    margin: $spacing-xs 0;
+    text-align: center;
+    color: $text-dark;
+
+    @media (max-width: 768px) {
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 480px) {
+        font-size: 1rem;
+    }
+}
+
+.card p {
+    font-size: $font-size-base;
+    color: $text-light;
+    text-align: center;
+    margin: $spacing-xs 0 0 0;
+
+    @media (max-width: 768px) {
+        font-size: 0.85rem;
+    }
+
+    @media (max-width: 480px) {
+        font-size: $font-size-sm;
+    }
+}
+
+// ============================================================================
+// CARD - COLOR VARIANTS
+// ============================================================================
+
+.card-dashboard {
+    @include card-color-variant($color-dashboard);
+}
+
+.card-customer {
+    @include card-color-variant($color-customer);
+}
+
+.card-order {
+    @include card-color-variant($color-order);
+}
+
+.card-stock {
+    @include card-color-variant($color-stock);
+}
+
+.card-inventory {
+    @include card-color-variant($color-inventory);
+}
+
+.card-supplier {
+    @include card-color-variant($color-supplier);
+}
+
+.card-admin {
+    @include card-color-variant($color-admin);
+}
+
+.card-user {
+    @include card-color-variant($color-user);
+}
