@@ -1,213 +1,227 @@
 """Blueprint pour les données client (API JSON).
 
 Endpoints :
-    - GET  /customer/data/<id>              : Récupérer les données complètes d'un client.
-    - GET  /customer/data/<id>/addresses    : Récupérer les adresses d'un client.
-    - POST /customer/data/<id>/address      : Ajouter une adresse.
-    - DELETE /customer/data/<id>/address/<addr_id> : Supprimer une adresse.
-    - GET  /customer/data/<id>/emails       : Récupérer les emails d'un client.
-    - POST /customer/data/<id>/email        : Ajouter un email.
-    - DELETE /customer/data/<id>/email/<email_id>  : Supprimer un email.
-    - GET  /customer/data/<id>/phones       : Récupérer les téléphones d'un client.
-    - POST /customer/data/<id>/phone        : Ajouter un téléphone.
-    - DELETE /customer/data/<id>/phone/<phone_id>  : Supprimer un téléphone.
-    - POST /customer/data/<id>/activate     : Activer un client.
-    - POST /customer/data/<id>/deactivate   : Désactiver un client.
+    - GET    /customer/data/search/fast       : Recherche rapide par nom (autocomplete).
+    - GET    /customer/data/search/long       : Recherche avancée multi-critères.
+    - GET    /customer/data/<id>              : Récupérer les données complètes d'un client.
+    - GET    /customer/data/<id>/addresses    : Récupérer les adresses d'un client.
+    - POST   /customer/data/<id>/address      : Ajouter une adresse.
+    - PATCH  /customer/data/<id>/address/<addr_id>          : Modifier une adresse.
+    - GET    /customer/data/<id>/emails       : Récupérer les emails d'un client.
+    - POST   /customer/data/<id>/email        : Ajouter un email.
+    - PATCH  /customer/data/<id>/email/<email_id>           : Modifier un email.
+    - GET    /customer/data/<id>/phones       : Récupérer les téléphones d'un client.
+    - POST   /customer/data/<id>/phone        : Ajouter un téléphone.
+    - PATCH  /customer/data/<id>/phone/<phone_id>           : Modifier un téléphone.
+    - POST   /customer/data/<id>/activate     : Activer un client.
+    - POST   /customer/data/<id>/deactivate   : Désactiver un client.
 """
 
 from flask import Blueprint, jsonify, request
-
+from app_front.blueprints.customer.utils.users import (
+    get_customers_by_name, multi_search_filter,
+    get_customer as util_get_customer, update_customer_info
+)
+from app_front.blueprints.customer.utils.addresses import (
+    get_addresses as util_get_addresses, update_address as util_update_address,
+    add_address as util_add_address
+)
+from app_front.blueprints.customer.utils.emails import (
+    get_emails as util_get_emails, update_email as util_update_email,
+    add_email as util_add_email
+)
+from app_front.blueprints.customer.utils.phones import (
+    get_phones as util_get_phones, update_phone as util_update_phone,
+    add_phone as util_add_phone
+)
 bp_customer_data = Blueprint("customer_data", __name__, url_prefix="/customer/data")
 
 _NO_DATA_ERROR = "Aucune donnée reçue."
+_NO_CUSTOMER_ERROR = "Client non trouvé."
 
+@bp_customer_data.route("/search/fast", methods=["GET"])
+def search_fast():
+    """Recherche rapide par nom / raison sociale (autocomplete).
 
-# ──────────────────────────────────────── Client complet ─────────────────────
+    Query params:
+        q (str): Texte libre (min 2 caractères).
+
+    Retourne une liste d'objets :
+        {id, display_name, location, customer_type}
+    """
+    query = request.args.get("q", "").strip()
+    if len(query) < 2:
+        return jsonify([])
+
+    customers = get_customers_by_name(query)
+    if not customers:
+        return jsonify([])
+
+    return jsonify(customers)
+
+@bp_customer_data.route("/search/long", methods=["GET"])
+def search_long():
+    """Recherche avancée multi-critères.
+
+    Query params (tous optionnels):
+        name          (str): Nom, prénom ou raison sociale.
+        customer_type (str): 'part' | 'pro'.
+        city          (str): Ville.
+        postal_code   (str): Code postal.
+        email         (str): Adresse email.
+        phone         (str): Numéro de téléphone.
+
+    Retourne une liste d'objets :
+        {id, display_name, customer_type, location, email, phone, is_active}
+    """
+    # Collecte des critères
+    name = request.args.get("name", "").strip()
+    customer_type = request.args.get("customer_type", "").strip()
+    city = request.args.get("city", "").strip()
+    postal_code = request.args.get("postal_code", "").strip()
+    email = request.args.get("email", "").strip()
+    phone = request.args.get("phone", "").strip()
+
+    return jsonify(multi_search_filter(name, email, phone, postal_code, city, customer_type))
+
 @bp_customer_data.route("/<int:customer_id>", methods=["GET"])
 def get_customer(customer_id: int):
     """Retourne les données complètes d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify({
-        "id": customer_id,
-        "customer_type": "part",
-        "is_active": True,
-        "created_at": "2026-02-24T10:00:00",
-        "updated_at": "2026-02-24T10:00:00",
-        "part": {
-            "civil_title": "M.",
-            "first_name": "Jean",
-            "last_name": "Dupont",
-            "date_of_birth": "1990-01-15",
-        },
-        "pro": None,
-    })
+    customer = util_get_customer(customer_id)
+    if not customer:
+        raise ValueError(_NO_CUSTOMER_ERROR)
+    return jsonify(customer)
 
+@bp_customer_data.route("/<int:customer_id>/info", methods=["PATCH"])
+def update_info(customer_id: int):
+    """Met à jour les informations principales d'un client (part ou pro).
 
-# ──────────────────────────────────────── Adresses ───────────────────────────
+    Body JSON attendu :
+        Pour un particulier : {civil_title, first_name, last_name, date_of_birth}
+        Pour un professionnel : {company_name, siret_number, vat_number}
+
+    Retourne le client complet mis à jour.
+    """
+    data = request.get_json()
+    if not data:
+        raise ValueError(_NO_DATA_ERROR)
+
+    try:
+        updated = update_customer_info(customer_id, data)
+        if not updated:
+            raise ValueError(_NO_CUSTOMER_ERROR)
+        return jsonify(updated)
+    except ValueError as e:
+        raise ValueError(str(e)) from e
+    except (KeyError, TypeError, AttributeError) as e:
+        raise ValueError("Données invalides ou incomplètes.") from e
+
 @bp_customer_data.route("/<int:customer_id>/addresses", methods=["GET"])
 def get_addresses(customer_id: int):
     """Retourne la liste des adresses d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify([
-        {
-            "id": 1,
-            "customer_id": customer_id,
-            "address_name": "Domicile",
-            "address_line1": "12 rue des Lilas",
-            "address_line2": "Bâtiment A",
-            "city": "Paris",
-            "state": "Île-de-France",
-            "postal_code": "75012",
-            "country": "France",
-            "is_billing": True,
-            "is_shipping": True,
-        },
-        {
-            "id": 2,
-            "customer_id": customer_id,
-            "address_name": "Bureau",
-            "address_line1": "5 avenue de la République",
-            "address_line2": "",
-            "city": "Lyon",
-            "state": "Auvergne-Rhône-Alpes",
-            "postal_code": "69001",
-            "country": "France",
-            "is_billing": False,
-            "is_shipping": True,
-        }
-    ])
-
+    addresses = util_get_addresses(customer_id)
+    if not addresses:
+        raise ValueError(_NO_CUSTOMER_ERROR)
+    return jsonify(addresses)
 
 @bp_customer_data.route("/<int:customer_id>/address", methods=["POST"])
 def add_address(customer_id: int):
     """Ajoute une adresse à un client."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": _NO_DATA_ERROR}), 400
-
-    # TODO: Envoyer au backend API, valider les champs
-    new_address = {
-        "id": 99,  # TODO: ID réel
-        "customer_id": customer_id,
-        "address_name": data.get("address_name", ""),
-        "address_line1": data.get("address_line_1", ""),
-        "address_line2": data.get("address_line_2", ""),
-        "city": data.get("city", ""),
-        "state": data.get("state", ""),
-        "postal_code": data.get("postal_code", ""),
-        "country": data.get("country", "France"),
-        "is_billing": True,
-        "is_shipping": False,
-    }
+        raise ValueError(_NO_DATA_ERROR)
+    new_address = util_add_address(customer_id, data)
+    if not new_address:
+        raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(new_address), 201
 
+@bp_customer_data.route("/<int:customer_id>/address/<int:address_id>", methods=["PATCH"])
+def update_address(customer_id: int, address_id: int):
+    """Met à jour une adresse d'un client."""
+    data = request.get_json()
+    if not data:
+        raise ValueError(_NO_DATA_ERROR)
+    updated = util_update_address(customer_id, address_id, data)
+    if not updated:
+        raise ValueError("Adresse ou client non trouvé.")
+    return jsonify(updated)
 
-@bp_customer_data.route("/<int:customer_id>/address/<int:address_id>", methods=["DELETE"])
-def delete_address(customer_id: int, address_id: int):
-    """Supprime une adresse d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify({"message": f"Adresse {address_id} supprimée.", "success": True})
-
-
-# ──────────────────────────────────────── Emails ─────────────────────────────
 @bp_customer_data.route("/<int:customer_id>/emails", methods=["GET"])
 def get_emails(customer_id: int):
     """Retourne la liste des emails d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify([
-        {
-            "id": 1,
-            "customer_id": customer_id,
-            "email_name": "Personnel",
-            "email": "jean.dupont@email.com",
-            "is_active": True,
-        },
-        {
-            "id": 2,
-            "customer_id": customer_id,
-            "email_name": "Professionnel",
-            "email": "j.dupont@entreprise.fr",
-            "is_active": True,
-        }
-    ])
-
+    emails = util_get_emails(customer_id)
+    if emails is None:
+        raise ValueError(_NO_CUSTOMER_ERROR)
+    return jsonify(emails)
 
 @bp_customer_data.route("/<int:customer_id>/email", methods=["POST"])
 def add_email(customer_id: int):
     """Ajoute un email à un client."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": _NO_DATA_ERROR}), 400
-
-    # TODO: Envoyer au backend API
-    new_email = {
-        "id": 99,  # TODO: ID réel
-        "customer_id": customer_id,
-        "email_name": data.get("email_name", ""),
-        "email": data.get("email", ""),
-        "is_active": True,
-    }
+        raise ValueError(_NO_DATA_ERROR)
+    new_email = util_add_email(customer_id, data)
+    if not new_email:
+        raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(new_email), 201
 
+@bp_customer_data.route("/<int:customer_id>/email/<int:email_id>", methods=["PATCH"])
+def update_email(customer_id: int, email_id: int):
+    """Met à jour un email d'un client."""
+    data = request.get_json()
+    if not data:
+        raise ValueError(_NO_DATA_ERROR)
+    updated = util_update_email(customer_id, email_id, data)
+    if not updated:
+        raise ValueError("Email ou client non trouvé.")
+    return jsonify(updated)
 
-@bp_customer_data.route("/<int:customer_id>/email/<int:email_id>", methods=["DELETE"])
-def delete_email(customer_id: int, email_id: int):
-    """Supprime un email d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify({"message": f"Email {email_id} supprimé.", "success": True})
-
-
-# ──────────────────────────────────────── Téléphones ─────────────────────────
 @bp_customer_data.route("/<int:customer_id>/phones", methods=["GET"])
 def get_phones(customer_id: int):
     """Retourne la liste des téléphones d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify([
-        {
-            "id": 1,
-            "customer_id": customer_id,
-            "phone_name": "Mobile",
-            "phone_number": "06 12 34 56 78",
-            "is_active": True,
-        }
-    ])
-
+    phones = util_get_phones(customer_id)
+    if not phones:
+        raise ValueError(_NO_CUSTOMER_ERROR)
+    return jsonify(phones)
 
 @bp_customer_data.route("/<int:customer_id>/phone", methods=["POST"])
 def add_phone(customer_id: int):
     """Ajoute un téléphone à un client."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": _NO_DATA_ERROR}), 400
-
-    # TODO: Envoyer au backend API
-    new_phone = {
-        "id": 99,  # TODO: ID réel
-        "customer_id": customer_id,
-        "phone_name": data.get("phone_name", ""),
-        "phone_number": data.get("phone_number", ""),
-        "is_active": True,
-    }
+        raise ValueError(_NO_DATA_ERROR)
+    new_phone = util_add_phone(customer_id, data)
+    if not new_phone:
+        raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(new_phone), 201
 
+@bp_customer_data.route("/<int:customer_id>/phone/<int:phone_id>", methods=["PATCH"])
+def update_phone(customer_id: int, phone_id: int):
+    """Met à jour un téléphone d'un client."""
+    data = request.get_json()
+    if not data:
+        raise ValueError(_NO_DATA_ERROR)
+    updated = util_update_phone(customer_id, phone_id, data)
+    if not updated:
+        raise ValueError("Téléphone ou client non trouvé.")
+    return jsonify(updated)
 
-@bp_customer_data.route("/<int:customer_id>/phone/<int:phone_id>", methods=["DELETE"])
-def delete_phone(customer_id: int, phone_id: int):
-    """Supprime un téléphone d'un client."""
-    # TODO: Appeler le backend API
-    return jsonify({"message": f"Téléphone {phone_id} supprimé.", "success": True})
-
-
-# ──────────────────────────────────────── Activation ─────────────────────────
 @bp_customer_data.route("/<int:customer_id>/activate", methods=["POST"])
 def activate(customer_id: int):
     """Active un client."""
-    # TODO: Appeler le backend API
-    return jsonify({"message": "Client activé.", "is_active": True, "success": True})
-
+    customer = util_get_customer(customer_id)
+    if not customer:
+        raise ValueError(_NO_CUSTOMER_ERROR)
+    customer["is_active"] = True
+    updated = update_customer_info(customer_id, {"is_active": True})
+    return jsonify(updated)
 
 @bp_customer_data.route("/<int:customer_id>/deactivate", methods=["POST"])
 def deactivate(customer_id: int):
     """Désactive un client."""
-    # TODO: Appeler le backend API
-    return jsonify({"message": "Client désactivé.", "is_active": False, "success": True})
+    customer = util_get_customer(customer_id)
+    if not customer:
+        raise ValueError(_NO_CUSTOMER_ERROR)
+    customer["is_active"] = False
+    updated = update_customer_info(customer_id, {"is_active": False})
+    return jsonify(updated)

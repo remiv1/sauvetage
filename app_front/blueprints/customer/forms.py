@@ -35,24 +35,23 @@ class CustomerMainForm(FlaskForm):
                                   ('m', 'M.'), ('mme', 'Mme'),
                                   ('mlle', 'Mlle'), ('ab', 'Abbé'),
                                   ('sr', 'Sr'), ('dr', 'Dr'),
-                              ],
-                              validators=[DataRequired()])
-    first_name = StringField('Prénom', validators=[DataRequired()])
-    last_name = StringField('Nom', validators=[DataRequired()])
-    date_of_birth = StringField('Date de naissance (YYYY-MM-DD)', validators=[DataRequired()])
+                              ])
+    first_name = StringField('Prénom')
+    last_name = StringField('Nom')
+    date_of_birth = StringField('Date de naissance (YYYY-MM-DD)')
 
     # Client Professionnel
-    company_name = StringField('Raison sociale', validators=[DataRequired()])
-    siret_number = StringField('Numéro SIRET', validators=[DataRequired()])
-    vat_number = StringField('Numéro de TVA', validators=[DataRequired()])
+    company_name = StringField('Raison sociale')
+    siret_number = StringField('Numéro SIRET')
+    vat_number = StringField('Numéro de TVA')
     submit = SubmitField('Créer un client')
 
 class AddressForm(FlaskForm):
     """Formulaire de création d'adresse pour un client."""
     address_name = StringField('Nom de l\'adresse (ex: Domicile, Travail)',
                                validators=[DataRequired()])
-    address_line_1 = StringField('Adresse', validators=[DataRequired()])
-    address_line_2 = StringField('Complément d\'adresse')
+    address_line1 = StringField('Adresse', validators=[DataRequired()])
+    address_line2 = StringField('Complément d\'adresse')
     city = StringField('Ville', validators=[DataRequired()])
     state = StringField('État/Région', validators=[DataRequired()])
     postal_code = StringField('Code postal', validators=[DataRequired()])

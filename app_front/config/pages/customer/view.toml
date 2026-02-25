@@ -5,11 +5,18 @@
 [params]
 tab = "Clients"
 styles = ["css/customer/customer.css", "css/main.css"]
-modules = ["js/customer/view.js"]
+modules = ["js/customer/view.js", "js/main.js"]
 # Clées
 [meta]
 title = "Fiche client | Intranet"
+description = "Page de vue d'un client dans l'intranet"
 keywords = "client, fiche, détail, adresses, emails, téléphones"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="document"
 # Pages spécifiques
 [layout]
 main_layout = "customer/view.html"

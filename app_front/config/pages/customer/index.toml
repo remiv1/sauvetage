@@ -1,16 +1,16 @@
 # ------------------------------------------------------------------------------
-# --- Configuration page de création de client
+# --- Configuration page d'accueil des clients
 # ------------------------------------------------------------------------------
 # Paramètres
 [params]
 tab = "Clients"
 styles = ["css/customer/customer.css", "css/main.css"]
-modules = ["js/customer/customer.js", "js/main.js"]
+modules = ["js/customer/index.js", "js/main.js"]
 # Clées
 [meta]
-title = "Nouveau client | Intranet"
-description = "Page de création d'un nouveau client dans l'intranet"
-keywords = "client, création, formulaire"
+title = "Accueil clients | Intranet"
+description = "Page d'accueil du module client dans l'intranet"
+keywords = "client, accueil, module"
 author = "Rémi Verschuur"
 robots = "noindex, nofollow"
 [meta.accessibility]
@@ -19,7 +19,7 @@ direction="ltr"
 aria_role="document"
 # Pages spécifiques
 [layout]
-main_layout = "customer/create.html"
+main_layout = "customer/index.html"
 extend_layout = "index.html"
 # Flags
 [flags]
