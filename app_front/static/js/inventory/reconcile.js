@@ -1,5 +1,6 @@
 /**
- * Gestion de l'étape « Conciliation » (étape 5) et validation (étape 6).
+ * Gestion de l'étape « Conciliation » (étape 5)
+ * et validation (étape 6).
  */
 
 import { showStep, MOTIFS } from './functions.js';
@@ -20,7 +21,7 @@ export function setupReconcile(onValidated) {
         showStep('step-unknown');
     });
 
-    // Écouter les modifications du stock réel (contenteditable)
+    // Écouter les modifications du stock réel (content-editable)
     document.querySelector('#reconcile-table tbody')
         .addEventListener('input', _onStockRealEdit);
 
@@ -66,7 +67,7 @@ function _render() {
     reconcileRows.forEach((row, idx) => {
         const tr = document.createElement('tr');
         tr.dataset.idx = idx;
-        const diffClass = row.difference !== 0 ? 'cell-diff' : '';
+        const diffClass = row.difference === 0 ? '' : 'cell-diff';
 
         // Cases à cocher pour les motifs
         const motifsHtml = MOTIFS.map(m =>
@@ -94,8 +95,8 @@ function _onStockRealEdit(ev) {
     const td = ev.target.closest('.stock-reel');
     if (!td) return;
     const tr    = td.closest('tr');
-    const idx   = parseInt(tr.dataset.idx, 10);
-    const newVal = parseInt(td.textContent, 10) || 0;
+    const idx   = Number.parseInt(tr.dataset.idx, 10);
+    const newVal = Number.parseInt(td.textContent, 10) || 0;
     const thVal  = reconcileRows[idx].stock_theorique;
     const diff   = newVal - thVal;
 
@@ -119,7 +120,7 @@ function _collectLines() {
         return {
             ean13:            row.ean13,
             stock_theorique:  row.stock_theorique,
-            stock_reel:       parseInt(tr.querySelector('.stock-reel').textContent, 10) || 0,
+            stock_reel:       Number.parseInt(tr.querySelector('.stock-reel').textContent, 10) || 0,
             motifs,
             commentaire,
         };

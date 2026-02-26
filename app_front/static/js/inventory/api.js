@@ -6,6 +6,7 @@
 
 import { postJson, fetchJson } from './functions.js';
 
+// Base URL pour les appels API du module inventaire
 const BASE = '/inventory/data';
 
 /** Étape 2 – Envoyer le texte brut pour parsing. */

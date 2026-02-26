@@ -5,16 +5,21 @@
 import { showStep } from './functions.js';
 import * as api from './api.js';
 
+// Création des variables globales
 /** @type {string|null} Type d'inventaire sélectionné. */
 let currentType = null;
-
 /** @type {object|null} Dernière réponse de parsing. */
 let lastParseResult = null;
 
 /** Retourne le type d'inventaire courant. */
-export function getType()        { return currentType; }
+export function getType() {
+    return currentType;
+}
+
 /** Retourne le résultat du dernier parsing. */
-export function getParseResult() { return lastParseResult; }
+export function getParseResult() {
+    return lastParseResult;
+}
 
 /**
  * Initialise les événements de l'étape choix + saisie.
