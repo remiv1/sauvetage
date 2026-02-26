@@ -8,6 +8,7 @@ import { setupUnknown, showUnknownStep } from './unknown.js';
 import { setupReconcile, showReconcileStep } from './reconcile.js';
 import { setupStatus, startCommit } from './status.js';
 
+// Listener global pour orchestrer les étapes du workflow
 document.addEventListener('DOMContentLoaded', () => {
     // --- Étape 2 : après parsing ---
     setupInput((parseResult) => {

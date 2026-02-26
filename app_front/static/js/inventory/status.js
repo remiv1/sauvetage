@@ -86,11 +86,17 @@ function _setStatusUI(status, progress, message) {
         btnNew.classList.remove('hidden');
         text.classList.add('status-success');
         text.classList.remove('status-error');
+        setTimeout(() => {
+            text.textContent = 'Stock à jour, veuillez patienter...';
+        }, 3000);
     } else if (status === 'error') {
         spinner.classList.add('hidden');
         container.classList.add('hidden');
         btnNew.classList.remove('hidden');
         text.classList.add('status-error');
         text.classList.remove('status-success');
+        setTimeout(() => {
+            text.textContent = 'Une erreur est survenue lors de la mise à jour du stock.';
+        }, 3000);
     }
 }
