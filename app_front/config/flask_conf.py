@@ -8,7 +8,8 @@ from typing import List
 from os import getenv
 from flask import Blueprint
 from app_front.blueprints import (bp_customer, bp_customer_data, bp_dashboard,
-                                  bp_dashboard_data, bp_inventory, bp_order,
+                                  bp_dashboard_data, bp_inventory,
+                                  bp_inventory_data, bp_order,
                                   bp_stock, bp_supplier, bp_admin, bp_user)
 from logs.logger import get_logger
 
@@ -23,6 +24,7 @@ BLUEPRINTS: List[Blueprint] = [
     bp_dashboard,
     bp_dashboard_data,
     bp_inventory,
+    bp_inventory_data,
     bp_order,
     bp_stock,
     bp_supplier,
