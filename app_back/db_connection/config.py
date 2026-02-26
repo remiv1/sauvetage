@@ -2,7 +2,7 @@
 
 from os import getenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 SECURE_DATABASE_URL = getenv("DATABASE_SECURE_URL",
     "postgresql://app:pwd@db-secure:5432/sauvetage_secure")
@@ -21,10 +21,10 @@ def _make_session(url: str):
     )
     return sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def get_secure_session():
+def get_secure_session() -> Session:
     """Crée une session pour la base de données sécurisée (utilisateurs)."""
     return _make_session(SECURE_DATABASE_URL)()
 
-def get_main_session():
+def get_main_session() -> Session:
     """Crée une session pour la base de données principale (app)."""
     return _make_session(DATABASE_URL)()
