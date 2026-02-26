@@ -1,0 +1,19 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="inventory-container">
+
+    {% include 'inventory/inventory_type.html' %}
+
+    {% include 'inventory/ean_production.html' %}
+
+    {% include 'inventory/unknown_product.html' %}
+
+    {% include 'inventory/create_modal.html' %}
+
+    {% include 'inventory/counciliation.html' %}
+
+    {% include 'inventory/final_status.html' %}
+
+</div>
+{% endblock %}

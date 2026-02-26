@@ -11,6 +11,7 @@ customer_index = "customer/index.toml"
 customer_search = "customer/search.toml"
 customer_create = "customer/create.toml"
 customer_view = "customer/view.toml"
+inventory = "inventory.toml"
 
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée

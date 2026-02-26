@@ -1,0 +1,35 @@
+{# ================================================================== #}
+{# Étape 2 — Saisie des EAN13                                         #}
+{# ================================================================== #}
+<section id="step-input" class="inventory-step hidden">
+    <h2 class="inventory-title" id="input-title">Saisie des EAN13</h2>
+
+    <form class="inventory-form" id="ean-form">
+        {{ ean_form.hidden_tag() }}
+        {{ ean_form.inventory_type(class="form-control hidden", id="inventory-type") }}
+
+        <div id="category-row" class="form-group hidden">
+            {{ ean_form.category.label(class="form-label", for="category-input") }}
+            {{ ean_form.category(class="form-control", id="category-input",
+                placeholder="Ex : Jeunesse, Spiritualité…") }}
+        </div>
+
+        <div id="textarea-row" class="form-group">
+            {{ ean_form.ean_textarea.label(class="form-label", for="ean-textarea") }}
+            {{ ean_form.ean_textarea(class="form-control", id="ean-textarea",
+                rows="8", cols="80",
+                placeholder="9782070612758\n...") }}
+        </div>
+
+        <div id="single-row" class="form-group hidden">
+            {{ ean_form.ean_single.label(class="form-label", for="ean-single") }}
+            {{ ean_form.ean_single(class="form-control", id="ean-single",
+                maxlength="13", placeholder="9782070612758") }}
+        </div>
+
+        <div class="inventory-actions">
+            <button id="btn-back-choice" class="btn btn-secondary" type="button">← Retour</button>
+            {{ ean_form.submit(class="btn btn-primary", id="btn-parse", type="button") }}
+        </div>
+    </form>
+</section>

@@ -1,0 +1,458 @@
+@charset "UTF-8";
+@import url("https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap");
+/* =========================================================================
+   Inventory — Styles du workflow d'inventaire
+   ========================================================================= */
+/* ── Conteneur principal ─────────────────────────────────────────────────── */
+.inventory-container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.inventory-title {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  font-family: "Asap", sans-serif;
+  font-weight: 600;
+  color: #00086f;
+}
+
+.inventory-subtitle {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #606060;
+}
+
+/* ── Cartes de choix (étape 1) ───────────────────────────────────────────── */
+.inventory-cards {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.inventory-card {
+  flex: 0 1 280px;
+  background: white;
+  border: 2px solid #00086f;
+  border-radius: 10px;
+  padding: 2rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.inventory-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 8, 111, 0.2);
+  transform: translateY(-2px);
+}
+.inventory-card__icon {
+  margin-bottom: 1rem;
+  color: #00086f;
+}
+.inventory-card h3 {
+  font-family: "Asap", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: #00086f;
+}
+.inventory-card p {
+  font-size: 0.85rem;
+  color: #606060;
+  margin: 0;
+}
+
+/* ── Sections / Steps ────────────────────────────────────────────────────── */
+.inventory-step {
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* ── Actions (boutons) ───────────────────────────────────────────────────── */
+.inventory-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+/* ── Tableaux ────────────────────────────────────────────────────────────── */
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+.inventory-table th,
+.inventory-table td {
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+.inventory-table th {
+  background: #00086f;
+  color: white;
+  text-align: left;
+  font-weight: 500;
+}
+.inventory-table tbody tr:nth-child(even) {
+  background: #f5f5f5;
+}
+.inventory-table .text-center {
+  text-align: center;
+}
+.inventory-table .stock-reel {
+  background: #fbe0aa;
+  cursor: text;
+  min-width: 3rem;
+}
+.inventory-table .cell-diff {
+  background: #fab3b3;
+  font-weight: 600;
+  color: #8a000f;
+}
+
+/* ── Motifs ───────────────────────────────────────────────────────────────── */
+.motifs-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.motif-label {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badge-warning {
+  background: #fbe0aa;
+  color: #8a4d00;
+}
+
+.badge-success {
+  background: #a1d6ae;
+  color: #004d12;
+}
+
+/* ── Boutons complémentaires ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary {
+  background: #00086f;
+  color: white;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #002bff;
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #e0e0e0;
+  color: #404040;
+}
+.btn-secondary:hover {
+  background: #c0c0c0;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* ── Modale ───────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 1rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  width: 100vw;
+  min-height: 100vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.is_open {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  width: 50%;
+  min-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 4px 4px 16px rgba(0, 0, 0, 0.3);
+}
+.modal-content h3 {
+  font-family: "Asap", sans-serif;
+  font-size: 1.2rem;
+  margin: 0 0 1rem;
+  color: #00086f;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+/* ── Statut / progression ────────────────────────────────────────────────── */
+.inventory-status {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #00086f;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.progress-bar-container {
+  width: 100%;
+  max-width: 400px;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  margin: 1rem auto;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #00086f;
+  border-radius: 5px;
+  transition: width 0.3s ease;
+  width: 0;
+}
+
+.status-success {
+  color: #006d19;
+  font-weight: 600;
+}
+
+.status-error {
+  color: #b60012;
+  font-weight: 600;
+}
+
+/* ── Form controls complémentaires ───────────────────────────────────────── */
+.inventory-form {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+.inventory-form .form-group {
+  margin-bottom: 1rem;
+  width: 100%;
+}
+.inventory-form .form-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: #202020;
+}
+.inventory-form .form-control {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #002bff;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+.inventory-form .form-control:focus {
+  border-color: #00086f;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 8, 111, 0.2);
+}
+.inventory-form textarea.form-control {
+  resize: vertical;
+  min-height: 6rem;
+}
+.inventory-form input[readonly].form-control {
+  background: #f5f5f5;
+  color: #808080;
+  cursor: not-allowed;
+}
+.inventory-form select.form-control {
+  appearance: auto;
+}
+
+.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.commentaire-input {
+  width: 100%;
+  min-width: 120px;
+}
+
+/* ── Autocomplete fournisseur ────────────────────────────────────────────── */
+.autocomplete-wrapper {
+  position: relative;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid #c0c0c0;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #202020;
+  transition: background 0.15s;
+}
+.autocomplete-item:hover {
+  background: #f5f5f5;
+  color: #00086f;
+}
+
+.supplier-create-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #606060;
+}
+
+.supplier-create-label {
+  white-space: nowrap;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #00086f;
+  color: #00086f;
+  border-radius: 10px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-outline:hover {
+  background: #00086f;
+  color: #fff;
+}
+
+.supplier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f5f5f5;
+  border: 1px solid #c0c0c0;
+  border-radius: 10px;
+  padding: 0.25rem 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: #202020;
+}
+
+.btn-badge-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #808080;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.btn-badge-clear:hover {
+  color: #b60012;
+}
+
+/* ── Utilitaires ─────────────────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+
+/*# sourceMappingURL=inventory.css.map */

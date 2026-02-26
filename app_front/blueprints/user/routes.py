@@ -48,7 +48,7 @@ def login():
             session['email'] = email
             session['permissions'] = permissions
             flash('Connexion réussie.', 'success')
-            return redirect(url_for('dashboard.index'))
+            return redirect(url_for('home'))
 
     # Afficher le formulaire de connexion
     return render_page('login', form=form, first_user=no_users)
