@@ -10,6 +10,7 @@ Ce module contient toute la logique métier :
 """
 
 import json
+from math import e
 import os
 import re
 import threading
@@ -62,8 +63,10 @@ def _unique_preserve_order(items: List[str]) -> List[str]:
             out.append(item)
     return out
 
-@router.post("/parse", response_model=ParseResponse)
-def parse_ean13(payload: ParseRequest):
+@router.post("/parse", response_model=ParseResponse,
+    tags=["inventory", "utils"], summary="Parse EAN13",
+    description="Normalise le texte et classifie en connu/inconnu.")
+def parse_ean13(payload: ParseRequest) -> ParseResponse:
     """Normalise le texte brut et classifie chaque EAN13 en connu/inconnu."""
     eans = _normalize_ean13(payload.raw)
     unique_eans = _unique_preserve_order(eans)
@@ -85,8 +88,10 @@ def parse_ean13(payload: ParseRequest):
 
     return ParseResponse(ean13=eans, unknown=unknown, known=known)
 
-@router.post("/unknown-products", response_model=UnknownResponse)
-def unknown_products(payload: UnknownRequest):
+@router.post("/unknown-products", response_model=UnknownResponse,
+    tags=["inventory", "utils"], summary="Produits inconnus",
+    description="Retourne les EAN13 qui ne correspondent à aucun produit en base.")
+def unknown_products(payload: UnknownRequest) -> UnknownResponse:
     """Retourne les EAN13 qui ne correspondent à aucun produit en base."""
     session = get_main_session()
     unknown: List[str] = []
@@ -101,15 +106,16 @@ def unknown_products(payload: UnknownRequest):
         session.close()
     return UnknownResponse(unknown=unknown)
 
-
 # =========================================================================== #
 #  Étape 5 – Préparation / conciliation                                      #
 # =========================================================================== #
 
 def _compute_theoretical_stock(session, general_object_id: int) -> int:
-    """Calcule le stock théorique d'un objet par la somme des mouvements.
+    """
+    Calcule le stock théorique d'un objet par la somme des mouvements
+    depuis le dernier inventaire.
 
-    stock = Σ inventory + Σ in − Σ out
+    stock = last inventory + Σ in − Σ out
     """
     def _sum_by_type(mvt_type: str) -> int:
         val = session.execute(
@@ -120,19 +126,29 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
         ).scalar_one()
         return int(val)
 
-    inventory_init = _sum_by_type("inventory")
+    def _last_inventory() -> int:
+        return session.execute(
+            select(InventoryMovements.quantity).where(
+                InventoryMovements.general_object_id == general_object_id,
+                InventoryMovements.movement_type == "inventory",
+            ).order_by(InventoryMovements.created_at.desc())
+        ).first() or 0
+
+    inventory_init = _last_inventory()
     entrants = _sum_by_type("in")
     sortants = _sum_by_type("out")
     return inventory_init + entrants - sortants
 
-
-@router.post("/prepare", response_model=List[ReconciliationLine])
-def prepare_inventory(payload: PrepareRequest):
+@router.post("/prepare", response_model=List[ReconciliationLine],
+    tags=["inventory"], summary="Préparer l'inventaire",
+    description="Calcule, pour chaque EAN13 unique, le stock théorique vs réel.")
+def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
     """Calcule, pour chaque EAN13 unique, le stock théorique vs réel."""
     # Compter les occurrences (le nombre de fois scanné = stock réel)
     counts: Dict[str, int] = {}
-    for ean in payload.ean13:
-        counts[ean] = counts.get(ean, 0) + 1
+    set_eans = set(payload.ean13)
+    for ean in set_eans:
+        counts[ean] = payload.ean13.count(ean)
 
     session = get_main_session()
     results: List[ReconciliationLine] = []
@@ -208,7 +224,6 @@ def _write_status(data: Dict) -> None:
     with open(STATUS_FILE, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False)
 
-
 def _run_commit(planned: List[Dict]) -> None:
     """Thread cible : applique les mouvements un par un et met à jour l'état."""
     started = datetime.now(timezone.utc).isoformat()
@@ -234,26 +249,28 @@ def _run_commit(planned: List[Dict]) -> None:
                     }, ensure_ascii=False),
                 )
                 session.add(movement)
-                session.commit()
                 progress = int((idx / total) * 100)
                 _write_status({
                     "status": "running", "progress": progress,
                     "started_at": started,
                     "message": f"Mouvement {idx}/{total} appliqué",
                 })
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            raise RuntimeError(f"Erreur lors du commit : {exc}") from exc
         finally:
             session.close()
-        # Succès → supprimer le fichier d'état
-        try:
-            os.remove(STATUS_FILE)
-        except FileNotFoundError:
-            pass
+            # Succès → supprimer le fichier d'état
+            try:
+                os.remove(STATUS_FILE)
+            except FileNotFoundError:
+                pass
     except (ValueError, TypeError, OSError, RuntimeError) as exc:
         _write_status({
             "status": "error", "progress": 0,
             "started_at": started, "message": str(exc),
         })
-
 
 @router.post("/commit", response_model=CommitResponse)
 def commit_inventory(payload: CommitRequest):
