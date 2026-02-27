@@ -56,18 +56,16 @@ def api_create_supplier():
         return jsonify({"error": str(exc)}), 400
     return jsonify(result), 201
 
-
 @bp_inventory_data.route("/parse", methods=["POST"])
 def api_parse():
     """Normalise et classifie les EAN13 saisis."""
     data = request.get_json(silent=True) or {}
-    result = parse_ean13(
-        raw=data.get("raw", ""),
-        inventory_type=data.get("inventory_type", "complete"),
-        category=data.get("category"),
-    )
-    if "error" in result:
-        return jsonify(result), 502
+    try:
+        result = parse_ean13(raw=data.get("raw", ""),
+                             inventory_type=data.get("inventory_type", "complete"),
+                             category=data.get("category"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 502
     return jsonify(result)
 
 @bp_inventory_data.route("/unknown", methods=["POST"])
@@ -112,7 +110,7 @@ def api_commit():
     """Lance l'application asynchrone des mouvements."""
     data = request.get_json(silent=True) or {}
     print("Received commit request with data:", data)  # Debug log
-    result = commit_inventory(data.get("planned", []), data.get("inventory_lines"))
+    result = commit_inventory(data.get("planned", []))
     if "error" in result:
         return jsonify(result), 502
     return jsonify(result)

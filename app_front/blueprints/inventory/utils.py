@@ -54,6 +54,7 @@ def parse_ean13(raw: str, inventory_type: str = "complete",
         "category": category,
     })
 
+#---
 def get_unknown_products(ean13_list: List[str]) -> Dict[str, Any]:
     """Renvoie la liste des EAN13 inconnus en base.
 
