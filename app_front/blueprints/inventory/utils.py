@@ -104,7 +104,8 @@ def create_product(product_data: Dict[str, Any]) -> Dict[str, Any]:
 
     Args:
         product_data: dict avec ean13, product_type, supplier_id, title, category, price.
-                      Si product_type == 'book' : author et publisher en plus.
+                      Si product_type == 'book' : author, diffuser, editor, genre,
+                      publication_year, pages en plus.
     Returns:
         {"status": "created", "ean13": "...", "general_object_id": N}
     Raises:

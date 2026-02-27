@@ -99,7 +99,6 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
 def unknown_products(payload: UnknownRequest) -> UnknownResponse:
     """Retourne les EAN13 qui ne correspondent à aucun produit en base."""
     session = get_main_session()
-    unknown: List[str] = []
     try:
         for ean in payload.ean13:
             obj = session.execute(
@@ -107,8 +106,6 @@ def unknown_products(payload: UnknownRequest) -> UnknownResponse:
             ).scalars().first()
             if not obj:
                 unknown.append(ean)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Erreur DB : {exc}") from exc
     finally:
         session.close()
     return UnknownResponse(unknown=unknown)
@@ -196,10 +193,14 @@ def validate_inventory(lines: List[ValidateLine]):
     planned: List[PlannedMovement] = []
     session = get_main_session()
     try:
+        eans = {line.ean13 for line in lines}
+        objects = session.execute(
+            select(GeneralObjects).where(GeneralObjects.ean13.in_(eans))
+        ).scalars().all()
+        go_by_ean: Dict[str, GeneralObjects] = {g.ean13: g for g in objects}
+
         for line in lines:
-            go = session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13 == line.ean13)
-            ).scalars().first()
+            go = go_by_ean.get(line.ean13)
             if not go:
                 raise HTTPException(
                     status_code=404, detail=f"Produit {line.ean13} introuvable"
