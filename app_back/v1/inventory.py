@@ -16,7 +16,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Dict, List
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from app_back.v1.schems.inventory import (
     ParseRequest, ParseResponse, UnknownRequest, UnknownResponse,
     PrepareRequest, ReconciliationLine, ValidateLine, ValidateResponse,
@@ -67,24 +67,30 @@ def _unique_preserve_order(items: List[str]) -> List[str]:
     description="Normalise le texte et classifie en connu/inconnu.")
 def parse_ean13(payload: ParseRequest) -> ParseResponse:
     """Normalise le texte brut et classifie chaque EAN13 en connu/inconnu."""
+    inventory_type = payload.inventory_type
+    category = payload.category
+    if inventory_type not in {"complete", "partial", "single"}:
+        message = "inventory_type doit être 'complete', 'partial' ou 'single'"
+        raise HTTPException(status_code=400, detail=message)
+    if inventory_type == "partial" and not category:
+        message = "category est requise pour un inventaire partiel"
+        raise HTTPException(status_code=400, detail=message)
     eans = _normalize_ean13(payload.raw)
     unique_eans = _unique_preserve_order(eans)
 
-    known: List[str] = []
-    unknown: List[str] = []
+    # Récupération des EAN13 connus en base selon le type d'inventaire
     session = get_main_session()
+    if inventory_type in {"partial", "single"}:
+        stmt = select(GeneralObjects.ean13).where(GeneralObjects.ean13.in_(unique_eans))
+    else:
+        stmt = select(GeneralObjects.ean13)
     try:
-        for ean in unique_eans:
-            obj = session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13 == ean)
-            ).scalars().first()
-            if obj:
-                known.append(ean)
-            else:
-                unknown.append(ean)
+        known_eans = set(session.execute(stmt).scalars().all())
     finally:
         session.close()
 
+    known = [ean for ean in unique_eans if ean in known_eans]
+    unknown = [ean for ean in unique_eans if ean not in known_eans]
     return ParseResponse(ean13=eans, unknown=unknown, known=known)
 
 @router.post("/unknown-products", response_model=UnknownResponse,
@@ -101,6 +107,8 @@ def unknown_products(payload: UnknownRequest) -> UnknownResponse:
             ).scalars().first()
             if not obj:
                 unknown.append(ean)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Erreur DB : {exc}") from exc
     finally:
         session.close()
     return UnknownResponse(unknown=unknown)
