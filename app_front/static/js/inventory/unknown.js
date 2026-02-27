@@ -15,7 +15,6 @@ let onAllResolved = null;
  * Initialise la gestion des produits inconnus.
  * @param {Function} onContinue — appelé quand l'utilisateur clique « Continuer ».
  */
-
 export function setupUnknown(onContinue) {
     onAllResolved = onContinue;
 
@@ -50,6 +49,12 @@ export function setupUnknown(onContinue) {
 
     // Modale : autocomplete fournisseur
     _setupSupplierAutocomplete();
+
+    // Modale : autocomplete champs produit
+    _setupFieldAutocomplete('modal-author',   'author-suggestions',   'author');
+    _setupFieldAutocomplete('modal-diffuser',  'diffuser-suggestions',  'diffuser');
+    _setupFieldAutocomplete('modal-editor',   'editor-suggestions',   'editor');
+    _setupFieldAutocomplete('modal-genre',    'genre-suggestions',    'genre');
 
     // Modale : soumission du formulaire
     document.getElementById('product-form').addEventListener('submit', async (ev) => {
@@ -98,6 +103,73 @@ function _toggleBookFields() {
     document.querySelectorAll('.book-field').forEach(el => {
         el.classList.toggle('hidden', !isBook);
     });
+}
+
+// ----- Autocomplete champs produit (author, diffuser, editor, genre) ------- //
+
+/** Timers de debounce par champ. */
+const _fieldDebounces = {};
+
+/**
+ * Branche un autocomplete générique sur un champ texte.
+ * @param {string} inputId       - id de l'input
+ * @param {string} suggestionsId - id de la ul de suggestions
+ * @param {string} fieldName     - clé de recherche dans l'API (ex: 'author')
+ */
+function _setupFieldAutocomplete(inputId, suggestionsId, fieldName) {
+    const input       = document.getElementById(inputId);
+    const suggestions = document.getElementById(suggestionsId);
+    if (!input || !suggestions) return;
+
+    // Saisie → recherche avec debounce
+    input.addEventListener('input', () => {
+        clearTimeout(_fieldDebounces[fieldName]);
+        const q = input.value.trim();
+        if (q.length < 2) {
+            suggestions.classList.add('hidden');
+            return;
+        }
+        _fieldDebounces[fieldName] = setTimeout(async () => {
+            const results = await api.searchObjectsInfo(fieldName, q);
+            _renderFieldSuggestions(suggestions, results);
+        }, 250);
+    });
+
+    // Clic sur une suggestion → remplir l'input
+    suggestions.addEventListener('click', (ev) => {
+        const li = ev.target.closest('li');
+        if (!li) return;
+        input.value = li.textContent;
+        suggestions.classList.add('hidden');
+    });
+
+    // Fermer la liste si clic en dehors
+    const wrapper = input.closest('.autocomplete-wrapper');
+    document.addEventListener('click', (ev) => {
+        if (wrapper && !wrapper.contains(ev.target)) {
+            suggestions.classList.add('hidden');
+        }
+    });
+
+    // Fermer avec Escape
+    input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') suggestions.classList.add('hidden');
+    });
+}
+
+function _renderFieldSuggestions(listEl, results) {
+    listEl.innerHTML = '';
+    if (!results || results.length === 0) {
+        listEl.classList.add('hidden');
+        return;
+    }
+    results.forEach(value => {
+        const li = document.createElement('li');
+        li.textContent = value;
+        li.className = 'autocomplete-item';
+        listEl.appendChild(li);
+    });
+    listEl.classList.remove('hidden');
 }
 
 // ----- Autocomplete fournisseur ------------------------------------------ //
@@ -269,6 +341,10 @@ function _openModal(ean) {
     document.getElementById('modal-genre').value = '';
     document.getElementById('modal-publication-year').value = '';
     document.getElementById('modal-pages').value = '';
+    // Masquer toutes les listes de suggestions
+    ['author-suggestions', 'diffuser-suggestions', 'editor-suggestions', 'genre-suggestions'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
     _clearSupplier();
     _toggleBookFields();
     modal.classList.remove('hidden');

@@ -53,3 +53,10 @@ export async function searchSuppliers(query) {
 export async function createSupplier(name) {
     return postJson(`${BASE}/suppliers`, { name });
 }
+
+/** Produits – Rechercher des valeurs existantes pour un champ (author, genre, diffuser, editor…). */
+export async function searchObjectsInfo(field, value) {
+    const params = new URLSearchParams({ [field]: value });
+    const data = await fetchJson(`${BASE}/objects/info/search?${params}`);
+    return Array.isArray(data?.[field]) ? data[field] : [];
+}

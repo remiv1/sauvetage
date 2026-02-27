@@ -78,23 +78,35 @@
             </div>
             <div class="form-group book-field" id="group-author">
                 {{ product_form.author.label(class="form-label") }}
-                {{ product_form.author(class="form-control", id="modal-author",
-                    placeholder="Nom de l'auteur") }}
+                <div class="autocomplete-wrapper">
+                    {{ product_form.author(class="form-control", id="modal-author",
+                        placeholder="Nom de l'auteur", autocomplete="off") }}
+                    <ul class="autocomplete-list hidden" id="author-suggestions"></ul>
+                </div>
             </div>
             <div class="form-group book-field" id="group-diffuser">
                 {{ product_form.diffuser.label(class="form-label") }}
-                {{ product_form.diffuser(class="form-control", id="modal-diffuser",
-                    placeholder="Nom du diffuseur") }}
+                <div class="autocomplete-wrapper">
+                    {{ product_form.diffuser(class="form-control", id="modal-diffuser",
+                        placeholder="Nom du diffuseur", autocomplete="off") }}
+                    <ul class="autocomplete-list hidden" id="diffuser-suggestions"></ul>
+                </div>
             </div>
             <div class="form-group book-field" id="group-editor">
                 {{ product_form.editor.label(class="form-label") }}
-                {{ product_form.editor(class="form-control", id="modal-editor",
-                    placeholder="Nom de l'éditeur") }}
+                <div class="autocomplete-wrapper">
+                    {{ product_form.editor(class="form-control", id="modal-editor",
+                        placeholder="Nom de l'éditeur", autocomplete="off") }}
+                    <ul class="autocomplete-list hidden" id="editor-suggestions"></ul>
+                </div>
             </div>
-            <div class="form-group">
+            <div class="form-group book-field" id="group-genre">
                 {{ product_form.genre.label(class="form-label") }}
-                {{ product_form.genre(class="form-control", id="modal-genre",
-                    placeholder="Ex : Roman, Jeunesse, Jeu de société…") }}
+                <div class="autocomplete-wrapper">
+                    {{ product_form.genre(class="form-control", id="modal-genre",
+                        placeholder="Ex : Roman, Jeunesse, Jeu de société…", autocomplete="off") }}
+                    <ul class="autocomplete-list hidden" id="genre-suggestions"></ul>
+                </div>
             </div>
             <div class="form-group book-field" id="group-publication-year">
                 {{ product_form.publication_year.label(class="form-label") }}
