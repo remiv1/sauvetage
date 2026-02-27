@@ -9,7 +9,7 @@ FastAPI (app-back) qui gère les traitements asynchrones.
 from os import getenv
 from typing import Any, Dict, List, Optional
 import requests
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app_front.config.db_conf import get_main_session
 from db_models.objects.objects import GeneralObjects, Books, OtherObjects
 from db_models.objects.suppliers import Suppliers
@@ -62,7 +62,6 @@ def get_unknown_products(ean13_list: List[str]) -> Dict[str, Any]:
     """
     return _post("/inventory/unknown-products", {"ean13": ean13_list})
 
-
 def prepare_inventory(ean13_list: List[str]) -> Any:
     """Calcule le stock théorique vs réel (opération lourde → FastAPI).
 
@@ -94,7 +93,6 @@ def get_inventory_status() -> Dict[str, Any]:
         {"running": false} ou {"status": "running", "progress": N, ...}
     """
     return _get("/inventory/status")
-
 
 # =========================================================================== #
 #  Opérations légères → accès direct à la base de données                    #
@@ -175,7 +173,6 @@ def create_product(product_data: Dict[str, Any]) -> Dict[str, Any]:
     finally:
         session.close()
 
-
 def search_suppliers(q: str = "") -> List[Dict[str, Any]]:
     """Recherche de fournisseurs par nom (ILIKE, accès DB direct).
 
@@ -194,7 +191,6 @@ def search_suppliers(q: str = "") -> List[Dict[str, Any]]:
         return [{"id": s.id, "name": s.name} for s in results]
     finally:
         session.close()
-
 
 def create_supplier(data: Dict[str, Any]) -> Dict[str, Any]:
     """Crée un fournisseur complet, accès DB direct.
@@ -243,5 +239,48 @@ def create_supplier(data: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as exc:
         session.rollback()
         raise ValueError(f"Erreur lors de la création du fournisseur : {exc}") from exc
+    finally:
+        session.close()
+
+def search_objects_info(q: dict[str, str]) -> List[str]:
+    """
+    Recherche d'éléments communs sur les livres
+    - Liste des auteurs filtrés dans la requête.
+    - Liste des distributeurs filtrés dans la requête.
+    - Liste des éditeurs filtrés dans la requête.
+    - Liste des catégories filtrées dans la requête.
+    """
+    session = get_main_session()
+    modal = list(q.keys())
+    if not modal:
+        raise ValueError("Fournir au moins un critère de recherche")
+    if len(modal) > 1:
+        raise ValueError("Veuillez n'en fournir qu'un seul")
+    if modal[0] == "author":
+        req = q["author"]
+        stmt = select(Books.author).where(
+            func.unaccent(func.lower(Books.author))
+                .ilike(func.unaccent(func.lower(f"%{req}%")))).distinct()
+    elif modal[0] == "diffuser":
+        req = q["diffuser"]
+        stmt = select(Books.diffuser).where(
+            func.unaccent(func.lower(Books.diffuser))
+                .ilike(func.unaccent(func.lower(f"%{req}%")))).distinct()
+    elif modal[0] == "editor":
+        req = q["editor"]
+        stmt = select(Books.editor).where(
+            func.unaccent(func.lower(Books.editor))
+                .ilike(func.unaccent(func.lower(f"%{req}%")))).distinct()
+    elif modal[0] == "genre":
+        req = q["genre"]
+        stmt = select(Books.genre).where(
+            func.unaccent(func.lower(Books.genre))
+                .ilike(func.unaccent(func.lower(f"%{req}%")))).distinct()
+    else:
+        raise ValueError(f"Critère de recherche invalide : {modal[0]}. "
+                         "Valeurs acceptées : 'author', 'diffuser', 'editor', 'genre'")
+    try:
+        response = session.execute(stmt).scalars().all()
+        return list({r for r in response if r})  # Uniques et non vides
     finally:
         session.close()

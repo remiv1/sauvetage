@@ -20,10 +20,9 @@ Endpoints :
 from flask import Blueprint, jsonify, request
 from app_front.blueprints.inventory.utils import ( parse_ean13, get_unknown_products,
     create_product, prepare_inventory, validate_inventory, commit_inventory, get_inventory_status,
-    search_suppliers, create_supplier)
+    search_suppliers, create_supplier, search_objects_info)
 
 bp_inventory_data = Blueprint("inventory_data", __name__, url_prefix="/inventory/data")
-
 
 @bp_inventory_data.route("/suppliers/search", methods=["GET"])
 def api_search_suppliers():
@@ -35,6 +34,17 @@ def api_search_suppliers():
         return jsonify({"error": str(exc)}), 500
     return jsonify(result)
 
+@bp_inventory_data.route("/objects/info/search", methods=["GET"])
+def api_search_objects_info():
+    """Recherche d'informations sur les paramètres des objets."""
+    quest = request.args.to_dict(flat=False)
+    search_key = list(quest.keys())[0] if quest else None
+    search_value = quest[search_key][0] if search_key else ""
+    try:
+        result = search_objects_info({search_key: search_value} if search_key else {})
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({search_key: result})
 
 @bp_inventory_data.route("/suppliers", methods=["POST"])
 def api_create_supplier():
@@ -101,7 +111,8 @@ def api_validate():
 def api_commit():
     """Lance l'application asynchrone des mouvements."""
     data = request.get_json(silent=True) or {}
-    result = commit_inventory(data.get("planned", []))
+    print("Received commit request with data:", data)  # Debug log
+    result = commit_inventory(data.get("planned", []), data.get("inventory_lines"))
     if "error" in result:
         return jsonify(result), 502
     return jsonify(result)
