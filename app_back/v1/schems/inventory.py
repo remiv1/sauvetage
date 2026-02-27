@@ -48,7 +48,7 @@ class UnknownResponse(BaseModel):
 class ProductCreate(BaseModel):
     """Données de création d'un produit (GeneralObjects + Books ou OtherObjects)."""
     ean13: str = Field(..., min_length=13, max_length=13)
-    title: str
+    name: str
     product_type: str = Field("book", description="Type de produit : 'book' ou 'other'")
     supplier_id: int = Field(..., description="ID du fournisseur")
     author: Optional[str] = None
