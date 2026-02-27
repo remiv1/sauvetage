@@ -1,0 +1,457 @@
+@use 'sass:color';
+@use '../core/variables' as variables;
+@use '../core/mixins' as mixins;
+
+/* =========================================================================
+   Inventory — Styles du workflow d'inventaire
+   ========================================================================= */
+
+/* ── Conteneur principal ─────────────────────────────────────────────────── */
+.inventory-container {
+    max-width: 1100px;
+    margin: variables.$space-lg auto;
+    padding: 0 variables.$space-lg;
+}
+
+.inventory-title {
+    text-align: center;
+    margin-bottom: variables.$space-lg;
+    font-size: 1.5rem;
+    font-family: variables.$font-primary;
+    font-weight: 600;
+    color: variables.$primary-color;
+}
+
+.inventory-subtitle {
+    text-align: center;
+    margin-bottom: variables.$space-lg;
+    color: variables.$gray-600;
+}
+
+/* ── Cartes de choix (étape 1) ───────────────────────────────────────────── */
+.inventory-cards {
+    display: flex;
+    gap: variables.$space-lg;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.inventory-card {
+    flex: 0 1 280px;
+    background: white;
+    border: 2px solid variables.$primary-color;
+    border-radius: variables.$radius-sm;
+    padding: variables.$space-lg variables.$space-lg;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+
+    &:hover {
+        box-shadow: 0 4px 16px rgba(variables.$primary-color, 0.2);
+        transform: translateY(-2px);
+    }
+
+    &__icon {
+        margin-bottom: variables.$space-md;
+        color: variables.$primary-color;
+    }
+
+    h3 {
+        font-family: variables.$font-primary;
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0 0 variables.$space-sm;
+        color: variables.$primary-color;
+    }
+
+    p {
+        font-size: 0.85rem;
+        color: variables.$gray-600;
+        margin: 0;
+    }
+}
+
+/* ── Sections / Steps ────────────────────────────────────────────────────── */
+.inventory-step {
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Actions (boutons) ───────────────────────────────────────────────────── */
+.inventory-actions {
+    display: flex;
+    gap: variables.$space-md;
+    justify-content: flex-end;
+    margin-top: variables.$space-lg;
+}
+
+/* ── Tableaux ────────────────────────────────────────────────────────────── */
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: variables.$space-md;
+
+    th,
+    td {
+        padding: variables.$space-sm;
+        border: 1px solid variables.$gray-200;
+        font-size: 0.9rem;
+    }
+
+    th {
+        background: variables.$primary-color;
+        color: white;
+        text-align: left;
+        font-weight: 500;
+    }
+
+    tbody tr:nth-child(even) {
+        background: variables.$gray-100;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .stock-reel {
+        background: variables.$warning-bg;
+        cursor: text;
+        min-width: 3rem;
+    }
+
+    .cell-diff {
+        background: variables.$danger-bg;
+        font-weight: 600;
+        color: variables.$danger-color;
+    }
+}
+
+/* ── Motifs ───────────────────────────────────────────────────────────────── */
+.motifs-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: variables.$space-xs variables.$space-sm;
+}
+
+.motif-label {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: variables.$space-xs;
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: variables.$space-xxs variables.$space-sm;
+    border-radius: variables.$radius-xs;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.badge-warning {
+    background: variables.$warning-bg;
+    color: variables.$warning-color;
+}
+
+.badge-success {
+    background: variables.$success-bg;
+    color: variables.$success-color;
+}
+
+/* ── Boutons complémentaires ─────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: variables.$space-sm variables.$space-md;
+    border: none;
+    border-radius: variables.$radius-sm;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-primary {
+    background: variables.$primary-color;
+    color: white;
+
+    &:hover:not(:disabled) {
+        background: variables.$secondary-color;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.btn-secondary {
+    background: variables.$gray-200;
+    color: variables.$gray-700;
+
+    &:hover {
+        background: variables.$gray-300;
+    }
+}
+
+.btn-sm {
+    padding: variables.$space-xs variables.$space-sm;
+    font-size: 0.8rem;
+}
+
+/* ── Modale ───────────────────────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: variables.$space-md;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    width: 100vw;
+    min-height: 100vh;
+    overflow-y: auto;
+    animation: slideUp 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    &.is_open {
+        background: rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+}
+
+.modal-content {
+    @include mixins.card;
+    width: 50%;
+    min-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: variables.$shadow-hard;
+
+    h3 {
+        font-family: variables.$font-primary;
+        font-size: 1.2rem;
+        margin: 0 0 variables.$space-md;
+        color: variables.$primary-color;
+        padding-bottom: variables.$space-sm;
+        border-bottom: 2px solid variables.$gray-200;
+    }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+.modal-actions {
+    display: flex;
+    gap: variables.$space-md;
+    justify-content: flex-end;
+    margin-top: variables.$space-lg;
+}
+
+/* ── Statut / progression ────────────────────────────────────────────────── */
+.inventory-status {
+    text-align: center;
+    padding: variables.$space-xl variables.$space-md;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid variables.$gray-200;
+    border-top-color: variables.$primary-color;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto variables.$space-md;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.progress-bar-container {
+    width: 100%;
+    max-width: 400px;
+    height: 8px;
+    background: variables.$gray-200;
+    border-radius: variables.$radius-xs;
+    margin: variables.$space-md auto;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: variables.$primary-color;
+    border-radius: variables.$radius-xs;
+    transition: width 0.3s ease;
+    width: 0;
+}
+
+.status-success {
+    color: variables.$color-success;
+    font-weight: 600;
+}
+
+.status-error {
+    color: variables.$color-danger;
+    font-weight: 600;
+}
+
+/* ── Form controls complémentaires ───────────────────────────────────────── */
+
+.inventory-form {
+    @include mixins.card;
+    margin-bottom: variables.$space-lg;
+
+    .form-group {
+        margin-bottom: variables.$space-md;
+        width: 100%;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: variables.$space-xs;
+        font-weight: 500;
+        color: variables.$gray-800;
+    }
+
+    .form-control {
+        @include mixins.input-base;
+    }
+
+    textarea.form-control {
+        resize: vertical;
+        min-height: 6rem;
+    }
+
+    input[readonly].form-control {
+        background: variables.$gray-100;
+        color: variables.$gray-500;
+        cursor: not-allowed;
+    }
+
+    select.form-control {
+        appearance: auto;
+    }
+}
+
+.form-control-sm {
+    padding: variables.$space-xs variables.$space-sm;
+    font-size: 0.85rem;
+}
+
+.commentaire-input {
+    width: 100%;
+    min-width: 120px;
+}
+
+/* ── Autocomplete fournisseur ────────────────────────────────────────────── */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: #fff;
+    border: 1px solid variables.$gray-300;
+    border-top: none;
+    border-radius: 0 0 variables.$radius-sm variables.$radius-sm;
+    max-height: 200px;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: variables.$shadow-soft;
+}
+
+.autocomplete-item {
+    padding: variables.$space-sm variables.$space-md;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: variables.$gray-800;
+    transition: background 0.15s;
+
+    &:hover {
+        background: variables.$gray-100;
+        color: variables.$primary-color;
+    }
+}
+
+.supplier-create-zone {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-sm;
+    margin-top: variables.$space-xs;
+    font-size: 0.85rem;
+    color: variables.$gray-600;
+}
+
+.supplier-create-label {
+    white-space: nowrap;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid variables.$primary-color;
+    color: variables.$primary-color;
+    border-radius: variables.$radius-sm;
+    padding: variables.$space-xs variables.$space-sm;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+        background: variables.$primary-color;
+        color: #fff;
+    }
+}
+
+.supplier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: variables.$space-xs;
+    background: variables.$gray-100;
+    border: 1px solid variables.$gray-300;
+    border-radius: variables.$radius-sm;
+    padding: variables.$space-xs variables.$space-sm;
+    margin-top: variables.$space-xs;
+    font-size: 0.9rem;
+    color: variables.$gray-800;
+}
+
+.btn-badge-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: variables.$gray-500;
+    padding: 0 2px;
+    transition: color 0.15s;
+
+    &:hover {
+        color: variables.$color-danger;
+    }
+}
+
+/* ── Utilitaires ─────────────────────────────────────────────────────────── */
+.hidden {
+    display: none !important;
+}

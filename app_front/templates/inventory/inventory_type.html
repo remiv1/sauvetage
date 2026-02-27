@@ -1,0 +1,46 @@
+{# ================================================================== #}
+{# Étape 1 — Choix du type d'inventaire                               #}
+{# ================================================================== #}
+<section id="step-choice" class="inventory-step">
+    <h2 class="inventory-title">Choisissez le type d'inventaire</h2>
+    <div class="inventory-cards">
+        <div class="inventory-card" data-type="complete">
+            <div class="inventory-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" width="48" height="48">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8
+                                a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
+            </div>
+            <h3>Inventaire Complet</h3>
+            <p>Saisie massive d'EAN13, comparaison avec le stock théorique et validation</p>
+        </div>
+
+        <div class="inventory-card" data-type="partial">
+            <div class="inventory-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" width="48" height="48">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="3" y1="9" x2="21" y2="9"/>
+                    <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+            </div>
+            <h3>Inventaire Partiel</h3>
+            <p>Inventaire par rayon, catégorie ou emplacement spécifique</p>
+        </div>
+
+        <div class="inventory-card" data-type="single">
+            <div class="inventory-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" width="48" height="48">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+            </div>
+            <h3>Article Unique</h3>
+            <p>Inventaire d'un seul article avec validation de la différence</p>
+        </div>
+    </div>
+</section>

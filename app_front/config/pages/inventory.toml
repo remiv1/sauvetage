@@ -1,0 +1,34 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page d'inventaire                                        ---
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Inventaire"
+styles = [
+    "css/main.css",
+    "css/inventory/inventory.css"
+]
+modules = [
+    "js/inventory/inventory.js",
+    "js/main.js"
+]
+# Clées
+[meta]
+title = "Inventaire | Intranet"
+description = "Page de gestion de l'inventaire de la librairie"
+keywords = "inventaire, inventory, stock, ean13, librairie"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="application"
+# Pages spécifiques
+[layout]
+main_layout = "inventory/inventory.html"
+extend_layout = "index.html"
+# Flags
+[flags]
+navbar = true
+searchbar = false
+userbar = true

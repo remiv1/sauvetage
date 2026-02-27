@@ -14,12 +14,8 @@
 - [x] Créer la migration propre avec les modèles réalisés.
 - [x] Créer la connexion avec la base de données PostgreSQL
 - [x] Passer la session de SQLAlchemy dans les repositories.
-- [ ] Faire la migration en démarrage de l'application backend pour que le front puisse fonctionner.
-- [ ] Recommencer les tests unitaires avec db qui supporte PostegreSQL.
-  - [ ] Pour les objets de la base de données.
-  - [ ] Pour les repositories de la base de données.
-  - [ ] Pour la sécurité
-  - [ ] Pour les services
-  - [ ] Pour les routes
-- [ ] Refaire les tests d'intégration.
-- [ ] Refaire les tests d'acceptation.
+- [x] Faire la migration en démarrage de l'application backend pour que le front puisse fonctionner.
+- [x] Créer l'interface dashboard (dashboard_sprint)
+- [x] Créer l'interface clients (customers_sprint)
+- [x] Créer l'interface d'accueil (home_sprint)
+- [ ] Créer l'interface catalogue/stocks/inventaires (inventory_sprint)

@@ -100,7 +100,6 @@ class Books(WorkingBase, QueryMixin):
 
     # Données spécifiques aux livres
     author: Mapped[str] = mapped_column(String, comment="Auteur du livre")
-    publisher: Mapped[str] = mapped_column(String, comment="Éditeur du livre")
     diffuser: Mapped[str] = mapped_column(String, comment="Diffuseur du livre")
     editor: Mapped[str] = mapped_column(String, comment="Éditeur du livre")
     genre: Mapped[str] = mapped_column(String, comment="Genre du livre")
@@ -128,7 +127,6 @@ class Books(WorkingBase, QueryMixin):
             "id": self.id,
             "general_object_id": self.general_object_id,
             "author": self.author,
-            "publisher": self.publisher,
             "diffuser": self.diffuser,
             "editor": self.editor,
             "genre": self.genre,
