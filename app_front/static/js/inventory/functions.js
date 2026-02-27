@@ -52,5 +52,5 @@ export function showStep(activeId) {
 
 /** Liste des motifs de différence possibles. */
 export const MOTIFS = [
-    'perte', 'casse', 'vol','erreur_saisie', 'retour','don', 'autre'
+    'Perte/Vol', 'Casse','Erreur de saisie', 'Retour','Don', 'Autre'
 ];
