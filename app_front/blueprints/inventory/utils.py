@@ -140,7 +140,7 @@ def create_product(product_data: Dict[str, Any]) -> Dict[str, Any]:
             supplier_id=product_data.get("supplier_id"),
             general_object_type=product_data.get("product_type", "book"),
             ean13=product_data.get("ean13", ""),
-            name=product_data.get("title", ""),
+            name=product_data.get("name", ""),
             description=product_data.get("description", ""),
             price=product_data.get("price", 0)
         )
