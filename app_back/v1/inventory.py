@@ -10,7 +10,6 @@ Ce module contient toute la logique métier :
 """
 
 import json
-from math import e
 import os
 import re
 import threading

@@ -75,7 +75,6 @@ function _render() {
                 <input type="checkbox" name="motif-${idx}" value="${m}" /> ${m}
              </label>`
         ).join('');
-
         tr.innerHTML = `
             <td>${row.ean13}</td>
             <td>${row.title}</td>
