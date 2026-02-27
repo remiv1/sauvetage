@@ -106,6 +106,8 @@ def unknown_products(payload: UnknownRequest) -> UnknownResponse:
             ).scalars().first()
             if not obj:
                 unknown.append(ean)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Erreur DB : {exc}") from exc
     finally:
         session.close()
     return UnknownResponse(unknown=unknown)
