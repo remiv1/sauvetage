@@ -14,14 +14,14 @@ export async function parseEan13(raw, inventoryType = 'complete', category = nul
     return postJson(`${BASE}/parse`, { raw, inventory_type: inventoryType, category });
 }
 
-/** Étape 3 – Obtenir les EAN13 inconnus. */
-export async function getUnknownProducts(ean13List) {
-    return postJson(`${BASE}/unknown`, { ean13: ean13List });
-}
-
 /** Étape 4 – Créer un nouveau produit. */
 export async function createProduct(productData) {
     return postJson(`${BASE}/products`, productData);
+}
+
+/** Etape 4bis - Création d'un fournisseur. */
+export async function createSupplier(data) {
+    return postJson(`${BASE}/suppliers`, { data });
 }
 
 /** Étape 5 – Calculer la conciliation théorique vs réel. */
@@ -47,9 +47,4 @@ export async function getInventoryStatus() {
 /** Fournisseurs – Rechercher par nom (autocomplete). */
 export async function searchSuppliers(query) {
     return fetchJson(`${BASE}/suppliers/search?q=${encodeURIComponent(query)}`);
-}
-
-/** Fournisseurs – Créer un fournisseur minimal. */
-export async function createSupplier(name) {
-    return postJson(`${BASE}/suppliers`, { name });
 }

@@ -58,8 +58,11 @@ export async function showReconcileStep(ean13List) {
     showStep('step-reconcile');
 }
 
-// ----- Rendu ------------------------------------------------------------- //
-
+/**
+ * Affiche les lignes de conciliation dans le tableau.
+ * Chaque ligne contient : ean13, title, stock_theorique,
+ * stock_reel, difference et motifs possibles.
+ */
 function _render() {
     const tbody = document.querySelector('#reconcile-table tbody');
     tbody.innerHTML = '';
@@ -107,8 +110,10 @@ function _onStockRealEdit(ev) {
     diffTd.classList.toggle('cell-diff', diff !== 0);
 }
 
-// ----- Collecte des lignes pour validation ------------------------------- //
-
+/**
+ * Collecte les lignes de conciliation pour validation.
+ * @returns {Array} Liste des lignes avec EAN13, stock théorique, stock réel, motifs et commentaire.
+ */
 function _collectLines() {
     const rows = document.querySelectorAll('#reconcile-table tbody tr');
     return Array.from(rows).map((tr, idx) => {

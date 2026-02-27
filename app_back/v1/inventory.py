@@ -90,11 +90,11 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
 
     return ParseResponse(ean13=eans, unknown=unknown, known=known)
 
-@router.post("/unknown-products", response_model=UnknownResponse,
+"""@router.post("/unknown-products", response_model=UnknownResponse,
     tags=["inventory", "utils"], summary="Produits inconnus",
     description="Retourne les EAN13 qui ne correspondent à aucun produit en base.")
 def unknown_products(payload: UnknownRequest) -> UnknownResponse:
-    """Retourne les EAN13 qui ne correspondent à aucun produit en base."""
+    \"""Retourne les EAN13 qui ne correspondent à aucun produit en base.\"""
     session = get_main_session()
     try:
         known_eans = session.execute(
@@ -107,7 +107,7 @@ def unknown_products(payload: UnknownRequest) -> UnknownResponse:
     finally:
         session.close()
     return UnknownResponse(unknown=unknown)
-
+"""
 # =========================================================================== #
 #  Étape 5 – Préparation / conciliation                                      #
 # =========================================================================== #
