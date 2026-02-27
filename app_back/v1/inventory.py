@@ -74,11 +74,14 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
     unknown: List[str] = []
     session = get_main_session()
     try:
+        objects = session.execute(
+            select(GeneralObjects.ean13).where(
+                GeneralObjects.ean13.in_(unique_eans)
+            )
+        ).scalars().all()
+        known_set = set(objects)
         for ean in unique_eans:
-            obj = session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13 == ean)
-            ).scalars().first()
-            if obj:
+            if ean in known_set:
                 known.append(ean)
             else:
                 unknown.append(ean)
@@ -93,14 +96,14 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
 def unknown_products(payload: UnknownRequest) -> UnknownResponse:
     """Retourne les EAN13 qui ne correspondent à aucun produit en base."""
     session = get_main_session()
-    unknown: List[str] = []
     try:
-        for ean in payload.ean13:
-            obj = session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13 == ean)
-            ).scalars().first()
-            if not obj:
-                unknown.append(ean)
+        known_eans = session.execute(
+            select(GeneralObjects.ean13).where(
+                GeneralObjects.ean13.in_(payload.ean13)
+            )
+        ).scalars().all()
+        known_set = set(known_eans)
+        unknown = [ean for ean in payload.ean13 if ean not in known_set]
     finally:
         session.close()
     return UnknownResponse(unknown=unknown)
@@ -188,10 +191,14 @@ def validate_inventory(lines: List[ValidateLine]):
     planned: List[PlannedMovement] = []
     session = get_main_session()
     try:
+        eans = {line.ean13 for line in lines}
+        objects = session.execute(
+            select(GeneralObjects).where(GeneralObjects.ean13.in_(eans))
+        ).scalars().all()
+        go_by_ean: Dict[str, GeneralObjects] = {g.ean13: g for g in objects}
+
         for line in lines:
-            go = session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13 == line.ean13)
-            ).scalars().first()
+            go = go_by_ean.get(line.ean13)
             if not go:
                 raise HTTPException(
                     status_code=404, detail=f"Produit {line.ean13} introuvable"
