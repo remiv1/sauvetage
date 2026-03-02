@@ -85,6 +85,13 @@ class ValidateLine(BaseModel):
     motifs: List[str] = Field(default_factory=list)
     commentaire: Optional[str] = None
 
+class ValidatePayload(BaseModel):
+    """Payload de validation d'inventaire."""
+    lines: List[ValidateLine]
+    inventory_type: Optional[str] = Field(
+        "partial",
+        description="Type d'inventaire : 'complete', 'partial' ou 'single'")
+
 class PlannedMovement(BaseModel):
     """Mouvement de stock planifié."""
     general_object_id: int

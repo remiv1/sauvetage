@@ -99,6 +99,7 @@ function _setStatusUI(status, progress, message) {
     const container  = document.getElementById('progress-container');
     const bar        = document.getElementById('progress-bar');
     const btnNew     = document.getElementById('btn-new-inventory');
+    const btnHome    = document.getElementById('btn-home');
 
     text.textContent = message;
     bar.style.width  = `${progress}%`;
@@ -107,20 +108,23 @@ function _setStatusUI(status, progress, message) {
         spinner.classList.remove('hidden');
         container.classList.remove('hidden');
         btnNew.classList.add('hidden');
+        btnHome.classList.add('hidden');
     } else if (status === 'success') {
         spinner.classList.add('hidden');
         container.classList.add('hidden');
         btnNew.classList.remove('hidden');
+        btnHome.classList.remove('hidden');
         text.classList.add('status-success');
         text.classList.remove('status-error');
         setTimeout(() => {
             text.textContent = 'Stock à jour, veuillez patienter...';
-        }, 3000);
-        // globalThis.location.replace('/home');
+        }, 5000);
+        globalThis.location.replace('/');
     } else if (status === 'error') {
         spinner.classList.add('hidden');
         container.classList.add('hidden');
         btnNew.classList.remove('hidden');
+        btnHome.classList.remove('hidden');
         text.classList.add('status-error');
         text.classList.remove('status-success');
         setTimeout(() => {

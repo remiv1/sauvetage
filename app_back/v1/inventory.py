@@ -19,8 +19,8 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, func
 from app_back.v1.schems.inventory import (
     ParseRequest, ParseResponse, UnknownRequest, UnknownResponse,
-    PrepareRequest, ReconciliationLine, ValidateLine, ValidateResponse,
-    PlannedMovement, CommitRequest, CommitResponse, StatusResponse)
+    PrepareRequest, ReconciliationLine, ValidateResponse,
+    PlannedMovement, CommitRequest, CommitResponse, StatusResponse, ValidatePayload)
 from app_back.db_connection.config import get_main_session
 from db_models.objects.objects import GeneralObjects
 from db_models.objects.inventory import InventoryMovements
@@ -122,26 +122,38 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
 
     stock = last inventory + Σ in − Σ out
     """
-    def _sum_by_type(mvt_type: str) -> int:
+    def _sum_by_type(mvt_type: str, since: str) -> int:
         val = session.execute(
             select(func.coalesce(func.sum(InventoryMovements.quantity), 0)).where(
                 InventoryMovements.general_object_id == general_object_id,
                 InventoryMovements.movement_type == mvt_type,
+                InventoryMovements.movement_timestamp > since,
             )
         ).scalar_one()
         return int(val)
 
     def _last_inventory() -> int:
-        return session.execute(
+        val = session.execute(
             select(InventoryMovements.quantity).where(
                 InventoryMovements.general_object_id == general_object_id,
                 InventoryMovements.movement_type == "inventory",
-            ).order_by(InventoryMovements.movement_timestamp.desc())
-        ).first() or 0
+            ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
+        ).scalars().first()
+        return int(val) if val is not None else 0
+
+    def _last_inventory_date() -> str:
+        last = session.execute(
+            select(InventoryMovements.movement_timestamp).where(
+                InventoryMovements.general_object_id == general_object_id,
+                InventoryMovements.movement_type == "inventory",
+            ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
+        ).scalars().first()
+        return last.isoformat() if last is not None else "1970-01-01T00:00:00Z"
 
     inventory_init = _last_inventory()
-    entrants = _sum_by_type("in")
-    sortants = _sum_by_type("out")
+    since = _last_inventory_date()
+    entrants = _sum_by_type("in", since=since)
+    sortants = _sum_by_type("out", since=since)
     return inventory_init + entrants - sortants
 
 @router.post("/prepare", response_model=List[ReconciliationLine],
@@ -152,9 +164,6 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
     # Compter les occurrences (le nombre de fois scanné = stock réel)
     counts: Dict[str, int] = {}
     set_eans = set(payload.ean13)
-    from pprint import pprint
-    print("Received prepare request with EAN13:", payload.ean13)  # Debug
-    pprint(payload.dict())  # Debug log
     inventory_type = getattr(payload, "inventory_type", "partial")
     for ean in set_eans:
         counts[ean] = payload.ean13.count(ean)
@@ -198,9 +207,10 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
 # =========================================================================== #
 
 @router.post("/validate", response_model=ValidateResponse)
-def validate_inventory(lines: List[ValidateLine]):
+def validate_inventory(payload: ValidatePayload) -> ValidateResponse:
     """Prépare les mouvements de stock pour chaque ligne validée."""
     planned: List[PlannedMovement] = []
+    lines = payload.lines
     session = get_main_session()
     try:
         eans = {line.ean13 for line in lines}
@@ -216,6 +226,8 @@ def validate_inventory(lines: List[ValidateLine]):
                     status_code=404, detail=f"Produit {line.ean13} introuvable"
                 )
             delta = line.stock_reel - line.stock_theorique
+            if delta == 0:
+                continue  # Pas d'écart → pas de mouvement à planifier
             movement_type = "in" if delta > 0 else "out"
             planned.append(PlannedMovement(
                 general_object_id=go.id,
