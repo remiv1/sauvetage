@@ -73,8 +73,6 @@ export function showUnknownStep(eans) {
     showStep('step-unknown');
 }
 
-// ----- Rendu du tableau -------------------------------------------------- //
-
 function _render() {
     const tbody    = document.querySelector('#unknown-table tbody');
     const btnCont  = document.getElementById('btn-continue');
@@ -92,8 +90,6 @@ function _render() {
 
     btnCont.disabled = unknownList.length > 0;
 }
-
-// ----- Modale ------------------------------------------------------------ //
 
 /**
  * Affiche/masque les champs spécifiques « Livre » selon le type sélectionné.
@@ -200,7 +196,7 @@ function _setupSupplierAutocomplete() {
     const btnFormCancel      = document.getElementById('btn-supplier-form-cancel');
     const supplierFormName   = document.getElementById('supplier-form-name');
 
-    // Saisie → recherche avec debounce
+    // Saisie → recherche avec debounce → suggestions ou option de création
     input.addEventListener('input', () => {
         clearTimeout(_supplierDebounce);
         const q = input.value.trim();
@@ -215,7 +211,7 @@ function _setupSupplierAutocomplete() {
         }, 250);
     });
 
-    // Clic sur une suggestion
+    // Clic sur une suggestion → sélectionner le fournisseur
     suggestions.addEventListener('click', (ev) => {
         const li = ev.target.closest('li');
         if (!li) return;
@@ -231,14 +227,16 @@ function _setupSupplierAutocomplete() {
         document.getElementById('supplier-form-name').focus();
     });
 
-    // Soumettre le formulaire de création de fournisseur
+    // Soumettre le formulaire de création de fournisseur → Intègre le fournisseur au produit
     btnFormSubmit.addEventListener('click', async (ev) => {
         ev.preventDefault();
         const name = (document.getElementById('supplier-form-name').value || '').trim();
+        // Validation basique du nom
         if (!name) {
             alert('Le nom du fournisseur est requis.');
             return;
         }
+        // Préparer les données à envoyer
         const data = {
             name,
             gln13: (document.getElementById('supplier-form-gln13').value || '').trim() || "",
@@ -246,11 +244,7 @@ function _setupSupplierAutocomplete() {
             contact_phone: (document.getElementById('supplier-form-phone').value || '').trim() || "",
         };
         try {
-            const response = await fetch('/inventory/data/suppliers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
+            const response = await api.createSupplier(data);
             if (!response.ok) {
                 const errorData = await response.json();
                 alert(`Erreur : ${errorData.error || 'Impossible de créer le fournisseur.'}`);
@@ -285,6 +279,9 @@ function _setupSupplierAutocomplete() {
     });
 }
 
+/**
+ * Masque le formulaire de création de fournisseur et réinitialise les champs.
+ */
 /**
  * Masque le formulaire de création de fournisseur et réinitialise les champs.
  */
@@ -416,8 +413,9 @@ async function _submitProduct() {
     // Construire le payload pour l'API suivant le type de produit
     const payload = {
         ean13, product_type: productType, supplier_id: supplierId, name, description,
-        price, genre, publication_year: pubYear, pages
+        price
     };
+    // Ajout des champs spécifiques si le produit est un livre
     if (productType === 'book') {
         payload.author = author;
         payload.editor = editor;

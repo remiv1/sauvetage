@@ -18,8 +18,7 @@ from typing import Dict, List
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, func
 from app_back.v1.schems.inventory import (
-    ParseRequest, ParseResponse, UnknownRequest, UnknownResponse,
-    PrepareRequest, ReconciliationLine, ValidateResponse,
+    ParseRequest, ParseResponse, PrepareRequest, ReconciliationLine, ValidateResponse,
     PlannedMovement, CommitRequest, CommitResponse, StatusResponse, ValidatePayload)
 from app_back.db_connection.config import get_main_session
 from db_models.objects.objects import GeneralObjects
@@ -75,11 +74,29 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
     if inventory_type == "partial" and not category:
         message = "category est requise pour un inventaire partiel"
         raise HTTPException(status_code=400, detail=message)
+    inventory_type = payload.inventory_type
+    category = payload.category
+    if inventory_type not in {"complete", "partial", "single"}:
+        message = "inventory_type doit être 'complete', 'partial' ou 'single'"
+        raise HTTPException(status_code=400, detail=message)
+    if inventory_type == "partial" and not category:
+        message = "category est requise pour un inventaire partiel"
+        raise HTTPException(status_code=400, detail=message)
     eans = _normalize_ean13(payload.raw)
     unique_eans = _unique_preserve_order(eans)
 
     # Récupération des EAN13 connus en base selon le type d'inventaire
+    # Récupération des EAN13 connus en base selon le type d'inventaire
     session = get_main_session()
+    if inventory_type in {"partial", "single"}:
+        stmt = select(GeneralObjects.ean13).where(GeneralObjects.ean13.in_(unique_eans))
+    else:
+        stmt = select(GeneralObjects.ean13)
+    try:
+        known_eans = set(session.execute(stmt).scalars().all())
+    except Exception as exc:
+        message = f"Erreur lors de la récupération des EAN13 connus : {exc}"
+        raise RuntimeError(message) from exc
     if inventory_type in {"partial", "single"}:
         stmt = select(GeneralObjects.ean13).where(GeneralObjects.ean13.in_(unique_eans))
     else:
@@ -91,25 +108,9 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
 
     known = [ean for ean in unique_eans if ean in known_eans]
     unknown = [ean for ean in unique_eans if ean not in known_eans]
+    known = [ean for ean in unique_eans if ean in known_eans]
+    unknown = [ean for ean in unique_eans if ean not in known_eans]
     return ParseResponse(ean13=eans, unknown=unknown, known=known)
-
-@router.post("/unknown-products", response_model=UnknownResponse,
-    tags=["inventory", "utils"], summary="Produits inconnus",
-    description="Retourne les EAN13 qui ne correspondent à aucun produit en base.")
-def unknown_products(payload: UnknownRequest) -> UnknownResponse:
-    """Retourne les EAN13 qui ne correspondent à aucun produit en base."""
-    unknown: List[str] = []
-    session = get_main_session()
-    try:
-        for ean in payload.ean13:
-            obj = session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13 == ean)
-            ).scalars().first()
-            if not obj:
-                unknown.append(ean)
-    finally:
-        session.close()
-    return UnknownResponse(unknown=unknown)
 
 # =========================================================================== #
 #  Étape 5 – Préparation / conciliation                                      #
