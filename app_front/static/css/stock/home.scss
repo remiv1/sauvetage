@@ -1,0 +1,40 @@
+@use '../core/variables' as variables;
+
+/* ============================================================================ */
+/* Page d'accueil Stock — Cards de navigation (SCSS)                          */
+/* ============================================================================ */
+
+// Mixin pour les variantes de cards (réutilisable)
+@mixin card-color-variant($color) {
+    border-color: $color;
+
+    .card-icon {
+        background-color: rgba($color, 0.1);
+        color: $color;
+    }
+
+    &:hover {
+        border-color: $color;
+        background: linear-gradient(135deg, rgba($color, 0.05) 0%, rgba($color, 0) 100%);
+    }
+}
+
+// ============================================================================
+// CARD COLOR VARIANTS
+// ============================================================================
+
+.card-council {
+    @include card-color-variant(variables.$primary-color);
+}
+
+.card-orders {
+    @include card-color-variant(variables.$primary-color);
+}
+
+.card-reservations {
+    @include card-color-variant(variables.$primary-color);
+}
+
+.card-search {
+    @include card-color-variant(variables.$primary-color);
+}

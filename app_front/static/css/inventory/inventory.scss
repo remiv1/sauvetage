@@ -30,44 +30,103 @@
 
 /* ── Cartes de choix (étape 1) ───────────────────────────────────────────── */
 .inventory-cards {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: variables.$space-lg;
-    justify-content: center;
-    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+        gap: variables.$space-md;
+    }
 }
 
 .inventory-card {
-    flex: 0 1 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: (variables.$space-lg + variables.$space-md) (variables.$space-md + variables.$space-sm);
     background: white;
+    border-radius: variables.$radius-md;
     border: 2px solid variables.$primary-color;
-    border-radius: variables.$radius-sm;
-    padding: variables.$space-lg variables.$space-lg;
+    box-shadow: variables.$shadow-medium;
     text-align: center;
     cursor: pointer;
-    transition: box-shadow 0.2s, transform 0.15s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(white, 0.5) 0%, rgba(white, 0) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
 
     &:hover {
-        box-shadow: 0 4px 16px rgba(variables.$primary-color, 0.2);
-        transform: translateY(-2px);
+        transform: translateY(-8px);
+        box-shadow: variables.$shadow-hard;
+        background: linear-gradient(135deg, rgba(variables.$primary-color, 0.05) 0%, rgba(variables.$primary-color, 0) 100%);
     }
 
     &__icon {
+        width: 5rem;
+        height: 5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: variables.$radius-md;
         margin-bottom: variables.$space-md;
+        background-color: rgba(variables.$primary-color, 0.1);
         color: variables.$primary-color;
+
+        svg {
+            width: 100%;
+            height: 100%;
+            stroke-width: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            width: 4rem;
+            height: 4rem;
+        }
+
+        @media (max-width: 480px) {
+            width: 3.5rem;
+            height: 3.5rem;
+        }
     }
 
     h3 {
         font-family: variables.$font-primary;
-        font-size: 1.15rem;
-        font-weight: 600;
-        margin: 0 0 variables.$space-sm;
-        color: variables.$primary-color;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        color: variables.$text-dark;
     }
 
     p {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         color: variables.$gray-600;
-        margin: 0;
+        margin: 0.5rem 0 0 0;
+    }
+
+    @media (max-width: 768px) {
+        padding: variables.$space-lg variables.$space-sm;
+    }
+
+    @media (max-width: 480px) {
+        padding: variables.$space-md variables.$space-sm;
     }
 }
 

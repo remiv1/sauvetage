@@ -223,6 +223,7 @@ $font-weight-black: 800;
     transition: $transition;
     position: relative;
     overflow: hidden;
+    z-index: 1;
 
     @media (max-width: 768px) {
         padding: $spacing-lg $spacing-sm;

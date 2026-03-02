@@ -1,0 +1,31 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de réservations de stocks                           ---
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Stock"
+styles = [
+    "css/main.css",
+    "css/stock/reservations.css"
+]
+scripts = ["js/main.js"]
+# Clées
+[meta]
+title = "Stock | Intranet"
+description = "Page de gestion des réservations de stocks de l'intranet Sauvetage"
+keywords = "stock, réservations, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="main"
+# Pages spécifiques
+[layout]
+main_layout = "stock/reservations.html"
+extend_layout = "index.html"
+# Flags pour afficher ou non les éléments sur les commons
+[flags]
+navbar = true
+searchbar = false
+userbar = true

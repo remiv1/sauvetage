@@ -53,6 +53,7 @@
   padding: 2rem;
   border-radius: 20px;
   box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1;
 }
 
 .form-section {
@@ -94,6 +95,7 @@
   padding: 2rem;
   border-radius: 20px;
   box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1;
   margin-bottom: 2rem;
 }
 .customer-info-card--editing {
@@ -317,6 +319,13 @@
   color: #00086f;
   margin: 0 0 0.5rem;
 }
+.inline-add-form input[type=text],
+.inline-add-form input[type=email],
+.inline-add-form input[type=tel] {
+  border: 2px solid #002bff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+}
 
 .form-actions {
   display: flex;
@@ -428,40 +437,91 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Page d'accueil — Cartes de choix
    ═══════════════════════════════════════════════════════════════════════════ */
-/* ── Grille 3 colonnes ───────────────────────────────────────────────────── */
+/* ── Grille responsive ────────────────────────────────────────────────────── */
 .customer-cards-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 2rem;
   margin-top: 1rem;
+}
+@media (max-width: 768px) {
+  .customer-cards-row {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .customer-cards-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
 /* ── Carte individuelle ──────────────────────────────────────────────────── */
 .choice-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 2rem 1rem;
-  transition: box-shadow 0.25s, transform 0.25s;
+  padding: 3rem 1.5rem;
+  background: white;
+  border-radius: 20px;
+  border: 2px solid #00086f;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+.choice-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 .choice-card:hover {
-  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-  transform: translateY(-3px);
+  transform: translateY(-8px);
+  box-shadow: 4px 4px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(0, 8, 111, 0.05) 0%, rgba(0, 8, 111, 0) 100%);
 }
 .choice-card__icon {
-  color: #002bff;
+  width: 5rem;
+  height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
   margin-bottom: 1rem;
+  background-color: rgba(0, 8, 111, 0.1);
+  color: #00086f;
+}
+.choice-card__icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.5;
+}
+@media (max-width: 768px) {
+  .choice-card__icon {
+    width: 4rem;
+    height: 4rem;
+  }
+}
+@media (max-width: 480px) {
+  .choice-card__icon {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
 }
 .choice-card__title {
-  font-family: "Italianno", cursive;
-  font-size: 2.2rem;
-  color: #00086f;
-  margin-bottom: 0.5rem;
+  font-family: "Asap", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  color: #202020;
 }
 .choice-card__desc {
   font-size: 0.9rem;
@@ -477,7 +537,7 @@
   margin-top: auto;
   font-weight: 600;
   font-size: 0.9rem;
-  color: #002bff;
+  color: #00086f;
   transition: color 0.2s;
 }
 .choice-card--link {
@@ -485,7 +545,17 @@
   cursor: pointer;
 }
 .choice-card--link:hover .choice-card__action {
-  color: #00086f;
+  color: #002bff;
+}
+@media (max-width: 768px) {
+  .choice-card {
+    padding: 2rem 0.5rem;
+  }
+}
+@media (max-width: 480px) {
+  .choice-card {
+    padding: 1rem 0.5rem;
+  }
 }
 
 /* ── Recherche rapide — Wrapper & Dropdown ────────────────────────────────── */
@@ -667,14 +737,6 @@
   border-radius: 10px;
 }
 
-.inline-add-form input[type=text],
-.inline-add-form input[type=email],
-.inline-add-form input[type=tel] {
-  border: 2px solid #002bff;
-  padding: 0.25rem 0.5rem;
-  border-radius: 10px;
-}
-
 /* ── Section éléments inactifs ───────────────────────────────────────────── */
 .inactive-section {
   margin-top: 1rem;
@@ -784,5 +846,3 @@
     padding: 0.25rem 0.5rem;
   }
 }
-
-/*# sourceMappingURL=customer.css.map */

@@ -11,6 +11,7 @@
     padding: variables.$space-lg;
     border-radius: variables.$radius-md;
     box-shadow: variables.$shadow-soft;
+    z-index: 1;
 }
 
 @mixin input-base {
