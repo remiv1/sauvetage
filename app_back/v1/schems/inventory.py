@@ -120,3 +120,9 @@ class StatusResponse(BaseModel):
     progress: Optional[int] = None
     started_at: Optional[str] = None
     message: Optional[str] = None
+
+class ObjectPrice(BaseModel):
+    """Prix d'un objet au moment du mouvement."""
+    general_object_id: int
+    ean13: str
+    price_at_movement: float

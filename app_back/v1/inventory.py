@@ -19,7 +19,9 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, func
 from app_back.v1.schems.inventory import (
     ParseRequest, ParseResponse, PrepareRequest, ReconciliationLine, ValidateResponse,
-    PlannedMovement, CommitRequest, CommitResponse, StatusResponse, ValidatePayload)
+    PlannedMovement, CommitRequest, CommitResponse, StatusResponse, ValidatePayload,
+    ObjectPrice,
+)
 from app_back.db_connection.config import get_main_session
 from db_models.objects.objects import GeneralObjects
 from db_models.objects.inventory import InventoryMovements
@@ -267,8 +269,79 @@ def _write_status(data: Dict) -> None:
     with open(STATUS_FILE, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False)
 
-def _run_commit(planned: List[Dict]) -> None:
-    """Thread cible : applique les mouvements un par un et met à jour l'état."""
+def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
+    """Récupère le prix au moment du mouvement pour un objet général donné."""
+    def _get_last_inventory_price(oid: int):
+        """Récupère le prix du dernier mouvement d'inventaire pour un objet général."""
+        stmt = select(
+            InventoryMovements.price_at_movement,
+            InventoryMovements.movement_timestamp
+        ).where(
+            InventoryMovements.general_object_id == oid,
+            InventoryMovements.movement_type == "inventory",
+        ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
+        return session.execute(stmt).first()
+
+    def _get_avg_in_price_since(oid: int, since: str) -> float:
+        """Récupère le prix moyen des mouvements 'in' depuis une date donnée."""
+        stmt = select(func.coalesce(func.avg(InventoryMovements.price_at_movement), 0.0)).where(
+            InventoryMovements.general_object_id == oid,
+            InventoryMovements.movement_type == "in",
+            InventoryMovements.movement_timestamp > since,
+        )
+        return session.execute(stmt).scalar_one()
+
+    if not objects_id:
+        return []
+
+    session = get_main_session()
+    try:
+        results: List[ObjectPrice] = []
+        # travailler sur l'ensemble dédupliqué d'ids
+        for oid in set(objects_id):
+            # dernier prix enregistré pour le type 'inventory'
+            last_row = _get_last_inventory_price(oid)
+            last_price = float(last_row[0]) if last_row and last_row[0] is not None else 0.0
+            last_ts = last_row[1] if last_row and last_row[1] is not None else None
+
+            # moyenne des prix des mouvements 'in' depuis la dernière date d'inventaire
+            # (si présente), sinon sur tout l'historique 'in'
+            if last_ts is not None:
+                avg_in = _get_avg_in_price_since(oid, last_ts)
+            else:
+                avg_in = _get_avg_in_price_since(oid, "1970-01-01T00:00:00Z") or 0.0
+
+            avg_in = float(avg_in or 0.0)
+            final_price = last_price + avg_in
+
+            # récupérer l'ean13 de l'objet général (peut être None)
+            ean = session.execute(
+                select(GeneralObjects.ean13).where(GeneralObjects.id == oid)
+            ).scalar_one_or_none()
+
+            if not ean:
+                raise RuntimeError(f"Objet général {oid} introuvable pour récupérer l'EAN13")
+
+            results.append(ObjectPrice(
+                general_object_id=oid,
+                ean13=ean,
+                price_at_movement=final_price,
+            ))
+
+        return results
+    finally:
+        session.close()
+
+def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> None:
+    """
+    Thread cible : applique les mouvements un par un et met à jour l'état.
+    
+    args:
+        - planned : liste de mouvements à appliquer, sous forme de dicts
+                    (issus de ValidateResponse)
+        - price_by_object_id : dictionnaire mapping les IDs d'objets généraux à leur prix
+                                au moment du mouvement
+    """
     started = datetime.now(timezone.utc).isoformat()
     try:
         _write_status({
@@ -283,7 +356,7 @@ def _run_commit(planned: List[Dict]) -> None:
                     general_object_id=mvt["general_object_id"],
                     movement_type=mvt["movement_type"],
                     quantity=mvt["quantity"],
-                    price_at_movement=0.0,
+                    price_at_movement=price_by_object_id.get(mvt["general_object_id"], 0.0),
                     source="inventory_workflow",
                     destination="stock",
                     notes=json.dumps({
@@ -319,7 +392,14 @@ def _run_commit(planned: List[Dict]) -> None:
 def commit_inventory(payload: CommitRequest):
     """Lance un thread pour appliquer les mouvements de manière asynchrone."""
     movements = [m.model_dump() for m in payload.planned]
-    thread = threading.Thread(target=_run_commit, args=(movements,), daemon=True)
+    objects_ids = [m["general_object_id"] for m in movements]
+    prices = _get_prices_at_movement(objects_ids)
+    price_by_object_id = {p.general_object_id: p.price_at_movement for p in prices}
+    thread = threading.Thread(
+        target=_run_commit,
+        args=(movements, price_by_object_id),
+        daemon=True
+    )
     thread.start()
     return CommitResponse(status="started")
 
