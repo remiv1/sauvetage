@@ -2,8 +2,9 @@
  * Gestion de l'étape « Statut de la tâche » (étape 8) — commit + polling.
  */
 
-import { showStep } from './functions.js';
 import * as api from './api.js';
+import { showStep } from './functions.js';
+import { getType } from './input.js';
 
 const POLL_INTERVAL = 3000; // ms
 
@@ -20,6 +21,15 @@ export function setupStatus() {
 }
 
 /**
+ * Initialise le bouton « Accueil ».
+ */
+export function returnHome() {
+    document.getElementById('btn-home').addEventListener('click', () => {
+        globalThis.location.href = '/';
+    });
+}
+
+/**
  * Lance le commit puis démarre le polling.
  * @param {Array} planned — mouvements planifiés.
  */
@@ -27,7 +37,10 @@ export async function startCommit(planned) {
     showStep('step-status');
     _setStatusUI('running', 0, 'Lancement du commit…');
 
-    const { ok } = await api.commitInventory(planned);
+    const inventoryType = getType();
+    console.debug('Starting commit with planned movements:', planned, 'inventory_type:', inventoryType);
+
+    const { ok } = await api.commitInventory(planned, inventoryType);
     if (!ok) {
         _setStatusUI('error', 0, 'Impossible de lancer le commit.');
         return;
@@ -37,11 +50,18 @@ export async function startCommit(planned) {
 
 // ----- Polling ----------------------------------------------------------- //
 
+/**
+ * Démarre le polling pour vérifier l'état de la tâche de commit.
+ */
 function _startPolling() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(_poll, POLL_INTERVAL);
 }
 
+/**
+ * Effectue le polling pour vérifier l'état de la tâche.
+ * @returns {Promise<void>}
+ */
 async function _poll() {
     const data = await api.getInventoryStatus();
     if (!data) return;
@@ -54,6 +74,7 @@ async function _poll() {
         return;
     }
 
+    // Erreur signalée par le backend
     if (data.status === 'error') {
         clearInterval(pollTimer);
         pollTimer = null;
@@ -66,6 +87,12 @@ async function _poll() {
 
 // ----- UI ---------------------------------------------------------------- //
 
+/**
+ * Met à jour l'affichage du statut de la tâche.
+ * @param {string} status - Le statut actuel ('running', 'success', 'error').
+ * @param {number} progress - Le pourcentage de progression (0-100).
+ * @param {string} message - Le message à afficher.
+ */
 function _setStatusUI(status, progress, message) {
     const spinner    = document.getElementById('status-spinner');
     const text       = document.getElementById('status-text');
@@ -89,6 +116,7 @@ function _setStatusUI(status, progress, message) {
         setTimeout(() => {
             text.textContent = 'Stock à jour, veuillez patienter...';
         }, 3000);
+        // globalThis.location.replace('/home');
     } else if (status === 'error') {
         spinner.classList.add('hidden');
         container.classList.add('hidden');

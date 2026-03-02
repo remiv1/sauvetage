@@ -5,6 +5,7 @@
 
 import { showStep, MOTIFS } from './functions.js';
 import * as api from './api.js';
+import { getType } from './input.js';
 
 /** @type {Array} Lignes de conciliation courantes. */
 let reconcileRows = [];
@@ -30,7 +31,8 @@ export function setupReconcile(onValidated) {
         btnValidate.textContent = 'Validation…';
 
         const lines = _collectLines();
-        const { ok, data } = await api.validateInventory(lines);
+        const inventoryType = getType();
+        const { ok, data } = await api.validateInventory(lines, inventoryType);
 
         btnValidate.disabled = false;
         btnValidate.textContent = 'Valider les écarts';
@@ -48,7 +50,8 @@ export function setupReconcile(onValidated) {
  * @param {string[]} ean13List
  */
 export async function showReconcileStep(ean13List) {
-    const { ok, data } = await api.prepareInventory(ean13List);
+    const inventoryType = getType();
+    const { ok, data } = await api.prepareInventory(ean13List, inventoryType);
     if (!ok || !data) {
         alert('Erreur lors de la préparation de la conciliation.');
         return;
@@ -60,6 +63,9 @@ export async function showReconcileStep(ean13List) {
 
 // ----- Rendu ------------------------------------------------------------- //
 
+/**
+ * Rend la table de conciliation à partir des données de reconcileRows.
+ */
 function _render() {
     const tbody = document.querySelector('#reconcile-table tbody');
     tbody.innerHTML = '';
@@ -90,6 +96,11 @@ function _render() {
 
 // ----- Édition du stock réel --------------------------------------------- //
 
+/**
+ * Gère la modification du stock réel dans la table de conciliation.
+ * @param {InputEvent} ev - L'événement d'entrée.
+ * @returns {void}
+ */
 function _onStockRealEdit(ev) {
     const td = ev.target.closest('.stock-reel');
     if (!td) return;
@@ -109,6 +120,10 @@ function _onStockRealEdit(ev) {
 
 // ----- Collecte des lignes pour validation ------------------------------- //
 
+/**
+ * Collecte les lignes de la table de conciliation pour validation.
+ * @returns {Array} - Les lignes de conciliation.
+ */
 function _collectLines() {
     const rows = document.querySelectorAll('#reconcile-table tbody tr');
     return Array.from(rows).map((tr, idx) => {

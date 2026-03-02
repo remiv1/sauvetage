@@ -25,18 +25,18 @@ export async function createProduct(productData) {
 }
 
 /** Étape 5 – Calculer la conciliation théorique vs réel. */
-export async function prepareInventory(ean13List) {
-    return postJson(`${BASE}/prepare`, { ean13: ean13List });
+export async function prepareInventory(ean13List, inventoryType = null) {
+    return postJson(`${BASE}/prepare`, { ean13: ean13List, inventory_type: inventoryType });
 }
 
 /** Étape 6 – Valider les écarts. */
-export async function validateInventory(lines) {
-    return postJson(`${BASE}/validate`, lines);
+export async function validateInventory(lines, inventoryType = null) {
+    return postJson(`${BASE}/validate`, { lines: lines, inventory_type: inventoryType });
 }
 
 /** Étape 7 – Lancer le commit asynchrone. */
-export async function commitInventory(planned) {
-    return postJson(`${BASE}/commit`, { planned });
+export async function commitInventory(planned, inventoryType = null) {
+    return postJson(`${BASE}/commit`, { planned: planned, inventory_type: inventoryType });
 }
 
 /** Étape 8 – Obtenir l'état de la tâche de commit. */

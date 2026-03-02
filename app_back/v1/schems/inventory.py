@@ -65,6 +65,9 @@ class ProductCreateResponse(BaseModel):
 class PrepareRequest(BaseModel):
     """Liste d'EAN13 scannés (doublons = quantité)."""
     ean13: List[str]
+    inventory_type: Optional[str] = Field(
+        "partial",
+        description="Type d'inventaire : 'complete', 'partial' ou 'single'")
 
 class ReconciliationLine(BaseModel):
     """Ligne de conciliation théorique vs réel."""

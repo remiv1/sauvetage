@@ -91,7 +91,7 @@ def api_create_product():
 def api_prepare():
     """Calcule le stock théorique vs réel pour la conciliation."""
     data = request.get_json(silent=True) or {}
-    result = prepare_inventory(data.get("ean13", []))
+    result = prepare_inventory(data.get("ean13", []), data.get("inventory_type", "partial"))
     if isinstance(result, dict) and "error" in result:
         return jsonify(result), 502
     return jsonify(result)
@@ -99,8 +99,8 @@ def api_prepare():
 @bp_inventory_data.route("/validate", methods=["POST"])
 def api_validate():
     """Valide les écarts et prépare les mouvements de stock."""
-    data = request.get_json(silent=True) or []
-    result = validate_inventory(data)
+    data = request.get_json(silent=True) or {}
+    result = validate_inventory(data.get("lines", []), data.get("inventory_type", "partial"))
     if "error" in result:
         return jsonify(result), 502
     return jsonify(result)
@@ -109,8 +109,7 @@ def api_validate():
 def api_commit():
     """Lance l'application asynchrone des mouvements."""
     data = request.get_json(silent=True) or {}
-    print("Received commit request with data:", data)  # Debug log
-    result = commit_inventory(data.get("planned", []))
+    result = commit_inventory(data.get("planned", []), data.get("inventory_type", "partial"))
     if "error" in result:
         return jsonify(result), 502
     return jsonify(result)

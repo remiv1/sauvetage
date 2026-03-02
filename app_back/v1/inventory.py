@@ -16,7 +16,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Dict, List
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func
 from app_back.v1.schems.inventory import (
     ParseRequest, ParseResponse, UnknownRequest, UnknownResponse,
     PrepareRequest, ReconciliationLine, ValidateLine, ValidateResponse,
@@ -98,6 +98,7 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
     description="Retourne les EAN13 qui ne correspondent à aucun produit en base.")
 def unknown_products(payload: UnknownRequest) -> UnknownResponse:
     """Retourne les EAN13 qui ne correspondent à aucun produit en base."""
+    unknown: List[str] = []
     session = get_main_session()
     try:
         for ean in payload.ean13:
@@ -135,7 +136,7 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
             select(InventoryMovements.quantity).where(
                 InventoryMovements.general_object_id == general_object_id,
                 InventoryMovements.movement_type == "inventory",
-            ).order_by(InventoryMovements.created_at.desc())
+            ).order_by(InventoryMovements.movement_timestamp.desc())
         ).first() or 0
 
     inventory_init = _last_inventory()
@@ -151,21 +152,30 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
     # Compter les occurrences (le nombre de fois scanné = stock réel)
     counts: Dict[str, int] = {}
     set_eans = set(payload.ean13)
+    from pprint import pprint
+    print("Received prepare request with EAN13:", payload.ean13)  # Debug
+    pprint(payload.dict())  # Debug log
+    inventory_type = getattr(payload, "inventory_type", "partial")
     for ean in set_eans:
         counts[ean] = payload.ean13.count(ean)
 
     session = get_main_session()
     results: List[ReconciliationLine] = []
-    try:
-        # Récupérer tous les objets concernés en une seule requête
-        objects = session.execute(
-            select(GeneralObjects).where(
-                GeneralObjects.ean13.in_(list(counts.keys()))
-            )
-        ).scalars().all()
-        go_by_ean: Dict[str, GeneralObjects] = {g.ean13: g for g in objects}
+    if inventory_type == "complete":
+        # Pour un inventaire complet, on doit aussi inclure les produits non scannés
+        stmt = select(GeneralObjects)
+    else:
+        stmt = select(GeneralObjects).where(
+            GeneralObjects.ean13.in_(list(counts.keys()))
+        )
+    objects = session.execute(stmt).scalars().all()
+    go_by_ean: Dict[str, GeneralObjects] = {g.ean13: g for g in objects}
+    if inventory_type == "complete":
+        set_eans.update(go_by_ean.keys())  # inclure les EAN13 non scannés pour le calcul
 
-        for ean, real_count in counts.items():
+    try:
+        for ean in set_eans:
+            real_count = counts.get(ean, 0)
             go = go_by_ean.get(ean)
             title = go.name if go else "(inconnu)"
             stock_th = _compute_theoretical_stock(session, go.id) if go else 0
@@ -206,14 +216,26 @@ def validate_inventory(lines: List[ValidateLine]):
                     status_code=404, detail=f"Produit {line.ean13} introuvable"
                 )
             delta = line.stock_reel - line.stock_theorique
-            if delta == 0:
-                continue
             movement_type = "in" if delta > 0 else "out"
             planned.append(PlannedMovement(
                 general_object_id=go.id,
                 ean13=line.ean13,
                 quantity=abs(delta),
                 movement_type=movement_type,
+                motifs=line.motifs,
+                commentaire=line.commentaire,
+            ))
+        for line in lines:
+            go = go_by_ean.get(line.ean13)
+            if not go:
+                raise HTTPException(
+                    status_code=404, detail=f"Produit {line.ean13} introuvable"
+                )
+            planned.append(PlannedMovement(
+                general_object_id=go.id,
+                ean13=line.ean13,
+                quantity=line.stock_reel,
+                movement_type="inventory",
                 motifs=line.motifs,
                 commentaire=line.commentaire,
             ))

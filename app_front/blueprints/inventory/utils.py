@@ -63,29 +63,31 @@ def get_unknown_products(ean13_list: List[str]) -> Dict[str, Any]:
     """
     return _post("/inventory/unknown-products", {"ean13": ean13_list})
 
-def prepare_inventory(ean13_list: List[str]) -> Any:
+def prepare_inventory(ean13_list: List[str], inventory_type: str = "partial") -> Any:
     """Calcule le stock théorique vs réel (opération lourde → FastAPI).
 
     Returns:
         Liste de dicts avec ean13, title, stock_theorique, stock_reel, difference.
     """
-    return _post("/inventory/prepare", {"ean13": ean13_list})
+    return _post("/inventory/prepare", {"ean13": ean13_list, "inventory_type": inventory_type})
 
-def validate_inventory(lines: List[Dict[str, Any]]) -> Dict[str, Any]:
+def validate_inventory(lines: List[Dict[str, Any]],
+                       inventory_type: str = "partial") -> Dict[str, Any]:
     """Valide et prépare les mouvements pour chaque ligne (opération lourde → FastAPI).
 
     Returns:
         {"planned": [...]}
     """
-    return _post("/inventory/validate", lines)
+    return _post("/inventory/validate", {"lines": lines, "inventory_type": inventory_type})
 
-def commit_inventory(planned: List[Dict[str, Any]]) -> Dict[str, Any]:
+def commit_inventory(planned: List[Dict[str, Any]],
+                     inventory_type: str = "partial") -> Dict[str, Any]:
     """Lance l'application asynchrone des mouvements (opération lourde → FastAPI).
 
     Returns:
         {"status": "started"}
     """
-    return _post("/inventory/commit", {"planned": planned})
+    return _post("/inventory/commit", {"planned": planned, "inventory_type": inventory_type})
 
 def get_inventory_status() -> Dict[str, Any]:
     """Interroge l'état de la tâche de commit (opération lourde → FastAPI).

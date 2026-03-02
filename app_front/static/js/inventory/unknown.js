@@ -157,6 +157,12 @@ function _setupFieldAutocomplete(inputId, suggestionsId, fieldName) {
     });
 }
 
+/**
+ * Fonction de rendu des suggestions d'autocomplete pour les champs produit.
+ * @param {HTMLElement} listEl
+ * @param {string[]} results
+ * @returns {void}
+ */
 function _renderFieldSuggestions(listEl, results) {
     listEl.innerHTML = '';
     if (!results || results.length === 0) {
@@ -180,6 +186,9 @@ let _supplierDebounce = 0;
 /** @type {number|null} ID du fournisseur sélectionné. */
 let _selectedSupplierId = null;
 
+/**
+ * Branche l'autocomplete sur le champ fournisseur de la modale.
+ */
 function _setupSupplierAutocomplete() {
     const input              = document.getElementById('modal-supplier-name');
     const suggestions        = document.getElementById('supplier-suggestions');
@@ -276,6 +285,9 @@ function _setupSupplierAutocomplete() {
     });
 }
 
+/**
+ * Masque le formulaire de création de fournisseur et réinitialise les champs.
+ */
 function _hideSupplierForm() {
     const formWrapper = document.getElementById('supplier-form-wrapper');
     formWrapper.classList.add('hidden');
@@ -286,12 +298,18 @@ function _hideSupplierForm() {
     document.getElementById('supplier-form-phone').value = '';
 }
 
+/**
+ * Rend les suggestions d'autocomplete pour le champ fournisseur.
+ * @param {Array<{id: number, name: string}>} results - Les résultats de la recherche.
+ * @param {string} query - La requête de recherche.
+ */
 function _renderSuggestions(results, query) {
     const suggestions = document.getElementById('supplier-suggestions');
     const createZone  = document.getElementById('supplier-create-zone');
     const createName  = document.getElementById('supplier-create-name');
     suggestions.innerHTML = '';
 
+    // Afficher les résultats ou l'option de création
     if (results && results.length > 0) {
         results.forEach(s => {
             const li = document.createElement('li');
@@ -309,6 +327,11 @@ function _renderSuggestions(results, query) {
     }
 }
 
+/**
+ * Sélectionne un fournisseur et met à jour les champs correspondants dans la modale.
+ * @param {number} id - L'ID du fournisseur.
+ * @param {string} name - Le nom du fournisseur.
+ */
 function _selectSupplier(id, name) {
     _selectedSupplierId = id;
     document.getElementById('modal-supplier-id').value = id;
@@ -320,6 +343,9 @@ function _selectSupplier(id, name) {
     document.getElementById('supplier-create-zone').classList.add('hidden');
 }
 
+/**
+ * Efface la sélection du fournisseur et réinitialise les champs correspondants.
+ */
 function _clearSupplier() {
     _selectedSupplierId = null;
     document.getElementById('modal-supplier-id').value = '';
@@ -328,6 +354,10 @@ function _clearSupplier() {
     document.getElementById('supplier-selected-badge').classList.add('hidden');
 }
 
+/**
+ * Ouvre la modale de création/modification de produit et initialise les champs.
+ * @param {string} ean - Le code EAN du produit.
+ */
 function _openModal(ean) {
     const modal = document.getElementById('product-modal');
     document.getElementById('modal-ean13').value = ean;
@@ -352,12 +382,19 @@ function _openModal(ean) {
     document.getElementById('modal-name-input').focus();
 }
 
+/**
+ * Ferme la modale de création/modification de produit.
+ */
 function _closeModal() {
     const modal = document.getElementById('product-modal');
     modal.classList.add('hidden');
     modal.classList.remove('is_open');
 }
 
+/**
+ * Fonction de soumission du formulaire de création de produit.
+ * @returns {Promise<void>}
+ */
 async function _submitProduct() {
     const ean13       = document.getElementById('modal-ean13').value;
     const productType = document.getElementById('modal-product-type').value;
@@ -372,9 +409,11 @@ async function _submitProduct() {
     const pages      = document.getElementById('modal-pages').value.trim() || null;
     const supplierId  = Number(document.getElementById('modal-supplier-id').value);
 
+    // Validation basique
     if (!name) { alert('Le nom est obligatoire.'); return; }
     if (!supplierId) { alert('Veuillez sélectionner ou créer un fournisseur.'); return; }
 
+    // Construire le payload pour l'API suivant le type de produit
     const payload = {
         ean13, product_type: productType, supplier_id: supplierId, name, description,
         price, genre, publication_year: pubYear, pages
@@ -388,14 +427,16 @@ async function _submitProduct() {
         payload.pages = pages;
     }
 
+    // Appeler l'API pour créer le produit
     const { ok, data } = await api.createProduct(payload);
 
+    // Gérer la réponse de l'API
     if (!ok || !data) {
         alert('Erreur lors de la création du produit.');
         return;
     }
 
-    // Retirer l'EAN de la liste des inconnus et mettre à jour
+    // Retirer l'EAN de la liste des inconnus et mettre à jour l'affichage
     unknownList = unknownList.filter(e => e !== ean13);
     _closeModal();
     _render();
