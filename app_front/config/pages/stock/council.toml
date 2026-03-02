@@ -9,6 +9,9 @@ styles = [
     "css/stock/council.css"
 ]
 scripts = ["js/main.js"]
+modules = [
+    "js/stock/council.js"
+]
 # Clées
 [meta]
 title = "Stock | Intranet"
