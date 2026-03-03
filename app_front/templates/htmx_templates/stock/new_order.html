@@ -1,0 +1,26 @@
+{# /home/remi-verschuur/Projets/sauvetage/app_front/templates/htmx_templates/stock/new_order.html #}
+<div id="new-order-form">
+    <form
+        method="post"
+        hx-post="{{ action_url }}"
+        hx-target="{{ target | default('#order-container') }}"
+        hx-swap="innerHTML"
+    >
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.supplier_id.label(class="form-label") }}
+            {{ form.supplier_id(class="form-control", placeholder="ID ou nom du fournisseur") }}
+            {% if form.supplier_id.errors %}
+                <div class="text-danger small">{{ form.supplier_id.errors[0] }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mt-2">
+            {{ form.submit(class="btn btn-primary",
+                           hx_get="{{ url_for('stock_htmx.new_order_line_form') }}",
+                           hx_target="{{ target | default('#order-container') }}",
+                           hx_swap="innerHTML") }}
+        </div>
+    </form>
+</div>

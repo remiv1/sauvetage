@@ -18,6 +18,12 @@
     {% for style in params.styles | default([]) %}
     <link rel="stylesheet" href="{{ url_for('static', filename=style) }}">
     {% endfor %}
+    {% if flags.htmx | default(false) %}
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.js"
+        integrity="sha384-ezjq8118wdwdRMj+nX4bevEi+cDLTbhLAeFF688VK8tPDGeLUe0WoY2MZtSla72F"
+        crossorigin="anonymous">
+    </script>
+    {% endif %}
 </head>
 <body>
     <header>

@@ -19,3 +19,6 @@
 - [x] Créer l'interface clients (customers_sprint)
 - [x] Créer l'interface d'accueil (home_sprint)
 - [ ] Créer l'interface catalogue/stocks/inventaires (inventory_sprint)
+  - [ ] Créer les formulaires htmx pour création de commandes et retours de commandes.
+  - [ ] Créer les formulaires pour l'ajout de lignes de commandes et de retours de commandes.
+  - [ ] Créer la logique d'ajout de formulaires dynamiques avec htmx.
