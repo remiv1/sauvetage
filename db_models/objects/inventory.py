@@ -31,6 +31,7 @@ class InventoryMovements(WorkingBase, QueryMixin):
 
     # Relations
     general_object = relationship("GeneralObjects", back_populates="inventory_movements")
+    orderin_line = relationship("OrderInLine", back_populates="inventory_movement", uselist=False)
 
     def __repr__(self) -> str:
         return f"<InventoryMovement(id={self.id}, general_object_id={self.general_object_id}, " \

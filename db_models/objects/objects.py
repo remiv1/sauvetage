@@ -59,6 +59,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                cascade=CASCADE_OPTIONS)
     order_lines = relationship("OrderLine", back_populates="general_object",
                                cascade=CASCADE_OPTIONS)
+    orderin_lines = relationship("OrderInLine", back_populates="general_object",
+                                 cascade=CASCADE_OPTIONS)
 
     def __repr__(self) -> str:
         return f"<GeneralObject(id={self.id}, supplier_id={self.supplier_id}, " \

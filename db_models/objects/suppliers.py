@@ -34,6 +34,7 @@ class Suppliers(WorkingBase):
 
     # Relations
     objects = relationship("GeneralObjects", back_populates="supplier")
+    orderin = relationship("OrderIn", back_populates="supplier")
 
     def __repr__(self) -> str:
         return f"<Supplier(id={self.id}, name={self.name}, contact_email={self.contact_email}, " \

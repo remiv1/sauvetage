@@ -8,7 +8,10 @@ styles = [
     "css/main.css",
     "css/stock/order.css"
 ]
-scripts = ["js/main.js"]
+scripts = [
+    "js/main.js",
+    "js/stock/order.js"
+]
 # Clées
 [meta]
 title = "Stock | Intranet"

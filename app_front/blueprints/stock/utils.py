@@ -1,10 +1,11 @@
 """Module utils pour le blueprint stock"""
 
 from sqlalchemy import select, func
-from sqlalchemy.sql import distinct
 from app_front.config.db_conf import get_main_session
 from db_models.objects import InventoryMovements
 from db_models.objects.objects import GeneralObjects
+from db_models.objects.stocks import OrderIn, OrderInLine
+from db_models.objects.suppliers import Suppliers
 
 def get_zero_price_items() -> list[dict]:
     """Récupère les articles dont le dernier inventaire a un prix de revient à zéro.
@@ -99,3 +100,88 @@ def update_movement_price(movement_id: int, price: float) -> int:
         session.rollback()
         raise RuntimeError(f"Erreur lors de la création du mouvement : {exc}") from exc
     return new_movement.id
+
+def get_supplier_orders() -> list[dict]:
+    """Récupère la liste des commandes fournisseurs avec le nom du fournisseur
+    et le nombre de lignes de commande.
+
+    Returns:
+        list[dict]: Liste de dictionnaires contenant les infos de chaque commande.
+    """
+    session = get_main_session()
+
+    # Sous-requête : nombre de lignes par commande
+    line_count_sq = (
+        select(
+            OrderInLine.order_in_id,
+            func.count(OrderInLine.id).label("line_count")  # pylint: disable=not-callable
+        )
+        .group_by(OrderInLine.order_in_id)
+        .subquery()
+    )
+
+    stmt = (
+        select(
+            OrderIn.id,
+            OrderIn.order_ref,
+            OrderIn.external_ref,
+            OrderIn.value,
+            Suppliers.name.label("supplier_name"),
+            func.coalesce(line_count_sq.c.line_count, 0).label("line_count"),
+        )
+        .outerjoin(Suppliers, OrderIn.supplier_id == Suppliers.id)
+        .outerjoin(line_count_sq, OrderIn.id == line_count_sq.c.order_in_id)
+        .order_by(OrderIn.id.desc())
+    )
+
+    result = session.execute(stmt).all()
+    return [
+        {
+            "id": row[0],
+            "order_ref": row[1],
+            "external_ref": row[2],
+            "value": row[3],
+            "supplier_name": row[4] or "—",
+            "line_count": row[5],
+        }
+        for row in result
+    ]
+
+
+def cancel_supplier_order(order_id: int) -> None:
+    """Supprime une commande fournisseur et ses lignes associées.
+
+    Les mouvements d'inventaire liés aux lignes sont désassociés (inventory_movement_id
+    mis à NULL sur la ligne) mais conservés à titre de traçabilité.
+
+    Args:
+        order_id: L'identifiant de la commande à annuler.
+
+    Raises:
+        ValueError: Si la commande n'existe pas.
+        RuntimeError: En cas d'erreur lors du commit.
+    """
+    session = get_main_session()
+    order = session.get(OrderIn, order_id)
+    if order is None:
+        raise ValueError(f"Commande {order_id} introuvable")
+
+    # Chargement ORM des lignes pour passer par les relations SQLAlchemy
+    lines = session.execute(
+        select(OrderInLine).where(OrderInLine.order_in_id == order_id)
+    ).scalars().all()
+
+    for line in lines:
+        # Désassociation du mouvement d'inventaire (FK nullable) avant suppression
+        line.inventory_movement_id = None
+        session.delete(line)
+
+    # Flush pour propager les changements sur les lignes avant de supprimer la commande
+    session.flush()
+    session.delete(order)
+
+    try:
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        raise RuntimeError(f"Erreur lors de l'annulation de la commande : {exc}") from exc

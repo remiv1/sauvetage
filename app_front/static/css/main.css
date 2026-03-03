@@ -639,4 +639,12 @@ textarea {
   border-radius: 10px;
 }
 
+.active {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
 /*# sourceMappingURL=main.css.map */

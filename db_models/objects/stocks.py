@@ -20,18 +20,19 @@ class OrderIn(WorkingBase, QueryMixin):
     external_ref: Mapped[int] = mapped_column(Integer,
                                               nullable=False,
                                               comment="Ref externe")
-    supplier: Mapped[str] = mapped_column(String,
+    supplier_id: Mapped[int] = mapped_column(Integer,
                                           ForeignKey("app_schema.suppliers.id"),
                                           comment="ID du fournisseur de la commande")
     value: Mapped[Numeric] = mapped_column(Numeric(10, 2),
                                            comment="Valeur totale de la commande")
 
     # Relations
-    general_object = relationship("GeneralObjects", back_populates="order_in")
+    orderin_lines = relationship("OrderInLine", back_populates="order_in")
+    supplier = relationship("Suppliers", back_populates="orderin")
 
     def __repr__(self) -> str:
         return f"<OrderIn(id={self.id}, external_ref={self.external_ref}, " \
-                + f"order_ref={self.order_ref}, supplier={self.supplier}, " \
+                + f"order_ref={self.order_ref}, supplier_id={self.supplier_id}, " \
                 + f"value={self.value})>"
 
     def to_dict(self) -> Dict[str, Any]:
@@ -40,7 +41,7 @@ class OrderIn(WorkingBase, QueryMixin):
             "id": self.id,
             "order_ref": self.order_ref,
             "external_ref": self.external_ref,
-            "supplier": self.supplier,
+            "supplier_id": self.supplier_id,
             "value": (float(self.value) if isinstance(self.value, (int, float, Decimal)) else None)
         }
 
@@ -64,6 +65,10 @@ class OrderInLine(WorkingBase, QueryMixin):
                                                    ForeignKey("app_schema.general_objects.id"),
                                                    nullable=False,
                                                    comment="ID de l'objet")
+    inventory_movement_id: Mapped[int] = mapped_column(Integer,
+                                                    ForeignKey("app_schema.inventory_movements.id"),
+                                                    nullable=True,
+                                                    comment="ID du mouvement de stock associé")
     quantity: Mapped[int] = mapped_column(Integer,
                                           nullable=False,
                                           comment="Quantité commandée")
@@ -73,8 +78,9 @@ class OrderInLine(WorkingBase, QueryMixin):
                                                 comment="Taux de TVA en pourcentage")
 
     # Relations
-    order_in = relationship("OrderIn", back_populates="order_in_lines")
-    general_object = relationship("GeneralObjects", back_populates="order_in_lines")
+    order_in = relationship("OrderIn", back_populates="orderin_lines")
+    general_object = relationship("GeneralObjects", back_populates="orderin_lines")
+    inventory_movement = relationship("InventoryMovements", back_populates="orderin_line")
 
     def __repr__(self) -> str:
         return f"<OrderInLine(id={self.id}, order_in_id={self.order_in_id}, " \

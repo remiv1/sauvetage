@@ -1,10 +1,9 @@
 """Blueprint pour les fonctionnalités de gestion des stocks"""
 
-from flask import Blueprint
+from flask import Blueprint, redirect, url_for, flash
 from app_front.utils.pages import render_page
-from app_front.blueprints.stock.utils import (
-    is_zero_price_items, get_zero_price_items
-)
+from app_front.blueprints.stock.utils import (is_zero_price_items, get_zero_price_items,
+    get_supplier_orders, cancel_supplier_order)
 
 bp_stock = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -23,8 +22,37 @@ def council():
 
 @bp_stock.route("/orders", methods=["GET"])
 def orders():
-    """Page de gestion des commandes entrantes"""
+    """Page de gestion des commandes fournisseurs (entrantes)"""
+    orders_list = get_supplier_orders()
+    return render_page("stock_order", orders=orders_list)
+
+@bp_stock.route("/orders/<int:order_id>", methods=["GET"])
+def view_order(order_id: int):
+    """Page de détail d'une commande fournisseur"""
+    # TODO: implémenter la vue détaillée
     return render_page("stock_order")
+
+@bp_stock.route("/orders/new", methods=["GET", "POST"])
+def create_order():
+    """Création d'une nouvelle commande fournisseur"""
+    # TODO: implémenter le formulaire de création
+    return render_page("stock_order")
+
+@bp_stock.route("/returns/new", methods=["GET", "POST"])
+def create_return():
+    """Création d'un retour fournisseur"""
+    # TODO: implémenter le formulaire de retour
+    return render_page("stock_order")
+
+@bp_stock.route("/orders/<int:order_id>/cancel", methods=["POST"])
+def cancel_order(order_id: int):
+    """Annule une commande fournisseur"""
+    try:
+        cancel_supplier_order(order_id)
+        flash("Commande annulée avec succès.", "success")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("stock.orders"))
 
 @bp_stock.route("/reservations", methods=["GET"])
 def reservations():
