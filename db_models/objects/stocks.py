@@ -14,16 +14,15 @@ class OrderIn(WorkingBase, QueryMixin):
     __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    order_ref: Mapped[str] = mapped_column(String,
-                                           nullable=False,
+    order_ref: Mapped[str] = mapped_column(String, nullable=False,
                                            comment="Numéro de commande")
-    external_ref: Mapped[int] = mapped_column(Integer,
-                                              nullable=False,
+    external_ref: Mapped[int] = mapped_column(Integer, nullable=True,
                                               comment="Ref externe")
     supplier_id: Mapped[int] = mapped_column(Integer,
                                           ForeignKey("app_schema.suppliers.id"),
+                                          nullable=False,
                                           comment="ID du fournisseur de la commande")
-    value: Mapped[Numeric] = mapped_column(Numeric(10, 2),
+    value: Mapped[Numeric] = mapped_column(Numeric(10, 2), default=0.00, nullable=False,
                                            comment="Valeur totale de la commande")
 
     # Relations

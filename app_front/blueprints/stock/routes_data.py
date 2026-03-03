@@ -9,7 +9,6 @@ from app_front.blueprints.stock.utils import update_movement_price
 
 bp_stock_data = Blueprint("stock_data", __name__, url_prefix="/stock/data")
 
-
 @bp_stock_data.route("/council", methods=["POST"])
 def api_update_price():
     """Met à jour le prix de revient d'un mouvement d'inventaire."""
