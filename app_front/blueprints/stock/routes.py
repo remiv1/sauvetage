@@ -2,31 +2,36 @@
 
 from flask import Blueprint
 from app_front.utils.pages import render_page
+from app_front.blueprints.stock.utils import (
+    is_zero_price_items, get_zero_price_items
+)
 
 bp_stock = Blueprint("stock", __name__, url_prefix="/stock")
 
-@bp_stock.route("/")
+@bp_stock.route("/", methods=["GET"])
 def index():
     """Page d'accueil du module stocks"""
-    has_zero_price_items = False
-    return render_page("stock_index", has_zero_price_items=has_zero_price_items)
+    has_zero_price_items = is_zero_price_items()
+    return render_page("stock_index",
+                       has_zero_price_items=has_zero_price_items)
 
-@bp_stock.route("/council")
+@bp_stock.route("/council", methods=["GET"])
 def council():
-    """Page de gestion du conseil de stock"""
-    return render_page("stock_council")
+    """Page de gestion de réconciliation des prix de stocks"""
+    items_to_council = get_zero_price_items()
+    return render_page("stock_council", items_to_council=items_to_council)
 
-@bp_stock.route("/orders")
+@bp_stock.route("/orders", methods=["GET"])
 def orders():
     """Page de gestion des commandes entrantes"""
     return render_page("stock_order")
 
-@bp_stock.route("/reservations")
+@bp_stock.route("/reservations", methods=["GET"])
 def reservations():
     """Page de gestion des réservations de stocks"""
     return render_page("stock_reservations")
 
-@bp_stock.route("/search")
+@bp_stock.route("/search", methods=["GET"])
 def search():
     """Page de recherche de stocks"""
     return render_page("stock_search")

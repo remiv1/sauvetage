@@ -9,5 +9,6 @@ from .inventory.routes import bp_inventory # type: ignore
 from .inventory.routes_data import bp_inventory_data # type: ignore
 from .order.routes import bp_order # type: ignore
 from .stock.routes import bp_stock # type: ignore
+from .stock.routes_data import bp_stock_data # type: ignore
 from .supplier.routes import bp_supplier # type: ignore
 from .user.routes import bp_user # type: ignore
