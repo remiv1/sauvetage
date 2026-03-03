@@ -362,6 +362,7 @@ function _openModal(ean) {
     document.getElementById('modal-name-input').value = '';
     document.getElementById('modal-description-input').value = '';
     document.getElementById('modal-price').value = '';
+    document.getElementById('modal-add-to-dilicom').checked = false;
     document.getElementById('modal-author').value = '';
     document.getElementById('modal-diffuser').value = '';
     document.getElementById('modal-editor').value = '';
@@ -405,6 +406,7 @@ async function _submitProduct() {
     const pubYear    = document.getElementById('modal-publication-year').value.trim() || null;
     const pages      = document.getElementById('modal-pages').value.trim() || null;
     const supplierId  = Number(document.getElementById('modal-supplier-id').value);
+    const addToDilicom = document.getElementById('modal-add-to-dilicom').checked;
 
     // Validation basique
     if (!name) { alert('Le nom est obligatoire.'); return; }
@@ -423,6 +425,7 @@ async function _submitProduct() {
         payload.genre = genre;
         payload.publication_year = pubYear;
         payload.pages = pages;
+        payload.add_to_dilicom = addToDilicom;
     }
 
     // Appeler l'API pour créer le produit

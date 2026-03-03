@@ -76,6 +76,10 @@
                 {{ product_form.price(class="form-control", id="modal-price",
                     step="0.01", min="0", type="number") }}
             </div>
+            <div class="form-group">
+                {{ product_form.add_to_dilicom.label(class="form-check-label") }}
+                {{ product_form.add_to_dilicom(class="form-check-input", id="modal-add-to-dilicom", type="checkbox") }}
+            </div>
             <div class="form-group book-field" id="group-author">
                 {{ product_form.author.label(class="form-label") }}
                 <div class="autocomplete-wrapper">

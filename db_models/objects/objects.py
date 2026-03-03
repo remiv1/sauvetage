@@ -105,6 +105,8 @@ class Books(WorkingBase, QueryMixin):
     genre: Mapped[str] = mapped_column(String, comment="Genre du livre")
     publication_year: Mapped[int] = mapped_column(Integer, comment="Année de publication du livre")
     pages: Mapped[int] = mapped_column(Integer, comment="Nombre de pages du livre")
+    add_to_dilicom: Mapped[bool] = mapped_column(Boolean, default=False,
+                                                 comment="Si doit être ajouté à la base Dilicom")
 
     # Meta-données de suivi
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,

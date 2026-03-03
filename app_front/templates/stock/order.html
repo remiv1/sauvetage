@@ -1,0 +1,40 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+
+<div class="orders-container">
+    <div class="orders-header">
+        <h2>Commandes</h2>
+    </div>
+
+    {% if orders %}
+    {# Tableau d'affichage des commandes #}
+    <table class="orders-table">
+        <thead>
+            <tr>
+                <th>Numéro de commande</th>
+                <th>Fournisseur</th>
+                <th>Date de commande</th>
+                <th>Statut</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td class="identifiant">{{ order.order_number }}</td>
+                <td>{{ supplier.name }}</td>
+                <td>{{ order.order_date.strftime('%d/%m/%Y') }}</td>
+                <td>{{ order.status }}</td>
+                <td>{{ order.total_amount }} €</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p class="no-order">Aucune commande disponible.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

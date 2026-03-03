@@ -1,7 +1,7 @@
 """Blueprint pour les fonctionnalités du tableau de bord"""
 
-from flask import Blueprint, render_template, jsonify
-from app_front.utils.pages import load_page_params
+from flask import Blueprint, jsonify
+from app_front.utils.pages import render_page
 
 bp_dashboard = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -9,9 +9,7 @@ bp_dashboard = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 @bp_dashboard.route("/")
 def index():
     """Page principale du tableau de bord."""
-    config = load_page_params("dashboard")
-    params = config.get("params", {})
-    return render_template("dashboard/dashboard.html", params=params)
+    return render_page("dashboard")
 
 
 def _data_general() -> dict:

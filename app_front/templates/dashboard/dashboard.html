@@ -1,53 +1,37 @@
 {% extends layout.extend_layout %}
-
-{% block title %}Editions Sauvetage - Modification de compte{% endblock %}
-
-{% set admin_permissions = (first_user or '1' in session['permissions'] or '9' in session['permissions']) and (user['username'] != session['username']) %}
-
 {% block content %}
-    <div class="register-container mt-3">
-        {# Message Flash #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        <h2 class="register-container__title">Modification de compte</h2>
-        {% for error in form.username.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.email.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.permissions.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        <form class="register-container__form" method="POST">
-            {{ form.hidden_tag() }}
+    <div class="dashboard-container">
+        <div class="tabs-row">
+            <button class="tab active" data-target="orders">Commandes</button>
+            <button class="tab" data-target="stocks">Stocks</button>
+            <button class="tab" data-target="finances">Finances</button>
+        </div>
 
-            <div class="form-group register-container__form__group mb-3">
-                {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control", placeholder="Nom d'utilisateur", value=form.username.data) }}
-            </div>
+        <div class="tab-content">
+            <section id="orders" class="panel">
+                <h2>Dernières commandes</h2>
+                <div id="orders-table" class="table-wrap">Chargement...</div>
+            </section>
 
-            <div class="form-group register-container__form__group mb-3">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control", placeholder="Adresse e-mail", value=form.email.data) }}
-                <div id="email-error" class="email-error"></div>
-            </div>
+            <section id="stocks" class="panel hidden">
+                <h2>Distribution du stock</h2>
+                <div class="charts-row">
+                    <canvas id="stocks-donut" width="400" height="300"></canvas>
+                    <div id="stocks-legend" class="legend"></div>
+                </div>
+                <div class="kpis-row">
+                    <div class="kpi-items">Total Articles<br><span id="kpi-total">—</span></div>
+                    <div class="kpi-amount">Valeur Totale<br><span id="kpi-value">—</span></div>
+                    <div class="kpi-categories">Catégories<br><span id="kpi-cat">—</span></div>
+                </div>
+            </section>
 
-            {% if admin_permissions %}
-            <div class="form-group register-container__form__group__checkbox mb-3">
-                {{ form.permissions.label(class="form-label checkbox-label") }}
-                {{ form.permissions(class="form-control register-container__form__group__checkbox") }}
-            </div>
-            {% endif %}
-
-            <div class="form-group register-container__form__group mb-3">
-                {{ form.submit(class="btn btn-primary", value="Mettre à jour") }}
-            </div>
-        </form>
+            <section id="finances" class="panel hidden">
+                <h2>Comptabilité annuelle</h2>
+                <canvas id="finances-bar" width="900" height="300"></canvas>
+            </section>
+        </div>
     </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {% endblock %}

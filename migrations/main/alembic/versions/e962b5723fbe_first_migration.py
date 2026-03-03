@@ -1,8 +1,8 @@
-"""First Migration
+"""first migration
 
-Revision ID: c11a652bad1d
+Revision ID: e962b5723fbe
 Revises: 
-Create Date: 2026-03-02 17:38:27.904999
+Create Date: 2026-03-03 08:10:48.644528
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c11a652bad1d'
+revision: str = 'e962b5723fbe'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -197,6 +197,7 @@ def upgrade() -> None:
     sa.Column('genre', sa.String(), nullable=False, comment='Genre du livre'),
     sa.Column('publication_year', sa.Integer(), nullable=False, comment='Année de publication du livre'),
     sa.Column('pages', sa.Integer(), nullable=False, comment='Nombre de pages du livre'),
+    sa.Column('add_to_dilicom', sa.Boolean(), nullable=False, comment='Si doit être ajouté à la base Dilicom'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création du livre'),
     sa.Column('updated_at', sa.DateTime(), nullable=False, comment='Date de dernière mise à jour du livre'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),

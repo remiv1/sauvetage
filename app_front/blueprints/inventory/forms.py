@@ -7,7 +7,7 @@ Module contenant les formulaires liés à l'inventaire :
 
 from flask_wtf import FlaskForm
 from wtforms import (StringField, TextAreaField, DecimalField, SelectField, SubmitField,
-    HiddenField, FileField)
+    HiddenField, FileField, BooleanField)
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, Email
 
 GENERAL_OBJECT_STRING = "Identifiant de l'objet général (ID)"
@@ -46,6 +46,8 @@ class ProductCreateForm(FlaskForm):
                  ("other", "Autre (jeu, objet de piété…)")],
         default="book",
         validators=[DataRequired()])
+    add_to_dilicom = BooleanField("Ajouter à la base Dilicom",
+        default=False)
     supplier_id = HiddenField("Fournisseur (ID)",
         validators=[DataRequired()])
     supplier_name = StringField("Fournisseur",

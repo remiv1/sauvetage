@@ -1,0 +1,36 @@
+@use "../core/variables" as variables;
+
+.orders-container {
+    .orders-header {
+        
+    }
+}
+
+/* ── Tableaux ────────────────────────────────────────────────────────────── */
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: variables.$space-md;
+
+    th,
+    td {
+        padding: variables.$space-sm;
+        border: 1px solid variables.$gray-200;
+        font-size: 0.9rem;
+    }
+
+    th {
+        background: variables.$primary-color;
+        color: white;
+        text-align: left;
+        font-weight: 500;
+    }
+
+    tbody tr:nth-child(even) {
+        background: variables.$gray-100;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+}

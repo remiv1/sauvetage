@@ -14,8 +14,8 @@ customer_view = "customer/view.toml"
 inventory = "inventory.toml"
 stock_index = "stock/index.toml"
 stock_search = "stock/search.toml"
-stock_in = "stock/in.toml"
-stock_out = "stock/out.toml"
+stock_order = "stock/order.toml"
+stock_reservations = "stock/reservations.toml"
 stock_council = "stock/council.toml"
 
 # ------------------------------------------------------------------------------
