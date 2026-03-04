@@ -22,3 +22,10 @@
   - [ ] Créer les formulaires htmx pour création de commandes et retours de commandes.
   - [ ] Créer les formulaires pour l'ajout de lignes de commandes et de retours de commandes.
   - [ ] Créer la logique d'ajout de formulaires dynamiques avec htmx.
+  - [ ] Nettoyer les dépôts sur la collab ou supprimer et recloner :
+
+  ```bash
+  git fetch origin --prune
+  git checkout main
+  git reset --hard origin/main
+  ```
