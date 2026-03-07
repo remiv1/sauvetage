@@ -1,11 +1,9 @@
 """Module utils pour le blueprint stock"""
 
-from sqlalchemy import select, func
 from app_front.config.db_conf import get_main_session
-from db_models.objects import InventoryMovements
-from db_models.objects.objects import GeneralObjects
-from db_models.objects.stocks import OrderIn, OrderInLine
-from db_models.objects.suppliers import Suppliers
+from app_front.blueprints.stock.forms import OrderInCreateForm
+from db_models.repositories.stock import StockRepository
+
 
 def get_zero_price_items() -> list[dict]:
     """Récupère les articles dont le dernier inventaire a un prix de revient à zéro.
@@ -13,54 +11,18 @@ def get_zero_price_items() -> list[dict]:
     Retourne une liste de dictionnaires avec les clés :
     - `general_object_id`, `name`, `ean13`, `price_at_movement`, `movement_id`.
     """
-    session = get_main_session()
-    im = InventoryMovements
-    go = GeneralObjects
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.get_zero_price_items()
 
-    # Sous-requête simple : timestamp max par general_object_id (mouvements d'inventaire)
-    latest = select(
-                im.general_object_id,
-                func.max(im.movement_timestamp).label("max_ts")
-            ).where(
-                im.movement_type == "inventory"
-            ).group_by(
-                im.general_object_id
-            ).subquery()
-
-    stmt = select(
-                im.id.label("movement_id"),
-                im.general_object_id,
-                go.name,
-                go.ean13,
-                im.price_at_movement
-            ).select_from(
-                im.__table__.join(
-                    latest,
-                    (im.general_object_id == latest.c.general_object_id) &
-                    (im.movement_timestamp == latest.c.max_ts)
-                ).join(go, im.general_object_id == go.id)
-            ).where(
-                im.price_at_movement == 0
-            )
-
-    result = session.execute(stmt).all()
-    return [
-        {
-            "movement_id": row[0],
-            "general_object_id": row[1],
-            "name": row[2],
-            "ean13": row[3],
-            "price_at_movement": row[4],
-        }
-        for row in result
-    ]
 
 def is_zero_price_items() -> bool:
     """
     Indique s'il existes des articles dont le dernier inventaire
     a un prix de revient à zéro
     """
-    return len(get_zero_price_items()) > 0
+    stock_repo = StockRepository(get_main_session())
+    return len(stock_repo.get_zero_price_items()) > 0
+
 
 def update_movement_price(movement_id: int, price: float) -> int:
     """Crée un nouveau mouvement d'inventaire en dupliquant le mouvement
@@ -79,27 +41,9 @@ def update_movement_price(movement_id: int, price: float) -> int:
         ValueError: si le mouvement d'origine n'existe pas.
         RuntimeError: en cas d'erreur lors du commit.
     """
-    session = get_main_session()
-    original = session.get(InventoryMovements, movement_id)
-    if original is None:
-        raise ValueError(f"Mouvement {movement_id} introuvable")
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.update_movement_price(movement_id, price)
 
-    new_movement = InventoryMovements(
-        general_object_id=original.general_object_id,
-        movement_type=original.movement_type,
-        quantity=original.quantity,
-        price_at_movement=price,
-        source=original.source,
-        destination=original.destination,
-        notes=f"Correction prix (réf. mouvement #{movement_id})",
-    )
-    session.add(new_movement)
-    try:
-        session.commit()
-    except Exception as exc:
-        session.rollback()
-        raise RuntimeError(f"Erreur lors de la création du mouvement : {exc}") from exc
-    return new_movement.id
 
 def get_supplier_orders() -> list[dict]:
     """Récupère la liste des commandes fournisseurs avec le nom du fournisseur
@@ -108,44 +52,8 @@ def get_supplier_orders() -> list[dict]:
     Returns:
         list[dict]: Liste de dictionnaires contenant les infos de chaque commande.
     """
-    session = get_main_session()
-
-    # Sous-requête : nombre de lignes par commande
-    line_count_sq = (
-        select(
-            OrderInLine.order_in_id,
-            func.count(OrderInLine.id).label("line_count")  # pylint: disable=not-callable
-        )
-        .group_by(OrderInLine.order_in_id)
-        .subquery()
-    )
-
-    stmt = (
-        select(
-            OrderIn.id,
-            OrderIn.order_ref,
-            OrderIn.external_ref,
-            OrderIn.value,
-            Suppliers.name.label("supplier_name"),
-            func.coalesce(line_count_sq.c.line_count, 0).label("line_count"),
-        )
-        .outerjoin(Suppliers, OrderIn.supplier_id == Suppliers.id)
-        .outerjoin(line_count_sq, OrderIn.id == line_count_sq.c.order_in_id)
-        .order_by(OrderIn.id.desc())
-    )
-
-    result = session.execute(stmt).all()
-    return [
-        {
-            "id": row[0],
-            "order_ref": row[1],
-            "external_ref": row[2],
-            "value": row[3],
-            "supplier_name": row[4] or "—",
-            "line_count": row[5],
-        }
-        for row in result
-    ]
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.get_supplier_orders()
 
 
 def cancel_supplier_order(order_id: int) -> None:
@@ -161,27 +69,25 @@ def cancel_supplier_order(order_id: int) -> None:
         ValueError: Si la commande n'existe pas.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    session = get_main_session()
-    order = session.get(OrderIn, order_id)
-    if order is None:
-        raise ValueError(f"Commande {order_id} introuvable")
+    stock_repo = StockRepository(get_main_session())
+    stock_repo.cancel_supplier_order(order_id)
 
-    # Chargement ORM des lignes pour passer par les relations SQLAlchemy
-    lines = session.execute(
-        select(OrderInLine).where(OrderInLine.order_in_id == order_id)
-    ).scalars().all()
 
-    for line in lines:
-        # Désassociation du mouvement d'inventaire (FK nullable) avant suppression
-        line.inventory_movement_id = None
-        session.delete(line)
+def create_order_in_db(form: OrderInCreateForm) -> int:
+    """Crée une nouvelle commande fournisseur en base à partir des données du formulaire.
 
-    # Flush pour propager les changements sur les lignes avant de supprimer la commande
-    session.flush()
-    session.delete(order)
+    Args:
+        form: Le formulaire contenant les données de la commande.
 
+    Raises:
+        RuntimeError: En cas d'erreur lors du commit.
+    """
+    supplier_id = form.supplier_id.data
+    if supplier_id is None:
+        raise ValueError("Le champ fournisseur est requis.")
     try:
-        session.commit()
-    except Exception as exc:
-        session.rollback()
-        raise RuntimeError(f"Erreur lors de l'annulation de la commande : {exc}") from exc
+        supplier_id = int(supplier_id)
+    except ValueError as e:
+        raise ValueError("Le champ fournisseur doit être un nombre entier.") from e
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.create_order_in_db(supplier_id)

@@ -29,6 +29,20 @@
   flex-wrap: wrap;
 }
 
+/* ── Formulaire de création / édition ───────────────────────────────────── */
+.orders-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  /* occuper 100% de la largeur de l'écran (full-bleed) tout en restant
+     visuellement centré par rapport au conteneur parent */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  box-sizing: border-box;
+  padding: 1rem;
+}
+
 /* ── Boutons ─────────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
