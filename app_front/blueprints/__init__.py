@@ -12,4 +12,5 @@ from .stock.routes import bp_stock # type: ignore
 from .stock.routes_data import bp_stock_data # type: ignore
 from .stock.routes_htmx import bp_stock_htmx # type: ignore
 from .supplier.routes import bp_supplier # type: ignore
+from .supplier.routes_data import bp_supplier_data # type: ignore
 from .user.routes import bp_user # type: ignore

@@ -6,8 +6,11 @@ Endpoints :
 
 from flask import Blueprint, jsonify, request
 from app_front.blueprints.stock.utils import update_movement_price
+from app_front.blueprints.stock.forms import OrderInCreateForm
+from app_front.blueprints.stock.utils import create_order_in_db
 
 bp_stock_data = Blueprint("stock_data", __name__, url_prefix="/stock/data")
+
 
 @bp_stock_data.route("/council", methods=["POST"])
 def api_update_price():
@@ -32,3 +35,17 @@ def api_update_price():
         return jsonify({"error": str(exc)}), 500
 
     return jsonify({"ok": True, "new_movement_id": new_id}), 200
+
+
+@bp_stock_data.route("/orderin/create", methods=["POST"])
+def api_create_order():
+    """Crée une nouvelle commande fournisseur."""
+    data = request.get_json(silent=True) or {}
+
+    try:
+        form = OrderInCreateForm(**data)
+        id_supplier = create_order_in_db(form)
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"ok": True, "id_supplier": id_supplier}), 200
