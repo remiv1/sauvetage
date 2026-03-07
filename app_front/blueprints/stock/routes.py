@@ -22,14 +22,24 @@ def index():
 def council():
     """Page de gestion de réconciliation des prix de stocks"""
     items_to_council = get_zero_price_items()
+    # TODO: implémenter le formulaire de mise à jour des prix et le traitement associé
     return render_page("stock_council", items_to_council=items_to_council)
 
 
 @bp_stock.route("/orders", methods=["GET", "POST"])
 def orders():
     """Page de gestion des commandes fournisseurs (entrantes)"""
+    form = OrderInCreateForm()
     orders_list = get_supplier_orders()
+    if form.validate_on_submit():
+        try:
+            create_order_in_db(form)
+            flash("Commande créée avec succès.", "success")
+            return redirect(url_for("stock_htmx.new_order_table"))
+        except (ValueError, RuntimeError) as exc:
+            flash(str(exc), "error")
     return render_page("stock_order", orders=orders_list)
+
 
 
 @bp_stock.route("/orders/new", methods=["GET", "POST"])
@@ -43,6 +53,7 @@ def create_return():
     """Création d'un retour fournisseur"""
     # TODO: implémenter le formulaire de retour
     return render_page("stock_order")
+
 
 
 @bp_stock.route("/reservations", methods=["GET"])
