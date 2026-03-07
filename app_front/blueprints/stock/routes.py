@@ -43,6 +43,7 @@ def orders():
 
 
 
+
 @bp_stock.route("/orders/new", methods=["GET", "POST"])
 def create_order():
     """Création d'une nouvelle commande fournisseur"""
@@ -54,6 +55,7 @@ def create_return():
     """Création d'un retour fournisseur"""
     # TODO: implémenter le formulaire de retour
     return render_page("stock_order")
+
 
 
 

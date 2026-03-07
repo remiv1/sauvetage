@@ -1,9 +1,15 @@
 """first_migration
 
 <<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
+<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
 Revision ID: b60b5de6b88d
 Revises: 
 Create Date: 2026-03-31 16:40:18.024733
+========
+Revision ID: 40b4e1d918f9
+Revises: 
+Create Date: 2026-03-07 14:27:31.768052
+>>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
 ========
 Revision ID: 40b4e1d918f9
 Revises: 
@@ -19,7 +25,11 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 <<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
+<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
 revision: str = 'b60b5de6b88d'
+========
+revision: str = '40b4e1d918f9'
+>>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
 ========
 revision: str = '40b4e1d918f9'
 >>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
@@ -217,7 +227,11 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('order_ref', sa.String(), nullable=False, comment='Numéro de commande'),
 <<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
+<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
     sa.Column('external_ref', sa.String(), nullable=True, comment='Ref externe'),
+========
+    sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
+>>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
 ========
     sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
 >>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
