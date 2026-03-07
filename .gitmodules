@@ -1,0 +1,3 @@
+[submodule "sales"]
+	path = sales
+	url = /home/remi-verschuur/Projets/sales-repo.git
