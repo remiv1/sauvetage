@@ -7,11 +7,11 @@ RUN apt-get update && apt-get install -y gettext
 WORKDIR /docker-entrypoint-initdb.d
 
 # Copier les fichiers
-COPY init/00_generate_models.sh .
-COPY init/*.sql.pattern .
+COPY tests/init/00_generate_models.sh .
+COPY tests/init/*.sql.pattern .
 
-# Copier le fichier .env dans un emplacementtemporaire
-COPY .env.db_main /tmp/.env
+# Copier le fichier .env global dans un emplacement temporaire
+COPY databases/main/.env.db_main /tmp/.env
 
 # Exécuter le script de génération avant le démarrage
 RUN chmod +x 00_generate_models.sh && \

@@ -8,6 +8,7 @@ from .customers import (
     CustomerParts, CustomerPros
 )
 from .orders import Order, OrderLine
+from .stocks import OrderIn, OrderInLine
 from .inventory import InventoryMovements
 from .invoices import Invoice
 from .shipments import Shipment

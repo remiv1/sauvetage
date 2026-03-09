@@ -3,28 +3,49 @@
 from sqlalchemy.orm import Session
 from db_models.objects.customers import Customers
 
-def test_customer_create_read_and_update(db_session: Session) -> None:    # pylint: disable=redefined-outer-name
-    """test de lecture du client rentré précédemment et de modification"""
-    customer = Customers(wpwc_id="1", henrri_id="2", customer_type="pro", is_active=True)
-    db_session.add(customer)
-    db_session.commit()
-    new_customer = Customers(wpwc_id="ojg54561", henrri_id="oe65v06b5g106e", customer_type="part")
-    db_session.add(new_customer)
-    db_session.commit()
-    customer = db_session.query(Customers).where(Customers.id==2).first()
-    if customer:
-        customer.is_active = False
-    db_session.add(customer)
-    db_session.commit()
-    customer = db_session.query(Customers).where(Customers.id==2).first()
-    assert customer.is_active is False if customer else None
-    assert customer.customer_type == 'part' if customer else None
 
-def test_create_complete_customer(db_session: Session, complete_customer_pro) -> None:    # pylint: disable=redefined-outer-name # type: ignore
+def test_customer_create_read_and_update(
+    db_session_main: Session,
+) -> None:  # pylint: disable=redefined-outer-name
+    """test de lecture du client rentré précédemment et de modification"""
+    customer = Customers(
+        wpwc_id="1", henrri_id="2", customer_type="pro", is_active=True
+    )
+    db_session_main.add(customer)
+    db_session_main.commit()
+    new_customer = Customers(
+        wpwc_id="ojg54561", henrri_id="oe65v06b5g106e", customer_type="part"
+    )
+    db_session_main.add(new_customer)
+    db_session_main.commit()
+    customer = (
+        db_session_main.query(Customers)
+        .where(Customers.henrri_id == "oe65v06b5g106e")
+        .first()
+    )
+    assert customer is not None
+    customer.is_active = False
+    db_session_main.add(customer)
+    db_session_main.commit()
+    customer = (
+        db_session_main.query(Customers)
+        .where(Customers.henrri_id == "oe65v06b5g106e")
+        .first()
+    )
+    assert customer.is_active is False if customer else None
+    assert customer.customer_type == "part" if customer else None
+
+
+def test_create_complete_customer(
+    db_session_main: Session, complete_customer_pro
+) -> None:  # pylint: disable=redefined-outer-name # type: ignore
     """test de création d'un client complet avec tous les champs"""
     # Vérification de la création du client et de ses relations
-    created_customer = db_session.query(Customers) \
-                .where(Customers.id == complete_customer_pro.id).first() # type: ignore
+    created_customer = (
+        db_session_main.query(Customers)
+        .where(Customers.id == complete_customer_pro.id)
+        .first()
+    )  # type: ignore
     assert created_customer is not None
     assert created_customer.wpwc_id == "1"
     assert created_customer.henrri_id == "2"

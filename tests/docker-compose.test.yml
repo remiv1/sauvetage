@@ -2,9 +2,9 @@ version: '3'
 services:
   test-db:
     build:
-      context: .
-      dockerfile: ./Dockerfile.postgres.test
+      context: ..
+      dockerfile: tests/Dockerfile.postgres.test
     env_file:
-      - .env.db_test
+      - ../databases/main/.env.db_main
     ports:
       - "5433:5432"
