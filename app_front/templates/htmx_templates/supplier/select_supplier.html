@@ -1,0 +1,15 @@
+{# Fragment retourné lors de la sélection d'un fournisseur dans le dropdown.
+   - Élément principal : remplace #supplier_id (outerHTML).
+   - OOB 1 : met à jour la valeur de #supplier_name.
+   - OOB 2 : vide #search-results pour fermer le dropdown. #}
+<input type="hidden" id="supplier_id" name="supplier_id" value="{{ supplier_id }}">
+<input type="text" id="supplier_name" name="supplier_name" class="form-control"
+       hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='name') }}"
+       hx-trigger="input changed delay:500ms"
+       hx-target="#search-results"
+       hx-swap="innerHTML"
+       placeholder="ID ou nom du fournisseur"
+       value="{{ supplier_name }}"
+       required
+       hx-swap-oob="true">
+<div id="search-results" class="dropdown-menu" hx-swap-oob="true"></div>

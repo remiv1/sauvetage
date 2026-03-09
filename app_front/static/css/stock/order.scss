@@ -46,6 +46,12 @@
     padding: variables.$space-md;
 }
 
+.search-results {
+    position: absolute;
+    z-index: 1000;
+    width: auto;
+}
+
 /* ── Boutons ─────────────────────────────────────────────────────────────── */
 .btn {
     display: inline-flex;

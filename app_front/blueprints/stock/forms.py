@@ -9,6 +9,8 @@ class OrderInCreateForm(FlaskForm):
     """Formulaire de création de commande fournisseur (étape 1)."""
 
     supplier_id = StringField("Fournisseur", validators=[DataRequired()])
+    supplier_name = StringField("Nom du fournisseur (auto-complete)",
+                                validators=[DataRequired()])
     submit = SubmitField("Créer la commande")
 
 

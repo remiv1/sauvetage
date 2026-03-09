@@ -4,6 +4,7 @@ from flask import Blueprint, render_template_string
 
 bp_supplier = Blueprint("supplier", __name__, url_prefix="/supplier")
 
+
 @bp_supplier.route("/")
 def index():
     """Page d'accueil du module fournisseurs"""

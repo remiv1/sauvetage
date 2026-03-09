@@ -8,19 +8,26 @@ Routes (templates) :
 from flask import Blueprint, redirect, url_for, flash
 from app_front.blueprints.customer.forms import CustomerMainForm
 from app_front.utils.pages import render_page
-from app_front.blueprints.customer.utils.users import form_to_dict, create_from_dict, get_customer
+from app_front.blueprints.customer.utils.users import (
+    form_to_dict,
+    create_from_dict,
+    get_customer,
+)
 
 bp_customer = Blueprint("customer", __name__, url_prefix="/customer")
+
 
 @bp_customer.route("/", methods=["GET"])
 def index():
     """Page d'accueil du module client."""
     return render_page("customer_index")
 
+
 @bp_customer.route("/search", methods=["GET"])
 def search():
     """Affiche le formulaire de recherche de clients."""
     return render_page("customer_search")
+
 
 @bp_customer.route("/create", methods=["GET", "POST"])
 def create():
@@ -32,6 +39,7 @@ def create():
         return redirect(url_for("customer.view", customer_id=customer_id))
 
     return render_page("customer_create", form=form)
+
 
 @bp_customer.route("/<int:customer_id>", methods=["GET"])
 def view(customer_id: int):

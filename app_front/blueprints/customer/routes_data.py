@@ -19,25 +19,32 @@ Endpoints :
 
 from flask import Blueprint, jsonify, request
 from app_front.blueprints.customer.utils.users import (
-    get_customers_by_name, multi_search_filter,
-    get_customer as util_get_customer, update_customer_info
+    get_customers_by_name,
+    multi_search_filter,
+    get_customer as util_get_customer,
+    update_customer_info,
 )
 from app_front.blueprints.customer.utils.addresses import (
-    get_addresses as util_get_addresses, update_address as util_update_address,
-    add_address as util_add_address
+    get_addresses as util_get_addresses,
+    update_address as util_update_address,
+    add_address as util_add_address,
 )
 from app_front.blueprints.customer.utils.emails import (
-    get_emails as util_get_emails, update_email as util_update_email,
-    add_email as util_add_email
+    get_emails as util_get_emails,
+    update_email as util_update_email,
+    add_email as util_add_email,
 )
 from app_front.blueprints.customer.utils.phones import (
-    get_phones as util_get_phones, update_phone as util_update_phone,
-    add_phone as util_add_phone
+    get_phones as util_get_phones,
+    update_phone as util_update_phone,
+    add_phone as util_add_phone,
 )
+
 bp_customer_data = Blueprint("customer_data", __name__, url_prefix="/customer/data")
 
 _NO_DATA_ERROR = "Aucune donnée reçue."
 _NO_CUSTOMER_ERROR = "Client non trouvé."
+
 
 @bp_customer_data.route("/search/fast", methods=["GET"])
 def search_fast():
@@ -58,6 +65,7 @@ def search_fast():
         return jsonify([])
 
     return jsonify(customers)
+
 
 @bp_customer_data.route("/search/long", methods=["GET"])
 def search_long():
@@ -82,7 +90,10 @@ def search_long():
     email = request.args.get("email", "").strip()
     phone = request.args.get("phone", "").strip()
 
-    return jsonify(multi_search_filter(name, email, phone, postal_code, city, customer_type))
+    return jsonify(
+        multi_search_filter(name, email, phone, postal_code, city, customer_type)
+    )
+
 
 @bp_customer_data.route("/<int:customer_id>", methods=["GET"])
 def get_customer(customer_id: int):
@@ -91,6 +102,7 @@ def get_customer(customer_id: int):
     if not customer:
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(customer)
+
 
 @bp_customer_data.route("/<int:customer_id>/info", methods=["PATCH"])
 def update_info(customer_id: int):
@@ -116,6 +128,7 @@ def update_info(customer_id: int):
     except (KeyError, TypeError, AttributeError) as e:
         raise ValueError("Données invalides ou incomplètes.") from e
 
+
 @bp_customer_data.route("/<int:customer_id>/addresses", methods=["GET"])
 def get_addresses(customer_id: int):
     """Retourne la liste des adresses d'un client."""
@@ -123,6 +136,7 @@ def get_addresses(customer_id: int):
     if not addresses:
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(addresses)
+
 
 @bp_customer_data.route("/<int:customer_id>/address", methods=["POST"])
 def add_address(customer_id: int):
@@ -135,7 +149,10 @@ def add_address(customer_id: int):
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(new_address), 201
 
-@bp_customer_data.route("/<int:customer_id>/address/<int:address_id>", methods=["PATCH"])
+
+@bp_customer_data.route(
+    "/<int:customer_id>/address/<int:address_id>", methods=["PATCH"]
+)
 def update_address(customer_id: int, address_id: int):
     """Met à jour une adresse d'un client."""
     data = request.get_json()
@@ -146,6 +163,7 @@ def update_address(customer_id: int, address_id: int):
         raise ValueError("Adresse ou client non trouvé.")
     return jsonify(updated)
 
+
 @bp_customer_data.route("/<int:customer_id>/emails", methods=["GET"])
 def get_emails(customer_id: int):
     """Retourne la liste des emails d'un client."""
@@ -153,6 +171,7 @@ def get_emails(customer_id: int):
     if emails is None:
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(emails)
+
 
 @bp_customer_data.route("/<int:customer_id>/email", methods=["POST"])
 def add_email(customer_id: int):
@@ -165,6 +184,7 @@ def add_email(customer_id: int):
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(new_email), 201
 
+
 @bp_customer_data.route("/<int:customer_id>/email/<int:email_id>", methods=["PATCH"])
 def update_email(customer_id: int, email_id: int):
     """Met à jour un email d'un client."""
@@ -176,6 +196,7 @@ def update_email(customer_id: int, email_id: int):
         raise ValueError("Email ou client non trouvé.")
     return jsonify(updated)
 
+
 @bp_customer_data.route("/<int:customer_id>/phones", methods=["GET"])
 def get_phones(customer_id: int):
     """Retourne la liste des téléphones d'un client."""
@@ -183,6 +204,7 @@ def get_phones(customer_id: int):
     if not phones:
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(phones)
+
 
 @bp_customer_data.route("/<int:customer_id>/phone", methods=["POST"])
 def add_phone(customer_id: int):
@@ -195,6 +217,7 @@ def add_phone(customer_id: int):
         raise ValueError(_NO_CUSTOMER_ERROR)
     return jsonify(new_phone), 201
 
+
 @bp_customer_data.route("/<int:customer_id>/phone/<int:phone_id>", methods=["PATCH"])
 def update_phone(customer_id: int, phone_id: int):
     """Met à jour un téléphone d'un client."""
@@ -206,6 +229,7 @@ def update_phone(customer_id: int, phone_id: int):
         raise ValueError("Téléphone ou client non trouvé.")
     return jsonify(updated)
 
+
 @bp_customer_data.route("/<int:customer_id>/activate", methods=["POST"])
 def activate(customer_id: int):
     """Active un client."""
@@ -215,6 +239,7 @@ def activate(customer_id: int):
     customer["is_active"] = True
     updated = update_customer_info(customer_id, {"is_active": True})
     return jsonify(updated)
+
 
 @bp_customer_data.route("/<int:customer_id>/deactivate", methods=["POST"])
 def deactivate(customer_id: int):

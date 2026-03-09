@@ -1,8 +1,12 @@
 """Utilitaires pour le module client --> Emails uniquement."""
 
 from typing import Dict, Any, List
-from db_models.repositories.customers import CustomersRepository, CustomerMailsRepository
+from db_models.repositories.customers import (
+    CustomersRepository,
+    CustomerMailsRepository,
+)
 from app_front.config.db_conf import get_main_session
+
 
 def get_emails(customer_id: int) -> List[Dict[str, Any]]:
     """Récupère la liste des emails d'un client.
@@ -16,6 +20,7 @@ def get_emails(customer_id: int) -> List[Dict[str, Any]]:
     if not customer:
         return []
     return [email.to_dict() for email in customer.emails]
+
 
 def add_email(customer_id: int, email_data: Dict[str, Any]) -> Dict[str, Any] | None:
     """Ajoute un email à un client.
@@ -33,7 +38,10 @@ def add_email(customer_id: int, email_data: Dict[str, Any]) -> Dict[str, Any] | 
 
     return email.to_dict()
 
-def update_email(customer_id: int, email_id: int, email_data: Dict[str, Any]) -> Dict[str, Any] | None:
+
+def update_email(
+    customer_id: int, email_id: int, email_data: Dict[str, Any]
+) -> Dict[str, Any] | None:
     """Met à jour un email d'un client.
     Args:
         customer_id (int): L'ID du client auquel appartient l'email.
@@ -50,6 +58,7 @@ def update_email(customer_id: int, email_id: int, email_data: Dict[str, Any]) ->
         raise ValueError(f"E-mail #{email_id} introuvable.") from e
     except (KeyError, TypeError, AttributeError) as e:
         raise ValueError("Données d'e-mail invalides.") from e
+
 
 def delete_email(email_id: int) -> bool:
     """Supprime un email d'un client en le marquant comme inactive.

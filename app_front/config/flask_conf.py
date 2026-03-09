@@ -7,11 +7,23 @@ utilisées par l'application Flask.
 from typing import List
 from os import getenv
 from flask import Blueprint
-from app_front.blueprints import (bp_customer, bp_customer_data, bp_dashboard,
-                                  bp_dashboard_data, bp_inventory,
-                                  bp_inventory_data, bp_order,
-                                  bp_stock, bp_stock_data, bp_stock_htmx,
-                                  bp_supplier, bp_supplier_data, bp_admin, bp_user)
+from app_front.blueprints import (
+    bp_customer,
+    bp_customer_data,
+    bp_dashboard,
+    bp_dashboard_data,
+    bp_inventory,
+    bp_inventory_data,
+    bp_order,
+    bp_stock,
+    bp_stock_data,
+    bp_stock_htmx,
+    bp_supplier,
+    bp_supplier_data,
+    bp_supplier_htmx,
+    bp_admin,
+    bp_user,
+)
 from logs.logger import get_logger
 
 # Configuration
@@ -32,6 +44,7 @@ BLUEPRINTS: List[Blueprint] = [
     bp_stock_htmx,
     bp_supplier,
     bp_supplier_data,
+    bp_supplier_htmx,
     bp_admin,
     bp_user,
 ]

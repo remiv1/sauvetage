@@ -5,7 +5,7 @@ WHITE_LIST_PREFIXES = [
     "/health",
     "/ready",
     "/user/login",
-    "/admin/first-user"
+    "/admin/first-user",
 ]
 WHITE_LIST_SUFFIXES = [
     "/login",
@@ -16,10 +16,12 @@ WHITE_LIST_SUFFIXES = [
     ".jpg",
     ".jpeg",
     ".gif",
-    ".ico"
+    ".ico",
 ]
+
 
 def is_allowed(path: str) -> bool:
     """Vérifie si le chemin demandé est dans la liste blanche."""
-    return any(path.startswith(prefix) for prefix in WHITE_LIST_PREFIXES) \
-        or any(path.endswith(suffix) for suffix in WHITE_LIST_SUFFIXES)
+    return any(path.startswith(prefix) for prefix in WHITE_LIST_PREFIXES) or any(
+        path.endswith(suffix) for suffix in WHITE_LIST_SUFFIXES
+    )

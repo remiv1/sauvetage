@@ -8,12 +8,13 @@
     >
         {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.supplier_id.label(class="form-label") }}
-            {{ form.supplier_id(class="form-control", id="supplier_id",
+        <div class="form-group" id="supplier-wrapper">
+            {{ form.supplier_id(id="supplier_id", type="hidden") }}
+            {{ form.supplier_name.label(class="form-label") }}
+            {{ form.supplier_name(class="form-control", id="supplier_name",
                 placeholder="ID ou nom du fournisseur", required=True,
                 **{
-                    "hx-get": url_for("supplier_data.get_suppliers"),
+                    "hx-get": url_for("supplier_htmx.get_suppliers", type_of_data="id_and_name"),
                     "hx-trigger": "input changed delay:500ms",
                     "hx-target": "#search-results",
                     "hx-swap": "innerHTML"
@@ -22,12 +23,11 @@
             }}
 
             <div id="search-results"
-                 class="dropdown-menu show"
-                 style="position: absolute; z-index: 1000; width: 100%;">
+                 class="dropdown-menu show">
                  <!-- Les résultats de la recherche seront injectés ici -->
             </div>
-            {% if form.supplier_id.errors %}
-                <div class="text-danger small">{{ form.supplier_id.errors[0] }}</div>
+            {% if form.supplier_name.errors %}
+                <div class="text-danger small">{{ form.supplier_name.errors[0] }}</div>
             {% endif %}
         </div>
 
@@ -42,4 +42,7 @@
             }}
         </div>
     </form>
+    <div id="supplier-create-modal">
+        <!-- Le formulaire d'ajout rapide de fournisseur sera injecté ici -->
+    </div>
 </div>

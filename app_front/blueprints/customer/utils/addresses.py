@@ -1,8 +1,12 @@
 """Utilitaires pour le module client --> Adresses uniquement."""
 
 from typing import Dict, Any, List
-from db_models.repositories.customers import CustomersRepository, CustomerAddressesRepository
+from db_models.repositories.customers import (
+    CustomersRepository,
+    CustomerAddressesRepository,
+)
 from app_front.config.db_conf import get_main_session
+
 
 def get_addresses(customer_id: int) -> List[Dict[str, Any]] | None:
     """
@@ -19,7 +23,10 @@ def get_addresses(customer_id: int) -> List[Dict[str, Any]] | None:
         return None
     return [addr.to_dict() for addr in customer.addresses]
 
-def add_address(customer_id: int, address_data: Dict[str, Any]) -> Dict[str, Any] | None:
+
+def add_address(
+    customer_id: int, address_data: Dict[str, Any]
+) -> Dict[str, Any] | None:
     """
     Ajoute une adresse à un client.
     Args:
@@ -36,8 +43,10 @@ def add_address(customer_id: int, address_data: Dict[str, Any]) -> Dict[str, Any
 
     return address.to_dict()
 
-def update_address(customer_id: int, address_id: int,
-                   address_data: Dict[str, Any]) -> Dict[str, Any] | None:
+
+def update_address(
+    customer_id: int, address_id: int, address_data: Dict[str, Any]
+) -> Dict[str, Any] | None:
     """
     Met à jour une adresse d'un client.
     Args:
@@ -53,6 +62,7 @@ def update_address(customer_id: int, address_id: int,
         return None
 
     return {"addresses": [addr.to_dict() for addr in address.customer.addresses]}
+
 
 def delete_address(address_id: int) -> bool:
     """

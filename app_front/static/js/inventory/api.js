@@ -8,6 +8,7 @@ import { postJson, fetchJson } from './functions.js';
 
 // Base URL pour les appels API du module inventaire
 const BASE = '/inventory/data';
+const BASE_SUPPLIERS = '/supplier/data';
 
 /** Étape 2 – Envoyer le texte brut pour parsing. */
 export async function parseEan13(raw, inventoryType = 'complete', category = null) {
@@ -21,7 +22,7 @@ export async function createProduct(productData) {
 
 /** Etape 4bis - Création d'un fournisseur. */
 export async function createSupplier(data) {
-    return postJson(`${BASE}/suppliers`, { data });
+    return postJson(`${BASE_SUPPLIERS}/suppliers`, { data });
 }
 
 /** Étape 5 – Calculer la conciliation théorique vs réel. */
@@ -46,5 +47,6 @@ export async function getInventoryStatus() {
 
 /** Fournisseurs – Rechercher par nom (autocomplete). */
 export async function searchSuppliers(query) {
-    return fetchJson(`${BASE}/suppliers/search?q=${encodeURIComponent(query)}`);
+    const typeOfData = "id_and_name";
+    return fetchJson(`${BASE_SUPPLIERS}/search?q=${encodeURIComponent(query)}&type_of_data=${typeOfData}`);
 }
