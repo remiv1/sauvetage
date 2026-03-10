@@ -1,11 +1,12 @@
 """Module utils pour le blueprint stock"""
 
+from typing import Sequence
 from app_front.config.db_conf import get_main_session
-from app_front.blueprints.stock.forms import OrderInCreateForm
-from db_models.repositories.stock import StockRepository
+from app_front.blueprints.stock.forms import OrderInCreateForm, OrderInLineForm
+from db_models.repositories.stock import StockRepository, OrderIn
 
 
-def get_zero_price_items() -> list[dict]:
+def get_zero_price_items() -> Sequence[dict]:
     """Récupère les articles dont le dernier inventaire a un prix de revient à zéro.
 
     Retourne une liste de dictionnaires avec les clés :
@@ -17,8 +18,7 @@ def get_zero_price_items() -> list[dict]:
 
 def is_zero_price_items() -> bool:
     """
-    Indique s'il existes des articles dont le dernier inventaire
-    a un prix de revient à zéro
+    Indique s'il existes des articles dont le dernier inventaire a un prix de revient à zéro
     """
     stock_repo = StockRepository(get_main_session())
     return len(stock_repo.get_zero_price_items()) > 0
@@ -45,33 +45,32 @@ def update_movement_price(movement_id: int, price: float) -> int:
     return stock_repo.update_movement_price(movement_id, price)
 
 
-def get_supplier_orders() -> list[dict]:
+def get_supplier_orders() -> Sequence[OrderIn]:
     """Récupère la liste des commandes fournisseurs avec le nom du fournisseur
     et le nombre de lignes de commande.
 
     Returns:
-        list[dict]: Liste de dictionnaires contenant les infos de chaque commande.
+        Sequence[OrderIn]: Liste des commandes avec relations complètement chargées.
     """
     stock_repo = StockRepository(get_main_session())
     return stock_repo.get_supplier_orders()
 
 
-def get_supplier_returns() -> list[dict]:
+def get_supplier_returns() -> Sequence[OrderIn]:
     """Récupère la liste des retours fournisseurs avec le nom du fournisseur
     et le nombre de lignes de retour.
 
     Returns:
-        list[dict]: Liste de dictionnaires contenant les infos de chaque retour.
+        Sequence[OrderIn]: Liste des retours avec relations complètement chargées.
     """
     stock_repo = StockRepository(get_main_session())
     return stock_repo.get_supplier_returns()
 
 
-def cancel_supplier_order(order_id: int) -> None:
+def cancel_supplier_order(order_id: int) -> bool:
     """Supprime une commande fournisseur et ses lignes associées.
 
-    Les mouvements d'inventaire liés aux lignes sont désassociés (inventory_movement_id
-    mis à NULL sur la ligne) mais conservés à titre de traçabilité.
+    Les mouvements d'inventaire liés sont désassociés et un mouvement inverse est créé.
 
     Args:
         order_id: L'identifiant de la commande à annuler.
@@ -80,8 +79,16 @@ def cancel_supplier_order(order_id: int) -> None:
         ValueError: Si la commande n'existe pas.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    stock_repo = StockRepository(get_main_session())
-    stock_repo.cancel_supplier_order(order_id)
+    try:
+        stock_repo = StockRepository(get_main_session())
+        stock_repo.cancel_supplier_order(order_id)
+        return True
+    except ValueError as exc:
+        msg = f"Erreur lors de l'annulation de la commande {order_id} : {str(exc)}"
+        raise ValueError(msg) from exc
+    except Exception as exc:
+        msg = f"Erreur inattendue lors de l'annulation de la commande {order_id} : {str(exc)}"
+        raise RuntimeError(msg) from exc
 
 
 def create_order_in_db(form: OrderInCreateForm) -> int:
@@ -104,14 +111,14 @@ def create_order_in_db(form: OrderInCreateForm) -> int:
     return stock_repo.create_order_in_db(supplier_id)
 
 
-def get_order_by_id(order_id: int) -> dict:
+def get_order_by_id(order_id: int) -> OrderIn:
     """Récupère les détails d'une commande fournisseur à partir de son ID.
 
     Args:
         order_id: L'identifiant de la commande à récupérer.
 
     Returns:
-        dict: Un dictionnaire contenant les détails de la commande.
+        OrderIn: Les détails de la commande.
 
     Raises:
         ValueError: Si la commande n'existe pas.
@@ -120,17 +127,48 @@ def get_order_by_id(order_id: int) -> dict:
     return stock_repo.get_order_by_id(order_id)
 
 
-def get_return_by_id(return_id: int) -> dict:
+def get_return_by_id(return_id: int) -> Sequence[OrderIn]:
     """Récupère les détails d'un retour fournisseur à partir de son ID.
 
     Args:
         return_id: L'identifiant du retour à récupérer.
 
     Returns:
-        dict: Un dictionnaire contenant les détails du retour.
+        Sequence[OrderIn]: Une séquence contenant les objets récupérés.
 
     Raises:
         ValueError: Si le retour n'existe pas.
     """
     stock_repo = StockRepository(get_main_session())
     return stock_repo.get_return_by_id(return_id)
+
+
+def create_order_in_line_db(form: OrderInLineForm) -> int:
+    """Crée une nouvelle ligne de commande fournisseur en base à partir des données du formulaire.
+
+    Args:
+        form: Le formulaire contenant les données de la ligne de commande.
+
+    Raises:
+        ValueError: Si les données du formulaire sont invalides.
+        RuntimeError: En cas d'erreur lors du commit.
+    """
+    try:
+        order_id = int(form.order_id.data or 0)
+        general_object_id = int(form.general_object_id.data or 0)
+        quantity = int(form.quantity.data or 0)
+        unit_price = float(form.unit_price.data or 0)
+        vat_rate = float(form.vat_rate.data or 0)
+        if general_object_id == 0 or quantity == 0 or unit_price == 0 or vat_rate == 0:
+            raise ValueError("Remplissez tous les champs du formulaire avec des valeurs valides.")
+    except (ValueError, TypeError) as e:
+        raise ValueError("Données du formulaire invalides : " + str(e)) from e
+
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.create_order_in_line_db(
+        order_id,
+        general_object_id,
+        quantity,
+        unit_price,
+        vat_rate
+        )

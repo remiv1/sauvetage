@@ -24,6 +24,8 @@ class OrderIn(WorkingBase, QueryMixin):
                                           comment="ID du fournisseur de la commande")
     value: Mapped[Numeric] = mapped_column(Numeric(10, 2), default=0.00, nullable=False,
                                            comment="Valeur totale de la commande")
+    order_state: Mapped[str] = mapped_column(String, default="draft", nullable=False,
+                                             comment="État de la commande")
 
     # Relations
     orderin_lines = relationship("OrderInLine", back_populates="order_in")
@@ -32,7 +34,7 @@ class OrderIn(WorkingBase, QueryMixin):
     def __repr__(self) -> str:
         return f"<OrderIn(id={self.id}, external_ref={self.external_ref}, " \
                 + f"order_ref={self.order_ref}, supplier_id={self.supplier_id}, " \
-                + f"value={self.value})>"
+                + f"value={self.value}) + order_state={self.order_state}>"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet OrderIn en dictionnaire."""
@@ -41,7 +43,8 @@ class OrderIn(WorkingBase, QueryMixin):
             "order_ref": self.order_ref,
             "external_ref": self.external_ref,
             "supplier_id": self.supplier_id,
-            "value": (float(self.value) if isinstance(self.value, (int, float, Decimal)) else None)
+            "value": (float(self.value) if isinstance(self.value, (int, float, Decimal)) else None),
+            "order_state": self.order_state
         }
 
     @classmethod
@@ -68,13 +71,19 @@ class OrderInLine(WorkingBase, QueryMixin):
                                                     ForeignKey("app_schema.inventory_movements.id"),
                                                     nullable=True,
                                                     comment="ID du mouvement de stock associé")
-    quantity: Mapped[int] = mapped_column(Integer,
-                                          nullable=False,
-                                          comment="Quantité commandée")
+    qty_ordered: Mapped[int] = mapped_column(Integer,
+                                             nullable=False,
+                                             comment="Quantité commandée")
+    qty_received: Mapped[int] = mapped_column(Integer,
+                                              default=0,
+                                              nullable=False,
+                                              comment="Quantité reçue")
     unit_price: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False,
                                                 comment="Prix unitaire en centimes d'euro")
     vat_rate: Mapped[Numeric] = mapped_column(Numeric(10, 3), nullable=False,
                                                 comment="Taux de TVA en pourcentage")
+    line_state: Mapped[str] = mapped_column(String, default="pending", nullable=False,
+                                            comment="État de la ligne de commande")
 
     # Relations
     order_in = relationship("OrderIn", back_populates="orderin_lines")
@@ -83,8 +92,9 @@ class OrderInLine(WorkingBase, QueryMixin):
 
     def __repr__(self) -> str:
         return f"<OrderInLine(id={self.id}, order_in_id={self.order_in_id}, " \
-                + f"general_object_id={self.general_object_id}, quantity={self.quantity}, " \
-                + f"unit_price={self.unit_price}, vat_rate={self.vat_rate})>"
+                + f"general_object_id={self.general_object_id}, qty_ordered={self.qty_ordered}, " \
+                + f"qty_received={self.qty_received}, unit_price={self.unit_price}, " \
+                + f"vat_rate={self.vat_rate}, line_state={self.line_state})>"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet OrderInLine en dictionnaire."""
@@ -92,13 +102,15 @@ class OrderInLine(WorkingBase, QueryMixin):
             "id": self.id,
             "order_in_id": self.order_in_id,
             "general_object_id": self.general_object_id,
-            "quantity": self.quantity,
+            "qty_ordered": self.qty_ordered,
+            "qty_received": self.qty_received,
             "unit_price": (float(self.unit_price)
                            if isinstance(self.unit_price, (int, float, Decimal))
                            else None),
             "vat_rate": (float(self.vat_rate)
                          if isinstance(self.vat_rate, (int, float, Decimal))
-                         else None)
+                         else None),
+            "line_state": self.line_state
         }
 
     @classmethod

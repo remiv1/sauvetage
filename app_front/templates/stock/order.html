@@ -5,22 +5,8 @@
 <section class="orders-container" id="orders-management">
     {% include "htmx_templates/stock/orders/sections/home.html" %}
 </section>
-
-
-{# ── Modale de validation de réception ───────────────────────────── #}
-<div id="receive-confirmation-modal" class="modal hidden">
-    <div class="modal-content">
-        <h3>Confirmer la réception</h3>
-        <!-- TODO: Créer le contenu de la modale de confirmation de réception -->
-    </div>
-</div>
-
-{# ── Modale de confirmation d'expédition de retour ───────────────── #}
-<div id="return-confirmation-modal" class="modal hidden">
-    <div class="modal-content">
-        <h3>Confirmer l'expédition du retour</h3>
-        <!-- TODO: Créer le contenu de la modale de confirmation d'expédition de retour -->
-    </div>
+<div id="supplier-create-modal">
+    <!-- Le formulaire d'ajout rapide de fournisseur sera injecté ici -->
 </div>
 
 {% endblock %}

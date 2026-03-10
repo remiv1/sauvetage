@@ -3,6 +3,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
+from wtforms import HiddenField
 
 
 class OrderInCreateForm(FlaskForm):
@@ -17,6 +18,7 @@ class OrderInCreateForm(FlaskForm):
 class OrderInLineForm(FlaskForm):
     """Formulaire de ligne de commande fournisseur (étape 2)."""
 
+    order_id = HiddenField("ID de la commande", validators=[DataRequired()])
     general_object_id = StringField("Article", validators=[DataRequired()])
     quantity = StringField("Quantité", validators=[DataRequired()])
     unit_price = StringField("Prix unitaire", validators=[DataRequired()])

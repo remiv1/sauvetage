@@ -1,8 +1,8 @@
 """first_migration
 
-Revision ID: 40b4e1d918f9
+Revision ID: fc3396479770
 Revises: 
-Create Date: 2026-03-07 14:27:31.768052
+Create Date: 2026-03-10 14:07:41.393243
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '40b4e1d918f9'
+revision: str = 'fc3396479770'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -207,6 +207,7 @@ def upgrade() -> None:
     sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
     sa.Column('supplier_id', sa.Integer(), nullable=False, comment='ID du fournisseur de la commande'),
     sa.Column('value', sa.Numeric(precision=10, scale=2), nullable=False, comment='Valeur totale de la commande'),
+    sa.Column('order_state', sa.String(), nullable=False, comment='État de la commande'),
     sa.ForeignKeyConstraint(['supplier_id'], ['app_schema.suppliers.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
@@ -309,9 +310,11 @@ def upgrade() -> None:
     sa.Column('order_in_id', sa.Integer(), nullable=False, comment="ID de la commande d'entrée"),
     sa.Column('general_object_id', sa.Integer(), nullable=False, comment="ID de l'objet"),
     sa.Column('inventory_movement_id', sa.Integer(), nullable=True, comment='ID du mouvement de stock associé'),
-    sa.Column('quantity', sa.Integer(), nullable=False, comment='Quantité commandée'),
+    sa.Column('qty_ordered', sa.Integer(), nullable=False, comment='Quantité commandée'),
+    sa.Column('qty_received', sa.Integer(), nullable=False, comment='Quantité reçue'),
     sa.Column('unit_price', sa.Numeric(precision=10, scale=2), nullable=False, comment="Prix unitaire en centimes d'euro"),
     sa.Column('vat_rate', sa.Numeric(precision=10, scale=3), nullable=False, comment='Taux de TVA en pourcentage'),
+    sa.Column('line_state', sa.String(), nullable=False, comment='État de la ligne de commande'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),
     sa.ForeignKeyConstraint(['inventory_movement_id'], ['app_schema.inventory_movements.id'], ),
     sa.ForeignKeyConstraint(['order_in_id'], ['app_schema.order_in.id'], ),

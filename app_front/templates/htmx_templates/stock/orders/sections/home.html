@@ -54,28 +54,18 @@
                 <a hx-get="{{ url_for('stock_htmx.view_order', order_id=order.id) }}"
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
-                    class="action-icon" title="Voir la commande">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
+                    class="action-icon"
+                    title="Voir la commande">
+                    {% include "svg/eye.html" %}
                 </a>
                 <button class="action-icon action-cancel"
-                        hx-post="{{ url_for('stock.cancel_order', order_id=order.id) }}"
+                        hx-post="{{ url_for('stock_htmx.cancel_order', order_id=order.id) }}"
                         hx-target="#orders-management"
                         hx-swap="innerHTML"
                         title="Annuler la commande"
                         data-order-id="{{ order.id }}"
                         data-order-ref="{{ order.order_ref }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                        <line x1="9" y1="9" x2="15" y2="15"></line>
-                    </svg>
+                    {% include "svg/del.html" %}
                 </button>
             </td>
         </tr>

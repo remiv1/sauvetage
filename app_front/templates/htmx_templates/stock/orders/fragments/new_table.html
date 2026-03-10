@@ -1,0 +1,103 @@
+<div class="new-order-wrapper">
+    {# ── En-tête avec bouton de retour ──────────────────────────────────────── #}
+    <div class="orders-header">
+        <div class="header-top">
+            <button class="btn btn-back"
+                    hx-get="{{ url_for('stock_htmx.orders') }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    title="Revenir aux commandes fournisseurs">
+                {% include "svg/back.html" %}
+            </button>
+            <h2>Nouvelle commande fournisseur</h2>
+        </div>
+    </div>
+
+    {# ── Informations de la commande ──────────────────────────────────────── #}
+    <div class="order-info-section">
+        <div class="info-group">
+            <span class="info-label">Identifiant commande :</span>
+            <span class="info-value" id="order-id">
+                {% if id_order %}{{ id_order[0] if id_order is iterable else id_order }}{% else %}—{% endif %}
+            </span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Fournisseur :</span>
+            <span class="info-value" id="supplier-name">
+                {{ supplier_name or '—' }}
+            </span>
+        </div>
+    </div>
+
+    {# ── Tableau des lignes de commande ──────────────────────────────────── #}
+    <div class="order-lines-section">
+        <div class="lines-header">
+            <h3>Lignes de commande</h3>
+            <button class="btn btn-primary btn-sm"
+                    hx-get="{{ url_for('stock_htmx.new_order_line_form', order_id=id_order) }}"
+                    hx-target="#new-line-modal"
+                    hx-swap="innerHTML"
+                    title="Ajouter une ligne">
+                {% include "svg/plus.html" %}
+                Ajouter une ligne
+            </button>
+        </div>
+
+        <table class="order-lines-table">
+            <thead>
+                <tr>
+                    <th>Article</th>
+                    <th>Quantité</th>
+                    <th>Prix unitaire</th>
+                    <th>TVA</th>
+                    <th>Montant HT</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="order-lines-tbody">
+                {% if order_lines %}
+                {% for line in order_lines %}
+                <tr>
+                    <td>{{ line.general_object_id }}</td>
+                    <td class="text-right">{{ line.quantity }}</td>
+                    <td class="text-right">{{ "%.2f"|format(line.unit_price|float) }} €</td>
+                    <td class="text-center">{{ line.vat_rate }}%</td>
+                    <td class="text-right">{{ "%.2f"|format(line.line_total|float) }} €</td>
+                    <td class="text-center actions-cell">
+                        <button class="action-icon action-delete"
+                                title="Supprimer la ligne">
+                            {% include "svg/del.html" %}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="empty-row">
+                    <td colspan="6">
+                        <div class="no-lines-message">
+                            <p>Aucune ligne de commande. Cliquez sur « Ajouter une ligne » pour commencer.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {# ── Modale pour ajouter une ligne ──────────────────────────────────────── #}
+    <div id="new-line-modal"></div>
+
+    {# ── Actions ──────────────────────────────────────────────────────────── #}
+    <div class="order-actions-section">
+        <button class="btn btn-success" id="confirm-order"
+                {% if not id_order %}disabled{% endif %}>
+            Valider la commande
+        </button>
+        <button class="btn btn-secondary"
+                hx-get="{{ url_for('stock_htmx.orders') }}"
+                hx-target="#orders-management"
+                hx-swap="innerHTML">
+            Annuler
+        </button>
+    </div>
+</div>

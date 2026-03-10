@@ -99,11 +99,6 @@ def api_validate():
     data = request.get_json(silent=True) or {}
     lines = data.get("lines", [])
     inventory_type = data.get("inventory_type", "partial")
-    from pprint import pprint
-
-    print("Received lines for validation:")
-    pprint(lines)
-    print("Inventory type:", inventory_type)
     result = validate_inventory(lines, inventory_type)
     if "error" in result:
         return jsonify(result), 502
