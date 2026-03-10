@@ -49,14 +49,6 @@ def view_order(order_id: int):
     return render_template("htmx_templates/stock/orders/sections/view.html", order=order)
 
 
-@bp_stock_htmx.get("/orders/create")
-def new_order_form():
-    """Retourne le formulaire de création d'une nouvelle commande fournisseur (HTMX)."""
-    form = OrderInCreateForm()
-    template_path = "htmx_templates/stock/orders/fragments/new_order.html"
-    return render_template(template_path, form=form)
-
-
 @bp_stock_htmx.get("/orders/table/create")
 def new_order_table():
     """Retourne une ligne de tableau pour une nouvelle ligne de commande fournisseur (HTMX)."""
@@ -84,12 +76,6 @@ def new_return_section():
     form = OrderInCreateForm()
     template_path = "htmx_templates/stock/returns/sections/new.html"
     return render_template(template_path, form=form)
-
-
-@bp_stock_htmx.get("/returns/create")
-def new_return_form():
-    """Retourne le formulaire de création d'un nouveau retour fournisseur (HTMX)."""
-    return render_template("htmx_templates/stock/returns/fragments/new_return.html")
 
 
 @bp_stock_htmx.get("/returns/table/create")

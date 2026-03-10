@@ -1,17 +1,55 @@
 <div class="orders-header">
     <h2 id="create-order-title">Nouvelle commande</h2>
 </div>
-<div class="orders-form">
-    <div name="new-order-form"
-         class="btn btn-primary"
-         hx-get="{{ url_for('stock_htmx.new_order_form') }}"
-         hx-target=".orders-form"
-         hx-swap="innerHTML">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Créer une nouvelle commande
+<!-- Formulaire de création de commandes. -->
+<div id="new-order-form">
+    <form
+        method="post"
+        hx-post="{{ action_url }}"
+        hx-target="{{ target | default('#order-container') }}"
+        hx-swap="innerHTML"
+    >
+        {{ form.hidden_tag() }}
+
+        <div class="form-group" id="supplier-wrapper">
+            {{ form.supplier_id(id="supplier_id", type="hidden") }}
+            {{ form.supplier_name.label(class="form-label") }}
+            {{ form.supplier_name(class="form-control", id="supplier_name",
+                placeholder="ID ou nom du fournisseur", required=True,
+                **{
+                    "hx-get": url_for("supplier_htmx.get_suppliers", type_of_data="id_and_name"),
+                    "hx-trigger": "input changed delay:500ms",
+                    "hx-target": "#search-results",
+                    "hx-swap": "innerHTML"
+                }
+                )
+            }}
+
+            <div id="search-results"
+                 class="dropdown-menu show">
+                 <!-- Les résultats de la recherche seront injectés ici -->
+            </div>
+            {% if form.supplier_name.errors %}
+                <div class="text-danger small">{{ form.supplier_name.errors[0] }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mt-2">
+            {{ form.submit(class="btn btn-primary",
+                **{
+                    "hx-post": url_for("stock.create_order"),
+                    "hx-target": "#order-container",
+                    "hx-swap": "innerHTML"
+                }
+                )
+            }}
+        </div>
+    </form>
+    <div id="supplier-create-modal">
+        <!-- Le formulaire d'ajout rapide de fournisseur sera injecté ici -->
+    </div>
+    <div id="order-container">
+        <!-- Le tableau de la commande créée sera injecté ici -->
     </div>
 </div>
 <div class="orders-actions">
