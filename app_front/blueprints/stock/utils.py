@@ -56,6 +56,17 @@ def get_supplier_orders() -> list[dict]:
     return stock_repo.get_supplier_orders()
 
 
+def get_supplier_returns() -> list[dict]:
+    """Récupère la liste des retours fournisseurs avec le nom du fournisseur
+    et le nombre de lignes de retour.
+
+    Returns:
+        list[dict]: Liste de dictionnaires contenant les infos de chaque retour.
+    """
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.get_supplier_returns()
+
+
 def cancel_supplier_order(order_id: int) -> None:
     """Supprime une commande fournisseur et ses lignes associées.
 
@@ -91,3 +102,35 @@ def create_order_in_db(form: OrderInCreateForm) -> int:
         raise ValueError("Le champ fournisseur doit être un nombre entier.") from e
     stock_repo = StockRepository(get_main_session())
     return stock_repo.create_order_in_db(supplier_id)
+
+
+def get_order_by_id(order_id: int) -> dict:
+    """Récupère les détails d'une commande fournisseur à partir de son ID.
+
+    Args:
+        order_id: L'identifiant de la commande à récupérer.
+
+    Returns:
+        dict: Un dictionnaire contenant les détails de la commande.
+
+    Raises:
+        ValueError: Si la commande n'existe pas.
+    """
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.get_order_by_id(order_id)
+
+
+def get_return_by_id(return_id: int) -> dict:
+    """Récupère les détails d'un retour fournisseur à partir de son ID.
+
+    Args:
+        return_id: L'identifiant du retour à récupérer.
+
+    Returns:
+        dict: Un dictionnaire contenant les détails du retour.
+
+    Raises:
+        ValueError: Si le retour n'existe pas.
+    """
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.get_return_by_id(return_id)

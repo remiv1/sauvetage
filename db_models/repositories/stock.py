@@ -191,6 +191,159 @@ class StockRepository(BaseRepository):
             ) from exc
 
 
+    def get_supplier_returns(self) -> list[dict]:
+        """Récupère la liste des retours fournisseurs avec le nom du fournisseur
+        et le nombre de lignes de retour.
+
+        Returns:
+            list[dict]: Liste de dictionnaires contenant les infos de chaque retour.
+        """
+        # Sous-requête : nombre de lignes par retour
+        line_count_sq = (
+            select(
+                OrderInLine.return_in_id,
+                func.count(OrderInLine.id).label("line_count"), # pylint: disable=not-callable
+            )
+            .group_by(OrderInLine.order_in_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                OrderIn.id,
+                OrderIn.order_ref,
+                OrderIn.external_ref,
+                OrderIn.value,
+                Suppliers.name.label("supplier_name"),
+                func.coalesce(line_count_sq.c.line_count, 0).label("line_count"),
+            )
+            .outerjoin(Suppliers, OrderIn.supplier_id == Suppliers.id)
+            .outerjoin(line_count_sq, OrderIn.id == line_count_sq.c.order_in_id)
+            .order_by(OrderIn.id.desc())
+        )
+
+        result = self.session.execute(stmt).all()
+        return [
+            {
+                "id": row[0],
+                "order_ref": row[1],
+                "external_ref": row[2],
+                "value": row[3],
+                "supplier_name": row[4],
+                "line_count": row[5],
+            }
+            for row in result
+        ]
+
+
+    def create_return_in_db(self, id_supplier: int) -> int:
+        """Crée un nouveau retour fournisseur en base à partir des données du formulaire.
+
+        Args:
+            id_supplier: L'identifiant du fournisseur pour le retour.
+
+        Returns:
+            L'ID du retour créé.
+        """
+        new_return = OrderIn(supplier_id=id_supplier, order_ref="temp")
+        self.session.add(new_return)
+        self.session.flush()
+        new_return.order_ref = f"RET-{new_return.id:06d}"
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise RuntimeError(f"Erreur lors de la création du retour : {exc}") from exc
+
+        return new_return.id
+
+
+    def create_return_in_line_db(self, return_in_id: int,
+                                general_object_id: int,
+                                quantity: int,
+                                price_at_movement: float = 0.0) -> int:
+        """Crée une nouvelle ligne de retour fournisseur en base à partir des données
+        du formulaire.
+
+        Args:
+            return_in_id: L'identifiant du retour fournisseur associé.
+            general_object_id: L'identifiant de l'article retourné.
+            quantity: La quantité retournée.
+
+        Returns:
+            L'ID de la ligne de retour créée.
+        """
+        new_line = OrderInLine(
+            return_in_id=return_in_id,
+            general_object_id=general_object_id,
+            quantity=quantity,
+        )
+        new_movement = InventoryMovements(
+            general_object_id=general_object_id,
+            movement_type="out",
+            quantity=quantity * -1,  # Quantité négative pour un retour
+            price_at_movement=price_at_movement,
+            source=f"Retour fournisseur #{return_in_id}",
+            destination="Stock",
+            notes=f"Retour fournisseur #{return_in_id} - Ligne #{general_object_id}",
+        )
+        self.session.add(new_movement)
+        self.session.flush()
+        new_line.inventory_movement_id = new_movement.id
+        self.session.add(new_line)
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            message = f"Erreur lors de la création de la ligne de retour : {exc}"
+            raise RuntimeError(message) from exc
+
+        return new_line.id
+
+
+    def create_order_in_line_db(self, order_in_id: int,
+                                general_object_id: int,
+                                quantity: int,
+                                price_at_movement: float = 0.0) -> int:
+        """Crée une nouvelle ligne de commande fournisseur en base à partir des données
+        du formulaire.
+
+        Args:
+            order_in_id: L'identifiant de la commande fournisseur associée.
+            general_object_id: L'identifiant de l'article commandé.
+            quantity: La quantité commandée.
+
+        Returns:
+            L'ID de la ligne de commande créée.
+        """
+        new_line = OrderInLine(
+            order_in_id=order_in_id,
+            general_object_id=general_object_id,
+            quantity=quantity,
+        )
+        new_movement = InventoryMovements(
+            general_object_id=general_object_id,
+            movement_type="in",
+            quantity=quantity,
+            price_at_movement=price_at_movement,
+            source=f"Commande fournisseur #{order_in_id}",
+            destination="Stock",
+            notes=f"Commande fournisseur #{order_in_id} - Ligne #{general_object_id}",
+        )
+        self.session.add(new_movement)
+        self.session.flush()
+        new_line.inventory_movement_id = new_movement.id
+        self.session.add(new_line)
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            message = f"Erreur lors de la création de la ligne de commande : {exc}"
+            raise RuntimeError(message) from exc
+
+        return new_line.id
+
+
     def create_order_in_db(self, id_supplier: int) -> int:
         """Crée une nouvelle commande fournisseur en base à partir des données du formulaire.
 
@@ -200,7 +353,7 @@ class StockRepository(BaseRepository):
         Returns:
             L'ID de la commande créée.
         """
-        new_order = OrderIn(supplier_id=id_supplier)
+        new_order = OrderIn(supplier_id=id_supplier, order_ref="temp")
         self.session.add(new_order)
         self.session.flush()
         new_order.order_ref = f"CMD-{new_order.id:06d}"
@@ -211,3 +364,73 @@ class StockRepository(BaseRepository):
             raise RuntimeError(f"Erreur lors de la création de la commande : {exc}") from exc
 
         return new_order.id
+
+
+    def get_order_by_id(self, order_id: int) -> dict:
+        """Récupère les détails d'une commande fournisseur à partir de son ID.
+
+        Args:
+            order_id: L'identifiant de la commande à récupérer.
+
+        Returns:
+            Un dictionnaire contenant les détails de la commande, ou un dictionnaire
+            vide si la commande n'existe pas.
+        """
+        stmt = (
+            select(
+                OrderIn.id,
+                OrderIn.order_ref,
+                OrderIn.external_ref,
+                OrderIn.value,
+                Suppliers.name.label("supplier_name"),
+            )
+            .outerjoin(Suppliers, OrderIn.supplier_id == Suppliers.id)
+            .where(OrderIn.id == order_id)
+        )
+
+        result = self.session.execute(stmt).first()
+        if result is None:
+            return {}
+
+        return {
+            "id": result[0],
+            "order_ref": result[1],
+            "external_ref": result[2],
+            "value": result[3],
+            "supplier_name": result[4],
+        }
+
+
+    def get_return_by_id(self, return_id: int) -> dict:
+        """Récupère les détails d'un retour fournisseur à partir de son ID.
+
+        Args:
+            return_id: L'identifiant du retour à récupérer.
+
+        Returns:
+            Un dictionnaire contenant les détails du retour, ou un dictionnaire
+            vide si le retour n'existe pas.
+        """
+        stmt = (
+            select(
+                OrderIn.id,
+                OrderIn.order_ref,
+                OrderIn.external_ref,
+                OrderIn.value,
+                Suppliers.name.label("supplier_name"),
+            )
+            .outerjoin(Suppliers, OrderIn.supplier_id == Suppliers.id)
+            .where(OrderIn.id == return_id)
+        )
+
+        result = self.session.execute(stmt).first()
+        if result is None:
+            return {}
+
+        return {
+            "id": result[0],
+            "order_ref": result[1],
+            "external_ref": result[2],
+            "value": result[3],
+            "supplier_name": result[4],
+        }

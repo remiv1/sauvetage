@@ -46,10 +46,16 @@
     padding: variables.$space-md;
 }
 
-.search-results {
+#search-results {
+    background-color: variables.$gray-200;
+    border: 1px solid variables.$primary-color;
     position: absolute;
     z-index: 1000;
     width: auto;
+}
+
+#order-container {
+    margin-top: variables.$space-lg;
 }
 
 /* ── Boutons ─────────────────────────────────────────────────────────────── */

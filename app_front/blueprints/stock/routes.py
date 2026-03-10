@@ -54,7 +54,14 @@ def view_order(order_id: int):
 @bp_stock.route("/orders/new", methods=["GET", "POST"])
 def create_order():
     """Création d'une nouvelle commande fournisseur"""
-    # TODO: implémenter le formulaire de création
+    form = OrderInCreateForm()
+    if form.validate_on_submit():
+        try:
+            create_order_in_db(form)
+            flash("Commande créée avec succès.", "success")
+            return redirect(url_for("stock_htmx.new_order_table"))
+        except (ValueError, RuntimeError) as exc:
+            flash(str(exc), "error")
     return render_page("stock_order")
 
 

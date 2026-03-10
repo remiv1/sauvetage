@@ -43,10 +43,16 @@
   padding: 1rem;
 }
 
-.search-results {
+#search-results {
+  background-color: #e0e0e0;
+  border: 1px solid #00086f;
   position: absolute;
   z-index: 1000;
   width: auto;
+}
+
+#order-container {
+  margin-top: 2rem;
 }
 
 /* ── Boutons ─────────────────────────────────────────────────────────────── */

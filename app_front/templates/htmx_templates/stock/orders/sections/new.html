@@ -1,0 +1,31 @@
+<div class="orders-header">
+    <h2 id="create-order-title">Nouvelle commande</h2>
+</div>
+<div class="orders-form">
+    <div name="new-order-form"
+         class="btn btn-primary"
+         hx-get="{{ url_for('stock_htmx.new_order_form') }}"
+         hx-target=".orders-form"
+         hx-swap="innerHTML">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Créer une nouvelle commande
+    </div>
+</div>
+<div class="orders-actions">
+    <div class="btn btn-secondary" id="back-from-create-order">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        Retour
+    </div>
+    <div class="btn btn-primary" id="create-order-validation">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Valider la commande
+    </div>
+</div>
