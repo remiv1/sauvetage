@@ -78,9 +78,9 @@ class OrderInLine(WorkingBase, QueryMixin):
                                               default=0,
                                               nullable=False,
                                               comment="Quantité reçue")
-    unit_price: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False,
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2, True, True), nullable=False,
                                                 comment="Prix unitaire en centimes d'euro")
-    vat_rate: Mapped[Numeric] = mapped_column(Numeric(10, 3), nullable=False,
+    vat_rate: Mapped[Decimal] = mapped_column(Numeric(10, 3, True, True), nullable=False,
                                                 comment="Taux de TVA en pourcentage")
     line_state: Mapped[str] = mapped_column(String, default="pending", nullable=False,
                                             comment="État de la ligne de commande")

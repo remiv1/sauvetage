@@ -143,16 +143,17 @@
     
     {# ── Modale pour ajouter une ligne ──────────────────────────────────────── #}
     {% if view_state == 'edit' or view_state == 'new' %}
-    <div id="new-line-modal" hx-swap-oob="true">
+    <div id="new-line-modal">
         <!-- Contenu de la modale pour ajouter une ligne -->
     </div>
     {% endif %}
 
     {# ── Bouton de retour en haut de page ───────────────────────────────────── #}
     {% if view_state == 'edit' or view_state == 'new' %}
-    <div id="delete-line-modal" hx-swap-oob="true">
+    <div id="delete-line-modal">
         <!-- Contenu de la modale de confirmation de suppression de ligne -->
     </div>
+    {% endif %}
 
     {# ── Bouton de retour en bas de page ────────────────────────────────────── #}
     {% if view_state == 'edit' or view_state == 'new' %}

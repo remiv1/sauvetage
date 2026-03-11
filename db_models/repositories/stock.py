@@ -2,6 +2,8 @@
 Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilisées par les
 routes du blueprint stock.
 """
+
+from decimal import Decimal
 from typing import Sequence
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
@@ -282,6 +284,65 @@ class StockRepository(BaseRepository):
             raise RuntimeError(message) from exc
 
         return new_line.id
+
+
+    def edit_order_in_line_db(self, line_id: int,
+                                general_object_id: int,
+                                quantity: int,
+                                price_at_movement: float = 0.0,
+                                vat_rate: float = 0.0) -> None:
+        """Modifie une ligne de commande fournisseur en base à partir des données du formulaire.
+
+        Args:
+            line_id: L'identifiant de la ligne de commande à modifier.
+            general_object_id: L'identifiant de l'article commandé.
+            quantity: La quantité commandée.
+            price_at_movement: Le prix unitaire de l'article au moment du mouvement.
+            vat_rate: Le taux de TVA applicable.
+
+        Raises:
+            ValueError: Si la ligne de commande n'existe pas.
+            RuntimeError: En cas d'erreur lors du commit.
+        """
+        line = self.session.get(OrderInLine, line_id)
+        if line is None:
+            raise ValueError(f"Ligne de commande {line_id} introuvable")
+
+        line.general_object_id = general_object_id
+        line.qty_ordered = quantity
+        line.unit_price = Decimal(price_at_movement)
+        line.vat_rate = Decimal(vat_rate)
+
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            message = f"Erreur lors de la modification de la ligne de commande : {exc}"
+            raise RuntimeError(message) from exc
+
+
+    def delete_order_in_line_db(self, line_id: int) -> None:
+        """Supprime une ligne de commande fournisseur en base.
+
+        Args:
+            line_id: L'identifiant de la ligne de commande à supprimer.
+
+        Raises:
+            ValueError: Si la ligne de commande n'existe pas.
+            RuntimeError: En cas d'erreur lors du commit.
+        """
+        line = self.session.get(OrderInLine, line_id)
+        if line is None:
+            raise ValueError(f"Ligne de commande {line_id} introuvable")
+
+        self.session.delete(line)
+
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            message = f"Erreur lors de la suppression de la ligne de commande : {exc}"
+            raise RuntimeError(message) from exc
 
 
     def create_return_in_line_db(self, return_in_id: int,

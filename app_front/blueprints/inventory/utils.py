@@ -7,12 +7,14 @@ FastAPI (app-back) qui gère les traitements asynchrones.
 """
 
 from os import getenv
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 import requests
 from sqlalchemy import select, func
 from app_front.config.db_conf import get_main_session
 from db_models.objects.objects import GeneralObjects, Books, OtherObjects
 from db_models.objects.suppliers import Suppliers
+from db_models.repositories.objects import ObjectsRepository
+
 
 # =========================================================================== #
 #  Helpers HTTP – uniquement pour les opérations lourdes (FastAPI)            #
@@ -277,3 +279,9 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
         return list({r for r in response if r})  # Uniques et non vides
     finally:
         session.close()
+
+def search_object_by_name(name: str) -> Sequence[GeneralObjects]:
+    """Rechercher les objet dans la base par nom"""
+    repo = ObjectsRepository(get_main_session())
+    items = repo.get_by_name(name)
+    return items

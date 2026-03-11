@@ -153,41 +153,34 @@ def create_order_in_line_db(form: OrderInLineForm, action: str = "create", line_
         ValueError: Si les données du formulaire sont invalides.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    def _validate_form_data() -> list[int | float]:
-        try:
-            order_id = int(form.order_id.data or 0)
-            general_object_id = int(form.general_object_id.data or 0)
-            quantity = int(form.quantity.data or 0)
-            unit_price = float(form.unit_price.data or 0)
-            vat_rate = float(form.vat_rate.data or 0)
-            if (
-                order_id == 0
-                or general_object_id == 0
-                or quantity == 0
-                or unit_price == 0
-                or vat_rate == 0
-            ):
-                raise ValueError("Remplir tous les champs du formulaire.")
-            return [order_id, general_object_id, quantity, unit_price, vat_rate]
-        except (ValueError, TypeError) as e:
-            raise ValueError("Données du formulaire invalides : " + str(e)) from e
+    order_id, general_object_id, quantity, unit_price, vat_rate = form.validate_form_data()
+    stock_repo = StockRepository(get_main_session())
     if action == "create":
-        
-        stock_repo = StockRepository(get_main_session())
         return stock_repo.create_order_in_line_db(
             order_id,
             general_object_id,
             quantity,
             unit_price,
             vat_rate
-            )
-    elif action == "edit":
+        )
+    if action == "edit":
         try:
-            general_object_id = int(form.general_object_id.data or 0)
-            quantity = int(form.quantity.data or 0)
-            unit_price = float(form.unit_price.data or 0)
-            vat_rate = float(form.vat_rate.data or 0)
-            if line_id == 0 or general_object_id == 0 or quantity == 0 or unit_price == 0 or vat_rate == 0:
-                raise ValueError("Remplissez tous les champs du formulaire avec des valeurs valides.")
-        except (ValueError, TypeError) as e:
-            raise ValueError("Données du formulaire invalides : " + str(e)) from e
+            line_id = int(line_id)
+            stock_repo.edit_order_in_line_db(
+                line_id,
+                general_object_id,
+                quantity,
+                unit_price,
+                vat_rate
+            )
+            return line_id
+        except ValueError as e:
+            raise ValueError("L'ID de la ligne doit être un nombre entier.") from e
+    if action == "delete":
+        try:
+            line_id = int(line_id)
+            stock_repo.delete_order_in_line_db(line_id)
+            return line_id
+        except ValueError as e:
+            raise ValueError("L'ID de la ligne doit être un nombre entier.") from e
+    raise ValueError("Action inconnue : " + action)

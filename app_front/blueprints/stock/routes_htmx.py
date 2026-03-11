@@ -1,6 +1,6 @@
 """Blueprint API HTMX pour le module stock."""
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, flash
 from app_front.blueprints.stock.forms import (
     OrderInCreateForm,
     OrderInLineForm,
@@ -94,7 +94,7 @@ def new_order_line_form(order_id: int):
             form=form,
             view_state='new'
             )
-    return render_template(NEW_LINE, form=form)
+    return render_template(NEW_LINE, form=form, action='create')
 
 
 @bp_stock_htmx.route("/orders/<int:order_id>/line/<int:line_id>/<action>",
@@ -110,11 +110,27 @@ def edit_order_line(order_id: int, line_id: int, action: str):
         # Gestion de l'action d'édition
         if action == "edit":
             if form.validate_on_submit():
-                pass  # TODO: implémenter la logique de mise à jour de la ligne de commande
+                create_order_in_line_db(form, action="edit", line_id=line_id)
+                order = get_order_by_id(order_id)
+                return render_template(
+                    EDIT_TABLE,
+                    order=order,
+                    form=form,
+                    view_state='edit'
+                )
+            flash("Données du formulaire invalides. Veuillez corriger les erreurs.", "error")
+            return render_template(NEW_LINE, form=form)
 
         # Gestion de l'action de suppression
-        elif action == "delete":
-            pass  # TODO: implémenter la logique de suppression de la ligne de commande
+        if action == "delete":
+            create_order_in_line_db(form, action="delete", line_id=line_id)
+            order = get_order_by_id(order_id)
+            return render_template(
+                EDIT_TABLE,
+                order=order,
+                form=form,
+                view_state='edit'
+            )
 
     # Retour du formulaire de validation de la suppression
     if action == 'delete':
@@ -127,10 +143,7 @@ def edit_order_line(order_id: int, line_id: int, action: str):
         raise ValueError(f"Line with ID {line_id} not found in order {order_id}")
 
     # Remplissage du formulaire avec les données de la ligne existante
-    form.general_object_id.data = str(line.general_object_id)
-    form.quantity.data = str(line.qty_ordered)
-    form.unit_price.data = str(line.unit_price)
-    form.vat_rate.data = str(line.vat_rate)
+    form.line_to_form(line)
 
     return render_template(NEW_LINE, form=form)
 

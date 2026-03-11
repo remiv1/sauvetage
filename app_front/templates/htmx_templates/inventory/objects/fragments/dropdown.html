@@ -1,0 +1,18 @@
+<ul id="supplier-results">
+    {% if not suppliers %}
+        <li>Aucun résultat trouvé.</li>
+    {% endif %}
+    {% for s in suppliers %}
+        <li hx-post="/inventory/htmx/objects/select"
+            hx-target="#dummy"
+            hx-swap="none"
+            hx-include="this"
+        >
+            {{ s.name }}
+            <input type="hidden" name="supplier_id" value="{{ s.id }}">
+            <input type="hidden" name="supplier_name" value="{{ s.name }}">
+        </li>
+    {% endfor %}
+</ul>
+
+<div id="dummy"></div>

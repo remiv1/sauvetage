@@ -11,9 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects.objects import (
     GeneralObjects, Books, OtherObjects, ObjectTags, ObjMetadatas, MediaFiles)
-from db_models.repositories.objects import (BooksRepository, OtherObjectsRepository,
-                                            ObjMetadatasRepository, ObjectTagsRepository,
-                                            MediaRepository)
+ # Pas d'import global des repositories pour éviter l'import circulaire
 
 class ObjectsRepository(BaseRepository):
     """
@@ -32,6 +30,12 @@ class ObjectsRepository(BaseRepository):
         super().__init__(*args, **kwargs)
         self.model = GeneralObjects
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
+        # Importations locales pour casser l'import circulaire
+        from .books import BooksRepository  # pylint: disable=import-outside-toplevel
+        from .other_objects import OtherObjectsRepository   # pylint: disable=import-outside-toplevel
+        from .obj_metadatas import ObjMetadatasRepository   # pylint: disable=import-outside-toplevel
+        from .object_tags import ObjectTagsRepository   # pylint: disable=import-outside-toplevel
+        from .media import MediaRepository  # pylint: disable=import-outside-toplevel
         self.book_repo = BooksRepository(self.session)
         self.other_object_repo = OtherObjectsRepository(self.session)
         self.obj_metadata_repo = ObjMetadatasRepository(self.session)
@@ -42,16 +46,16 @@ class ObjectsRepository(BaseRepository):
         """Retourne une requête de base pour les objets, avec tous les éléments liés."""
         return (select(self.model).where(self.model.is_active == True)   # pylint: disable=singleton-comparison
                 .options(joinedload(self.model.supplier),
-                         joinedload(self.model.books),
-                         joinedload(self.model.other_objects),
+                         joinedload(self.model.book),
+                         joinedload(self.model.other_object),
                          joinedload(self.model.inventory_movements),
-                         joinedload(self.model.obj_metadata),
+                         joinedload(self.model.obj_metadatas),
                          joinedload(self.model.object_tags)))
 
     def get_all(self) -> Sequence["GeneralObjects"]:
         """
         Récupère tous les objets actifs avec tous les éléments liés :
-        (supplier, books, other_objects, inventory_movements, obj_metadata, object_tags).
+        (supplier, book, other_object, inventory_movements, obj_metadata, object_tags).
         Returns:
             List[GeneralObjects]: Une liste de tous les objets actifs avec leurs éléments liés.
         """
@@ -64,6 +68,11 @@ class ObjectsRepository(BaseRepository):
         stmt = self._get_global_select().where(or_(
             self.model.id == reference, self.model.ean13 == reference))
         return self.session.execute(stmt).scalar_one_or_none()
+
+    def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
+        """Récupère une liste d'objets dont le nom correspond à la recherche."""
+        stmt = self._get_global_select().where(self.model.name.ilike(f"%{name}%")).limit(10)
+        return self.session.execute(stmt).unique().scalars().all()
 
     def create_object(self, **kwargs: Any) -> "GeneralObjects":
         """
@@ -95,7 +104,7 @@ class ObjectsRepository(BaseRepository):
                                media: Optional[List[MediaFiles]]=None) -> GeneralObjects:
         """
         Crée un nouvel objet avec tous ses éléments liés
-        (books, other_objects, obj_metadata, object_tags, media).
+        (book, other_object, obj_metadata, object_tags, media).
         """
         try:
             if book:

@@ -7,31 +7,41 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
 
-            <div class="modal-body">
-                <form id="order-line-form"
-                      method="post"
-                      hx-post="{{ url_for('stock_htmx.order_section', order_id=form.order_id.data) }}"
-                      hx-target="#orders-container"
-                      hx-swap="innerHTML">
+            <form id="order-line-form"
+                    method="post"
+                    hx-post="{{
+                    url_for('stock_htmx.new_order_line_form',
+                        order_id=form.order_id.data
+                    )
+                    if action == 'create' else
+                    url_for('stock_htmx.edit_order_line',
+                        order_id=form.order_id.data,
+                        line_id=line_id,
+                        action='edit'
+                    )
+                    }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML">
+                <div class="modal-body">
                     {{ form.hidden_tag() }}
 
                     {# ── Champ Article ──────────────────────────────────────── #}
                     <div class="form-group mb-3" id="article-wrapper">
                         {{ form.order_id() }}
-                        {{ form.general_object_id.label(class="form-label") }}
-                        {{ form.general_object_id(
-                            class="form-control",
-                            id="general_object_id",
-                            placeholder="Saisissez l'ID ou le nom de l'article",
-                            required=True,
-                            **{
-                                "hx-get": url_for("inventory_htmx.get_items_search"),
-                                "hx-trigger": "input changed delay:500ms",
-                                "hx-target": "#article-search-results",
-                                "hx-swap": "innerHTML",
-                                "autocomplete": "off"
-                            }
-                        ) }}
+                        {{ form.general_object_id(class="form-control", id="general_object_id") }}
+                        <label for="object-wrapper">Article</label>
+                        <input type="text"
+                               class="form-control"
+                               name="object-wrapper"
+                               id="object-wrapper"
+                               placeholder="Saisissez l'ID ou le nom de l'article"
+                               required
+                               hx-get="{{ url_for('inventory_htmx.get_items_search') }}"
+                               hx-trigger="input changed delay:500ms"
+                               hx-target="#article-search-results"
+                               hx-swap="innerHTML"
+                               autocomplete="off"
+                        >
                         
                         <div id="article-search-results" class="dropdown-menu position-static mt-1">
                             {# Les résultats de la recherche seront injectés ici #}
@@ -121,26 +131,22 @@
                             </div>
                         </div>
                     </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal"
-                        title="Annuler la création de la ligne de commande"
-                        hx-get="{{ url_for('stock_htmx.cleared') }}"
-                        hx-target="#new-line-modal"
-                        hx-swap="innerHTML"
-                >
-                    Annuler
-                </button>
-                {{ form.submit(
-                    class="btn btn-primary",
-                    id="submit-line",
-                    )
-                }}
-            </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                            title="Annuler la création de la ligne de commande"
+                            hx-get="{{ url_for('stock_htmx.cleared') }}"
+                            hx-target="#new-line-modal"
+                            hx-swap="innerHTML"
+                    >
+                        Annuler
+                    </button>
+                    {{ form.submit(class="btn btn-primary", id="submit-line") }}
+                </div>
+            </form>
         </div>
     </div>
 </div>
