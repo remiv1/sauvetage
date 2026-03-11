@@ -143,7 +143,7 @@ def get_return_by_id(return_id: int) -> Sequence[OrderIn]:
     return stock_repo.get_return_by_id(return_id)
 
 
-def create_order_in_line_db(form: OrderInLineForm) -> int:
+def create_order_in_line_db(form: OrderInLineForm, action: str = "create", line_id: int = 0) -> int:
     """Crée une nouvelle ligne de commande fournisseur en base à partir des données du formulaire.
 
     Args:
@@ -153,22 +153,41 @@ def create_order_in_line_db(form: OrderInLineForm) -> int:
         ValueError: Si les données du formulaire sont invalides.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    try:
-        order_id = int(form.order_id.data or 0)
-        general_object_id = int(form.general_object_id.data or 0)
-        quantity = int(form.quantity.data or 0)
-        unit_price = float(form.unit_price.data or 0)
-        vat_rate = float(form.vat_rate.data or 0)
-        if general_object_id == 0 or quantity == 0 or unit_price == 0 or vat_rate == 0:
-            raise ValueError("Remplissez tous les champs du formulaire avec des valeurs valides.")
-    except (ValueError, TypeError) as e:
-        raise ValueError("Données du formulaire invalides : " + str(e)) from e
-
-    stock_repo = StockRepository(get_main_session())
-    return stock_repo.create_order_in_line_db(
-        order_id,
-        general_object_id,
-        quantity,
-        unit_price,
-        vat_rate
-        )
+    def _validate_form_data() -> list[int | float]:
+        try:
+            order_id = int(form.order_id.data or 0)
+            general_object_id = int(form.general_object_id.data or 0)
+            quantity = int(form.quantity.data or 0)
+            unit_price = float(form.unit_price.data or 0)
+            vat_rate = float(form.vat_rate.data or 0)
+            if (
+                order_id == 0
+                or general_object_id == 0
+                or quantity == 0
+                or unit_price == 0
+                or vat_rate == 0
+            ):
+                raise ValueError("Remplir tous les champs du formulaire.")
+            return [order_id, general_object_id, quantity, unit_price, vat_rate]
+        except (ValueError, TypeError) as e:
+            raise ValueError("Données du formulaire invalides : " + str(e)) from e
+    if action == "create":
+        
+        stock_repo = StockRepository(get_main_session())
+        return stock_repo.create_order_in_line_db(
+            order_id,
+            general_object_id,
+            quantity,
+            unit_price,
+            vat_rate
+            )
+    elif action == "edit":
+        try:
+            general_object_id = int(form.general_object_id.data or 0)
+            quantity = int(form.quantity.data or 0)
+            unit_price = float(form.unit_price.data or 0)
+            vat_rate = float(form.vat_rate.data or 0)
+            if line_id == 0 or general_object_id == 0 or quantity == 0 or unit_price == 0 or vat_rate == 0:
+                raise ValueError("Remplissez tous les champs du formulaire avec des valeurs valides.")
+        except (ValueError, TypeError) as e:
+            raise ValueError("Données du formulaire invalides : " + str(e)) from e

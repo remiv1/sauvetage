@@ -46,10 +46,10 @@
         {% for order in orders %}
         <tr>
             <td class="identifiant">{{ order.order_ref }}</td>
-            <td>{{ order.external_ref }}</td>
-            <td>{{ order.supplier_name }}</td>
+            <td>{{ order.external_ref or '—' }}</td>
+            <td>{{ order.supplier.name }}</td>
             <td class="text-right">{{ "%.2f"|format(order.value|float) }} €</td>
-            <td class="text-center">{{ order.line_count }}</td>
+            <td class="text-center">{{ order.orderin_lines | length }}</td>
             <td class="text-center actions-cell">
                 <a hx-get="{{ url_for('stock_htmx.view_order', order_id=order.id) }}"
                     hx-target="#orders-management"
@@ -58,6 +58,15 @@
                     title="Voir la commande">
                     {% include "svg/eye.html" %}
                 </a>
+                {% if order.order_state == "draft" %}
+                <a hx-get="{{ url_for('stock_htmx.edit_order', order_id=order.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Modifier la commande">
+                    {% include "svg/edit.html" %}
+                </a>
+                {% endif %}
                 <button class="action-icon action-cancel"
                         hx-post="{{ url_for('stock_htmx.cancel_order', order_id=order.id) }}"
                         hx-target="#orders-management"

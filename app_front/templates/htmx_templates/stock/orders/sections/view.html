@@ -1,0 +1,172 @@
+<div class="new-order-wrapper">
+    {# ── En-tête avec bouton de retour ──────────────────────────────────────── #}
+    <div class="orders-header">
+        <div class="header-top">
+            <button class="btn btn-back"
+                    hx-get="{{ url_for('stock_htmx.orders') }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    title="Revenir aux commandes fournisseurs">
+                {% include "svg/back.html" %}
+            </button>
+            <h2>
+                {% if view_state == 'new' %}
+                    Nouvelle commande fournisseur
+                {% elif view_state == 'edit' %}
+                    Édition de la commande fournisseur
+                {% elif view_state == 'receipt' %}
+                    Réception de la commande fournisseur
+                {% else %}
+                    Commande fournisseur
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+
+    {# ── Informations de la commande ──────────────────────────────────────── #}
+    <div class="order-info-section">
+        <div class="info-group">
+            <span class="info-label">Identifiant commande :</span>
+            <span class="info-value" id="order-id">
+                {% if order.id %}
+                    {{ order.id }}
+                {% else %}
+                    —
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Fournisseur :</span>
+            <span class="info-value" id="supplier-name">
+                {{ order.supplier.name or '—' }}
+            </span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Statut :</span>
+            <span class="info-value" id="order-status">
+                {{ order.order_state | capitalize or '—' }}
+            </span>
+        </div>
+    </div>
+
+    {# ── Tableau des lignes de commande ──────────────────────────────────── #}
+    <div class="order-lines-section">
+        <div class="lines-header">
+            <h3>Lignes de commande</h3>
+            {% if view_state == 'edit' or view_state == 'new' %}
+            <button class="btn btn-primary btn-sm"
+                    hx-get="{{ url_for('stock_htmx.new_order_line_form', order_id=id_order) }}"
+                    hx-target="#new-line-modal"
+                    hx-swap="innerHTML"
+                    title="Ajouter une ligne">
+                {% include "svg/plus.html" %}
+                Ajouter une ligne
+            </button>
+            {% endif %}
+        </div>
+
+        <table class="order-lines-table">
+            <thead>
+                <tr>
+                    <th>Article</th>
+                    {% if view_state == 'receipt' or view_state == 'view' %}
+                    <th>Quantité commandée</th>
+                    <th>Quantité reçue</th>
+                    {% else %}
+                    <th>Quantité</th>
+                    {% endif %}
+                    <th>Prix unitaire</th>
+                    <th>TVA</th>
+                    <th>Montant HT</th>
+                    {% if view_state == 'edit' or view_state == 'new' or view_state == 'receipt' %}
+                    <th class="text-center">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tfoot>
+                <tr>
+                    <td colspan="{{ 5 if view_state != 'receipt' else 6 }}" class="text-right"><strong>Total TTC :</strong></td>
+                    <td class="text-right" id="total-ttc">
+                        {% set total_ttc = 0 %}
+                        {% for line in order.lines %}
+                            {% set line_total = line.qty_ordered * line.unit_price * (1 + line.vat_rate / 100) %}
+                            {% set total_ttc = (total_ttc | default(0)) + line_total %}
+                        {% endfor %}
+                        {{ "%.2f"|format(total_ttc|float) }} €
+                    </td>
+                </tr>
+            </tfoot>
+            <tbody id="order-lines-tbody">
+                {% if order.lines %}
+                {% for line in order.lines %}
+                <tr>
+                    {% set total = line.qty_ordered * line.unit_price * (1 + line.vat_rate / 100) %}
+                    <td>{{ line.general_object_id }}</td>
+                    {% if view_state == 'receipt' or view_state == 'view' %}
+                    <td class="text-right">{{ line.qty_ordered }}</td>
+                    <td class="text-right">{{ line.qty_received }}</td>
+                    {% else %}
+                    <td class="text-right">{{ line.qty_ordered }}</td>
+                    {% endif %}
+                    <td class="text-right">{{ "%.2f"|format(line.unit_price|float) }} €</td>
+                    <td class="text-center">{{ line.vat_rate }}%</td>
+                    <td class="text-right">{{ "%.2f"|format(total|float) }} €</td>
+                    {% if view_state == 'edit' or view_state == 'new' %}
+                    <td class="text-center actions-cell">
+                        <button class="action-icon action-delete"
+                                title="Supprimer la ligne">
+                            {% include "svg/del.html" %}
+                        </button>
+                    </td>
+                    {% elif view_state == 'receipt' %}
+                    <td class="text-center actions-cell">
+                        <button class="action-icon action-receipt"
+                                title="Recevoir la ligne">
+                            {% include "svg/receipt.html" %}
+                        </button>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="empty-row">
+                    <td colspan="6">
+                        <div class="no-lines-message">
+                            <p>Aucune ligne de commande. Passez en édition pour ajouter des lignes.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    {# ── Modale pour ajouter une ligne ──────────────────────────────────────── #}
+    {% if view_state == 'edit' or view_state == 'new' %}
+    <div id="new-line-modal" hx-swap-oob="true">
+        <!-- Contenu de la modale pour ajouter une ligne -->
+    </div>
+    {% endif %}
+
+    {# ── Bouton de retour en haut de page ───────────────────────────────────── #}
+    {% if view_state == 'edit' or view_state == 'new' %}
+    <div id="delete-line-modal" hx-swap-oob="true">
+        <!-- Contenu de la modale de confirmation de suppression de ligne -->
+    </div>
+
+    {# ── Bouton de retour en bas de page ────────────────────────────────────── #}
+    {% if view_state == 'edit' or view_state == 'new' %}
+    <div class="order-actions-section">
+        <button class="btn {{ 'btn-success' if order.lines | length > 0 else 'btn-secondary' }}" id="confirm-order"
+                {% if order.lines | length == 0  %}disabled{% endif %}>
+            Valider la commande
+        </button>
+        <button class="btn btn-secondary"
+                hx-get="{{ url_for('stock_htmx.orders') }}"
+                hx-target="#orders-management"
+                hx-swap="innerHTML">
+            Annuler
+        </button>
+    </div>
+    {% endif %}
+</div>

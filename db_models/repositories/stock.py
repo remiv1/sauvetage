@@ -3,7 +3,7 @@ Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilis�
 routes du blueprint stock.
 """
 from typing import Sequence
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 from db_models.objects import InventoryMovements
 from db_models.objects.objects import GeneralObjects
@@ -118,7 +118,10 @@ class StockRepository(BaseRepository):
                 selectinload(OrderIn.supplier),
                 selectinload(OrderIn.orderin_lines)
             )
-            .where(OrderIn.orderin_lines.any(OrderInLine.qty_ordered < 0))  # Exclure les retours
+            .where(or_(
+                OrderIn.orderin_lines.any(OrderInLine.qty_ordered >= 0),  # Exclure les retours
+                OrderIn.orderin_lines == None  # Inclure les commandes sans lignes # pylint: disable=singleton-comparison
+            ))
             .order_by(OrderIn.id.desc())
         )
         return self.session.execute(stmt).scalars().all()
@@ -200,6 +203,7 @@ class StockRepository(BaseRepository):
         self.session.add(new_order)
         self.session.flush()
         new_order.order_ref = f"CMD-{new_order.id:06d}"
+        new_order.order_state = "draft"
         try:
             self.session.commit()
         except Exception as exc:
@@ -222,6 +226,7 @@ class StockRepository(BaseRepository):
         self.session.add(new_return)
         self.session.flush()
         new_return.order_ref = f"RET-{new_return.id:06d}"
+        new_return.order_state = "draft"
         try:
             self.session.commit()
         except Exception as exc:
@@ -343,14 +348,12 @@ class StockRepository(BaseRepository):
             select(OrderIn)
             .options(
                 selectinload(OrderIn.supplier),
-                selectinload(OrderIn.orderin_lines),
-                selectinload(OrderIn.supplier)
+                selectinload(OrderIn.orderin_lines)
             )
             .where(OrderIn.id == order_id)
         )
 
-        row = self.session.execute(stmt).first()
-        result = row.scalar() if row is not None else None
+        result = self.session.execute(stmt).scalar_one_or_none()
         if result is None:
             raise ValueError(f"Commande {order_id} introuvable")
         return result
