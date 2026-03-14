@@ -31,6 +31,7 @@ router = APIRouter(prefix="/inventory", tags=["inventory"])
 STATUS_FILE = os.environ.get("INVENTORY_STATUS_FILE", "/tmp/inventory_commit_status.json")
 _EAN13_RE = re.compile(r"^\d{13}$")
 
+
 def _normalize_ean13(raw: str) -> List[str]:
     """Normalise un texte brut en liste d'EAN13 valides.
 
@@ -52,6 +53,7 @@ def _normalize_ean13(raw: str) -> List[str]:
             result.append(cleaned)
     return result
 
+
 def _unique_preserve_order(items: List[str]) -> List[str]:
     """Déduplique une liste tout en conservant l'ordre d'apparition."""
     seen: set[str] = set()
@@ -62,11 +64,18 @@ def _unique_preserve_order(items: List[str]) -> List[str]:
             out.append(item)
     return out
 
-@router.post("/parse", response_model=ParseResponse,
-    tags=["inventory", "utils"], summary="Parse EAN13",
-    description="Normalise le texte et classifie en connu/inconnu.")
+
+@router.post("/parse", tags=["inventory", "utils"], summary="Parse EAN13",
+    description="Normalise le texte et classifie en connu/inconnu.",
+    responses={
+        200: {"model": ParseResponse, "description": "Résultat du parsing"},
+        400: {"description": "Requête invalide (ex: inventory_type incorrect)"},
+        500: {"description": "Erreur serveur lors de la récupération des EAN13 connus"}
+    })
 def parse_ean13(payload: ParseRequest) -> ParseResponse:
-    """Normalise le texte brut et classifie chaque EAN13 en connu/inconnu."""
+    """
+    Normalise le texte brut et classifie chaque EAN13 en connu/inconnu.
+    """
     inventory_type = payload.inventory_type
     category = payload.category
     if inventory_type not in {"complete", "partial", "single"}:
@@ -134,6 +143,7 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
         ).scalar_one()
         return int(val)
 
+
     def _last_inventory() -> int:
         val = session.execute(
             select(InventoryMovements.quantity).where(
@@ -142,6 +152,7 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
             ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
         ).scalars().first()
         return int(val) if val is not None else 0
+
 
     def _last_inventory_date() -> str:
         last = session.execute(
@@ -152,14 +163,15 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
         ).scalars().first()
         return last.isoformat() if last is not None else "1970-01-01T00:00:00Z"
 
+
     inventory_init = _last_inventory()
     since = _last_inventory_date()
     entrants = _sum_by_type("in", since=since)
     sortants = _sum_by_type("out", since=since)
     return inventory_init + entrants - sortants
 
-@router.post("/prepare", response_model=List[ReconciliationLine],
-    tags=["inventory"], summary="Préparer l'inventaire",
+
+@router.post("/prepare", tags=["inventory"], summary="Préparer l'inventaire",
     description="Calcule, pour chaque EAN13 unique, le stock théorique vs réel.")
 def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
     """Calcule, pour chaque EAN13 unique, le stock théorique vs réel."""
@@ -208,7 +220,17 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
 #  Étape 6 – Validation                                                      #
 # =========================================================================== #
 
-@router.post("/validate", response_model=ValidateResponse)
+@router.post(
+    "/validate",
+    tags=["inventory"],
+    summary="Valider l'inventaire",
+    description="Prépare les mouvements de stock pour chaque ligne validée.",
+    responses={
+        200: {"model": ValidateResponse, "description": "Mouvements préparés"},
+        404: {"description": "Produit introuvable"},
+        500: {"description": "Erreur serveur lors de la validation"}
+    }
+)
 def validate_inventory(payload: ValidatePayload) -> ValidateResponse:
     """Prépare les mouvements de stock pour chaque ligne validée."""
     planned: List[PlannedMovement] = []
@@ -268,6 +290,7 @@ def _write_status(data: Dict) -> None:
     with open(STATUS_FILE, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False)
 
+
 def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
     """Récupère le prix au moment du mouvement pour un objet général donné."""
     def _get_last_inventory_price(oid: int):
@@ -281,6 +304,7 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
         ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
         return session.execute(stmt).first()
 
+
     def _get_avg_in_price_since(oid: int, since: str) -> float:
         """Récupère le prix moyen des mouvements 'in' depuis une date donnée."""
         stmt = select(func.coalesce(func.avg(InventoryMovements.price_at_movement), 0.0)).where(
@@ -289,6 +313,7 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
             InventoryMovements.movement_timestamp > since,
         )
         return session.execute(stmt).scalar_one()
+
 
     if not objects_id:
         return []
@@ -330,6 +355,7 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
         return results
     finally:
         session.close()
+
 
 def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> None:
     """
@@ -387,8 +413,19 @@ def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> No
             "started_at": started, "message": str(exc),
         })
 
-@router.post("/commit", response_model=CommitResponse)
-def commit_inventory(payload: CommitRequest):
+
+@router.post(
+    "/commit",
+    tags=["inventory"],
+    summary="Lancer le commit de l'inventaire",
+    description="Lance un thread pour appliquer les mouvements de manière asynchrone.",
+    responses={
+        200: {"model": CommitResponse, "description": "Tâche de commit lancée"},
+        400: {"description": "Requête invalide (ex: données de mouvements incorrectes)"},
+        500: {"description": "Erreur serveur lors du lancement du commit"}
+    }
+)
+def commit_inventory(payload: CommitRequest) -> CommitResponse:
     """Lance un thread pour appliquer les mouvements de manière asynchrone."""
     movements = [m.model_dump() for m in payload.planned]
     objects_ids = [m["general_object_id"] for m in movements]
@@ -407,8 +444,17 @@ def commit_inventory(payload: CommitRequest):
 #  Étape 8 – Statut                                                          #
 # =========================================================================== #
 
-@router.get("/status", response_model=StatusResponse)
-def inventory_status():
+@router.get(
+    "/status",
+    tags=["inventory"],
+    summary="Obtenir le statut du commit de l'inventaire",
+    description="Retourne l'état courant de la tâche de commit.",
+    responses={
+        200: {"model": StatusResponse, "description": "Statut actuel de la tâche de commit"},
+        500: {"description": "Erreur serveur lors de la récupération du statut"}
+    }
+)
+def inventory_status() -> StatusResponse:
     """Retourne l'état courant de la tâche de commit."""
     if not os.path.exists(STATUS_FILE):
         return StatusResponse(running=False)
