@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.inventory import InventoryMovements
+from db_models.objects import InventoryMovements
 
 class InventoryRepository(BaseRepository):
     """

@@ -9,12 +9,9 @@
     <div class="cards-grid">
         <!-- Conciliation — affichée uniquement s'il y a des articles à prix zéro -->
         {% if has_zero_price_items %}
-        <a href="{{ url_for('stock.council') }}" class="card card-council">
+        <a href="{{ url_for('stock.council') }}" class="card card-stock">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 9v2m0 4h.01"></path>
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                </svg>
+                {% include "svg/warning.html" %}
             </div>
             <h2>Conciliation</h2>
             <p>Articles sans prix à traiter</p>
@@ -22,43 +19,30 @@
         {% endif %}
 
         <!-- Commandes -->
-        <a href="{{ url_for('stock.orders') }}" class="card card-orders">
+        <a href="{{ url_for('stock.orders') }}" class="card card-stock">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="1" y="3" width="15" height="13"></rect>
-                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
-                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                </svg>
+                {% include "svg/truck.html" %}
             </div>
             <h2>Commandes</h2>
             <p>Suivi des commandes et retours</p>
         </a>
 
         <!-- Réservations -->
-        <a href="{{ url_for('stock.reservations') }}" class="card card-reservations">
+        <a href="{{ url_for('stock.reservations') }}" class="card card-stock">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
+                {% include "svg/calendar.html" %}
             </div>
             <h2>Réservations</h2>
             <p>Gestion des réservations</p>
         </a>
 
-        <!-- Recherche -->
-        <a href="{{ url_for('stock.search') }}" class="card card-search">
+        <!-- Vision globale -->
+        <a href="{{ url_for('stock.search') }}" class="card card-stock">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
+                {% include "svg/search.html" %}
             </div>
-            <h2>Recherche</h2>
-            <p>Recherche simple et multi-critères</p>
+            <h2>Vision globale</h2>
+            <p>Recherche et actions sur stock</p>
         </a>
     </div>
 </div>

@@ -2,28 +2,30 @@
 
 import pytest
 from sqlalchemy.orm import Session
-from db_models.objects.objects import GeneralObjects
-from db_models.objects.customers import Customers, CustomerAddresses
-from db_models.objects.orders import Order, OrderLine
-from db_models.objects.invoices import Invoice
-from db_models.objects.shipments import Shipment
-from tests.fixtures.db_fixture import (
-    db_session_main,
-    engine,
+from db_models.objects import (
+    GeneralObjects,
+    Customers, CustomerAddresses,
+    Order, OrderLine,
+    Invoice,
+    Shipment,
+)
+from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
+    db_session_main,  # pylint: disable=unused-import # type: ignore
+    engine,  # pylint: disable=unused-import # type: ignore
 )  # pylint: disable=unused-import # type: ignore
-from tests.fixtures.f_objects import (
-    book_object,
+from tests.fixtures.f_objects import (  # pylint: disable=unused-import # type: ignore
+    book_object,  # pylint: disable=unused-import # type: ignore
 )  # pylint: disable=unused-import # type: ignore
-from tests.fixtures.f_customers import (
-    complete_customer_part,
+from tests.fixtures.f_customers import (  # pylint: disable=unused-import # type: ignore
+    complete_customer_part,  # pylint: disable=unused-import # type: ignore
 )  # pylint: disable=unused-import # type: ignore
 
 
 @pytest.fixture
 def order(
-    db_session_main: Session,
+    db_session_main: Session,  # pylint: disable=redefined-outer-name # type: ignore
     complete_customer_part: Customers,  # pylint: disable=redefined-outer-name # type: ignore
-    book_object: GeneralObjects,
+    book_object: GeneralObjects,  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Order:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer une commande de test."""
     # Récupérer l'adresse de facturation
@@ -31,8 +33,7 @@ def order(
         db_session_main.query(CustomerAddresses)
         .filter(
             CustomerAddresses.customer_id == complete_customer_part.id,
-            CustomerAddresses.is_billing
-            == True,  # pylint: disable=singleton-comparison
+            CustomerAddresses.is_billing == True,  # pylint: disable=singleton-comparison
             CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
         )
         .first()
@@ -43,8 +44,7 @@ def order(
         db_session_main.query(CustomerAddresses)
         .filter(
             CustomerAddresses.customer_id == complete_customer_part.id,
-            CustomerAddresses.is_shipping
-            == True,  # pylint: disable=singleton-comparison
+            CustomerAddresses.is_shipping == True,  # pylint: disable=singleton-comparison
             CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
         )
         .first()
@@ -86,7 +86,7 @@ def order(
 
 @pytest.fixture
 def invoice(
-    db_session_main: Session, order
+    db_session_main: Session, order  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Invoice:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer une facture de test."""
     total_amount = sum(ol.unit_price * ol.quantity for ol in order.order_lines)  # type: ignore
@@ -111,7 +111,7 @@ def invoice(
 
 @pytest.fixture
 def shipment(
-    db_session_main: Session, order
+    db_session_main: Session, order  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Shipment:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer un envoi de test."""
     shipment_object = Shipment(

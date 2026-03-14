@@ -9,7 +9,7 @@ from sqlalchemy import select, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import (
+from db_models.objects import (
     GeneralObjects, Books, OtherObjects, ObjectTags, ObjMetadatas, MediaFiles)
  # Pas d'import global des repositories pour éviter l'import circulaire
 

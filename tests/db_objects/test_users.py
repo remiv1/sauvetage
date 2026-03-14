@@ -2,7 +2,7 @@
 
 from typing import Dict, Any
 from sqlalchemy.orm import Session, joinedload
-from db_models.objects.users import Users, UsersPasswords
+from db_models.objects import Users, UsersPasswords
 
 
 def test_user_to_dict(

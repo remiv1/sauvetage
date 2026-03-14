@@ -8,10 +8,10 @@ from .customers import (
     CustomerParts, CustomerPros
 )
 from .orders import Order, OrderLine
-from .stocks import OrderIn, OrderInLine
+from .stocks import OrderIn, OrderInLine, DilicomReferencial
 from .inventory import InventoryMovements
 from .invoices import Invoice
 from .shipments import Shipment
-from .users import Users
+from .users import Users, UsersPasswords
 from .objects import GeneralObjects, Books, OtherObjects, Tags, ObjectTags, ObjMetadatas, MediaFiles
 from .suppliers import Suppliers

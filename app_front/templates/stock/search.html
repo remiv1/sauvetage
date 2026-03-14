@@ -1,0 +1,160 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="search-container">
+
+    {# ── En-tête ────────────────────────────────────────────────────────────── #}
+    <div class="search-header">
+        <div class="header-top">
+            <a href="{{ url_for('stock.index') }}" class="btn btn-back"
+               title="Retour à la gestion des stocks">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Vision globale du stock</h2>
+        </div>
+    </div>
+
+    {# ── Accordéon de recherche ─────────────────────────────────────────────── #}
+    <details class="search-accordion" open>
+        <summary class="accordion-toggle">
+            {% include "svg/search.html" %} Filtres de recherche
+        </summary>
+
+        <form id="search-filters"
+              hx-get="{{ url_for('stock_htmx.search_table') }}"
+              hx-target="#stock-table-wrapper"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              hx-include="#search-filters">
+
+            <div class="filters-grid">
+                {# Nom #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-name">Nom</label>
+                    <input type="text" id="filter-name" name="name"
+                           class="filter-control" placeholder="Nom de l'article…"
+                           autocomplete="off">
+                </div>
+
+                {# EAN13 #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-ean13">EAN13</label>
+                    <input type="text" id="filter-ean13" name="ean13"
+                           class="filter-control" placeholder="Code EAN13…"
+                           autocomplete="off">
+                </div>
+
+                {# Fournisseur (auto-complétion) #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-supplier-name">Fournisseur</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="filter-supplier-name"
+                               class="filter-control"
+                               placeholder="Nom du fournisseur…"
+                               autocomplete="off"
+                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_and_name') }}"
+                               hx-trigger="keyup changed delay:300ms"
+                               hx-target="#supplier-search-results"
+                               hx-swap="innerHTML"
+                               name="supplier_name">
+                        <input type="hidden" id="filter-supplier-id" name="supplier_id" value="">
+                        <div id="supplier-search-results" class="search-dropdown"></div>
+                    </div>
+                </div>
+
+                {# Type d'objet #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-type">Type d'objet</label>
+                    <select id="filter-type" name="object_type" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="book">Livre</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+
+                {# Statut actif #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-active">Statut article</label>
+                    <select id="filter-active" name="is_active" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="true">Actif</option>
+                        <option value="false">Inactif</option>
+                    </select>
+                </div>
+
+                {# Statut Dilicom #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-dilicom">Statut Dilicom</label>
+                    <select id="filter-dilicom" name="dilicom_status" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="active">Actif</option>
+                        <option value="pending">En cours d'activation</option>
+                        <option value="deleting">En cours de suppression</option>
+                        <option value="inactive">Inactif / Supprimé</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% include "svg/search.html" %} Rechercher
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-reset-filters">
+                    Réinitialiser
+                </button>
+            </div>
+        </form>
+    </details>
+
+    {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}
+    <div id="stock-table-wrapper"
+         hx-get="{{ url_for('stock_htmx.search_table') }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="loading-indicator">
+            <p>Chargement du stock…</p>
+        </div>
+    </div>
+
+    {# ── Conteneur modale Dilicom ───────────────────────────────────────── #}
+    <div id="dilicom-modal-container"></div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Réinitialisation des filtres
+    const resetBtn = document.getElementById('btn-reset-filters');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            const form = document.getElementById('search-filters');
+            form.reset();
+            document.getElementById('filter-supplier-id').value = '';
+            htmx.trigger(form, 'submit');
+        });
+    }
+
+    // Sélection fournisseur depuis l'auto-complétion
+    document.addEventListener('click', function(e) {
+        const item = e.target.closest('#supplier-search-results .dropdown-item');
+        if (item) {
+            const supplierId = item.dataset.supplierId;
+            const supplierName = item.dataset.supplierName;
+            if (supplierId && supplierName) {
+                document.getElementById('filter-supplier-name').value = supplierName;
+                document.getElementById('filter-supplier-id').value = supplierId;
+                document.getElementById('supplier-search-results').innerHTML = '';
+            }
+        }
+    });
+
+    // Fermer la modale Dilicom
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-overlay') ||
+            e.target.classList.contains('btn-close-modal')) {
+            document.getElementById('dilicom-modal-container').innerHTML = '';
+        }
+    });
+});
+</script>
+{% endblock %}

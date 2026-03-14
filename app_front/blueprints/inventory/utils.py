@@ -11,8 +11,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import requests
 from sqlalchemy import select, func
 from app_front.config.db_conf import get_main_session
-from db_models.objects.objects import GeneralObjects, Books, OtherObjects
-from db_models.objects.suppliers import Suppliers
+from db_models.objects import GeneralObjects, Books, OtherObjects, Suppliers
 from db_models.repositories.objects import ObjectsRepository
 
 

@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.invoices import Invoice
+from db_models.objects import Invoice
 
 class InvoiceRepository(BaseRepository):
     """

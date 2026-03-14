@@ -1,0 +1,614 @@
+@use "../core/variables" as variables;
+@use "sass:color";
+
+/* ============================================================================ */
+/* Stock — Page de recherche globale                                           */
+/* ============================================================================ */
+
+.search-container {
+    max-width: 1200px;
+    margin: variables.$space-lg auto;
+    padding: 0 variables.$space-lg;
+}
+
+/* ── En-tête ─────────────────────────────────────────────────────────────── */
+.search-header {
+    margin-bottom: variables.$space-lg;
+
+    h2 {
+        color: variables.$primary-color;
+        margin: 0;
+    }
+}
+
+.header-top {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-md;
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 1px solid variables.$gray-200;
+        border-radius: variables.$radius-xs;
+        background: #fff;
+        color: variables.$gray-600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+
+        &:hover {
+            color: variables.$primary-color;
+            border-color: variables.$primary-color;
+            background: rgba(variables.$primary-color, 0.06);
+        }
+    }
+}
+
+/* ── Accordéon de filtres ────────────────────────────────────────────────── */
+.search-accordion {
+    margin-bottom: variables.$space-lg;
+    border: 1px solid variables.$gray-200;
+    border-radius: variables.$radius-sm;
+    overflow: hidden;
+}
+
+.accordion-toggle {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-sm;
+    padding: variables.$space-md variables.$space-lg;
+    background: variables.$gray-100;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: variables.$primary-color;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+
+    &::-webkit-details-marker {
+        display: none;
+    }
+
+    svg {
+        flex-shrink: 0;
+    }
+}
+
+details[open] > .accordion-toggle {
+    border-bottom: 1px solid variables.$gray-200;
+}
+
+#search-filters {
+    padding: variables.$space-lg;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: variables.$space-md;
+    margin-bottom: variables.$space-lg;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: variables.$space-xs;
+}
+
+.filter-label {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: variables.$gray-700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.filter-control {
+    padding: variables.$space-sm variables.$space-md;
+    border: 1px solid variables.$gray-300;
+    border-radius: variables.$radius-xs;
+    font-family: variables.$font-primary;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    width: 100%;
+
+    &:focus {
+        outline: none;
+        border-color: variables.$primary-color;
+        box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
+    }
+}
+
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.search-dropdown {
+    background-color: variables.$gray-200;
+    border: 1px solid variables.$primary-color;
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 0 0 variables.$radius-xs variables.$radius-xs;
+
+    &:empty {
+        display: none;
+    }
+
+    .dropdown-item {
+        padding: variables.$space-sm variables.$space-md;
+        cursor: pointer;
+        font-size: 0.88rem;
+        transition: background 0.15s;
+
+        &:hover {
+            background: rgba(variables.$primary-color, 0.08);
+        }
+    }
+}
+
+.filters-actions {
+    display: flex;
+    gap: variables.$space-sm;
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: variables.$space-xs;
+    padding: variables.$space-sm variables.$space-md;
+    border: none;
+    border-radius: variables.$radius-xs;
+    font-family: variables.$font-primary;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, opacity 0.2s;
+
+    svg {
+        flex-shrink: 0;
+    }
+
+    &:hover {
+        opacity: 0.9;
+    }
+}
+
+.btn-primary {
+    background: variables.$primary-color;
+    color: #fff;
+
+    &:hover {
+        background: variables.$primary-color-dark;
+    }
+}
+
+.btn-secondary {
+    background: variables.$gray-200;
+    color: variables.$gray-800;
+
+    &:hover {
+        background: variables.$gray-300;
+    }
+}
+
+.btn-danger {
+    background: variables.$color-danger;
+    color: #fff;
+
+    &:hover {
+        background: color.adjust(variables.$color-danger, $lightness: -8%);
+    }
+}
+
+.btn-sm {
+    font-size: 0.82rem;
+    padding: variables.$space-xs variables.$space-sm;
+}
+
+/* ── Résumé et chargement ────────────────────────────────────────────────── */
+.table-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: variables.$space-sm 0;
+    font-size: 0.88rem;
+    color: variables.$gray-600;
+    border-bottom: 1px solid variables.$gray-200;
+    margin-bottom: variables.$space-sm;
+}
+
+.loading-indicator {
+    display: flex;
+    justify-content: center;
+    padding: variables.$space-xl;
+    color: variables.$gray-500;
+}
+
+/* ── Tableau stock ───────────────────────────────────────────────────────── */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.stock-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid variables.$gray-200;
+    border-radius: variables.$radius-xs;
+    overflow: hidden;
+
+    th,
+    td {
+        padding: variables.$space-sm variables.$space-md;
+        font-size: 0.88rem;
+    }
+
+    th {
+        background: variables.$primary-color;
+        color: white;
+        text-align: left;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    td {
+        border-top: 1px solid variables.$gray-200;
+    }
+
+    tbody tr {
+        transition: background 0.15s;
+
+        &:nth-child(even) {
+            background: variables.$gray-100;
+        }
+
+        &:hover {
+            background: rgba(variables.$primary-color, 0.06);
+        }
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .cell-name {
+        font-weight: 500;
+        max-width: 260px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cell-ean {
+        font-family: monospace;
+        font-size: 0.85rem;
+        letter-spacing: 0.03em;
+    }
+
+    .cell-qty {
+        font-weight: 600;
+    }
+}
+
+/* ── Badges statut ───────────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.badge-active {
+    background: variables.$success-bg;
+    color: variables.$success-color;
+}
+
+.badge-inactive {
+    background: variables.$gray-200;
+    color: variables.$gray-600;
+}
+
+/* ── Points Dilicom ──────────────────────────────────────────────────────── */
+.dilicom-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+
+.dot-green {
+    background: variables.$color-success;
+    box-shadow: 0 0 0 2px rgba(variables.$color-success, 0.25);
+}
+
+.dot-yellow {
+    background: variables.$color-warning;
+    box-shadow: 0 0 0 2px rgba(variables.$color-warning, 0.25);
+}
+
+.dot-red {
+    background: variables.$color-danger;
+    box-shadow: 0 0 0 2px rgba(variables.$color-danger, 0.25);
+}
+
+.dot-grey {
+    background: variables.$gray-400;
+    box-shadow: 0 0 0 2px rgba(variables.$gray-400, 0.25);
+}
+
+/* ── Icônes d'action ─────────────────────────────────────────────────────── */
+.actions-cell {
+    display: flex;
+    gap: variables.$space-xs;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: variables.$radius-xs;
+    border: 1px solid variables.$gray-200;
+    background: #fff;
+    color: variables.$gray-600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        color: variables.$primary-color;
+        border-color: variables.$primary-color;
+        background: rgba(variables.$primary-color, 0.06);
+    }
+
+    &.action-cancel:hover {
+        color: variables.$color-danger;
+        border-color: variables.$color-danger;
+        background: rgba(variables.$color-danger, 0.06);
+    }
+
+    &.action-dilicom {
+        .action-letter {
+            font-weight: 700;
+            font-size: 0.85rem;
+            font-family: variables.$font-primary;
+        }
+
+        &:hover {
+            color: variables.$secondary-color;
+            border-color: variables.$secondary-color;
+            background: rgba(variables.$secondary-color, 0.06);
+        }
+    }
+}
+
+/* ── État vide ───────────────────────────────────────────────────────────── */
+.no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: variables.$space-md;
+    padding: variables.$space-xl variables.$space-md;
+    color: variables.$gray-500;
+    text-align: center;
+
+    svg {
+        opacity: 0.4;
+        width: 48px;
+        height: 48px;
+    }
+
+    p {
+        font-size: 1.05rem;
+    }
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: variables.$space-sm;
+    padding: variables.$space-lg 0;
+}
+
+.page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.page-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 variables.$space-xs;
+    border: 1px solid variables.$gray-200;
+    border-radius: variables.$radius-xs;
+    background: #fff;
+    color: variables.$gray-700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: variables.$font-primary;
+
+    &:hover {
+        background: rgba(variables.$primary-color, 0.06);
+        border-color: variables.$primary-color;
+        color: variables.$primary-color;
+    }
+
+    &.current {
+        background: variables.$primary-color;
+        color: #fff;
+        border-color: variables.$primary-color;
+        cursor: default;
+    }
+}
+
+.page-ellipsis {
+    padding: 0 variables.$space-xs;
+    color: variables.$gray-400;
+}
+
+/* ── Modale Dilicom ──────────────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+}
+
+.modal-dilicom {
+    background: #fff;
+    border-radius: variables.$radius-sm;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    width: 90%;
+    max-width: 540px;
+    overflow: hidden;
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: variables.$space-md variables.$space-lg;
+        border-bottom: 1px solid variables.$gray-200;
+
+        h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: variables.$primary-color;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: variables.$gray-500;
+            line-height: 1;
+            padding: 0;
+            transition: color 0.2s;
+
+            &:hover {
+                color: variables.$gray-800;
+            }
+        }
+    }
+
+    .modal-body {
+        padding: variables.$space-lg;
+
+        .dilicom-info {
+            margin-bottom: variables.$space-lg;
+            padding: variables.$space-md;
+            background: variables.$gray-100;
+            border-radius: variables.$radius-xs;
+            border-left: 4px solid variables.$primary-color;
+
+            .info-group {
+                display: flex;
+                gap: variables.$space-sm;
+                align-items: center;
+                margin-bottom: variables.$space-xs;
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+            }
+
+            .info-label {
+                font-size: 0.82rem;
+                font-weight: 600;
+                color: variables.$gray-500;
+                min-width: 100px;
+            }
+
+            .info-value {
+                font-size: 0.92rem;
+                color: variables.$gray-800;
+                display: flex;
+                align-items: center;
+                gap: variables.$space-xs;
+            }
+        }
+
+        h4 {
+            color: variables.$primary-color;
+            margin: 0 0 variables.$space-md;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: variables.$space-md;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: variables.$space-xs;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: variables.$gray-700;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: variables.$space-sm variables.$space-md;
+            border: 1px solid variables.$gray-300;
+            border-radius: variables.$radius-xs;
+            font-family: variables.$font-primary;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+
+            &:focus {
+                outline: none;
+                border-color: variables.$primary-color;
+                box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
+            }
+        }
+
+        .text-warning {
+            color: variables.$color-warning;
+            font-size: 0.9rem;
+            margin-bottom: variables.$space-lg;
+        }
+
+        .text-info {
+            color: variables.$secondary-color;
+            font-size: 0.9rem;
+            margin-bottom: variables.$space-lg;
+        }
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: variables.$space-sm;
+        justify-content: flex-end;
+        padding-top: variables.$space-md;
+    }
+}

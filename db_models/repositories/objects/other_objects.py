@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import OtherObjects
+from db_models.objects import OtherObjects
 
 class OtherObjectsRepository(BaseRepository):
     """Repository pour la gestion des autres objets liés aux objets généraux."""

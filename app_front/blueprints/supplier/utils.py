@@ -3,7 +3,7 @@
 from typing import Any, Dict, List
 from sqlalchemy import select
 from app_front.config.db_conf import get_main_session
-from db_models.objects.suppliers import Suppliers
+from db_models.objects import Suppliers
 
 def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str, Any]]:
     """

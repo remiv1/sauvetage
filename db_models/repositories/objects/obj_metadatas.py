@@ -8,7 +8,7 @@ import json
 from typing import Any, Dict, Optional, List
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import ObjMetadatas
+from db_models.objects import ObjMetadatas
 
 class ObjMetadatasRepository(BaseRepository):
     """

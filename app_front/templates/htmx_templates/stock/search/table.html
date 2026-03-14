@@ -1,0 +1,133 @@
+{# Fragment HTMX — Tableau des résultats de recherche de stock global #}
+
+{% set total_pages = (total / per_page) | round(0, 'ceil') | int %}
+{% set total_pages = total_pages if total_pages > 0 else 1 %}
+
+{# ── Résumé ─────────────────────────────────────────────────────────────── #}
+<div class="table-summary">
+    <span>{{ total }} article{{ 's' if total > 1 else '' }} trouvé{{ 's' if total > 1 else '' }}</span>
+    <span class="page-info">Page {{ page }} / {{ total_pages }}</span>
+</div>
+
+{# ── Tableau ────────────────────────────────────────────────────────────── #}
+{% if items %}
+<div class="table-responsive">
+    <table class="stock-table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Fournisseur</th>
+                <th class="text-center">Qté</th>
+                <th>EAN13</th>
+                <th class="text-center">Statut</th>
+                <th class="text-center">Dilicom</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="cell-name">{{ item.name }}</td>
+                <td>{{ item.supplier_name }}</td>
+                <td class="text-center cell-qty">{{ item.stock_qty }}</td>
+                <td class="cell-ean">{{ item.ean13 or '—' }}</td>
+                <td class="text-center">
+                    {% if item.is_active %}
+                        <span class="badge badge-active">Actif</span>
+                    {% else %}
+                        <span class="badge badge-inactive">Inactif</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if item.dilicom_status == 'active' %}
+                        <span class="dilicom-dot dot-green" title="Actif Dilicom"></span>
+                    {% elif item.dilicom_status == 'pending' %}
+                        <span class="dilicom-dot dot-yellow" title="En cours d'activation"></span>
+                    {% elif item.dilicom_status == 'deleting' %}
+                        <span class="dilicom-dot dot-red" title="En cours de suppression"></span>
+                    {% else %}
+                        <span class="dilicom-dot dot-grey" title="Inactif / Non référencé"></span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-cell">
+                        {# Bouton Dilicom #}
+                        <button class="action-icon action-dilicom"
+                                title="Gérer Dilicom"
+                                hx-get="{{ url_for('stock_htmx.dilicom_modal', object_id=item.id) }}"
+                                hx-target="#dilicom-modal-container"
+                                hx-swap="innerHTML">
+                            <span class="action-letter">D</span>
+                        </button>
+                        {# Bouton Voir #}
+                        <button class="action-icon action-view"
+                                title="Voir le détail">
+                            {% include "svg/eye.html" %}
+                        </button>
+                        {# Bouton Éditer #}
+                        <button class="action-icon action-edit"
+                                title="Éditer l'article">
+                            {% include "svg/edit.html" %}
+                        </button>
+                        {# Bouton Supprimer #}
+                        <button class="action-icon action-cancel"
+                                title="Supprimer l'article">
+                            {% include "svg/del.html" %}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ── Pagination ─────────────────────────────────────────────────────────── #}
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('stock_htmx.search_table', page=page - 1) }}"
+            hx-target="#stock-table-wrapper"
+            hx-swap="innerHTML"
+            hx-include="#search-filters">
+        &laquo; Précédent
+    </button>
+    {% endif %}
+
+    <span class="page-numbers">
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <span class="page-num current">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+                <button class="page-num"
+                        hx-get="{{ url_for('stock_htmx.search_table', page=p) }}"
+                        hx-target="#stock-table-wrapper"
+                        hx-swap="innerHTML"
+                        hx-include="#search-filters">
+                    {{ p }}
+                </button>
+            {% elif p == 4 or p == total_pages - 3 %}
+                <span class="page-ellipsis">…</span>
+            {% endif %}
+        {% endfor %}
+    </span>
+
+    {% if page < total_pages %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('stock_htmx.search_table', page=page + 1) }}"
+            hx-target="#stock-table-wrapper"
+            hx-swap="innerHTML"
+            hx-include="#search-filters">
+        Suivant &raquo;
+    </button>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="no-results">
+    {% include "svg/box.html" %}
+    <p>Aucun article trouvé.</p>
+</div>
+{% endif %}

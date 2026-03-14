@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional, List
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import MediaFiles
+from db_models.objects import MediaFiles
 
 class MediaRepository(BaseRepository):
     """Module de gestion des médias liés aux objets généraux."""

@@ -1,8 +1,7 @@
 """Tests pour les modèles d'objets dans la base de données."""
 
 from sqlalchemy.orm import Session, joinedload
-from db_models.objects.objects import GeneralObjects, Books
-from db_models.objects.suppliers import Suppliers
+from db_models.objects import GeneralObjects, Books, Suppliers
 
 
 def test_object_create_read_and_update(

@@ -21,23 +21,15 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.engine import Engine
 from db_models import WorkingBase, SecureBase  # type: ignore # pylint: disable=unused-import
-from db_models.objects.orders import Order, OrderLine  # type: ignore # pylint: disable=unused-import
-from db_models.objects.objects import (  # type: ignore # pylint: disable=unused-import
-    GeneralObjects,
-    Books,
-    OtherObjects,
-    MediaFiles,
-    ObjMetadatas,
-    Tags,
-    ObjectTags,  # pylint: disable=unused-import    # type: ignore
-)  # type: ignore # pylint: disable=unused-import
-from db_models.objects.shipments import (
-    Shipment,
-)  # pylint: disable=unused-import    # type: ignore
-from db_models.objects.inventory import InventoryMovements  # type: ignore # pylint: disable=unused-import
-from db_models.objects.invoices import Invoice  # type: ignore # pylint: disable=unused-import
-from db_models.objects.suppliers import Suppliers  # type: ignore # pylint: disable=unused-import
-from db_models.objects.users import Users  # type: ignore # pylint: disable=unused-import
+from db_models.objects import ( # type: ignore # pylint: disable=unused-import
+    Order, OrderLine,  # pylint: disable=unused-import# type: ignore
+    GeneralObjects, Books, OtherObjects, MediaFiles, ObjMetadatas, Tags, ObjectTags,  # type: ignore # pylint: disable=unused-import
+    Shipment,  # type: ignore # pylint: disable=unused-import
+    InventoryMovements,  # type: ignore # pylint: disable=unused-import
+    Invoice,  # type: ignore # pylint: disable=unused-import
+    Suppliers,  # type: ignore # pylint: disable=unused-import
+    Users,  # type: ignore # pylint: disable=unused-import
+)   # type: ignore # pylint: disable=unused-import
 
 
 def _load_env() -> None:
@@ -107,7 +99,7 @@ def engine_users() -> Engine:
 
 @pytest.fixture(scope="session")
 def engine(
-    engine_main: Engine, engine_users: Engine
+    engine_main: Engine, engine_users: Engine   # pylint: disable=redefined-outer-name
 ) -> Engine:  # pylint: disable=redefined-outer-name
     """Détecte et renvoie l'engine qui contient `auth_schema.users`.
 
@@ -130,7 +122,7 @@ def engine(
 
 @pytest.fixture(scope="function")
 def db_session_main(
-    engine_main: Engine, engine_users: Engine
+    engine_main: Engine, engine_users: Engine   # pylint: disable=redefined-outer-name, unused-argument
 ) -> Generator[
     Session, None, None
 ]:  # pylint: disable=redefined-outer-name, disable=unused-argument
@@ -147,7 +139,7 @@ def db_session_main(
 
 @pytest.fixture(scope="function")
 def db_session_users(
-    engine_users: Engine,
+    engine_users: Engine,   # pylint: disable=redefined-outer-name, unused-argument
 ) -> Generator[Session, None, None]:  # pylint: disable=redefined-outer-name
     """Session pour la DB `users` (transaction rollbackée par test)."""
     yield from _session_scope(engine_users)

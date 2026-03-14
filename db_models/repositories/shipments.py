@@ -6,7 +6,7 @@ suppression des expéditions dans la base de données.
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.shipments import Shipment
+from db_models.objects import Shipment
 
 class ShipmentsRepository(BaseRepository):
     """

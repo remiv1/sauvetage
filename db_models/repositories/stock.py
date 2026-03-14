@@ -4,12 +4,12 @@ routes du blueprint stock.
 """
 
 from decimal import Decimal
-from typing import Sequence
-from sqlalchemy import select, func, or_
+from typing import Sequence, Optional, Any, Dict
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import selectinload
-from db_models.objects import InventoryMovements
-from db_models.objects.objects import GeneralObjects
-from db_models.objects.stocks import OrderIn, OrderInLine
+from db_models.objects import (
+    InventoryMovements, GeneralObjects, OrderIn, OrderInLine, DilicomReferencial, Suppliers
+)
 from db_models.repositories.base_repo import BaseRepository
 
 
@@ -447,3 +447,350 @@ class StockRepository(BaseRepository):
         if result is None:
             raise ValueError(f"Retour {return_id} introuvable")
         return result
+
+
+    def search_stock_global(
+        self,
+        name: Optional[str] = None,
+        ean13: Optional[str] = None,
+        supplier_id: Optional[int] = None,
+        object_type: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        dilicom_status: Optional[str] = None,
+        page: int = 1,
+        per_page: int = 100,
+    ) -> Dict[str, Any]:
+        """Recherche paginée du stock global avec calcul de quantité.
+
+        La quantité est calculée comme :
+          qté du dernier inventaire + mouvements 'in' - mouvements 'out'
+          (seuls les mouvements postérieurs au dernier inventaire sont comptés)
+
+        Args:
+            name: Filtre par nom (ILIKE).
+            ean13: Filtre par EAN13 (ILIKE).
+            supplier_id: Filtre par fournisseur.
+            object_type: Filtre par type d'objet.
+            is_active: Filtre par statut actif/inactif.
+            dilicom_status: Filtre par statut Dilicom (active, pending, deleting, inactive).
+            page: Numéro de page (1-indexé).
+            per_page: Nombre d'éléments par page.
+
+        Returns:
+            Dict avec 'items' (liste de dicts) et 'total' (nombre total).
+        """
+        im = InventoryMovements
+        go = GeneralObjects
+
+        # --- Sous-requête : quantité du dernier inventaire par objet ---
+        latest_inv_ts = (
+            select(im.general_object_id, func.max(im.movement_timestamp).label("max_ts"))
+            .where(im.movement_type == "inventory")
+            .group_by(im.general_object_id)
+            .subquery()
+        )
+        latest_inv_qty = (
+            select(im.general_object_id,
+                   im.quantity.label("inv_qty"),
+                   im.movement_timestamp.label("inv_ts"))
+            .join(latest_inv_ts,
+                  and_(im.general_object_id == latest_inv_ts.c.general_object_id,
+                       im.movement_timestamp == latest_inv_ts.c.max_ts))
+            .where(im.movement_type == "inventory")
+            .subquery()
+        )
+
+        # --- Sous-requête : somme des mouvements 'in' après le dernier inventaire ---
+        in_after = (
+            select(im.general_object_id,
+                   func.coalesce(func.sum(im.quantity), 0).label("in_qty"))
+            .join(latest_inv_qty,
+                  im.general_object_id == latest_inv_qty.c.general_object_id)
+            .where(im.movement_type == "in",
+                   im.movement_timestamp > latest_inv_qty.c.inv_ts)
+            .group_by(im.general_object_id)
+            .subquery()
+        )
+
+        # --- Sous-requête : somme des mouvements 'out' après le dernier inventaire ---
+        out_after = (
+            select(im.general_object_id,
+                   func.coalesce(func.sum(im.quantity), 0).label("out_qty"))
+            .join(latest_inv_qty,
+                  im.general_object_id == latest_inv_qty.c.general_object_id)
+            .where(im.movement_type == "out",
+                   im.movement_timestamp > latest_inv_qty.c.inv_ts)
+            .group_by(im.general_object_id)
+            .subquery()
+        )
+
+        # --- Quantité calculée ---
+        qty_expr = (
+            func.coalesce(latest_inv_qty.c.inv_qty, 0)
+            + func.coalesce(in_after.c.in_qty, 0)
+            - func.abs(func.coalesce(out_after.c.out_qty, 0))
+        ).label("stock_qty")
+
+        # --- Requête principale ---
+        base = (
+            select(
+                go.id,
+                go.name,
+                go.ean13,
+                go.general_object_type,
+                go.is_active,
+                go.price,
+                Suppliers.name.label("supplier_name"),
+                Suppliers.id.label("sid"),
+                qty_expr,
+                DilicomReferencial.id.label("dilicom_id"),
+                DilicomReferencial.create_ref,
+                DilicomReferencial.delete_ref,
+                DilicomReferencial.dilicom_synced,
+                DilicomReferencial.is_active.label("dilicom_is_active"),
+            )
+            .select_from(go)
+            .join(Suppliers, go.supplier_id == Suppliers.id)
+            .outerjoin(latest_inv_qty,
+                       go.id == latest_inv_qty.c.general_object_id)
+            .outerjoin(in_after, go.id == in_after.c.general_object_id)
+            .outerjoin(out_after, go.id == out_after.c.general_object_id)
+            .outerjoin(DilicomReferencial,
+                       go.ean13 == DilicomReferencial.ean13)
+        )
+
+        # --- Filtres ---
+        where_clauses = []
+        if name:
+            where_clauses.append(go.name.ilike(f"%{name}%"))
+        if ean13:
+            where_clauses.append(go.ean13.ilike(f"%{ean13}%"))
+        if supplier_id is not None:
+            where_clauses.append(go.supplier_id == supplier_id)
+        if object_type:
+            where_clauses.append(go.general_object_type == object_type)
+        if is_active is not None:
+            where_clauses.append(go.is_active == is_active)  # pylint: disable=singleton-comparison
+        dilicom_filter = self._dilicom_status_filter(dilicom_status)
+        if dilicom_filter is not None:
+            where_clauses.append(dilicom_filter)
+
+        if where_clauses:
+            base = base.where(and_(*where_clauses))
+
+        # --- Comptage total ---
+        count_stmt = select(func.count()).select_from(base.subquery())  # pylint: disable=not-callable
+        total = self.session.execute(count_stmt).scalar() or 0
+
+        # --- Pagination ---
+        offset = (page - 1) * per_page
+        base = base.order_by(go.name).limit(per_page).offset(offset)
+
+        rows = self.session.execute(base).all()
+        items = []
+        for row in rows:
+            dilicom_st = self._compute_dilicom_status(
+                row.dilicom_id, row.create_ref, row.delete_ref, row.dilicom_synced
+            )
+            items.append({
+                "id": row.id,
+                "name": row.name,
+                "ean13": row.ean13,
+                "general_object_type": row.general_object_type,
+                "is_active": row.is_active,
+                "price": float(row.price) if row.price else 0.0,
+                "supplier_name": row.supplier_name,
+                "supplier_id": row.sid,
+                "stock_qty": int(row.stock_qty) if row.stock_qty else 0,
+                "dilicom_status": dilicom_st,
+                "dilicom_id": row.dilicom_id,
+            })
+
+        return {"items": items, "total": total, "page": page, "per_page": per_page}
+
+    @staticmethod
+    def _compute_dilicom_status(
+        dilicom_id, create_ref, delete_ref, dilicom_synced
+    ) -> str:
+        """Calcule le statut Dilicom pour l'affichage.
+
+        Returns:
+            'active', 'pending', 'deleting' ou 'inactive'.
+        """
+        if dilicom_id is None:
+            return "inactive"
+        if create_ref and dilicom_synced:
+            return "active"
+        if create_ref and not dilicom_synced:
+            return "pending"
+        if delete_ref and not dilicom_synced:
+            return "deleting"
+        return "inactive"
+
+    @staticmethod
+    def _dilicom_status_filter(dilicom_status: Optional[str]):
+        """Retourne une clause WHERE SQLAlchemy pour le filtre Dilicom, ou None."""
+        mapping = {
+            "active": and_(
+                DilicomReferencial.create_ref == True,  # pylint: disable=singleton-comparison
+                DilicomReferencial.dilicom_synced == True  # pylint: disable=singleton-comparison
+            ),
+            "pending": and_(
+                DilicomReferencial.create_ref == True,  # pylint: disable=singleton-comparison
+                DilicomReferencial.dilicom_synced == False  # pylint: disable=singleton-comparison
+            ),
+            "deleting": and_(
+                DilicomReferencial.delete_ref == True,  # pylint: disable=singleton-comparison
+                DilicomReferencial.dilicom_synced == False  # pylint: disable=singleton-comparison
+            ),
+            "inactive": or_(
+                DilicomReferencial.id == None,  # pylint: disable=singleton-comparison
+                and_(
+                    DilicomReferencial.delete_ref == True,  # pylint: disable=singleton-comparison
+                    DilicomReferencial.dilicom_synced == True  # pylint: disable=singleton-comparison
+                )
+            ),
+        }
+        return mapping.get(dilicom_status) if dilicom_status else None
+
+
+class DilicomReferencialRepository(BaseRepository):
+    """
+    Dépôt de fonctions de gestion des références Dilicom utilisées par les
+    routes du blueprint stock.
+    """
+
+    def _get_select(self, to_create: Optional[bool] = None, created: Optional[bool] = None,
+                    to_delete: Optional[bool] = None, deleted: Optional[bool] = None) -> Any:
+        """Construit une requête SQLAlchemy pour filtrer les références Dilicom en fonction
+        des critères de création/suppression.
+
+        Args:
+            to_create: Si True, filtre les références à créer (create_ref=True).
+            created: Si True, filtre les références déjà créées (create_ref=True).
+            to_delete: Si True, filtre les références à supprimer (delete_ref=True).
+            deleted: Si True, filtre les références déjà supprimées (delete_ref=True).
+        """
+        stmt = select(DilicomReferencial)
+        where_clauses = []
+        if to_create is True:
+            where_clauses.append(DilicomReferencial.create_ref == True)  # pylint: disable=singleton-comparison
+            where_clauses.append(DilicomReferencial.dilicom_synced == False)  # pylint: disable=singleton-comparison
+        if created is True:
+            where_clauses.append(DilicomReferencial.create_ref == True)  # pylint: disable=singleton-comparison
+            where_clauses.append(DilicomReferencial.dilicom_synced == True)  # pylint: disable=singleton-comparison
+        if to_delete is True:
+            where_clauses.append(DilicomReferencial.delete_ref == True)  # pylint: disable=singleton-comparison
+            where_clauses.append(DilicomReferencial.dilicom_synced == False)  # pylint: disable=singleton-comparison
+        if deleted is True:
+            where_clauses.append(DilicomReferencial.delete_ref == True)  # pylint: disable=singleton-comparison
+            where_clauses.append(DilicomReferencial.dilicom_synced == True)  # pylint: disable=singleton-comparison
+        if where_clauses:
+            stmt = stmt.where(and_(*where_clauses))
+        return stmt
+
+
+    def _update_status(self, status: str) -> Dict[str, bool]:
+        """Met à jour les champs de statut d'une référence Dilicom en fonction du statut
+        cible.
+
+        Args:
+            status: Le statut cible (to_create, created, to_delete, deleted).
+
+        Returns:
+            Un dictionnaire avec les clés `create_ref`, `delete_ref`, `dilicom_synced`
+            indiquant les valeurs à appliquer pour chaque champ.
+        """
+        if status == "to_create":
+            return {"create_ref": True, "delete_ref": False, "dilicom_synced": False}
+        elif status == "created":
+            return {"create_ref": True, "delete_ref": False, "dilicom_synced": True}
+        elif status == "to_delete":
+            return {"create_ref": False, "delete_ref": True, "dilicom_synced": False}
+        elif status == "deleted":
+            return {"create_ref": False, "delete_ref": True, "dilicom_synced": True}
+        else:
+            raise ValueError(f"Statut inconnu : {status}")
+
+
+    def get_one_by_ean13(self, ean13: str) -> Optional[DilicomReferencial]:
+        """Récupère une référence Dilicom à partir de son EAN13.
+
+        Args:
+            ean13: L'EAN13 de la référence à récupérer.
+
+        Returns:
+            Une instance de `DilicomReferencial` si la référence existe, sinon None.
+        """
+        stmt = select(DilicomReferencial).where(DilicomReferencial.ean13 == ean13)
+        result = self.session.execute(stmt).scalar_one_or_none()
+        return result
+
+
+    def get_all_referentials(self,
+                             synced: Optional[bool] = None
+                             ) -> Dict[str, Optional[Sequence[DilicomReferencial]]]:
+        """Récupère toutes les références Dilicom en fonction de leur statut de synchronisation.
+
+        Args:
+            synced: Filtre les références en fonction de leur statut de synchronisation.
+                    Si True, ne retourne que les références synchronisées.
+                    Si False, ne retourne que les références non synchronisées.
+                    Si None ou absent, retourne toutes les références.
+
+        Retourne un dictionnaire avec les clés :
+        - `to_create`, `created`, `to_delete`, `deleted`,
+            chacune contenant une liste de références Dilicom.
+        """
+        stmt_to_create = self._get_select(to_create=True) if synced is False else None
+        stmt_created = self._get_select(created=True) if synced is True else None
+        stmt_to_delete = self._get_select(to_delete=True) if synced is False else None
+        stmt_deleted = self._get_select(deleted=True) if synced is True else None
+        referentials = {
+            "to_create": self.session.execute(stmt_to_create).scalars().all() \
+                                if stmt_to_create else [],
+            "created": self.session.execute(stmt_created).scalars().all() \
+                                if stmt_created else [],
+            "to_delete": self.session.execute(stmt_to_delete).scalars().all() \
+                                if stmt_to_delete else [],
+            "deleted": self.session.execute(stmt_deleted).scalars().all() \
+                                if stmt_deleted else [],
+        }
+        return referentials
+
+
+    def create_or_update_referential(self, data: dict, status: str) -> int:
+        """Crée ou met à jour une référence Dilicom en base à partir des données du formulaire.
+
+        Si `id` est présent dans les données et correspond à une référence existante, la
+        référence est mise à jour. Sinon, une nouvelle référence est créée.
+
+        Args:
+            data: Dictionnaire contenant les données de la référence (isbn, gln13, etc.).
+            status: Le statut de la référence (to_create, created, to_delete, deleted).
+        Returns:
+            L'identifiant de la référence créée ou mise à jour.
+        """
+        ref_id = data.get("id")
+        if ref_id:
+            ref = self.get_one_by_ean13(data.get("ean13", ""))
+            if not ref:
+                raise ValueError(f"Référence avec ID {ref_id} introuvable pour mise à jour")
+            status_updates = self._update_status(status)
+            for key, value in data.items():
+                setattr(ref, key, value)
+            for key, value in status_updates.items():
+                setattr(ref, key, value)
+        else:
+            ref = DilicomReferencial.from_dict(data)
+            status_updates = self._update_status(status)
+            for key, value in status_updates.items():
+                setattr(ref, key, value)
+            self.session.add(ref)
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            msg = f"Erreur lors de la création/mise à jour de la référence : {exc}"
+            raise RuntimeError(msg) from exc
+        return ref.id

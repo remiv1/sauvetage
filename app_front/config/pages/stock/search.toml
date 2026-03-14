@@ -29,3 +29,4 @@ extend_layout = "index.html"
 navbar = true
 searchbar = false
 userbar = true
+htmx = true

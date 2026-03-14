@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import Tags
+from db_models.objects import Tags
 
 class TagsRepository(BaseRepository):
     """Dépôt pour la gestion des tags associés ou non aux objets"""

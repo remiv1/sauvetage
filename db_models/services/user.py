@@ -9,7 +9,7 @@ Service de gestion des utilisateurs. Il comporte plusieurs méthodes :
 
 from typing import Any
 from sqlalchemy.exc import IntegrityError
-from db_models.objects.users import Users
+from db_models.objects import Users
 from db_models.repositories.user import UsersRepository
 
 class UserService:

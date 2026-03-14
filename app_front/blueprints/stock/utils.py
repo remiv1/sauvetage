@@ -1,6 +1,6 @@
 """Module utils pour le blueprint stock"""
 
-from typing import Sequence
+from typing import Any, Dict, Optional, Sequence
 from app_front.config.db_conf import get_main_session
 from app_front.blueprints.stock.forms import OrderInCreateForm, OrderInLineForm
 from db_models.repositories.stock import StockRepository, OrderIn
@@ -184,3 +184,29 @@ def create_order_in_line_db(form: OrderInLineForm, action: str = "create", line_
         except ValueError as e:
             raise ValueError("L'ID de la ligne doit être un nombre entier.") from e
     raise ValueError("Action inconnue : " + action)
+
+
+def search_stock_global(
+    name: Optional[str] = None,
+    ean13: Optional[str] = None,
+    supplier_id: Optional[int] = None,
+    object_type: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    dilicom_status: Optional[str] = None,
+    page: int = 1,
+) -> Dict[str, Any]:
+    """Recherche paginée du stock global.
+
+    Returns:
+        Dict avec 'items', 'total', 'page', 'per_page'.
+    """
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.search_stock_global(
+        name=name,
+        ean13=ean13,
+        supplier_id=supplier_id,
+        object_type=object_type,
+        is_active=is_active,
+        dilicom_status=dilicom_status,
+        page=page,
+    )

@@ -23,8 +23,7 @@ from app_back.v1.schems.inventory import (
     ObjectPrice,
 )
 from app_back.db_connection.config import get_main_session
-from db_models.objects.objects import GeneralObjects
-from db_models.objects.inventory import InventoryMovements
+from db_models.objects import GeneralObjects, InventoryMovements
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 

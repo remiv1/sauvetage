@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
+
 class OrderIn(WorkingBase, QueryMixin):
     """Database model for OrderIn table."""
 
@@ -51,6 +52,7 @@ class OrderIn(WorkingBase, QueryMixin):
     def from_dict(cls, data: Dict[str, Any]) -> "OrderIn":
         """Crée un objet OrderIn à partir d'un dictionnaire."""
         return cls(**data)
+
 
 class OrderInLine(WorkingBase, QueryMixin):
     """Database model for OrderInLine table."""
@@ -118,6 +120,7 @@ class OrderInLine(WorkingBase, QueryMixin):
         """Crée un objet OrderInLine à partir d'un dictionnaire."""
         return cls(**data)
 
+
 class DilicomReferencial(WorkingBase, QueryMixin):
     """Database model for Dilicom Referential table."""
 
@@ -125,9 +128,9 @@ class DilicomReferencial(WorkingBase, QueryMixin):
     __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    isbn: Mapped[str] = mapped_column(String,
-                                      nullable=False,
-                                      comment="ISBN de l'objet")
+    ean13: Mapped[str] = mapped_column(String, ForeignKey("app_schema.general_objects.ean13"),
+                                       nullable=False,
+                                       comment="EAN13 de l'objet")
     gln13: Mapped[str] = mapped_column(String,
                                        ForeignKey("app_schema.suppliers.gln13"),
                                        nullable=False,
@@ -138,6 +141,8 @@ class DilicomReferencial(WorkingBase, QueryMixin):
                                              comment="Indique si l'objet doit être supprimé")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True,
                                             comment="Indique si la référence est active")
+    dilicom_synced: Mapped[bool] = mapped_column(Boolean, default=False,
+                                                 comment="Synchronisé avec Dilicom ou non")
 
     # Métadonnées de suivi
     created_at: Mapped[str] = mapped_column(String, nullable=False,
@@ -145,28 +150,33 @@ class DilicomReferencial(WorkingBase, QueryMixin):
     updated_at: Mapped[str] = mapped_column(String, nullable=False,
                                             comment="Date de dernière MàJ de la référence")
 
+    # Relations
+    general_object = relationship("GeneralObjects", back_populates="dilicom_referencial")
+    supplier = relationship("Suppliers", back_populates="dilicom_referencial")
+
     def __repr__(self) -> str:
-        return f"<DilicomReferencial(id={self.id}, isbn={self.isbn}, gln13={self.gln13}, " \
+        return f"<DilicomReferencial(id={self.id}, ean13={self.ean13}, gln13={self.gln13}, " \
                f"create_ref={self.create_ref}, delete_ref={self.delete_ref}, " \
-               f"is_active={self.is_active})>"
+               f"is_active={self.is_active}, dilicom_synced={self.dilicom_synced})>"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet DilicomReferencial en dictionnaire."""
         return {
             "id": self.id,
-            "isbn": self.isbn,
+            "ean13": self.ean13,
             "gln13": self.gln13,
             "create_ref": self.create_ref,
             "delete_ref": self.delete_ref,
             "is_active": self.is_active,
             "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "updated_at": self.updated_at,
+            "dilicom_synced": self.dilicom_synced,
         }
 
     def to_pipe(self) -> str:
         """Création du pipe de commandes pour Dilicom."""
         direction = "c" if self.create_ref else "d"
-        return f"{direction}|{self.isbn}|{self.gln13}"
+        return f"{direction}|{self.ean13}|{self.gln13}"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DilicomReferencial":

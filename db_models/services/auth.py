@@ -1,7 +1,7 @@
 """Service d'authentification et de gestion des sessions."""
 
 from flask import session
-from db_models.objects.users import Users
+from db_models.objects import Users
 from db_models.repositories.user import UsersRepository
 
 class AuthService:

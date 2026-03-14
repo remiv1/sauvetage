@@ -1,8 +1,8 @@
-"""first_migration
+"""first migration
 
-Revision ID: fc3396479770
+Revision ID: 8f589e12c255
 Revises: 
-Create Date: 2026-03-10 14:07:41.393243
+Create Date: 2026-03-14 17:08:43.966225
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'fc3396479770'
+revision: str = '8f589e12c255'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -172,19 +172,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
     )
-    op.create_table('dilicom_referential',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('isbn', sa.String(), nullable=False, comment="ISBN de l'objet"),
-    sa.Column('gln13', sa.String(), nullable=False, comment='GLN13 du fournisseur'),
-    sa.Column('create_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être créé"),
-    sa.Column('delete_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être supprimé"),
-    sa.Column('is_active', sa.Boolean(), nullable=False, comment='Indique si la référence est active'),
-    sa.Column('created_at', sa.String(), nullable=False, comment='Date de création de la référence'),
-    sa.Column('updated_at', sa.String(), nullable=False, comment='Date de dernière MàJ de la référence'),
-    sa.ForeignKeyConstraint(['gln13'], ['app_schema.suppliers.gln13'], ),
-    sa.PrimaryKeyConstraint('id'),
-    schema='app_schema'
-    )
     op.create_table('general_objects',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment="Identifiant unique de l'objet"),
     sa.Column('supplier_id', sa.Integer(), nullable=False, comment="Identifiant du fournisseur de l'objet"),
@@ -199,6 +186,7 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=False, comment="Indique si l'objet est actif pour la vente"),
     sa.ForeignKeyConstraint(['supplier_id'], ['app_schema.suppliers.id'], ),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('ean13'),
     schema='app_schema'
     )
     op.create_table('order_in',
@@ -225,6 +213,21 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création du livre'),
     sa.Column('updated_at', sa.DateTime(), nullable=False, comment='Date de dernière mise à jour du livre'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    schema='app_schema'
+    )
+    op.create_table('dilicom_referential',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('ean13', sa.String(), nullable=False, comment="EAN13 de l'objet"),
+    sa.Column('gln13', sa.String(), nullable=False, comment='GLN13 du fournisseur'),
+    sa.Column('create_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être créé"),
+    sa.Column('delete_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être supprimé"),
+    sa.Column('is_active', sa.Boolean(), nullable=False, comment='Indique si la référence est active'),
+    sa.Column('dilicom_synced', sa.Boolean(), nullable=False, comment='Synchronisé avec Dilicom ou non'),
+    sa.Column('created_at', sa.String(), nullable=False, comment='Date de création de la référence'),
+    sa.Column('updated_at', sa.String(), nullable=False, comment='Date de dernière MàJ de la référence'),
+    sa.ForeignKeyConstraint(['ean13'], ['app_schema.general_objects.ean13'], ),
+    sa.ForeignKeyConstraint(['gln13'], ['app_schema.suppliers.gln13'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
     )
@@ -312,8 +315,8 @@ def upgrade() -> None:
     sa.Column('inventory_movement_id', sa.Integer(), nullable=True, comment='ID du mouvement de stock associé'),
     sa.Column('qty_ordered', sa.Integer(), nullable=False, comment='Quantité commandée'),
     sa.Column('qty_received', sa.Integer(), nullable=False, comment='Quantité reçue'),
-    sa.Column('unit_price', sa.Numeric(precision=10, scale=2), nullable=False, comment="Prix unitaire en centimes d'euro"),
-    sa.Column('vat_rate', sa.Numeric(precision=10, scale=3), nullable=False, comment='Taux de TVA en pourcentage'),
+    sa.Column('unit_price', sa.Numeric(precision=10, scale=2, decimal_return_scale=True), nullable=False, comment="Prix unitaire en centimes d'euro"),
+    sa.Column('vat_rate', sa.Numeric(precision=10, scale=3, decimal_return_scale=True), nullable=False, comment='Taux de TVA en pourcentage'),
     sa.Column('line_state', sa.String(), nullable=False, comment='État de la ligne de commande'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),
     sa.ForeignKeyConstraint(['inventory_movement_id'], ['app_schema.inventory_movements.id'], ),
@@ -355,10 +358,10 @@ def downgrade() -> None:
     op.drop_table('obj_metadatas', schema='app_schema')
     op.drop_table('media_files', schema='app_schema')
     op.drop_table('inventory_movements', schema='app_schema')
+    op.drop_table('dilicom_referential', schema='app_schema')
     op.drop_table('books', schema='app_schema')
     op.drop_table('order_in', schema='app_schema')
     op.drop_table('general_objects', schema='app_schema')
-    op.drop_table('dilicom_referential', schema='app_schema')
     op.drop_table('customer_sync_logs', schema='app_schema')
     op.drop_table('customer_pros', schema='app_schema')
     op.drop_table('customer_phones', schema='app_schema')

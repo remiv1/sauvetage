@@ -3,24 +3,19 @@
 from typing import Dict, Any
 import pytest
 from sqlalchemy.orm import Session
-from db_models.objects.objects import (
-    GeneralObjects,
-    Books,
-    Tags,
-    ObjectTags,
-    ObjMetadatas,
-    MediaFiles,
+from db_models.objects import (
+    GeneralObjects, Books, Tags, ObjectTags, ObjMetadatas, MediaFiles,
+    Suppliers
 )
-from db_models.objects.suppliers import Suppliers
-from tests.fixtures.db_fixture import (
-    db_session_main,
-    engine,
+from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
+    db_session_main,  # pylint: disable=unused-import # type: ignore
+    engine,  # pylint: disable=unused-import # type: ignore
 )  # pylint: disable=unused-import # type: ignore
 
 
 @pytest.fixture
 def tags(
-    db_session_main: Session,
+    db_session_main: Session,  # pylint: disable=redefined-outer-name, unused-argument
 ) -> list[Tags]:  # pylint: disable=redefined-outer-name
     """Fixture pour créer des tags de test."""
     tags = [  # pylint: disable=redefined-outer-name
@@ -35,7 +30,7 @@ def tags(
 
 @pytest.fixture
 def book_object(
-    db_session_main: Session, supplier: Suppliers, tags: list[Tags]
+    db_session_main: Session, supplier: Suppliers, tags: list[Tags]  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Books:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un objet de type livre."""
     general_object = GeneralObjects(

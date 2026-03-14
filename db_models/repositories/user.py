@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.users import Users, UsersPasswords
+from db_models.objects import Users, UsersPasswords
 from db_models.security.secur_sauv import PwdHasher
 
 class UsersRepository(BaseRepository):

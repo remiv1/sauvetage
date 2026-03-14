@@ -23,7 +23,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                              ForeignKey('app_schema.suppliers.id'), nullable=False,
                                             comment="Identifiant du fournisseur de l'objet")
     general_object_type: Mapped[str] = mapped_column(String, nullable=False, comment="Type d'objet")
-    ean13: Mapped[str] = mapped_column(String, comment="Code EAN13 de l'objet")
+    ean13: Mapped[str] = mapped_column(String, unique=True, comment="Code EAN13 de l'objet")
     name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom de l'objet")
     description: Mapped[str] = mapped_column(String, comment="Description de l'objet")
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, comment="Prix de l'objet")
@@ -61,6 +61,9 @@ class GeneralObjects(WorkingBase, QueryMixin):
                                cascade=CASCADE_OPTIONS)
     orderin_lines = relationship("OrderInLine", back_populates="general_object",
                                  cascade=CASCADE_OPTIONS)
+    dilicom_referencial = relationship("DilicomReferencial", uselist=False,
+                                       back_populates="general_object",
+                                       cascade=CASCADE_OPTIONS)
 
     def __repr__(self) -> str:
         return f"<GeneralObject(id={self.id}, supplier_id={self.supplier_id}, " \

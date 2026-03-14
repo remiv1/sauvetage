@@ -1,7 +1,7 @@
 """Test unitaire pour la classe Customers dans db_models.objects.customers."""
 
 from sqlalchemy.orm import Session
-from db_models.objects.customers import Customers
+from db_models.objects import Customers
 
 
 def test_customer_create_read_and_update(

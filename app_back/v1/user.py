@@ -5,7 +5,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Request
 from sqlalchemy import select
 from app_back.db_connection.config import get_secure_session
-from db_models.objects.users import Users, UsersPasswords
+from db_models.objects import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
 
 router = APIRouter(

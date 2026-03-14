@@ -3,7 +3,7 @@
 from datetime import date
 import pytest
 from sqlalchemy.orm import Session
-from db_models.objects.customers import (
+from db_models.objects import (
     Customers,
     CustomerParts,
     CustomerPros,
@@ -11,15 +11,15 @@ from db_models.objects.customers import (
     CustomerMails,
     CustomerPhones,
 )
-from tests.fixtures.db_fixture import (
-    db_session_main,
-    engine,
+from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
+    db_session_main,  # pylint: disable=unused-import # type: ignore
+    engine,  # pylint: disable=unused-import # type: ignore
 )  # pylint: disable=unused-import # type: ignore
 
 
 @pytest.fixture
 def complete_customer_pro(
-    db_session_main: Session,
+    db_session_main: Session,   # pylint: disable=redefined-outer-name, unused-argument
 ) -> Customers:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un client professionnel complet avec tous les champs."""
     customer = Customers(wpwc_id="1", henrri_id="2", customer_type="pro")
@@ -85,7 +85,7 @@ def complete_customer_pro(
 
 @pytest.fixture
 def complete_customer_part(
-    db_session_main: Session,
+    db_session_main: Session,   # pylint: disable=redefined-outer-name, unused-argument
 ) -> Customers:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un client particulier complet avec tous les champs."""
     customer = Customers(wpwc_id="1", henrri_id="2", customer_type="part")

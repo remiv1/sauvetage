@@ -7,7 +7,7 @@ Dépôt de données pour les fournisseurs. Ceci ne contient que d'une classe :
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.suppliers import Suppliers
+from db_models.objects import Suppliers
 
 class SuppliersRepository(BaseRepository):
     """

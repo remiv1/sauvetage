@@ -44,13 +44,6 @@ def orders():
     return render_page("stock_order", orders=orders_list)
 
 
-@bp_stock.route("/orders/<int:order_id>", methods=["GET"])
-def view_order(order_id: int):
-    """Page de détail d'une commande fournisseur"""
-    # TODO: implémenter la vue détaillée
-    return render_page("stock_order")
-
-
 @bp_stock.route("/orders/new", methods=["GET", "POST"])
 def create_order():
     """Création d'une nouvelle commande fournisseur"""

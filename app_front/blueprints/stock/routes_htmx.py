@@ -13,6 +13,7 @@ from app_front.blueprints.stock.utils import (
     cancel_supplier_order,
     create_order_in_db,
     create_order_in_line_db,
+    search_stock_global,
 )
 
 bp_stock_htmx = Blueprint(
@@ -191,3 +192,63 @@ def new_return_table():
 def new_return_line_form():
     """Retourne le formulaire de création d'une ligne de retour fournisseur (HTMX)."""
     return render_template("htmx_templates/stock/returns/fragments/new_line.html")
+
+
+# ============================================================================
+# Recherche globale de stock
+# ============================================================================
+
+SEARCH_TABLE = "htmx_templates/stock/search/table.html"
+DILICOM_MODAL = "htmx_templates/stock/search/dilicom_modal.html"
+
+
+@bp_stock_htmx.get("/search/table")
+def search_table():
+    """Retourne le tableau filtré du stock global (HTMX)."""
+    name = request.args.get("name", "").strip() or None
+    ean13 = request.args.get("ean13", "").strip() or None
+    supplier_id_str = request.args.get("supplier_id", "").strip()
+    supplier_id = int(supplier_id_str) if supplier_id_str else None
+    object_type = request.args.get("object_type", "").strip() or None
+    is_active_str = request.args.get("is_active", "").strip()
+    is_active = None
+    if is_active_str == "true":
+        is_active = True
+    elif is_active_str == "false":
+        is_active = False
+    dilicom_status = request.args.get("dilicom_status", "").strip() or None
+    page_str = request.args.get("page", "1").strip()
+    page = max(1, int(page_str)) if page_str.isdigit() else 1
+
+    result = search_stock_global(
+        name=name,
+        ean13=ean13,
+        supplier_id=supplier_id,
+        object_type=object_type,
+        is_active=is_active,
+        dilicom_status=dilicom_status,
+        page=page,
+    )
+    return render_template(SEARCH_TABLE, **result)
+
+
+@bp_stock_htmx.get("/search/dilicom/<int:object_id>")
+def dilicom_modal(object_id: int):
+    """Retourne la modale Dilicom pour un objet donné (HTMX)."""
+    from app_front.config.db_conf import get_main_session
+    from db_models.repositories.stock import DilicomReferencialRepository
+    from db_models.objects import GeneralObjects
+
+    session = get_main_session()
+    obj = session.get(GeneralObjects, object_id)
+    if obj is None:
+        return "<p>Objet introuvable.</p>", 404
+
+    dilicom_repo = DilicomReferencialRepository(session)
+    dilicom_ref = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
+
+    return render_template(
+        DILICOM_MODAL,
+        obj=obj,
+        dilicom_ref=dilicom_ref,
+    )

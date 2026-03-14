@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import Books
+from db_models.objects import Books
 
 class BooksRepository(BaseRepository):
     """Repository pour la gestion des livres liés aux objets généraux."""

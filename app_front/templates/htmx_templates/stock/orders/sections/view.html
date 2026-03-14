@@ -55,7 +55,7 @@
             <h3>Lignes de commande</h3>
             {% if view_state == 'edit' or view_state == 'new' %}
             <button class="btn btn-primary btn-sm"
-                    hx-get="{{ url_for('stock_htmx.new_order_line_form', order_id=id_order) }}"
+                    hx-get="{{ url_for('stock_htmx.new_order_line_form', order_id=order.id) }}"
                     hx-target="#new-line-modal"
                     hx-swap="innerHTML"
                     title="Ajouter une ligne">

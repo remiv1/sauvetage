@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.orders import Order, OrderLine
+from db_models.objects import Order, OrderLine
 
 class OrdersRepository(BaseRepository):
     """Dépôt de données pour les commandes. Contient les méthodes pour interagir avec les

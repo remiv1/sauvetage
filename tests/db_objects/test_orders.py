@@ -1,9 +1,7 @@
 """Test pour les commandes de bout en bout."""
 
 from sqlalchemy.orm import Session, joinedload
-from db_models.objects.orders import Order, OrderLine
-from db_models.objects.invoices import Invoice
-from db_models.objects.shipments import Shipment
+from db_models.objects import Order, OrderLine, Invoice, Shipment
 
 
 def test_create_order_with_invoice_and_shipment(
