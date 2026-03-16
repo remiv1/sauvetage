@@ -2,6 +2,7 @@
 
 from flask import Blueprint, render_template, request, flash
 from app_front.blueprints.stock.forms import (
+    CreateObjectForm,
     OrderInCreateForm,
     OrderInLineForm,
 )
@@ -14,6 +15,12 @@ from app_front.blueprints.stock.utils import (
     create_order_in_db,
     create_order_in_line_db,
     search_stock_global,
+    get_dilicom_referencial,
+    get_object_by_id,
+    create_object_complete,
+    search_book_field,
+    search_tags,
+    create_tag,
 )
 
 bp_stock_htmx = Blueprint(
@@ -235,20 +242,144 @@ def search_table():
 @bp_stock_htmx.get("/search/dilicom/<int:object_id>")
 def dilicom_modal(object_id: int):
     """Retourne la modale Dilicom pour un objet donné (HTMX)."""
-    from app_front.config.db_conf import get_main_session
-    from db_models.repositories.stock import DilicomReferencialRepository
-    from db_models.objects import GeneralObjects
-
-    session = get_main_session()
-    obj = session.get(GeneralObjects, object_id)
-    if obj is None:
-        return "<p>Objet introuvable.</p>", 404
-
-    dilicom_repo = DilicomReferencialRepository(session)
-    dilicom_ref = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
+    dilicom_ref, obj = get_dilicom_referencial(object_id)
+    if dilicom_ref is None and obj is None:
+        return "<p>Aucun référentiel Dilicom trouvé pour cet objet.</p>"
 
     return render_template(
         DILICOM_MODAL,
         obj=obj,
         dilicom_ref=dilicom_ref,
     )
+
+
+# ============================================================================
+# Routes pour la gestion unitaire des objets (création / vue)
+# ============================================================================
+
+OBJECT_FORM = "htmx_templates/stock/search/single_object_form.html"
+OBJECT_COMPLEMENT = "htmx_templates/stock/search/object_complement.html"
+AUTOCOMPLETE_DROPDOWN = "htmx_templates/stock/search/autocomplete_dropdown.html"
+TAG_AUTOCOMPLETE = "htmx_templates/stock/search/tag_autocomplete_dropdown.html"
+TAG_SELECTED = "htmx_templates/stock/search/tag_selected.html"
+
+
+@bp_stock_htmx.get("/search/object/autocomplete/<field>")
+def object_autocomplete(field: str):
+    """Retourne les suggestions d'autocomplete pour un champ donné (HTMX)."""
+    q = request.args.get("q", "").strip()
+    print(f"DEBUG Autocomplete request for field '{field}' with query: '{q}'")
+    print(f"DEBUG request.args: {dict(request.args)}")
+    if len(q) < 1:
+        return ""
+    if field == "tag":
+        results = search_tags(q)
+        return render_template(TAG_AUTOCOMPLETE, results=results, query=q)
+    else:
+        results = search_book_field(field, q)
+        return render_template(AUTOCOMPLETE_DROPDOWN, results=results, field=field)
+
+
+@bp_stock_htmx.post("/search/object/tag/create")
+def create_tag_htmx():
+    """Crée un tag via HTMX et retourne le fragment de sélection."""
+    name = request.form.get("name", "").strip()
+    description = request.form.get("description", "").strip()
+    if not name:
+        return "<div class='dropdown-item text-danger'>Le nom est requis.</div>", 422
+    try:
+        tag = create_tag(name, description)
+    except ValueError as exc:
+        return f"<div class='dropdown-item text-danger'>{exc}</div>", 422
+    return render_template(
+        TAG_SELECTED,
+        tag_id=tag["id"],
+        tag_name=tag["name"],
+        tag_description=tag["description"],
+    )
+
+
+@bp_stock_htmx.get("/search/object/form")
+def object_form():
+    """Retourne le formulaire de base de l'objet en mode création (HTMX)."""
+    form = CreateObjectForm()
+    return render_template(OBJECT_FORM, form=form, form_state="create")
+
+
+@bp_stock_htmx.get("/search/object/view/<int:object_id>")
+def object_view(object_id: int):
+    """Retourne le formulaire de l'objet en mode consultation (HTMX)."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return "<p>Objet introuvable.</p>", 404
+    form = CreateObjectForm()
+    form.supplier_id.data = str(obj.supplier_id)
+    form.supplier_name.data = obj.supplier.name if obj.supplier else ""
+    form.general_object_type.data = obj.general_object_type
+    form.ean_13.data = obj.ean13
+    form.name.data = obj.name
+    form.description.data = obj.description or ""
+    form.price.data = str(obj.price)
+    return render_template(
+        OBJECT_FORM, form=form, form_state="view", obj=obj,
+    )
+
+
+@bp_stock_htmx.get("/search/object/complement")
+def object_complement():
+    """Retourne le complément d'onglets en fonction du type sélectionné (HTMX)."""
+    object_type = request.args.get("general_object_type", "other")
+    form_state = request.args.get("form_state", "create")
+    form = CreateObjectForm()
+    return render_template(
+        OBJECT_COMPLEMENT,
+        form=form,
+        object_type=object_type,
+        form_state=form_state,
+    )
+
+
+@bp_stock_htmx.get("/search/object/complement/<int:object_id>")
+def object_complement_view(object_id: int):
+    """Retourne le complément d'onglets pré-rempli en mode consultation (HTMX)."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return "<p>Objet introuvable.</p>", 404
+    form = CreateObjectForm()
+    if obj.book:
+        form.book.author.data = obj.book.author or ""
+        form.book.diffuser.data = obj.book.diffuser or ""
+        form.book.editor.data = obj.book.editor or ""
+        form.book.genre.data = obj.book.genre or ""
+        form.book.publication_year.data = str(obj.book.publication_year or "")
+        form.book.pages.data = str(obj.book.pages or "")
+        form.book.add_to_dilicom.data = "true" if obj.book.add_to_dilicom else "false"
+    return render_template(
+        OBJECT_COMPLEMENT,
+        form=form,
+        object_type=obj.general_object_type,
+        form_state="view",
+        obj=obj,
+    )
+
+
+@bp_stock_htmx.route("/search/object/create", methods=["POST"])
+def create_object():
+    """Valide et crée un nouvel objet à partir du formulaire global (HTMX)."""
+    form = CreateObjectForm()
+    if form.validate_on_submit():
+        try:
+            new_obj = create_object_complete(form)
+            return render_template(
+                OBJECT_FORM, form=CreateObjectForm(),
+                form_state="created", created_id=new_obj.id,
+            )
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return render_template(
+                OBJECT_FORM, form=form, form_state="create",
+            ), 422
+    print(f"DEBUG Form errors: {form.errors}")
+    return render_template(
+        OBJECT_FORM, form=form, form_state="create",
+    ), 422

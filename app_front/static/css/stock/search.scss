@@ -133,7 +133,7 @@ details[open] > .accordion-toggle {
     background-color: variables.$gray-200;
     border: 1px solid variables.$primary-color;
     position: absolute;
-    z-index: 1000;
+    z-index: 10000;
     width: 100%;
     left: 0;
     right: 0;
@@ -235,6 +235,20 @@ details[open] > .accordion-toggle {
     justify-content: center;
     padding: variables.$space-xl;
     color: variables.$gray-500;
+}
+
+/* ── Bouton ajouter article ──────────────────────────────────────────────── */
+.search-actions {
+    display: flex;
+    gap: variables.$space-md;
+    margin-bottom: variables.$space-lg;
+    align-items: center;
+
+    a.btn {
+        display: inline-flex;
+        align-items: center;
+        gap: variables.$space-sm;
+    }
 }
 
 /* ── Tableau stock ───────────────────────────────────────────────────────── */
@@ -483,12 +497,12 @@ details[open] > .accordion-toggle {
     backdrop-filter: blur(4px);
 }
 
-.modal-dilicom {
+/* ── Styles communs aux modales ──────────────────────────────────────────── */
+.modal-box {
     background: #fff;
     border-radius: variables.$radius-sm;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
     width: 90%;
-    max-width: 540px;
     overflow: hidden;
 
     .modal-header {
@@ -523,40 +537,6 @@ details[open] > .accordion-toggle {
     .modal-body {
         padding: variables.$space-lg;
 
-        .dilicom-info {
-            margin-bottom: variables.$space-lg;
-            padding: variables.$space-md;
-            background: variables.$gray-100;
-            border-radius: variables.$radius-xs;
-            border-left: 4px solid variables.$primary-color;
-
-            .info-group {
-                display: flex;
-                gap: variables.$space-sm;
-                align-items: center;
-                margin-bottom: variables.$space-xs;
-
-                &:last-child {
-                    margin-bottom: 0;
-                }
-            }
-
-            .info-label {
-                font-size: 0.82rem;
-                font-weight: 600;
-                color: variables.$gray-500;
-                min-width: 100px;
-            }
-
-            .info-value {
-                font-size: 0.92rem;
-                color: variables.$gray-800;
-                display: flex;
-                align-items: center;
-                gap: variables.$space-xs;
-            }
-        }
-
         h4 {
             color: variables.$primary-color;
             margin: 0 0 variables.$space-md;
@@ -590,6 +570,12 @@ details[open] > .accordion-toggle {
                 border-color: variables.$primary-color;
                 box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
             }
+
+            &:disabled {
+                background: variables.$gray-100;
+                color: variables.$gray-600;
+                cursor: not-allowed;
+            }
         }
 
         .text-warning {
@@ -603,6 +589,11 @@ details[open] > .accordion-toggle {
             font-size: 0.9rem;
             margin-bottom: variables.$space-lg;
         }
+
+        .text-muted {
+            color: variables.$gray-500;
+            font-size: 0.9rem;
+        }
     }
 
     .modal-buttons {
@@ -610,5 +601,223 @@ details[open] > .accordion-toggle {
         gap: variables.$space-sm;
         justify-content: flex-end;
         padding-top: variables.$space-md;
+    }
+}
+
+/* ── Modale Dilicom ──────────────────────────────────────────────────────── */
+.modal-dilicom {
+    max-width: 540px;
+
+    .dilicom-info {
+        margin-bottom: variables.$space-lg;
+        padding: variables.$space-md;
+        background: variables.$gray-100;
+        border-radius: variables.$radius-xs;
+        border-left: 4px solid variables.$primary-color;
+
+        .info-group {
+            display: flex;
+            gap: variables.$space-sm;
+            align-items: center;
+            margin-bottom: variables.$space-xs;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+
+        .info-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: variables.$gray-500;
+            min-width: 100px;
+        }
+
+        .info-value {
+            font-size: 0.92rem;
+            color: variables.$gray-800;
+            display: flex;
+            align-items: center;
+            gap: variables.$space-xs;
+        }
+    }
+}
+
+/* ── Modale Objet (création / vue) ───────────────────────────────────────── */
+.modal-object {
+    max-width: 750px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+
+    .modal-body {
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .object-created-msg {
+        padding: variables.$space-lg;
+        background: rgba(variables.$color-success, 0.08);
+        border-left: 4px solid variables.$color-success;
+        border-radius: variables.$radius-xs;
+        margin-bottom: variables.$space-lg;
+
+        p {
+            margin: 0;
+            color: variables.$gray-800;
+        }
+    }
+
+    .object-fields-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: variables.$space-md;
+        margin-bottom: variables.$space-lg;
+
+        .form-group-wide {
+            grid-column: span 2;
+        }
+    }
+}
+
+/* ── Onglets complémentaires ─────────────────────────────────────────────── */
+.complement-tabs {
+    border: 1px solid variables.$gray-200;
+    border-radius: variables.$radius-xs;
+    overflow: visible;
+}
+
+.tab-nav {
+    display: flex;
+    border-bottom: 2px solid variables.$gray-200;
+    background: variables.$gray-100;
+    padding: 0;
+
+    .tab-btn {
+        flex: 1;
+        padding: variables.$space-sm variables.$space-md;
+        border: none;
+        background: transparent;
+        font-family: variables.$font-primary;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: variables.$gray-500;
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+
+        &:hover {
+            color: variables.$primary-color;
+        }
+
+        &.active {
+            color: variables.$primary-color;
+            border-bottom-color: variables.$primary-color;
+            background: #fff;
+        }
+    }
+}
+
+.tab-panels {
+    padding: variables.$space-md;
+}
+
+.tab-panel {
+    display: none;
+
+    &.active {
+        display: block;
+    }
+}
+
+.complement-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: variables.$space-md;
+}
+
+/* ── Listes dynamiques (mots-clés, métadonnées) ─────────────────────────── */
+.dynamic-list {
+    display: flex;
+    flex-direction: column;
+    gap: variables.$space-sm;
+    margin-bottom: variables.$space-md;
+}
+
+.dynamic-list-item {
+    display: flex;
+    gap: variables.$space-sm;
+    align-items: center;
+
+    .form-control {
+        flex: 1;
+    }
+
+    .btn-remove-item {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    &.kv-pair .form-control:first-child {
+        flex: 0.4;
+    }
+}
+
+.media-item .form-control {
+    flex: 1;
+}
+
+.media-item {
+    .media-type-select {
+        max-width: 140px;
+    }
+    .media-fields {
+        display: flex;
+        gap: variables.$space-sm;
+        flex: 1;
+        .form-control {
+            flex: 1;
+        }
+    }
+    .media-type-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: variables.$radius-xs;
+        background: variables.$gray-300;
+    }
+}
+
+.dropdown-item-create {
+    font-weight: 500;
+    border-top: 1px solid variables.$gray-300;
+}
+
+.tag-create-form {
+    border-top: 1px solid variables.$gray-300;
+    padding: variables.$space-sm;
+    background: rgba(variables.$primary-color, 0.02);
+    
+    .form-control {
+        font-size: 0.85rem;
+        margin-bottom: variables.$space-xs;
+        
+        &:last-of-type {
+            margin-bottom: variables.$space-sm;
+        }
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
     }
 }

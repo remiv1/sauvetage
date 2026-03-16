@@ -56,6 +56,7 @@ a:hover {
   padding: 2rem;
   border-radius: 20px;
   box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1;
 }
 
 .centered {
@@ -137,6 +138,27 @@ form input[type=submit]:hover {
 .bg-primary {
   background-color: #00086f;
   color: #ffffff;
+}
+
+.icone-8 {
+  width: 8px;
+  height: 8px;
+}
+.icone-16 {
+  width: 16px;
+  height: 16px;
+}
+.icone-24 {
+  width: 24px;
+  height: 24px;
+}
+.icone-32 {
+  width: 32px;
+  height: 32px;
+}
+.icone-48 {
+  width: 48px;
+  height: 48px;
 }
 
 .mt-1 {
@@ -369,6 +391,26 @@ form input[type=submit]:hover {
   padding-right: 8rem;
 }
 
+.p-1 {
+  padding: 0.5rem;
+}
+
+.p-2 {
+  padding: 1rem;
+}
+
+.p-3 {
+  padding: 2rem;
+}
+
+.p-4 {
+  padding: 4rem;
+}
+
+.p-5 {
+  padding: 8rem;
+}
+
 .text-center {
   text-align: center;
 }
@@ -548,13 +590,13 @@ textarea {
   transition: all 0.3s ease;
 }
 .criterion.invalid {
-  color: hsl(354.0659340659, 100%, -4.3137254902%);
-  background: rgb(255, 131, 143.2637362637);
+  color: #8a000f;
+  background: #fab3b3;
   font-style: italic;
 }
 .criterion.valid {
-  color: hsl(133.7614678899, 100%, -18.6274509804%);
-  background: rgb(58, 255, 103.1834862385);
+  color: #004d12;
+  background: #a1d6ae;
   font-style: normal;
 }
 

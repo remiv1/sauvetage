@@ -1,0 +1,171 @@
+{# Fragment HTMX — Formulaire de création / consultation d'un objet #}
+
+{% set disabled = form_state == 'view' %}
+
+<div class="modal-overlay" id="object-modal-overlay">
+    <div class="modal-box modal-object">
+        <div class="modal-header">
+            {% if form_state == 'create' %}
+                <h3>Ajouter un article</h3>
+            {% elif form_state == 'created' %}
+                <h3>Article créé</h3>
+            {% else %}
+                <h3>Détail de l'article</h3>
+            {% endif %}
+            <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            {% if form_state == 'created' %}
+                <div class="object-created-msg">
+                    <p>L'article a été créé avec succès (ID : {{ created_id }}).</p>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-primary btn-close-modal">Fermer</button>
+                </div>
+            {% else %}
+            <form id="object-form"
+                  {% if not disabled %}
+                  hx-post="{{ url_for('stock_htmx.create_object') }}"
+                  hx-target="#object-modal-container"
+                  hx-swap="innerHTML"
+                  {% endif %}
+                  method="post">
+                {{ form.hidden_tag() }}
+
+                {# ── Champs de base ──────────────────────────────── #}
+                <div class="object-fields-grid">
+
+                    {# Fournisseur (auto-complétion) #}
+                    <div class="form-group form-group-wide">
+                        {{ form.supplier_name.label(class="form-label") }}
+                        <div class="autocomplete-wrapper">
+                            <input type="hidden" id="supplier_id"
+                                   name="supplier_id"
+                                   value="{{ form.supplier_id.data or '' }}">
+                            <input type="text" id="supplier_name"
+                                   name="supplier_name"
+                                   class="form-control"
+                                   placeholder="Rechercher un fournisseur…"
+                                   autocomplete="off"
+                                   value="{{ form.supplier_name.data or '' }}"
+                                   {% if disabled %}disabled{% endif %}
+                                   {% if not disabled %}
+                                   hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='name_and_id') }}"
+                                   hx-trigger="input changed delay:500ms"
+                                   hx-target="#search-results"
+                                   hx-swap="innerHTML"
+                                   required
+                                   {% endif %}>
+                            {% if not disabled %}
+                            <div id="search-results" class="dropdown-menu"></div>
+                            {% endif %}
+                        </div>
+                        {# Conteneur pour le formulaire de création fournisseur #}
+                        <div id="supplier-create-modal"></div>
+                    </div>
+
+                    {# Type d'objet #}
+                    <div class="form-group">
+                        {{ form.general_object_type.label(class="form-label") }}
+                        <select name="general_object_type" id="general_object_type"
+                                class="form-control"
+                                {% if disabled %}disabled{% endif %}
+                                {% if not disabled %}
+                                hx-get="{{ url_for('stock_htmx.object_complement') }}"
+                                hx-target="#object-complement-container"
+                                hx-swap="innerHTML"
+                                hx-trigger="change"
+                                hx-include="[name='form_state']"
+                                {% endif %}>
+                            {% for val, label in form.general_object_type.choices %}
+                            <option value="{{ val }}" {{ 'selected' if form.general_object_type.data == val else '' }}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="form_state" value="{{ form_state }}">
+                    </div>
+
+                    {# EAN13 #}
+                    <div class="form-group">
+                        {{ form.ean_13.label(class="form-label") }}
+                        {{ form.ean_13(class="form-control", placeholder="Code EAN13…",
+                                       disabled=disabled) }}
+                    </div>
+
+                    {# Nom #}
+                    <div class="form-group form-group-wide">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control", placeholder="Nom de l'article…",
+                                     disabled=disabled) }}
+                    </div>
+
+                    {# Description #}
+                    <div class="form-group form-group-wide">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control",
+                                            placeholder="Description (optionnel)…",
+                                            disabled=disabled) }}
+                    </div>
+
+                    {# Prix #}
+                    <div class="form-group">
+                        {{ form.price.label(class="form-label") }}
+                        {{ form.price(class="form-control", placeholder="0.00",
+                                      disabled=disabled) }}
+                    </div>
+                </div>
+
+                {# ── Conteneur du complément (onglets) ──────────── #}
+                <div id="object-complement-container"
+                     {% if form_state == 'create' %}
+                     hx-get="{{ url_for('stock_htmx.object_complement', general_object_type=form.general_object_type.data or 'book') }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML"
+                     {% elif form_state == 'view' and obj %}
+                     hx-get="{{ url_for('stock_htmx.object_complement_view', object_id=obj.id) }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML"
+                     {% endif %}>
+                    <div class="loading-indicator">
+                        <p>Chargement des compléments…</p>
+                    </div>
+                </div>
+
+                {# ── Boutons d'action ────────────────────────────── #}
+                <div class="modal-buttons">
+                    {% if disabled %}
+                        <button type="button" class="btn btn-secondary btn-close-modal">Retour</button>
+                    {% else %}
+                        <button type="button" class="btn btn-secondary btn-close-modal">Annuler</button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    {% endif %}
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not disabled %}
+<script>
+(function() {
+    // Écouter l'événement HTMX « supplier:created » pour remplir les champs fournisseur
+    document.body.addEventListener('supplier:created', function(evt) {
+        var data = evt.detail;
+        if (data && data.id) {
+            var hiddenField = document.getElementById('supplier_id');
+            var nameField = document.getElementById('supplier_name');
+            if (hiddenField) hiddenField.value = data.id;
+            if (nameField) nameField.value = data.name || '';
+        }
+        // Fermer le mini-formulaire de création
+        var modal = document.getElementById('supplier-create-modal');
+        if (modal) modal.innerHTML = '';
+    });
+})();
+</script>
+{% endif %}

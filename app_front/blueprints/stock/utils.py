@@ -1,9 +1,16 @@
 """Module utils pour le blueprint stock"""
 
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+from flask import request as flask_request
+from sqlalchemy import select, distinct
 from app_front.config.db_conf import get_main_session
-from app_front.blueprints.stock.forms import OrderInCreateForm, OrderInLineForm
+from app_front.blueprints.stock.forms import CreateObjectForm, OrderInCreateForm, OrderInLineForm
+from db_models.objects import Books, Tags, ObjectTags, ObjMetadatas
 from db_models.repositories.stock import StockRepository, OrderIn
+from db_models.repositories.stock import DilicomReferencialRepository, GeneralObjects
+from db_models.repositories.objects.objects import ObjectsRepository
+from db_models.repositories.tags import TagsRepository
+
 
 
 def get_zero_price_items() -> Sequence[dict]:
@@ -210,3 +217,161 @@ def search_stock_global(
         dilicom_status=dilicom_status,
         page=page,
     )
+
+
+def get_dilicom_referencial(object_id: int) -> Tuple[Optional[dict], Optional[GeneralObjects]]:
+    """Récupère les données de référentiel Dilicom pour un objet donné.
+
+    Args:
+        object_id: L'identifiant de l'objet pour lequel récupérer les données.
+
+    Returns:
+        Un tuple contenant un dictionnaire avec les données de référentiel Dilicom
+        et l'objet GeneralObjects, ou None si non trouvé.
+    """
+    session = get_main_session()
+    obj = session.get(GeneralObjects, object_id)
+    if obj is None:
+        return None, None
+
+    dilicom_repo = DilicomReferencialRepository(session)
+    dilicom_ref = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
+    return dilicom_ref, obj
+
+
+def get_object_by_id(object_id: int) -> Optional[GeneralObjects]:
+    """Récupère un objet complet par son identifiant (avec relations chargées)."""
+    session = get_main_session()
+    repo = ObjectsRepository(session)
+    return repo.get_by_ref(object_id)
+
+
+def create_object_complete(form: CreateObjectForm) -> GeneralObjects:
+    """Crée un objet complet à partir du formulaire CreateObjectForm.
+
+    Args:
+        form: Le formulaire validé contenant les données de l'objet.
+
+    Returns:
+        L'objet GeneralObjects créé.
+
+    Raises:
+        ValueError: Si la création échoue.
+    """
+    session = get_main_session()
+    repo = ObjectsRepository(session)
+
+    obj = repo.create_object(
+        supplier_id=int(form.supplier_id.data or 0),
+        general_object_type=form.general_object_type.data,
+        ean13=form.ean_13.data,
+        name=form.name.data,
+        description=form.description.data or "",
+        price=float(form.price.data or 0),
+    )
+
+    if form.general_object_type.data == "book":
+        _create_book(session, obj.id, form.book)
+
+    tag_ids = flask_request.form.getlist("tag_id")
+    _create_tags(session, obj.id, tag_ids)
+    _create_metadata(session, obj.id, form.metadata)
+
+    repo.commit_object()
+    return obj
+
+
+def _create_book(session: Any, object_id: int, book_form: Any) -> None:
+    """Crée l'enregistrement Book associé à un objet."""
+    book = Books(
+        general_object_id=object_id,
+        author=book_form.author.data or "",
+        diffuser=book_form.diffuser.data or "",
+        editor=book_form.editor.data or "",
+        genre=book_form.genre.data or "",
+        publication_year=int(book_form.publication_year.data)
+            if book_form.publication_year.data else None,
+        pages=int(book_form.pages.data) if book_form.pages.data else None,
+        add_to_dilicom=book_form.add_to_dilicom.data == "true",
+    )
+    session.add(book)
+
+
+def _create_tags(session: Any, object_id: int, tag_ids: List[str]) -> None:
+    """Crée les associations objet-tag à partir des tag_id du formulaire."""
+    for tid in tag_ids:
+        if tid:
+            session.add(ObjectTags(
+                general_object_id=object_id,
+                tag_id=int(tid),
+            ))
+
+
+def _create_metadata(session: Any, object_id: int, metadata_form: Any) -> None:
+    """Crée les métadonnées associées à un objet."""
+    for meta_entry in metadata_form.items:  # type: ignore[union-attr]
+        meta_data = meta_entry.data if isinstance(meta_entry.data, dict) else {}
+        meta_key = meta_data.get("key", "")
+        meta_value = meta_data.get("value", "")
+        if meta_key and meta_value:
+            session.add(ObjMetadatas(
+                general_object_id=object_id,
+                meta_key=meta_key,
+                meta_value=meta_value,
+            ))
+
+
+# ============================================================================
+# Recherche autocomplete pour les champs livre et tags
+# ============================================================================
+
+_BOOK_FIELD_MAP = {
+    "author": Books.author,
+    "editor": Books.editor,
+    "diffuser": Books.diffuser,
+    "genre": Books.genre,
+}
+
+
+def search_book_field(field_name: str, query: str) -> List[str]:
+    """Recherche des valeurs distinctes d'un champ Books correspondant à la requête."""
+    column = _BOOK_FIELD_MAP.get(field_name)
+    if column is None:
+        return []
+    session = get_main_session()
+    stmt = (
+        select(distinct(column))
+        .where(column.ilike(f"%{query}%"))
+        .where(column.isnot(None))
+        .where(column != "")
+        .order_by(column)
+        .limit(10)
+    )
+    return [row[0] for row in session.execute(stmt).all()]
+
+
+def search_tags(query: str) -> List[Dict[str, Any]]:
+    """Recherche des tags (id + name) correspondant à la requête."""
+    session = get_main_session()
+    stmt = (
+        select(Tags.id, Tags.name, Tags.description)
+        .where(Tags.name.ilike(f"%{query}%"))
+        .order_by(Tags.name)
+        .limit(10)
+    )
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "description": row[2]
+        }
+        for row in session.execute(stmt).all()
+    ]
+
+
+def create_tag(name: str, description: str = "") -> Dict[str, Any]:
+    """Crée un nouveau tag et retourne son id + name."""
+    session = get_main_session()
+    repo = TagsRepository(session)
+    tag = repo.create({"name": name, "description": description})
+    return {"id": tag.id, "name": tag.name, "description": tag.description}

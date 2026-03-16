@@ -15,9 +15,10 @@
     </div>
 
     {# ── Accordéon de recherche ─────────────────────────────────────────────── #}
-    <details class="search-accordion" open>
-        <summary class="accordion-toggle">
-            {% include "svg/search.html" %} Filtres de recherche
+    <details class="search-accordion">
+        <summary class="accordion-toggle" title="Afficher/Masquer les filtres de recherche">
+            {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+            Filtres de recherche
         </summary>
 
         <form id="search-filters"
@@ -97,7 +98,7 @@
 
             <div class="filters-actions">
                 <button type="submit" class="btn btn-primary">
-                    {% include "svg/search.html" %} Rechercher
+                    {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
                 </button>
                 <button type="button" class="btn btn-secondary" id="btn-reset-filters">
                     Réinitialiser
@@ -105,6 +106,16 @@
             </div>
         </form>
     </details>
+
+    {# ── Bouton ajouter article ─────────────────────────────────────────── #}
+    <div class="search-actions">
+        <button class="btn btn-primary"
+                hx-get="{{ url_for('stock_htmx.object_form') }}"
+                hx-target="#object-modal-container"
+                hx-swap="innerHTML">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Ajouter un article
+        </button>
+    </div>
 
     {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}
     <div id="stock-table-wrapper"
@@ -118,6 +129,9 @@
 
     {# ── Conteneur modale Dilicom ───────────────────────────────────────── #}
     <div id="dilicom-modal-container"></div>
+
+    {# ── Conteneur modale Objet ─────────────────────────────────────────── #}
+    <div id="object-modal-container"></div>
 
 </div>
 
@@ -148,11 +162,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Fermer la modale Dilicom
+    // Fermer les modales (Dilicom et Objet)
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('modal-overlay') ||
             e.target.classList.contains('btn-close-modal')) {
-            document.getElementById('dilicom-modal-container').innerHTML = '';
+            var overlay = e.target.closest('.modal-overlay');
+            if (overlay) {
+                overlay.parentElement.innerHTML = '';
+            }
         }
     });
 });

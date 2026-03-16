@@ -61,7 +61,10 @@
                         </button>
                         {# Bouton Voir #}
                         <button class="action-icon action-view"
-                                title="Voir le détail">
+                                title="Voir le détail"
+                                hx-get="{{ url_for('stock_htmx.object_view', object_id=item.id) }}"
+                                hx-target="#object-modal-container"
+                                hx-swap="innerHTML">
                             {% include "svg/eye.html" %}
                         </button>
                         {# Bouton Éditer #}

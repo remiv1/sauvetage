@@ -1,0 +1,26 @@
+{# Fragment HTMX — Dropdown autocomplete pour les tags avec option de création #}
+{% if results %}
+    {% for tag in results %}
+    <div class="dropdown-item"
+         onclick="selectTag(this, {{ tag.id }}, '{{ tag.name|e }}', '{{ tag.description|e if tag.description else '' }}')">
+        {{ tag.name }}{% if tag.description %} - {{ tag.description }}{% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="dropdown-item text-muted">Aucun résultat</div>
+{% endif %}
+<div class="dropdown-item dropdown-item-create"
+     onclick="toggleTagCreateForm(this)">
+    ✨ Créer un mot-clé
+</div>
+<div class="tag-create-form" style="display:none; padding: .5rem;">
+    <input type="text" class="form-control tag-new-name"
+           placeholder="Nom du mot-clé" value="{{ query|e }}">
+    <input type="text" class="form-control tag-new-desc"
+           placeholder="Description" style="margin-top:.3rem;">
+    <button type="button" class="btn btn-sm btn-primary"
+            style="margin-top:.4rem;"
+            onclick="createTag(this)">
+        Créer
+    </button>
+</div>

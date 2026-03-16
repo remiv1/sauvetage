@@ -2,9 +2,17 @@
 
 from typing import Any
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import (
+    StringField,
+    FieldList,
+    FormField,
+    SubmitField,
+    HiddenField,
+    SelectField,
+    FileField,
+    TextAreaField,
+)
 from wtforms.validators import DataRequired
-from wtforms import HiddenField
 
 
 class OrderInCreateForm(FlaskForm):
@@ -63,3 +71,82 @@ class OrderInLineForm(FlaskForm):
         self.quantity.data = str(line.qty_ordered)
         self.unit_price.data = str(line.unit_price)
         self.vat_rate.data = str(line.vat_rate)
+
+
+class BookForm(FlaskForm):
+    """Formulaire de création/édition d'un livre."""
+
+    author = StringField("Auteur du livre")
+    diffuser = StringField("Diffuseur du livre")
+    editor = StringField("Éditeur du livre")
+    genre = StringField("Genre du livre")
+    publication_year = StringField("Année de publication du livre")
+    pages = StringField("Nombre de pages du livre")
+    add_to_dilicom = SelectField(
+        "Ajouter à Dilicom",
+        choices=[('true', 'Oui'), ('false', 'Non')],
+        validators=[DataRequired()]
+    )
+
+
+class KeyValueForm(FlaskForm):
+    """Formulaire générique pour les paires clé-valeur."""
+
+    key = StringField("Clé", validators=[DataRequired()])
+    value = StringField("Valeur", validators=[DataRequired()])
+
+
+class MetadataForm(FlaskForm):
+    """Formulaire de création/édition de métadonnée."""
+    items = FieldList(FormField(KeyValueForm), min_entries=0)   # type: ignore[arg-type]
+
+
+class TagForm(FlaskForm):
+    """Formulaire de création/édition de tag."""
+
+    name = StringField("Nom du tag", validators=[DataRequired()])
+
+
+class MediaFileForm(FlaskForm):
+    """Formulaire de création/édition de fichier média."""
+    file_name = StringField("Nom du fichier média", validators=[DataRequired()])
+    file_type = SelectField(
+        "Type de fichier média",
+        choices=[
+            ('lnk', 'Lien'),
+            ('img', 'Image'),
+            ('oth', 'Autre'),
+        ],
+        validators=[DataRequired()]
+    )
+    alt_text = StringField("Texte alternatif pour les images")
+    file_data = FileField("Fichier média")
+    file_url = StringField("URL du fichier média (si type lien)")
+
+
+class CreateObjectForm(FlaskForm):
+    """Formulaire de création d'objet (étape 1)."""
+
+    supplier_id = StringField("Fournisseur", validators=[DataRequired()])
+    supplier_name = StringField("Nom du fournisseur (auto-complete)",
+                                validators=[DataRequired()])
+    general_object_type = SelectField("Type d'objet",
+                                      choices=[
+                                          ('book', 'Livre'),
+                                          ('dvd', 'DVD'),
+                                          ('cd', 'CD'),
+                                          ('games', 'Jeux'),
+                                          ('spiritual_object', 'Objet spirituel'),
+                                          ('other', 'Autre'),
+                                          ],
+                                      validators=[DataRequired()]
+                                     )
+    ean_13 = StringField("EAN13", validators=[DataRequired()])
+    name = StringField("Nom de l'objet", validators=[DataRequired()])
+    description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
+    price = StringField("Prix de l'objet", validators=[DataRequired()])
+    book = FormField(BookForm)  # type: ignore[arg-type]
+    tags = FieldList(FormField(TagForm), min_entries=0) # type: ignore[arg-type]
+    metadata = FormField(MetadataForm)  # type: ignore[arg-type]
+    media_files = FieldList(FormField(MediaFileForm), min_entries=0)    # type: ignore[arg-type]
+    submit = SubmitField("Créer l'objet")

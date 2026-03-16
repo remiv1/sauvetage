@@ -140,6 +140,27 @@ form input[type=submit]:hover {
   color: #ffffff;
 }
 
+.icone-8 {
+  width: 8px;
+  height: 8px;
+}
+.icone-16 {
+  width: 16px;
+  height: 16px;
+}
+.icone-24 {
+  width: 24px;
+  height: 24px;
+}
+.icone-32 {
+  width: 32px;
+  height: 32px;
+}
+.icone-48 {
+  width: 48px;
+  height: 48px;
+}
+
 .mt-1 {
   margin-top: 0.5rem;
 }

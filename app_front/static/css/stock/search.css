@@ -125,7 +125,7 @@ details[open] > .accordion-toggle {
   background-color: #e0e0e0;
   border: 1px solid #00086f;
   position: absolute;
-  z-index: 1000;
+  z-index: 10000;
   width: 100%;
   left: 0;
   right: 0;
@@ -219,6 +219,19 @@ details[open] > .accordion-toggle {
   justify-content: center;
   padding: 4rem;
   color: #808080;
+}
+
+/* ── Bouton ajouter article ──────────────────────────────────────────────── */
+.search-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+.search-actions a.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ── Tableau stock ───────────────────────────────────────────────────────── */
@@ -447,27 +460,27 @@ details[open] > .accordion-toggle {
   backdrop-filter: blur(4px);
 }
 
-.modal-dilicom {
+/* ── Styles communs aux modales ──────────────────────────────────────────── */
+.modal-box {
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
   width: 90%;
-  max-width: 540px;
   overflow: hidden;
 }
-.modal-dilicom .modal-header {
+.modal-box .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
   border-bottom: 1px solid #e0e0e0;
 }
-.modal-dilicom .modal-header h3 {
+.modal-box .modal-header h3 {
   margin: 0;
   font-size: 1.1rem;
   color: #00086f;
 }
-.modal-dilicom .modal-header .btn-close {
+.modal-box .modal-header .btn-close {
   background: none;
   border: none;
   font-size: 1.4rem;
@@ -477,57 +490,28 @@ details[open] > .accordion-toggle {
   padding: 0;
   transition: color 0.2s;
 }
-.modal-dilicom .modal-header .btn-close:hover {
+.modal-box .modal-header .btn-close:hover {
   color: #202020;
 }
-.modal-dilicom .modal-body {
+.modal-box .modal-body {
   padding: 2rem;
 }
-.modal-dilicom .modal-body .dilicom-info {
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: #f5f5f5;
-  border-radius: 5px;
-  border-left: 4px solid #00086f;
-}
-.modal-dilicom .modal-body .dilicom-info .info-group {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.25rem;
-}
-.modal-dilicom .modal-body .dilicom-info .info-group:last-child {
-  margin-bottom: 0;
-}
-.modal-dilicom .modal-body .dilicom-info .info-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #808080;
-  min-width: 100px;
-}
-.modal-dilicom .modal-body .dilicom-info .info-value {
-  font-size: 0.92rem;
-  color: #202020;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-.modal-dilicom .modal-body h4 {
+.modal-box .modal-body h4 {
   color: #00086f;
   margin: 0 0 1rem;
   font-size: 1rem;
 }
-.modal-dilicom .modal-body .form-group {
+.modal-box .modal-body .form-group {
   margin-bottom: 1rem;
 }
-.modal-dilicom .modal-body .form-label {
+.modal-box .modal-body .form-label {
   display: block;
   margin-bottom: 0.25rem;
   font-weight: 600;
   font-size: 0.85rem;
   color: #404040;
 }
-.modal-dilicom .modal-body .form-control {
+.modal-box .modal-body .form-control {
   width: 100%;
   padding: 0.5rem 1rem;
   border: 1px solid #c0c0c0;
@@ -537,26 +521,231 @@ details[open] > .accordion-toggle {
   box-sizing: border-box;
   transition: border-color 0.2s;
 }
-.modal-dilicom .modal-body .form-control:focus {
+.modal-box .modal-body .form-control:focus {
   outline: none;
   border-color: #00086f;
   box-shadow: 0 0 0 2px rgba(0, 8, 111, 0.12);
 }
-.modal-dilicom .modal-body .text-warning {
+.modal-box .modal-body .form-control:disabled {
+  background: #f5f5f5;
+  color: #606060;
+  cursor: not-allowed;
+}
+.modal-box .modal-body .text-warning {
   color: #b66d00;
   font-size: 0.9rem;
   margin-bottom: 2rem;
 }
-.modal-dilicom .modal-body .text-info {
+.modal-box .modal-body .text-info {
   color: #002bff;
   font-size: 0.9rem;
   margin-bottom: 2rem;
 }
-.modal-dilicom .modal-buttons {
+.modal-box .modal-body .text-muted {
+  color: #808080;
+  font-size: 0.9rem;
+}
+.modal-box .modal-buttons {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
   padding-top: 1rem;
+}
+
+/* ── Modale Dilicom ──────────────────────────────────────────────────────── */
+.modal-dilicom {
+  max-width: 540px;
+}
+.modal-dilicom .dilicom-info {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 5px;
+  border-left: 4px solid #00086f;
+}
+.modal-dilicom .dilicom-info .info-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+.modal-dilicom .dilicom-info .info-group:last-child {
+  margin-bottom: 0;
+}
+.modal-dilicom .dilicom-info .info-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #808080;
+  min-width: 100px;
+}
+.modal-dilicom .dilicom-info .info-value {
+  font-size: 0.92rem;
+  color: #202020;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── Modale Objet (création / vue) ───────────────────────────────────────── */
+.modal-object {
+  max-width: 750px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-object .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-object .object-created-msg {
+  padding: 2rem;
+  background: rgba(0, 109, 25, 0.08);
+  border-left: 4px solid #006d19;
+  border-radius: 5px;
+  margin-bottom: 2rem;
+}
+.modal-object .object-created-msg p {
+  margin: 0;
+  color: #202020;
+}
+.modal-object .object-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.modal-object .object-fields-grid .form-group-wide {
+  grid-column: span 2;
+}
+
+/* ── Onglets complémentaires ─────────────────────────────────────────────── */
+.complement-tabs {
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  overflow: visible;
+}
+
+.tab-nav {
+  display: flex;
+  border-bottom: 2px solid #e0e0e0;
+  background: #f5f5f5;
+  padding: 0;
+}
+.tab-nav .tab-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  font-family: "Asap", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #808080;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.tab-nav .tab-btn:hover {
+  color: #00086f;
+}
+.tab-nav .tab-btn.active {
+  color: #00086f;
+  border-bottom-color: #00086f;
+  background: #fff;
+}
+
+.tab-panels {
+  padding: 1rem;
+}
+
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+}
+
+.complement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+/* ── Listes dynamiques (mots-clés, métadonnées) ─────────────────────────── */
+.dynamic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dynamic-list-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.dynamic-list-item .form-control {
+  flex: 1;
+}
+.dynamic-list-item .btn-remove-item {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+.dynamic-list-item.kv-pair .form-control:first-child {
+  flex: 0.4;
+}
+
+.media-item .form-control {
+  flex: 1;
+}
+
+.media-item .media-type-select {
+  max-width: 140px;
+}
+.media-item .media-fields {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+}
+.media-item .media-fields .form-control {
+  flex: 1;
+}
+.media-item .media-type-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #c0c0c0;
+}
+
+.dropdown-item-create {
+  font-weight: 500;
+  border-top: 1px solid #c0c0c0;
+}
+
+.tag-create-form {
+  border-top: 1px solid #c0c0c0;
+  padding: 0.5rem;
+  background: rgba(0, 8, 111, 0.02);
+}
+.tag-create-form .form-control {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+.tag-create-form .form-control:last-of-type {
+  margin-bottom: 0.5rem;
+}
+.tag-create-form .btn {
+  width: 100%;
+  justify-content: center;
 }
 
 /*# sourceMappingURL=search.css.map */
