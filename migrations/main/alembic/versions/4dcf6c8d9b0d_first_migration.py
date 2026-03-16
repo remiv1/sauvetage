@@ -1,8 +1,8 @@
-"""first migration
+"""first_migration
 
-Revision ID: 8f589e12c255
+Revision ID: 4dcf6c8d9b0d
 Revises: 
-Create Date: 2026-03-14 17:08:43.966225
+Create Date: 2026-03-16 17:55:41.871015
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '8f589e12c255'
+revision: str = '4dcf6c8d9b0d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -250,7 +250,7 @@ def upgrade() -> None:
     sa.Column('general_object_id', sa.Integer(), nullable=False, comment='Identifiant de la métadonnée associée'),
     sa.Column('file_name', sa.String(), nullable=False, comment='Nom du fichier média'),
     sa.Column('file_type', sa.String(), nullable=False, comment='Type du fichier média (ex: image/jpeg)'),
-    sa.Column('alt_text', sa.String(), nullable=False, comment='Texte alternatif pour le fichier média'),
+    sa.Column('alt_text', sa.String(), nullable=True, comment='Texte alternatif pour le fichier média'),
     sa.Column('file_data', sa.LargeBinary(), nullable=True, comment='Données brutes du fichier média'),
     sa.Column('file_link', sa.String(), nullable=True, comment='Lien vers le fichier média ext.'),
     sa.Column('uploaded_at', sa.DateTime(), nullable=False, comment='Date de téléchargement du fichier média'),
