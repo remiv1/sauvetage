@@ -5,12 +5,18 @@ Module pour les dépôts des objets vendus par la librairie. Contient les classe
 """
 
 from typing import Any, Sequence, Optional, Dict, List
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import (
-    GeneralObjects, Books, OtherObjects, ObjectTags, ObjMetadatas, MediaFiles)
+    GeneralObjects,
+    Books,
+    OtherObjects,
+    ObjectTags,
+    ObjMetadatas,
+    MediaFiles,
+)
  # Pas d'import global des repositories pour éviter l'import circulaire
 
 class ObjectsRepository(BaseRepository):
@@ -45,12 +51,12 @@ class ObjectsRepository(BaseRepository):
     def _get_global_select(self):
         """Retourne une requête de base pour les objets, avec tous les éléments liés."""
         return (select(self.model).where(self.model.is_active == True)   # pylint: disable=singleton-comparison
-                .options(joinedload(self.model.supplier),
-                         joinedload(self.model.book),
-                         joinedload(self.model.other_object),
-                         joinedload(self.model.inventory_movements),
-                         joinedload(self.model.obj_metadatas),
-                         joinedload(self.model.object_tags)))
+            .options(joinedload(self.model.supplier),
+                 joinedload(self.model.book),
+                 joinedload(self.model.other_object),
+                 joinedload(self.model.inventory_movements),
+                 joinedload(self.model.obj_metadatas),
+                 joinedload(self.model.object_tags).joinedload(ObjectTags.tag)))
 
     def get_all(self) -> Sequence["GeneralObjects"]:
         """
@@ -65,25 +71,25 @@ class ObjectsRepository(BaseRepository):
 
     def get_by_ref(self, reference: str | int) -> "GeneralObjects":
         """Récupère un objet par une référence (id ou ean13)."""
-        stmt = self._get_global_select().where(or_(
-            self.model.id == reference, self.model.ean13 == reference))
-        return self.session.execute(stmt).scalar_one_or_none()
+        if isinstance(reference, str) and not reference.isdigit():
+            stmt = self._get_global_select().where(self.model.ean13 == reference)
+        elif isinstance(reference, int) or (isinstance(reference, str) and reference.isdigit()):
+            stmt = self._get_global_select().where(self.model.id == int(reference))
+        else:
+            raise ValueError("Reference must be an integer id or a string ean13.")
+        return self.session.execute(stmt).unique().scalar_one_or_none()
 
     def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
         """Récupère une liste d'objets dont le nom correspond à la recherche."""
         stmt = self._get_global_select().where(self.model.name.ilike(f"%{name}%")).limit(10)
         return self.session.execute(stmt).unique().scalars().all()
 
-    def create_object(self, **kwargs: Any) -> "GeneralObjects":
+    def create_object(self, **kwargs: Any) -> int:
         """
         Crée un nouvel objet général.
         Les champs requis pour créer un objet général sont :
         (supplier_id, general_object_type, ean13, name, description, price)
         """
-        # Levée d'une exception si des champs requis sont manquants
-        if not all(k in kwargs for k in self._kwargs):
-            raise ValueError(f"Tous les champs sont nécessaires : {', '.join(self._kwargs)}")
-
         # Création de l'objet général avec les champs requis
         general_object = GeneralObjects(**kwargs)
 
@@ -91,7 +97,7 @@ class ObjectsRepository(BaseRepository):
         try:
             self.session.add(general_object)
             self.session.flush()
-            return general_object
+            return general_object.id
         except SQLAlchemyError as e:
             self.session.rollback()
             raise ValueError(f"Error creating object: {str(e)}") from e
@@ -108,7 +114,8 @@ class ObjectsRepository(BaseRepository):
         """
         try:
             if book:
-                general_object = self.create_object(**book.to_dict())
+                general_object_id = self.create_object(**book.to_dict())
+                general_object = self.get_by_ref(general_object_id)
             if other_object:
                 other_object.general_object_id = general_object.id
                 self.other_object_repo.create(other_object.to_dict())

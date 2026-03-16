@@ -5,9 +5,19 @@ from flask import request as flask_request
 from sqlalchemy import select, distinct
 from app_front.config.db_conf import get_main_session
 from app_front.blueprints.stock.forms import CreateObjectForm, OrderInCreateForm, OrderInLineForm
-from db_models.objects import Books, Tags, ObjectTags, ObjMetadatas
-from db_models.repositories.stock import StockRepository, OrderIn
-from db_models.repositories.stock import DilicomReferencialRepository, GeneralObjects
+from db_models.objects import (
+    Books,
+    Tags,
+    ObjectTags,
+    ObjMetadatas,
+    OrderIn,
+    GeneralObjects,
+    MediaFiles,
+)
+from db_models.repositories.stock import (
+    StockRepository,
+    DilicomReferencialRepository,
+)
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.tags import TagsRepository
 
@@ -246,7 +256,7 @@ def get_object_by_id(object_id: int) -> Optional[GeneralObjects]:
     return repo.get_by_ref(object_id)
 
 
-def create_object_complete(form: CreateObjectForm) -> GeneralObjects:
+def create_object_complete(form: CreateObjectForm) -> int:
     """Crée un objet complet à partir du formulaire CreateObjectForm.
 
     Args:
@@ -261,7 +271,7 @@ def create_object_complete(form: CreateObjectForm) -> GeneralObjects:
     session = get_main_session()
     repo = ObjectsRepository(session)
 
-    obj = repo.create_object(
+    obj_id = repo.create_object(
         supplier_id=int(form.supplier_id.data or 0),
         general_object_type=form.general_object_type.data,
         ean13=form.ean_13.data,
@@ -271,14 +281,15 @@ def create_object_complete(form: CreateObjectForm) -> GeneralObjects:
     )
 
     if form.general_object_type.data == "book":
-        _create_book(session, obj.id, form.book)
+        _create_book(session, obj_id, form.book)
 
     tag_ids = flask_request.form.getlist("tag_id")
-    _create_tags(session, obj.id, tag_ids)
-    _create_metadata(session, obj.id, form.metadata)
+    _create_tags(session, obj_id, tag_ids)
+    _create_metadata(session, obj_id, form.metadata)
+    _create_media_files(session, obj_id, form.media_files)
 
     repo.commit_object()
-    return obj
+    return obj_id
 
 
 def _create_book(session: Any, object_id: int, book_form: Any) -> None:
@@ -309,16 +320,30 @@ def _create_tags(session: Any, object_id: int, tag_ids: List[str]) -> None:
 
 def _create_metadata(session: Any, object_id: int, metadata_form: Any) -> None:
     """Crée les métadonnées associées à un objet."""
-    for meta_entry in metadata_form.items:  # type: ignore[union-attr]
-        meta_data = meta_entry.data if isinstance(meta_entry.data, dict) else {}
-        meta_key = meta_data.get("key", "")
-        meta_value = meta_data.get("value", "")
-        if meta_key and meta_value:
-            session.add(ObjMetadatas(
-                general_object_id=object_id,
-                meta_key=meta_key,
-                meta_value=meta_value,
-            ))
+    meta_data = metadata_form.data if isinstance(metadata_form.data, dict) else {}
+    session.add(ObjMetadatas(
+        general_object_id=object_id,
+        semistructured_data=meta_data,
+    ))
+
+
+def _create_media_files(session: Any, object_id: int, media_files_form: Any) -> None:
+    """Crée les enregistrements MediaFiles associés à un objet."""
+    media_files = media_files_form.data if isinstance(media_files_form.data, list) else []
+    for mf in media_files:
+        file_data = mf.get("file_data")
+        file_bytes = None
+        # Si file_data est un FileStorage (upload Flask), on lit directement
+        if file_data and hasattr(file_data, "read"):
+            file_bytes = file_data.read()
+        session.add(MediaFiles(
+            general_object_id=object_id,
+            file_name=mf.get("file_name", ""),
+            file_type=mf.get("file_type", ""),
+            alt_text=mf.get("alt_text", ""),
+            file_data=file_bytes,
+            file_link=mf.get("file_url", None),
+        ))
 
 
 # ============================================================================

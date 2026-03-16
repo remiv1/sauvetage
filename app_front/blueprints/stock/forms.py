@@ -75,6 +75,9 @@ class OrderInLineForm(FlaskForm):
 
 class BookForm(FlaskForm):
     """Formulaire de création/édition d'un livre."""
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+        csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
     author = StringField("Auteur du livre")
     diffuser = StringField("Diffuseur du livre")
@@ -91,6 +94,9 @@ class BookForm(FlaskForm):
 
 class KeyValueForm(FlaskForm):
     """Formulaire générique pour les paires clé-valeur."""
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+        csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
     key = StringField("Clé", validators=[DataRequired()])
     value = StringField("Valeur", validators=[DataRequired()])
@@ -98,17 +104,28 @@ class KeyValueForm(FlaskForm):
 
 class MetadataForm(FlaskForm):
     """Formulaire de création/édition de métadonnée."""
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+        csrf = False  # Désactive CSRF pour ce formulaire imbriqué
+
     items = FieldList(FormField(KeyValueForm), min_entries=0)   # type: ignore[arg-type]
 
 
 class TagForm(FlaskForm):
     """Formulaire de création/édition de tag."""
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+        csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
     name = StringField("Nom du tag", validators=[DataRequired()])
 
 
 class MediaFileForm(FlaskForm):
     """Formulaire de création/édition de fichier média."""
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+        csrf = False  # Désactive CSRF pour ce formulaire imbriqué
+
     file_name = StringField("Nom du fichier média", validators=[DataRequired()])
     file_type = SelectField(
         "Type de fichier média",

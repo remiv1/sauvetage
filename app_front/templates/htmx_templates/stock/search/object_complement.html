@@ -20,7 +20,6 @@
         {# ── Onglet Livre ────────────────────────────────────────────────── #}
         {% if object_type == 'book' %}
         <div class="tab-panel active" id="tab-book">
-            {{ form.book.csrf_token() }}
             <div class="complement-grid">
                 <div class="form-group">
                     {{ form.book.author.label(class="form-label") }}
@@ -152,16 +151,15 @@
 
         {# ── Onglet Métadonnées ──────────────────────────────────────────── #}
         <div class="tab-panel" id="tab-metadata">
-            {{ form.metadata.csrf_token() }}
             <div id="metadata-list" class="dynamic-list">
                 {% if form_state == 'view' and obj and obj.obj_metadatas %}
-                    {% for m in obj.obj_metadatas %}
+                    {% for m in obj.obj_metadatas.items %}
                     <div class="dynamic-list-item kv-pair">
                         <input type="text" name="metadata-items-{{ loop.index0 }}-key"
-                               class="form-control" value="{{ m.meta_key }}" disabled
+                               class="form-control" value="{{ m.key }}" disabled
                                placeholder="Clé">
                         <input type="text" name="metadata-items-{{ loop.index0 }}-value"
-                               class="form-control" value="{{ m.meta_value }}" disabled
+                               class="form-control" value="{{ m.value }}" disabled
                                placeholder="Valeur">
                     </div>
                     {% endfor %}
@@ -307,10 +305,6 @@
     });
 
     {% if not disabled %}
-    // Get CSRF token from parent form for nested forms
-    var csrfTokenField = document.querySelector('input[name="csrf_token"]');
-    var csrfTokenValue = csrfTokenField ? csrfTokenField.value : '';
-    var csrfTokenHidden = '<input type="hidden" name="csrf_token" value="' + csrfTokenValue + '">';
 
     // Get the autocomplete URL for author field, then extract the base path
     var sampleUrl = "{{ url_for('stock_htmx.object_autocomplete', field='author') }}";
@@ -384,9 +378,7 @@
             var idx = list.querySelectorAll('.dynamic-list-item').length;
             var div = document.createElement('div');
             div.className = 'dynamic-list-item';
-            // Inclure les attributs HTMX directement dans le HTML pour qu'HTMX les détecte
-            div.innerHTML = csrfTokenHidden
-                          + '<div class="autocomplete-wrapper" style="flex:1">'
+            div.innerHTML = '<div class="autocomplete-wrapper" style="flex:1">'
                           + '<input type="text" name="tags-' + idx + '-name" '
                           + 'class="form-control ac-tag-input ac-input" '
                           + 'data-ac-field="tag" '
@@ -410,8 +402,7 @@
             var idx = list.querySelectorAll('.dynamic-list-item').length;
             var div = document.createElement('div');
             div.className = 'dynamic-list-item kv-pair';
-            div.innerHTML = csrfTokenHidden
-                          + '<input type="text" name="metadata-items-' + idx + '-key" class="form-control" placeholder="Clé">'
+            div.innerHTML = '<input type="text" name="metadata-items-' + idx + '-key" class="form-control" placeholder="Clé">'
                           + '<input type="text" name="metadata-items-' + idx + '-value" class="form-control" placeholder="Valeur">'
                           + '<button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>';
             list.appendChild(div);
@@ -429,8 +420,7 @@
             var idx = list.querySelectorAll('.dynamic-list-item').length;
             var div = document.createElement('div');
             div.className = 'dynamic-list-item media-item';
-            div.innerHTML = csrfTokenHidden
-                          + '<select name="media_files-' + idx + '-file_type" class="form-control media-type-select">'
+            div.innerHTML = '<select name="media_files-' + idx + '-file_type" class="form-control media-type-select">'
                           + '<option value="">-- Type --</option>'
                           + '<option value="lnk">Lien</option>'
                           + '<option value="img">Image</option>'
@@ -449,10 +439,12 @@
                                      + '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom du lien">';
                 } else if (this.value === 'img') {
                     fields.innerHTML = '<input type="file" name="media_files-' + i + '-file_data" class="form-control" accept="image/*">'
-                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Texte alternatif">';
+                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Texte alternatif">'
+                                     + '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom de l\'image">';
                 } else if (this.value === 'oth') {
                     fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom du fichier">'
-                                     + '<input type="file" name="media_files-' + i + '-file_data" class="form-control">';
+                                     + '<input type="file" name="media_files-' + i + '-file_data" class="form-control">'
+                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Description">';
                 } else {
                     fields.innerHTML = '';
                 }

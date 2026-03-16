@@ -369,13 +369,14 @@ def create_object():
     form = CreateObjectForm()
     if form.validate_on_submit():
         try:
-            new_obj = create_object_complete(form)
+            new_obj_id = create_object_complete(form)
             return render_template(
                 OBJECT_FORM, form=CreateObjectForm(),
-                form_state="created", created_id=new_obj.id,
+                form_state="created", created_id=new_obj_id,
             )
         except ValueError as exc:
             flash(str(exc), "danger")
+            print(f"DEBUG Error creating object: {exc}")
             return render_template(
                 OBJECT_FORM, form=form, form_state="create",
             ), 422

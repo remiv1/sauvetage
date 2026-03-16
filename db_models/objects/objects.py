@@ -329,7 +329,7 @@ class MediaFiles(WorkingBase, QueryMixin):
     file_name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom du fichier média")
     file_type: Mapped[str] = mapped_column(String, nullable=False,
                                            comment="Type du fichier média (ex: image/jpeg)")
-    alt_text: Mapped[str] = mapped_column(String, nullable=False,
+    alt_text: Mapped[str] = mapped_column(String, nullable=True,
                                           comment="Texte alternatif pour le fichier média")
     file_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=True,
                                              comment="Données brutes du fichier média")
