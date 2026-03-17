@@ -17,10 +17,13 @@ from app_front.blueprints.stock.utils import (
     search_stock_global,
     get_dilicom_referencial,
     get_object_by_id,
-    create_object_complete,
+    save_object_complete,
     search_book_field,
     search_tags,
     create_tag,
+    toggle_object_active,
+    add_object_to_dilicom,
+    remove_object_from_dilicom,
 )
 
 bp_stock_htmx = Blueprint(
@@ -35,6 +38,7 @@ NEW_LINE = "htmx_templates/stock/orders/fragments/new_line.html"
 SECTION_NEW = "htmx_templates/stock/orders/sections/new.html"
 SECTION_HOME = "htmx_templates/stock/orders/sections/home.html"
 SECTION_CANCELED = "htmx_templates/stock/orders/sections/canceled.html"
+UNKNOWN_OBJECT = "<p>Objet introuvable.</p>"
 
 
 @bp_stock_htmx.get("/cleared")
@@ -311,7 +315,7 @@ def object_view(object_id: int):
     """Retourne le formulaire de l'objet en mode consultation (HTMX)."""
     obj = get_object_by_id(object_id)
     if obj is None:
-        return "<p>Objet introuvable.</p>", 404
+        return UNKNOWN_OBJECT, 404
     form = CreateObjectForm()
     form.supplier_id.data = str(obj.supplier_id)
     form.supplier_name.data = obj.supplier.name if obj.supplier else ""
@@ -322,6 +326,25 @@ def object_view(object_id: int):
     form.price.data = str(obj.price)
     return render_template(
         OBJECT_FORM, form=form, form_state="view", obj=obj,
+    )
+
+
+@bp_stock_htmx.get("/search/object/edit/<int:object_id>")
+def object_edit(object_id: int):
+    """Retourne le formulaire de l'objet en mode édition (HTMX)."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    form = CreateObjectForm()
+    form.supplier_id.data = str(obj.supplier_id)
+    form.supplier_name.data = obj.supplier.name if obj.supplier else ""
+    form.general_object_type.data = obj.general_object_type
+    form.ean_13.data = obj.ean13
+    form.name.data = obj.name
+    form.description.data = obj.description or ""
+    form.price.data = str(obj.price)
+    return render_template(
+        OBJECT_FORM, form=form, form_state="edit", obj=obj,
     )
 
 
@@ -344,7 +367,7 @@ def object_complement_view(object_id: int):
     """Retourne le complément d'onglets pré-rempli en mode consultation (HTMX)."""
     obj = get_object_by_id(object_id)
     if obj is None:
-        return "<p>Objet introuvable.</p>", 404
+        return UNKNOWN_OBJECT, 404
     form = CreateObjectForm()
     if obj.book:
         form.book.author.data = obj.book.author or ""
@@ -353,12 +376,34 @@ def object_complement_view(object_id: int):
         form.book.genre.data = obj.book.genre or ""
         form.book.publication_year.data = str(obj.book.publication_year or "")
         form.book.pages.data = str(obj.book.pages or "")
-        form.book.add_to_dilicom.data = "true" if obj.book.add_to_dilicom else "false"
     return render_template(
         OBJECT_COMPLEMENT,
         form=form,
         object_type=obj.general_object_type,
         form_state="view",
+        obj=obj,
+    )
+
+
+@bp_stock_htmx.get("/search/object/complement/edit/<int:object_id>")
+def object_complement_edit(object_id: int):
+    """Retourne le complément d'onglets pré-rempli en mode édition (HTMX)."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    form = CreateObjectForm()
+    if obj.book:
+        form.book.author.data = obj.book.author or ""
+        form.book.diffuser.data = obj.book.diffuser or ""
+        form.book.editor.data = obj.book.editor or ""
+        form.book.genre.data = obj.book.genre or ""
+        form.book.publication_year.data = str(obj.book.publication_year or "")
+        form.book.pages.data = str(obj.book.pages or "")
+    return render_template(
+        OBJECT_COMPLEMENT,
+        form=form,
+        object_type=obj.general_object_type,
+        form_state="edit",
         obj=obj,
     )
 
@@ -369,9 +414,11 @@ def create_object():
     form = CreateObjectForm()
     if form.validate_on_submit():
         try:
-            new_obj_id = create_object_complete(form)
+            print("DEBUG Form data for object creation:")
+            print(form)
+            new_obj_id = save_object_complete(form)
             return render_template(
-                OBJECT_FORM, form=CreateObjectForm(),
+                OBJECT_FORM, form=form,
                 form_state="created", created_id=new_obj_id,
             )
         except ValueError as exc:
@@ -384,3 +431,76 @@ def create_object():
     return render_template(
         OBJECT_FORM, form=form, form_state="create",
     ), 422
+
+
+@bp_stock_htmx.post("/search/object/edit/<int:object_id>")
+def edit_object(object_id: int):
+    """Valide et met à jour un objet existant à partir du formulaire global (HTMX)."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    form = CreateObjectForm()
+    if form.validate_on_submit():
+        try:
+            updated_obj_id = save_object_complete(form, object_id=obj.id)
+            return render_template(
+                OBJECT_FORM, form=form,
+                form_state="updated",
+                updated_id=updated_obj_id
+            )
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            print(f"DEBUG Error updating object: {exc}")
+            return render_template(
+                OBJECT_FORM, form=form, form_state="edit", obj=obj,
+            ), 422
+    print(f"DEBUG Form errors: {form.errors}")
+    return render_template(
+        OBJECT_FORM, form=form, form_state="edit", obj=obj,
+    ), 422
+
+
+TOGGLE_ACTIVE_MODAL = "htmx_templates/stock/search/toggle_active_modal.html"
+
+
+@bp_stock_htmx.get("/search/object/toggle-active/<int:object_id>")
+def object_toggle_active_modal(object_id: int):
+    """Retourne la modale de confirmation d'activation/désactivation (HTMX)."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    return render_template(TOGGLE_ACTIVE_MODAL, obj=obj)
+
+
+@bp_stock_htmx.post("/search/object/toggle-active/<int:object_id>")
+def object_toggle_active(object_id: int):
+    """Bascule le statut actif/inactif d'un objet (HTMX)."""
+    try:
+        new_status = toggle_object_active(object_id)
+        label = "activé" if new_status else "désactivé"
+        return render_template(
+            TOGGLE_ACTIVE_MODAL,
+            obj=None,
+            success=True,
+            label=label,
+        )
+    except ValueError as exc:
+        return f"<p class='text-danger'>{exc}</p>", 404
+
+
+@bp_stock_htmx.post("/search/dilicom/<int:object_id>/add")
+def dilicom_add(object_id: int):
+    """Planifie l'ajout d'un objet au référentiel Dilicom (HTMX)."""
+    gln13 = request.form.get("gln13", "").strip()
+    print(f"DEBUG Request to add object {object_id} to Dilicom with GLN13: '{gln13}'")
+    if gln13 is None or gln13 == "":
+        return "<p class='text-danger'>GLN13 manquant.</p>", 422
+    obj = add_object_to_dilicom(object_id, gln13)
+    return render_template(DILICOM_MODAL, obj=obj)
+
+
+@bp_stock_htmx.post("/search/dilicom/<int:object_id>/remove")
+def dilicom_remove(object_id: int):
+    """Planifie la suppression d'un objet du référentiel Dilicom (HTMX)."""
+    obj = remove_object_from_dilicom(object_id)
+    return render_template(DILICOM_MODAL, obj=obj)

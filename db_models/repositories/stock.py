@@ -17,6 +17,7 @@ class StockRepository(BaseRepository):
     """Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilisées par les
     routes du blueprint stock.
     """
+
     def get_zero_price_items(self) -> Sequence[dict]:
         """Récupère les articles dont le dernier inventaire a un prix de revient à zéro.
 
@@ -608,6 +609,7 @@ class StockRepository(BaseRepository):
 
         return {"items": items, "total": total, "page": page, "per_page": per_page}
 
+
     @staticmethod
     def _compute_dilicom_status(
         dilicom_id, create_ref, delete_ref, dilicom_synced
@@ -626,6 +628,7 @@ class StockRepository(BaseRepository):
         if delete_ref and not dilicom_synced:
             return "deleting"
         return "inactive"
+
 
     @staticmethod
     def _dilicom_status_filter(dilicom_status: Optional[str]):
@@ -727,70 +730,38 @@ class DilicomReferencialRepository(BaseRepository):
         return result
 
 
-    def get_all_referentials(self,
-                             synced: Optional[bool] = None
-                             ) -> Dict[str, Optional[Sequence[DilicomReferencial]]]:
-        """Récupère toutes les références Dilicom en fonction de leur statut de synchronisation.
+    def create_status(self, ean13: str, gln13: str, movement: str) -> DilicomReferencial:
+        """Crée une nouvelle référence Dilicom en base.
 
         Args:
-            synced: Filtre les références en fonction de leur statut de synchronisation.
-                    Si True, ne retourne que les références synchronisées.
-                    Si False, ne retourne que les références non synchronisées.
-                    Si None ou absent, retourne toutes les références.
+            ean13: L'EAN13 de l'objet à référencer.
+            gln13: Le GLN13 du point de vente.
+            movement: Le type de mouvement (to_create, created, to_delete, deleted).
 
-        Retourne un dictionnaire avec les clés :
-        - `to_create`, `created`, `to_delete`, `deleted`,
-            chacune contenant une liste de références Dilicom.
-        """
-        stmt_to_create = self._get_select(to_create=True) if synced is False else None
-        stmt_created = self._get_select(created=True) if synced is True else None
-        stmt_to_delete = self._get_select(to_delete=True) if synced is False else None
-        stmt_deleted = self._get_select(deleted=True) if synced is True else None
-        referentials = {
-            "to_create": self.session.execute(stmt_to_create).scalars().all() \
-                                if stmt_to_create else [],
-            "created": self.session.execute(stmt_created).scalars().all() \
-                                if stmt_created else [],
-            "to_delete": self.session.execute(stmt_to_delete).scalars().all() \
-                                if stmt_to_delete else [],
-            "deleted": self.session.execute(stmt_deleted).scalars().all() \
-                                if stmt_deleted else [],
-        }
-        return referentials
-
-
-    def create_or_update_referential(self, data: dict, status: str) -> int:
-        """Crée ou met à jour une référence Dilicom en base à partir des données du formulaire.
-
-        Si `id` est présent dans les données et correspond à une référence existante, la
-        référence est mise à jour. Sinon, une nouvelle référence est créée.
-
-        Args:
-            data: Dictionnaire contenant les données de la référence (isbn, gln13, etc.).
-            status: Le statut de la référence (to_create, created, to_delete, deleted).
         Returns:
-            L'identifiant de la référence créée ou mise à jour.
+            L'instance de `DilicomReferencial` créée.
+
+        Raises:
+            ValueError: Si le type de mouvement est inconnu.
+            RuntimeError: En cas d'erreur lors du commit.
         """
-        ref_id = data.get("id")
-        if ref_id:
-            ref = self.get_one_by_ean13(data.get("ean13", ""))
-            if not ref:
-                raise ValueError(f"Référence avec ID {ref_id} introuvable pour mise à jour")
-            status_updates = self._update_status(status)
-            for key, value in data.items():
-                setattr(ref, key, value)
-            for key, value in status_updates.items():
-                setattr(ref, key, value)
-        else:
-            ref = DilicomReferencial.from_dict(data)
-            status_updates = self._update_status(status)
-            for key, value in status_updates.items():
-                setattr(ref, key, value)
-            self.session.add(ref)
+        status_fields = self._update_status(movement)
+        ref = self.get_one_by_ean13(ean13)
+        if not ref:
+            ref = DilicomReferencial(
+                ean13=ean13,
+                gln13=gln13
+            )
+        for field, value in status_fields.items():
+            setattr(ref, field, value)
+        self.session.add(ref)
         try:
+            print(f"Création/modification référence Dilicom : EAN13={ean13}, GLN13={gln13}, status={movement}")
             self.session.commit()
+            print(f"Référence Dilicom créée/modifiée avec succès : ID={ref.id}")
         except Exception as exc:
             self.session.rollback()
-            msg = f"Erreur lors de la création/mise à jour de la référence : {exc}"
-            raise RuntimeError(msg) from exc
-        return ref.id
+            message = f"Erreur lors de la création de la référence Dilicom : {exc}"
+            raise RuntimeError(message) from exc
+
+        return ref

@@ -14,11 +14,13 @@ class ObjMetadatasRepository(BaseRepository):
     """
     Dépôt des données pour la gestion des métadonnées des objets généraux.
     """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.model = ObjMetadatas
         # Récupération dynamique des colonnes du modèle
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
+
 
     def create(self, obj_metadata_data: Dict[str, Any]):
         """
@@ -45,12 +47,14 @@ class ObjMetadatasRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Erreur lors de la création de la métadonnée : {str(e)}") from e
 
+
     def create_list(self, obj_metadata_data_list: List[Dict[str, Any]]) -> List[ObjMetadatas]:
         """Crée une liste de métadonnées à partir d'une liste de dictionnaires de données."""
         obj_metadatas: List[ObjMetadatas] = []
         for obj_metadata_data in obj_metadata_data_list:
             obj_metadatas.append(self.create(obj_metadata_data))
         return obj_metadatas
+
 
     def update_one(self, update_data: Dict[str, Any], obj_metadata: Optional[ObjMetadatas]=None,
                    obj_metadata_id: Optional[int]=None) -> ObjMetadatas:
@@ -70,10 +74,8 @@ class ObjMetadatasRepository(BaseRepository):
 
         # Mise à jour des champs pour la métadonnée
         for key, value in update_data.items():
-            if key == "semistructured_data":
-                # Transformer la valeur en JSON si ce n'est pas déjà une chaîne JSON
-                if not isinstance(value, str):
-                    value = json.dumps(value)
+            if key == "semistructured_data" and isinstance(value, str):
+                value = json.loads(value)
             setattr(obj_metadata, key, value)
         try:
             self.session.flush()
@@ -81,6 +83,7 @@ class ObjMetadatasRepository(BaseRepository):
         except SQLAlchemyError as e:
             self.session.rollback()
             raise ValueError(f"Erreur lors de la mise à jour des métadonnée : {str(e)}") from e
+
 
     def update_list(self, update_data_list: List[Dict[str, Any]],
                     obj_metadata_ids: Optional[List[int]] = None,
@@ -98,3 +101,25 @@ class ObjMetadatasRepository(BaseRepository):
             obj_metadatas_return.append(self.update_one(update_data, obj_metadata=selected_obj_metadata,
                                              obj_metadata_id=selected_obj_metadata_id))
         return obj_metadatas_return
+
+
+    def save_from_form(self,
+                       form: Any,
+                       general_object_id: int,
+                       instance: Optional[ObjMetadatas] = None) -> ObjMetadatas:
+        """
+        Sauvegarde une métadonnée à partir d'un formulaire.
+        Si instance est fourni, met à jour la métadonnée existante, sinon en crée une nouvelle.
+        """
+        if instance is None:
+            instance = ObjMetadatas()
+            self.session.add(instance)
+        data = form.data
+        items = data.get("items")
+        instance.semistructured_data = {
+            it["key"]: it.get("value")
+            for it in items
+            if isinstance(it, dict) and it.get("key")
+        }
+        instance.general_object_id = general_object_id
+        return instance

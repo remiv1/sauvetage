@@ -193,6 +193,7 @@
     padding: variables.$space-sm variables.$space-md;
     cursor: pointer;
     background-color: variables.$gray-100;
+    color: variables.$primary-color;
     transition: background .15s, color .15s;
     &:hover {
         background: variables.$primary-color-light;

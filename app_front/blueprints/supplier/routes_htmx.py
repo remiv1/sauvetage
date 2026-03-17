@@ -16,6 +16,9 @@ def get_suppliers(type_of_data: str):
     """Retourne la liste des fournisseurs"""
     supplier_name = request.args.get("supplier_name", "")
     suppliers = search_suppliers(supplier_name, data_returned=type_of_data)
+    if type_of_data == "id_name_gln":
+        return render_template("htmx_templates/supplier/dilicom_suppliers_dropdown.html",
+                               suppliers=suppliers, query=supplier_name)
     return render_template("htmx_templates/supplier/suppliers_dropdown.html",
                            suppliers=suppliers, query=supplier_name)
 
@@ -61,6 +64,19 @@ def select_supplier(supplier_id: int):
         "htmx_templates/supplier/select_supplier.html",
         supplier_id=supplier_id,
         supplier_name=supplier_name,
+    )
+
+
+@bp_supplier_htmx.get("/select/dilicom/<int:supplier_id>")
+def select_dilicom_supplier(supplier_id: int):
+    """Retourne les fragments OOB pour la sélection d'un fournisseur dans le contexte Dilicom."""
+    supplier_name = request.args.get("supplier_name", "")
+    gln13 = request.args.get("gln13", "")
+    return render_template(
+        "htmx_templates/supplier/select_dilicom_supplier.html",
+        supplier_id=supplier_id,
+        supplier_name=supplier_name,
+        gln13=gln13,
     )
 
 

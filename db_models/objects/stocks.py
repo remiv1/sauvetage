@@ -1,6 +1,7 @@
 """Modèle de données pour les stocks."""
 
 from typing import Dict, Any
+from datetime import timezone, datetime
 from decimal import Decimal
 from sqlalchemy import Integer, String, ForeignKey, Numeric, Boolean
 from sqlalchemy.orm import relationship, mapped_column, Mapped
@@ -146,8 +147,11 @@ class DilicomReferencial(WorkingBase, QueryMixin):
 
     # Métadonnées de suivi
     created_at: Mapped[str] = mapped_column(String, nullable=False,
+                                            default=lambda: datetime.now(timezone.utc).isoformat(),
                                             comment="Date de création de la référence")
     updated_at: Mapped[str] = mapped_column(String, nullable=False,
+                                            default=lambda: datetime.now(timezone.utc).isoformat(),
+                                            onupdate=lambda: datetime.now(timezone.utc).isoformat(),
                                             comment="Date de dernière MàJ de la référence")
 
     # Relations

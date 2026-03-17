@@ -1,0 +1,65 @@
+{# Fragment HTMX — Modale d'activation / désactivation d'un objet #}
+
+{% if success %}
+{# ── Confirmation post-toggle ─────────────────────────────────────────── #}
+<div class="modal-overlay" id="object-modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Statut mis à jour</h3>
+            <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>L'article a bien été <strong>{{ label }}</strong>.</p>
+            <div class="modal-buttons">
+                <a href="{{ url_for('stock.search') }}" class="btn btn-primary">
+                    Fermer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+{# ── Modale de confirmation ───────────────────────────────────────────── #}
+<div class="modal-overlay" id="object-modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            {% if obj.is_active %}
+                <h3>Désactiver l'article</h3>
+            {% else %}
+                <h3>Activer l'article</h3>
+            {% endif %}
+            <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>
+                Article : <strong>{{ obj.name }}</strong><br>
+                Statut actuel :
+                {% if obj.is_active %}
+                    <span class="badge badge-active">Actif</span>
+                {% else %}
+                    <span class="badge badge-inactive">Inactif</span>
+                {% endif %}
+            </p>
+            {% if obj.is_active %}
+                <p class="text-warning">
+                    Désactiver l'article le masquera des listes et empêchera toute commande.
+                </p>
+            {% else %}
+                <p class="text-info">
+                    Activer l'article le rendra de nouveau visible et commandable.
+                </p>
+            {% endif %}
+            <div class="modal-buttons">
+                <button type="button" class="btn btn-secondary btn-close-modal">Annuler</button>
+                <button class="btn {{ 'btn-danger' if obj.is_active else 'btn-success' }}"
+                        hx-post="{{ url_for('stock_htmx.object_toggle_active', object_id=obj.id) }}"
+                        hx-target="#object-modal-container"
+                        hx-swap="innerHTML">
+                    {% if obj.is_active %}Désactiver{% else %}Activer{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

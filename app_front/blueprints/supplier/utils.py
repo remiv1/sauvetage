@@ -29,6 +29,8 @@ def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str,
             return [{"name": s.name} for s in results]
         if data_returned == "id":
             return [{"id": s.id} for s in results]
+        if data_returned == "id_name_gln":
+            return [{"id": s.id, "name": s.name, "gln13": s.gln13 or ""} for s in results]
         return [{"id": s.id, "name": s.name} for s in results]
     finally:
         session.close()

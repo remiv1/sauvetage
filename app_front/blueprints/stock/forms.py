@@ -85,11 +85,6 @@ class BookForm(FlaskForm):
     genre = StringField("Genre du livre")
     publication_year = StringField("Année de publication du livre")
     pages = StringField("Nombre de pages du livre")
-    add_to_dilicom = SelectField(
-        "Ajouter à Dilicom",
-        choices=[('true', 'Oui'), ('false', 'Non')],
-        validators=[DataRequired()]
-    )
 
 
 class KeyValueForm(FlaskForm):
@@ -116,8 +111,8 @@ class TagForm(FlaskForm):
     class Meta:
         """Désactive CSRF pour ce formulaire imbriqué."""
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
-
-    name = StringField("Nom du tag", validators=[DataRequired()])
+    id = HiddenField("ID de la liaison object_tags")
+    tag_id = HiddenField("ID du tag")
 
 
 class MediaFileForm(FlaskForm):
@@ -138,13 +133,14 @@ class MediaFileForm(FlaskForm):
     )
     alt_text = StringField("Texte alternatif pour les images")
     file_data = FileField("Fichier média")
-    file_url = StringField("URL du fichier média (si type lien)")
+    file_link = StringField("URL du fichier média (si type lien)")
 
 
 class CreateObjectForm(FlaskForm):
     """Formulaire de création d'objet (étape 1)."""
 
     supplier_id = StringField("Fournisseur", validators=[DataRequired()])
+    general_object_id = HiddenField("ID de l'objet (pour les mises à jour)")
     supplier_name = StringField("Nom du fournisseur (auto-complete)",
                                 validators=[DataRequired()])
     general_object_type = SelectField("Type d'objet",
@@ -163,7 +159,7 @@ class CreateObjectForm(FlaskForm):
     description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
     price = StringField("Prix de l'objet", validators=[DataRequired()])
     book = FormField(BookForm)  # type: ignore[arg-type]
-    tags = FieldList(FormField(TagForm), min_entries=0) # type: ignore[arg-type]
-    metadata = FormField(MetadataForm)  # type: ignore[arg-type]
+    object_tags = FieldList(FormField(TagForm), min_entries=0) # type: ignore[arg-type]
+    obj_metadatas = FormField(MetadataForm)  # type: ignore[arg-type]
     media_files = FieldList(FormField(MediaFileForm), min_entries=0)    # type: ignore[arg-type]
-    submit = SubmitField("Créer l'objet")
+    submit = SubmitField("Valider")

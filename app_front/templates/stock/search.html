@@ -162,10 +162,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Fermer les modales (Dilicom et Objet)
+    // Fermer les modales (Dilicom et Objet) — seulement au clic sur le bouton fermer
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('modal-overlay') ||
-            e.target.classList.contains('btn-close-modal')) {
+        if (e.target.classList.contains('btn-close-modal')) {
             var overlay = e.target.closest('.modal-overlay');
             if (overlay) {
                 overlay.parentElement.innerHTML = '';

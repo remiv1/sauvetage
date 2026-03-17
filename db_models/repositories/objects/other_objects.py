@@ -6,11 +6,15 @@ from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import OtherObjects
 
 class OtherObjectsRepository(BaseRepository):
-    """Repository pour la gestion des autres objets liés aux objets généraux."""
+    """
+    Repository pour la gestion des autres objets liés aux objets généraux.
+    """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.model = OtherObjects()
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
+
 
     def create(self, other_object_data: Dict[str, Any]) -> OtherObjects:
         """
@@ -34,6 +38,7 @@ class OtherObjectsRepository(BaseRepository):
         except SQLAlchemyError as e:
             self.session.rollback()
             raise ValueError(f"Erreur lors de la création de l'autre objet : {str(e)}") from e
+
 
     def update(self, other_object_data: Dict[str, Any], other_object: Optional[OtherObjects]=None,
                     other_object_id: Optional[int]=None) -> OtherObjects:
@@ -62,3 +67,19 @@ class OtherObjectsRepository(BaseRepository):
         except SQLAlchemyError as e:
             self.session.rollback()
             raise ValueError(f"Erreur lors de la mise à jour de l'autre objet : {str(e)}") from e
+
+
+    def save_from_form(self,
+                       form: Any,   # pylint: disable=unused-argument
+                       general_object_id: int,
+                       instance: Optional[OtherObjects] = None) -> OtherObjects:
+        """
+        Met à jour les champs spécifiques aux autres objets à partir des données du formulaire.
+        Les champs spécifiques aux autres objets sont :
+        - general_object_id
+        """
+        if instance is None:
+            instance = OtherObjects()
+            self.session.add(instance)
+        instance.general_object_id = general_object_id
+        return instance

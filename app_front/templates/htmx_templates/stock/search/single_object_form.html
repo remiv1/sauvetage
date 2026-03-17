@@ -7,28 +7,43 @@
         <div class="modal-header">
             {% if form_state == 'create' %}
                 <h3>Ajouter un article</h3>
-            {% elif form_state == 'created' %}
+            {% elif form_state in ['created', 'edit'] %}
                 <h3>Article créé</h3>
             {% else %}
                 <h3>Détail de l'article</h3>
             {% endif %}
             <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
         </div>
-
         <div class="modal-body">
+            {# Partie qui s'affiche une fois l'objet créé #}
             {% if form_state == 'created' %}
                 <div class="object-created-msg">
                     <p>L'article a été créé avec succès (ID : {{ created_id }}).</p>
                 </div>
                 <div class="modal-buttons">
-                    <button class="btn btn-primary btn-close-modal">Fermer</button>
+                    <a href="{{ url_for('stock.search') }}" class="btn btn-primary">
+                        Fermer
+                    </a>
+                </div>
+            {% elif form_state == 'updated' %}
+                <div class="object-created-msg">
+                    <p>L'article a été modifié avec succès (ID : {{ updated_id }}).</p>
+                </div>
+                <div class="modal-buttons">
+                    <a href="{{ url_for('stock.search') }}" class="btn btn-primary">
+                        Fermer
+                    </a>
                 </div>
             {% else %}
             <form id="object-form"
                   {% if not disabled %}
-                  hx-post="{{ url_for('stock_htmx.create_object') }}"
-                  hx-target="#object-modal-container"
-                  hx-swap="innerHTML"
+                    {% if form_state == 'create' %}
+                            hx-post="{{ url_for('stock_htmx.create_object') }}"
+                        {% elif form_state == 'edit' and obj %}
+                            hx-post="{{ url_for('stock_htmx.edit_object', object_id=obj.id) }}"
+                        {% endif %}
+                    hx-target="#object-modal-container"
+                    hx-swap="innerHTML"
                   {% endif %}
                   method="post">
                 {{ form.hidden_tag() }}
@@ -38,6 +53,7 @@
 
                     {# Fournisseur (auto-complétion) #}
                     <div class="form-group form-group-wide">
+                        {{ form.general_object_id }}
                         {{ form.supplier_name.label(class="form-label") }}
                         <div class="autocomplete-wrapper">
                             <input type="hidden" id="supplier_id"
@@ -124,6 +140,11 @@
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML"
+                     {% elif form_state == 'edit' and obj %}
+                     hx-get="{{ url_for('stock_htmx.object_complement_edit', object_id=obj.id) }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML"
                      {% elif form_state == 'view' and obj %}
                      hx-get="{{ url_for('stock_htmx.object_complement_view', object_id=obj.id) }}"
                      hx-trigger="load"
@@ -137,9 +158,9 @@
 
                 {# ── Boutons d'action ────────────────────────────── #}
                 <div class="modal-buttons">
-                    {% if disabled %}
+                    {% if form_state == 'view' %}
                         <button type="button" class="btn btn-secondary btn-close-modal">Retour</button>
-                    {% else %}
+                    {% elif form_state in ['create', 'edit'] %}
                         <button type="button" class="btn btn-secondary btn-close-modal">Annuler</button>
                         {{ form.submit(class="btn btn-primary") }}
                     {% endif %}

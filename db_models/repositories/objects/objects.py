@@ -4,20 +4,14 @@ Module pour les dépôts des objets vendus par la librairie. Contient les classe
                           vendus par la librairie.
 """
 
-from typing import Any, Sequence, Optional, Dict, List
+from typing import Any, Sequence, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects import (
-    GeneralObjects,
-    Books,
-    OtherObjects,
-    ObjectTags,
-    ObjMetadatas,
-    MediaFiles,
-)
- # Pas d'import global des repositories pour éviter l'import circulaire
+from db_models.objects import GeneralObjects, ObjectTags
+
+
 
 class ObjectsRepository(BaseRepository):
     """
@@ -48,6 +42,7 @@ class ObjectsRepository(BaseRepository):
         self.object_tags_repo = ObjectTagsRepository(self.session)
         self.media_repo = MediaRepository(self.session)
 
+
     def _get_global_select(self):
         """Retourne une requête de base pour les objets, avec tous les éléments liés."""
         return (select(self.model).where(self.model.is_active == True)   # pylint: disable=singleton-comparison
@@ -57,6 +52,7 @@ class ObjectsRepository(BaseRepository):
                  joinedload(self.model.inventory_movements),
                  joinedload(self.model.obj_metadatas),
                  joinedload(self.model.object_tags).joinedload(ObjectTags.tag)))
+
 
     def get_all(self) -> Sequence["GeneralObjects"]:
         """
@@ -69,6 +65,7 @@ class ObjectsRepository(BaseRepository):
 
         return self.session.execute(stmt).unique().scalars().all()
 
+
     def get_by_ref(self, reference: str | int) -> "GeneralObjects":
         """Récupère un objet par une référence (id ou ean13)."""
         if isinstance(reference, str) and not reference.isdigit():
@@ -79,64 +76,12 @@ class ObjectsRepository(BaseRepository):
             raise ValueError("Reference must be an integer id or a string ean13.")
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
+
     def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
         """Récupère une liste d'objets dont le nom correspond à la recherche."""
         stmt = self._get_global_select().where(self.model.name.ilike(f"%{name}%")).limit(10)
         return self.session.execute(stmt).unique().scalars().all()
 
-    def create_object(self, **kwargs: Any) -> int:
-        """
-        Crée un nouvel objet général.
-        Les champs requis pour créer un objet général sont :
-        (supplier_id, general_object_type, ean13, name, description, price)
-        """
-        # Création de l'objet général avec les champs requis
-        general_object = GeneralObjects(**kwargs)
-
-        # Ajout de l'objet à la session et flush pour obtenir l'id généré
-        try:
-            self.session.add(general_object)
-            self.session.flush()
-            return general_object.id
-        except SQLAlchemyError as e:
-            self.session.rollback()
-            raise ValueError(f"Error creating object: {str(e)}") from e
-
-    def create_object_complete(self, *, general_object: GeneralObjects,
-                               book: Optional[Books]=None,
-                               other_object: Optional[OtherObjects]=None,
-                               object_tags: Optional[List[ObjectTags]]=None,
-                               obj_metadata: Optional[List[ObjMetadatas]]=None,
-                               media: Optional[List[MediaFiles]]=None) -> GeneralObjects:
-        """
-        Crée un nouvel objet avec tous ses éléments liés
-        (book, other_object, obj_metadata, object_tags, media).
-        """
-        try:
-            if book:
-                general_object_id = self.create_object(**book.to_dict())
-                general_object = self.get_by_ref(general_object_id)
-            if other_object:
-                other_object.general_object_id = general_object.id
-                self.other_object_repo.create(other_object.to_dict())
-            if object_tags:
-                for ot in object_tags:
-                    ot.general_object_id = general_object.id
-                self.object_tags_repo.create_list([ot.to_dict() for ot in object_tags])
-            if obj_metadata:
-                for m in obj_metadata:
-                    m.general_object_id = general_object.id
-                self.obj_metadata_repo.create_list([m.to_dict() for m in obj_metadata])
-            if media:
-                for m in media:
-                    m.general_object_id = general_object.id
-                general_object.media_files.extend(media)
-            self.session.add(general_object)
-            self.session.flush()
-            return general_object
-        except SQLAlchemyError as e:
-            self.session.rollback()
-            raise ValueError(f"Error creating complete object: {str(e)}") from e
 
     def commit_object(self) -> None:
         """
@@ -149,73 +94,6 @@ class ObjectsRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Error committing object changes: {str(e)}") from e
 
-    def update_object(self, *, update_payload: Dict[str, Any],
-                      general_object: Optional[GeneralObjects] = None,
-                      id_object: Optional[int] = None):
-        """
-        Met à jour un objet existant.
-        Passer en arguments soit l'id de l'objet à mettre à jour, soit l'objet lui-même.
-        Les champs à mettre à jour sont passés en arguments dans le payload.
-        format du payload :
-            ```json
-            update_payload = {
-                "general": {"name": "Nouveau titre", "price": 12.9},
-                "book": {"author": "X", "pages": 320},
-                "other_object": {"some_field": "val"},
-                "obj_metadata": {"semistructured_data": {...}},
-                "object_tags": ["tag1", "tag2"],
-                "media": [
-                    {"metadata_id": 1, "file_name": "cover.jpg", "is_principal": True},
-                ],
-            }
-            ```
-        """
-        # Levée d'une exception si le payloadde mise à jour est manquant
-        if not update_payload:
-            raise ValueError("update_payload must be provided for update.")
-        general_object = self._resolve_general_object(general_object, id_object)
-
-        if "general" in update_payload:
-            self.update(general_object, update_payload["general"])
-        if "book" in update_payload:
-            self.book_repo.update(update_payload["book"], book=general_object.books)
-        if "other_object" in update_payload:
-            self.other_object_repo.update(update_payload["other_object"],
-                                          other_object=general_object.other_objects)
-        if "obj_metadata" in update_payload:
-            self.obj_metadata_repo.update_list([update_payload["obj_metadata"]],
-                                           obj_metadatas=general_object.obj_metadata)
-        if "object_tags" in update_payload:
-            self.object_tags_repo.update_list(update_payload["object_tags"],
-                                              object_tags=general_object.object_tags)
-        if "media" in update_payload:
-            self.media_repo.update_list(update_payload["media"], medias=general_object.media_files)
-
-        self.session.commit()
-
-    def update(self, general_object: GeneralObjects, general_payload: Dict[str, Any]):
-        """
-        Met à jour les champs généraux d'un objet.
-        Les champs généraux d'un objet sont :
-        - supplier_id,
-        - general_object_type,
-        - ean13,
-        - name,
-        - description,
-        - price
-        """
-        for key, value in general_payload.items():
-            setattr(general_object, key, value)
-
-    def _resolve_general_object(self,
-                                general_object: Optional[GeneralObjects],
-                                id_object: Optional[int]) -> GeneralObjects:
-        """Cherche et retourne l'objet complet s'il n'est pas fourni."""
-        if general_object is None and id_object is not None:
-            general_object = self.get_by_ref(id_object)
-        if general_object is None:
-            raise ValueError("Mentionnez l'objet ou son identifiant pour la mise à jour.")
-        return general_object
 
     def delete(self, object_id: int):
         """Supprime un objet (soft delete)."""
@@ -224,3 +102,62 @@ class ObjectsRepository(BaseRepository):
             raise ValueError(f"Object with id {object_id} not found.")
         obj.is_active = False
         self.session.commit()
+
+
+    def toggle_active(self, object_id: int) -> bool:
+        """Bascule le statut actif/inactif d'un objet. Retourne le nouveau statut."""
+        obj = self.get_by_ref(object_id)
+        if not obj:
+            raise ValueError(f"Object with id {object_id} not found.")
+        obj.is_active = not obj.is_active
+        self.session.commit()
+        return obj.is_active
+
+
+    def save_from_form(self, form: Any, instance: Optional[GeneralObjects]=None) -> int:
+        """
+        Sauvegarde un objet à partir d'un formulaire.
+        Si instance est fourni, met à jour l'objet existant, sinon en crée un nouveau.
+        """
+        if instance is None:
+            instance = GeneralObjects()
+            self.session.add(instance)
+
+        instance.supplier_id = int(form.supplier_id.data)
+        instance.general_object_type = form.general_object_type.data
+        instance.ean13 = form.ean_13.data
+        instance.name = form.name.data
+        instance.description = form.description.data
+        instance.price = float(form.price.data or 0)
+        self.session.flush()
+        form.general_object_id.data = instance.id
+
+        if form.general_object_type.data == "book":
+            self.book_repo.save_from_form(
+                form=form.book,
+                general_object_id=instance.id,
+                instance=instance.book
+            )
+        else:
+            self.other_object_repo.save_from_form(
+                form=form.other_object,
+                general_object_id=instance.id,
+                instance=instance.other_object,
+            )
+        self.obj_metadata_repo.save_from_form(
+            form=form.obj_metadatas,
+            general_object_id=instance.id,
+            instance=instance.obj_metadatas[0] if instance.obj_metadatas else None,
+        )
+        self.object_tags_repo.save_from_form(
+            form=form,
+            general_object_id=instance.id,
+            parent_instance=instance,
+        )
+        self.media_repo.save_from_form(
+            form=form,
+            general_object_id=instance.id,
+            parent_instance=instance,
+        )
+        self.commit_object()
+        return instance.id

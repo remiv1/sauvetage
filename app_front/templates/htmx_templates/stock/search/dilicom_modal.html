@@ -49,13 +49,13 @@
                 {# Pas de référence ou supprimée → proposer l'ajout #}
                 <h4>Ajouter au référentiel Dilicom</h4>
                 <div class="form-group">
-                    <label class="form-label" for="dilicom-gln13">GLN13 du fournisseur</label>
+                    <label class="form-label" for="dilicom-supplier-name">Fournisseur (GLN13)</label>
                     <div class="autocomplete-wrapper">
                         <input type="text" id="dilicom-supplier-name"
                                class="form-control"
                                placeholder="Rechercher un fournisseur…"
                                autocomplete="off"
-                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_and_name') }}"
+                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln') }}"
                                hx-trigger="keyup changed delay:300ms"
                                hx-target="#dilicom-supplier-results"
                                hx-swap="innerHTML"
@@ -69,6 +69,10 @@
                     <button class="btn btn-primary"
                             id="btn-dilicom-add"
                             disabled
+                            hx-post="{{ url_for('stock_htmx.dilicom_add', object_id=obj.id) }}"
+                            hx-include="#dilicom-gln13"
+                            hx-target="#dilicom-modal-overlay"
+                            hx-swap="outerHTML"
                             title="Ajouter au référentiel Dilicom">
                         Ajouter chez Dilicom
                     </button>
@@ -85,6 +89,9 @@
                     <button class="btn btn-secondary btn-close-modal">Annuler</button>
                     <button class="btn btn-danger"
                             id="btn-dilicom-delete"
+                            hx-post="{{ url_for('stock_htmx.dilicom_remove', object_id=obj.id) }}"
+                            hx-target="#dilicom-modal-overlay"
+                            hx-swap="outerHTML"
                             title="Supprimer du référentiel Dilicom">
                         Supprimer chez Dilicom
                     </button>
@@ -114,3 +121,21 @@
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    // Active le bouton "Ajouter" dès qu'un GLN13 est renseigné.
+    // Note : #dilicom-gln13 est remplacé par outerHTML à chaque sélection,
+    // il faut donc re-requêter l'élément à chaque fois.
+    var addBtn = document.getElementById('btn-dilicom-add');
+    if (!addBtn) return;
+
+    function updateBtn() {
+        var el = document.getElementById('dilicom-gln13');
+        addBtn.disabled = !el || !el.value.trim();
+    }
+
+    document.body.addEventListener('htmx:afterSwap', updateBtn);
+    updateBtn();
+})();
+</script>

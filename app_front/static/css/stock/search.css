@@ -136,15 +136,6 @@ details[open] > .accordion-toggle {
 .search-dropdown:empty {
   display: none;
 }
-.search-dropdown .dropdown-item {
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.88rem;
-  transition: background 0.15s;
-}
-.search-dropdown .dropdown-item:hover {
-  background: rgba(0, 8, 111, 0.08);
-}
 
 .filters-actions {
   display: flex;

@@ -672,6 +672,7 @@ textarea {
   padding: 0.5rem 1rem;
   cursor: pointer;
   background-color: #f5f5f5;
+  color: #00086f;
   transition: background 0.15s, color 0.15s;
 }
 .dropdown-item:hover {

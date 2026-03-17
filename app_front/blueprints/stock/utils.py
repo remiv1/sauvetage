@@ -1,18 +1,14 @@
 """Module utils pour le blueprint stock"""
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from flask import request as flask_request
 from sqlalchemy import select, distinct
 from app_front.config.db_conf import get_main_session
 from app_front.blueprints.stock.forms import CreateObjectForm, OrderInCreateForm, OrderInLineForm
 from db_models.objects import (
     Books,
     Tags,
-    ObjectTags,
-    ObjMetadatas,
     OrderIn,
     GeneralObjects,
-    MediaFiles,
 )
 from db_models.repositories.stock import (
     StockRepository,
@@ -256,94 +252,75 @@ def get_object_by_id(object_id: int) -> Optional[GeneralObjects]:
     return repo.get_by_ref(object_id)
 
 
-def create_object_complete(form: CreateObjectForm) -> int:
+def toggle_object_active(object_id: int) -> bool:
+    """Bascule le statut actif/inactif d'un objet. Retourne le nouveau statut."""
+    session = get_main_session()
+    repo = ObjectsRepository(session)
+    return repo.toggle_active(object_id)
+
+
+def add_object_to_dilicom(object_id: int, gln13: str) -> Any:
+    """Planifie l'ajout d'un objet au référentiel Dilicom (create_ref=True).
+
+    Returns:
+        L'ID de la référence Dilicom créée.
+    Raises:
+        ValueError: si l'objet n'existe pas ou n'a pas d'EAN13.
+        RuntimeError: en cas d'erreur lors du commit.
+    """
+    general_object_repo = ObjectsRepository(get_main_session())
+    obj = general_object_repo.get_by_ref(object_id)
+    if obj is None:
+        print(f"DEBUG Object with id {object_id} not found when trying to add to Dilicom.")
+        raise ValueError(f"Objet avec l'id {object_id} introuvable.")
+    dilicom_repo = DilicomReferencialRepository(get_main_session())
+    dilicom_ref = dilicom_repo.create_status(obj.ean13, gln13, movement="to_create")
+    return dilicom_ref
+
+
+def remove_object_from_dilicom(object_id: int) -> Any:
+    """Planifie la suppression d'un objet du référentiel Dilicom (delete_ref=True).
+
+    Returns:
+        L'ID de la référence Dilicom mise à jour.
+    Raises:
+        ValueError: si l'objet ou sa référence Dilicom n'existe pas.
+        RuntimeError: en cas d'erreur lors du commit.
+    """
+    general_object_repo = ObjectsRepository(get_main_session())
+    obj = general_object_repo.get_by_ref(object_id)
+    if obj is None:
+        print(f"DEBUG Object with id {object_id} not found when trying to remove from Dilicom.")
+        raise ValueError(f"Objet avec l'id {object_id} introuvable.")
+    dilicom_repo = DilicomReferencialRepository(get_main_session())
+    existing = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
+    if existing is None:
+        raise ValueError("Aucun référentiel Dilicom trouvé pour cet objet.")
+    dilicom_ref = dilicom_repo.create_status(obj.ean13, existing.gln13, movement="to_delete")
+    return dilicom_ref
+
+def save_object_complete(form: CreateObjectForm, object_id: Optional[int] = None) -> int:
     """Crée un objet complet à partir du formulaire CreateObjectForm.
 
     Args:
         form: Le formulaire validé contenant les données de l'objet.
 
     Returns:
-        L'objet GeneralObjects créé.
+        L'objet GeneralObjects créé ou mis à jour.
 
     Raises:
-        ValueError: Si la création échoue.
+        ValueError: Si la création ou la mise à jour échoue.
     """
     session = get_main_session()
     repo = ObjectsRepository(session)
+    if object_id is None:
+        obj_id = repo.save_from_form(form)
+        return obj_id
 
-    obj_id = repo.create_object(
-        supplier_id=int(form.supplier_id.data or 0),
-        general_object_type=form.general_object_type.data,
-        ean13=form.ean_13.data,
-        name=form.name.data,
-        description=form.description.data or "",
-        price=float(form.price.data or 0),
-    )
+    general_object = repo.get_by_ref(object_id)
+    obj_id = repo.save_from_form(form, instance=general_object)
 
-    if form.general_object_type.data == "book":
-        _create_book(session, obj_id, form.book)
-
-    tag_ids = flask_request.form.getlist("tag_id")
-    _create_tags(session, obj_id, tag_ids)
-    _create_metadata(session, obj_id, form.metadata)
-    _create_media_files(session, obj_id, form.media_files)
-
-    repo.commit_object()
     return obj_id
-
-
-def _create_book(session: Any, object_id: int, book_form: Any) -> None:
-    """Crée l'enregistrement Book associé à un objet."""
-    book = Books(
-        general_object_id=object_id,
-        author=book_form.author.data or "",
-        diffuser=book_form.diffuser.data or "",
-        editor=book_form.editor.data or "",
-        genre=book_form.genre.data or "",
-        publication_year=int(book_form.publication_year.data)
-            if book_form.publication_year.data else None,
-        pages=int(book_form.pages.data) if book_form.pages.data else None,
-        add_to_dilicom=book_form.add_to_dilicom.data == "true",
-    )
-    session.add(book)
-
-
-def _create_tags(session: Any, object_id: int, tag_ids: List[str]) -> None:
-    """Crée les associations objet-tag à partir des tag_id du formulaire."""
-    for tid in tag_ids:
-        if tid:
-            session.add(ObjectTags(
-                general_object_id=object_id,
-                tag_id=int(tid),
-            ))
-
-
-def _create_metadata(session: Any, object_id: int, metadata_form: Any) -> None:
-    """Crée les métadonnées associées à un objet."""
-    meta_data = metadata_form.data if isinstance(metadata_form.data, dict) else {}
-    session.add(ObjMetadatas(
-        general_object_id=object_id,
-        semistructured_data=meta_data,
-    ))
-
-
-def _create_media_files(session: Any, object_id: int, media_files_form: Any) -> None:
-    """Crée les enregistrements MediaFiles associés à un objet."""
-    media_files = media_files_form.data if isinstance(media_files_form.data, list) else []
-    for mf in media_files:
-        file_data = mf.get("file_data")
-        file_bytes = None
-        # Si file_data est un FileStorage (upload Flask), on lit directement
-        if file_data and hasattr(file_data, "read"):
-            file_bytes = file_data.read()
-        session.add(MediaFiles(
-            general_object_id=object_id,
-            file_name=mf.get("file_name", ""),
-            file_type=mf.get("file_type", ""),
-            alt_text=mf.get("alt_text", ""),
-            file_data=file_bytes,
-            file_link=mf.get("file_url", None),
-        ))
 
 
 # ============================================================================
