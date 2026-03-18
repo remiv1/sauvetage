@@ -14,7 +14,6 @@ from app_front.config.db_conf import get_main_session
 from db_models.objects import GeneralObjects, Books, OtherObjects, Suppliers
 from db_models.repositories.objects import ObjectsRepository
 
-
 # =========================================================================== #
 #  Helpers HTTP – uniquement pour les opérations lourdes (FastAPI)            #
 # =========================================================================== #
@@ -278,6 +277,7 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
         return list({r for r in response if r})  # Uniques et non vides
     finally:
         session.close()
+
 
 def search_object_by_name(name: str) -> Sequence[GeneralObjects]:
     """Rechercher les objet dans la base par nom"""

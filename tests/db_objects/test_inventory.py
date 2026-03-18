@@ -7,7 +7,9 @@ from db_models.objects import InventoryMovements, GeneralObjects, Books, Supplie
 def test_add_movements(
     db_session_main: Session,
     general_object,  # pylint: disable=redefined-outer-name, unused-argument
-    inventory_movements: list[InventoryMovements],  # pylint: disable=redefined-outer-name, unused-argument
+    inventory_movements: list[
+        InventoryMovements
+    ],  # pylint: disable=redefined-outer-name, unused-argument
 ) -> None:  # pylint: disable=redefined-outer-name, unused-argument
     """Test d'ajout et de lecture des mouvements d'inventaire."""
     for movement in inventory_movements:

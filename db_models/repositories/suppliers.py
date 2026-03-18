@@ -4,10 +4,12 @@ Dépôt de données pour les fournisseurs. Ceci ne contient que d'une classe :
         notamment la validation des données, la création de nouveaux fournisseurs, et la
         gestion des fournisseurs.
 """
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Suppliers
+
 
 class SuppliersRepository(BaseRepository):
     """
@@ -18,6 +20,7 @@ class SuppliersRepository(BaseRepository):
     - update_supplier : pour mettre à jour les informations d'un fournisseur existant.
     - deactivate_supplier : pour désactiver un fournisseur (soft delete).
     """
+
     def get_by_id(self, supplier_id: int) -> "Suppliers | None":
         """Récupère un fournisseur par son identifiant.
         Args:
@@ -45,10 +48,18 @@ class SuppliersRepository(BaseRepository):
             return supplier
         except IntegrityError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la création du fournisseur : {e.orig}") from e
+            raise ValueError(
+                f"Erreur lors de la création du fournisseur : {e.orig}"
+            ) from e
 
-    def update_supplier(self, supplier: Suppliers, *, name: str | None = None,
-                        email: str | None = None, phone: str | None = None) -> Suppliers:
+    def update_supplier(
+        self,
+        supplier: Suppliers,
+        *,
+        name: str | None = None,
+        email: str | None = None,
+        phone: str | None = None,
+    ) -> Suppliers:
         """Met à jour les informations d'un fournisseur existant.
         Args:
             supplier (Suppliers): Le fournisseur à mettre à jour.
@@ -69,7 +80,9 @@ class SuppliersRepository(BaseRepository):
             return supplier
         except IntegrityError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la mise à jour du fournisseur : {e.orig}") from e
+            raise ValueError(
+                f"Erreur lors de la mise à jour du fournisseur : {e.orig}"
+            ) from e
 
     def deactivate_supplier(self, supplier: Suppliers) -> Suppliers:
         """Désactive un fournisseur (Soft delete).
@@ -84,4 +97,6 @@ class SuppliersRepository(BaseRepository):
             return supplier
         except IntegrityError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la désactivation du fournisseur : {e.orig}") from e
+            raise ValueError(
+                f"Erreur lors de la désactivation du fournisseur : {e.orig}"
+            ) from e

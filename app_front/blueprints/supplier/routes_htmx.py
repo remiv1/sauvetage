@@ -17,10 +17,22 @@ def get_suppliers(type_of_data: str):
     supplier_name = request.args.get("supplier_name", "")
     suppliers = search_suppliers(supplier_name, data_returned=type_of_data)
     if type_of_data == "id_name_gln":
-        return render_template("htmx_templates/supplier/dilicom_suppliers_dropdown.html",
-                               suppliers=suppliers, query=supplier_name)
-    return render_template("htmx_templates/supplier/suppliers_dropdown.html",
-                           suppliers=suppliers, query=supplier_name)
+        return render_template(
+            "htmx_templates/supplier/dilicom_suppliers_dropdown.html",
+            suppliers=suppliers,
+            query=supplier_name,
+        )
+    if type_of_data == "filter":
+        return render_template(
+            "htmx_templates/supplier/filter_suppliers_dropdown.html",
+            suppliers=suppliers,
+            query=supplier_name,
+        )
+    return render_template(
+        "htmx_templates/supplier/suppliers_dropdown.html",
+        suppliers=suppliers,
+        query=supplier_name,
+    )
 
 
 @bp_supplier_htmx.get("/add-new/<name>")
@@ -29,7 +41,6 @@ def add_new_supplier(name: str):
     form = SupplierCreateForm()
     form.supplier_name.data = name
     return render_template(ADD_FORM_TEMPLATE, form=form, name=name)
-
 
 
 @bp_supplier_htmx.route("/create", methods=["POST"])

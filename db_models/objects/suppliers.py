@@ -6,31 +6,51 @@ from sqlalchemy import Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
 
+
 class Suppliers(WorkingBase):
     """Modèle pour les fournisseurs."""
-    __tablename__ = 'suppliers'
+
+    __tablename__ = "suppliers"
     __table_args__ = {"schema": "app_schema"}
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,
-                                    comment="Identifiant unique du fournisseur")
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Identifiant unique du fournisseur",
+    )
 
     # Données de base du fournisseur
-    name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom du fournisseur")
-    gln13: Mapped[str] = mapped_column(String, unique=True, comment="Code GLN du fournisseur")
-    contact_email: Mapped[str] = mapped_column(String, comment="Email de contact du fournisseur")
-    contact_phone: Mapped[str] = mapped_column(String,
-                                               comment="Téléphone de contact du fournisseur")
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True,
-                                            comment="Indique si le fournisseur est actif")
+    name: Mapped[str] = mapped_column(
+        String, nullable=False, comment="Nom du fournisseur"
+    )
+    gln13: Mapped[str] = mapped_column(
+        String, unique=True, comment="Code GLN du fournisseur"
+    )
+    contact_email: Mapped[str] = mapped_column(
+        String, comment="Email de contact du fournisseur"
+    )
+    contact_phone: Mapped[str] = mapped_column(
+        String, comment="Téléphone de contact du fournisseur"
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, comment="Indique si le fournisseur est actif"
+    )
 
     # Méta-données de suivi
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
-                                        default=lambda: datetime.now(timezone.utc),
-                                        comment="Date de création du fournisseur")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False,
-                                                 default=lambda: datetime.now(timezone.utc),
-                                                 onupdate=lambda: datetime.now(timezone.utc),
-                                                 comment="Date de dernière MàJ du fournisseur")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de création du fournisseur",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        comment="Date de dernière MàJ du fournisseur",
+    )
 
     # Relations
     objects = relationship("GeneralObjects", back_populates="supplier")
@@ -38,8 +58,10 @@ class Suppliers(WorkingBase):
     dilicom_referencial = relationship("DilicomReferencial", back_populates="supplier")
 
     def __repr__(self) -> str:
-        return f"<Supplier(id={self.id}, name={self.name}, contact_email={self.contact_email}, " \
-               f"contact_phone={self.contact_phone}, is_active={self.is_active})>"
+        return (
+            f"<Supplier(id={self.id}, name={self.name}, contact_email={self.contact_email}, "
+            f"contact_phone={self.contact_phone}, is_active={self.is_active})>"
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet Supplier en dictionnaire."""
@@ -51,7 +73,7 @@ class Suppliers(WorkingBase):
             "contact_phone": self.contact_phone,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     @classmethod

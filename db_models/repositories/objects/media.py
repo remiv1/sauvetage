@@ -6,6 +6,7 @@ from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import MediaFiles
 from db_models.services.objects import sync_collection
 
+
 class MediaRepository(BaseRepository):
     """
     Module de gestion des médias liés aux objets généraux.
@@ -16,9 +17,8 @@ class MediaRepository(BaseRepository):
         self.model = MediaFiles
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
 
-
     def create(self, media_data: Dict[str, Any]) -> MediaFiles:
-        """Création d'un objet média à partir des données fournies. """
+        """Création d'un objet média à partir des données fournies."""
         extra_keys = set(media_data.keys()) - set(self._kwargs)
         if extra_keys:
             raise ValueError(f"Champs inattendus : {', '.join(sorted(extra_keys))}")
@@ -31,7 +31,6 @@ class MediaRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Erreur lors de la création du média : {str(e)}") from e
 
-
     def create_list(self, media_data_list: List[Dict[str, Any]]) -> List[MediaFiles]:
         """Crée une liste de médias à partir d'une liste de dictionnaires de données."""
         medias: List[MediaFiles] = []
@@ -39,9 +38,12 @@ class MediaRepository(BaseRepository):
             medias.append(self.create(media_data))
         return medias
 
-
-    def update_one(self, media_data: Dict[str, Any], media: Optional[MediaFiles]=None,
-               media_id: Optional[int]=None) -> MediaFiles:
+    def update_one(
+        self,
+        media_data: Dict[str, Any],
+        media: Optional[MediaFiles] = None,
+        media_id: Optional[int] = None,
+    ) -> MediaFiles:
         """Mise à jour d'un média existant avec les données fournies."""
         # Vérification des champs attendus pour la mise à jour d'un média
         extra_keys = set(media_data.keys()) - set(self._kwargs)
@@ -64,32 +66,47 @@ class MediaRepository(BaseRepository):
             return media
         except SQLAlchemyError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la mise à jour du média : {str(e)}") from e
+            raise ValueError(
+                f"Erreur lors de la mise à jour du média : {str(e)}"
+            ) from e
 
-
-    def update_list(self, media_data_list: List[Dict[str, Any]],
-                    media_ids: Optional[List[int]] = None,
-                    medias: Optional[List[MediaFiles]] = None) -> List[MediaFiles]:
+    def update_list(
+        self,
+        media_data_list: List[Dict[str, Any]],
+        media_ids: Optional[List[int]] = None,
+        medias: Optional[List[MediaFiles]] = None,
+    ) -> List[MediaFiles]:
         """Mise à jour d'une liste de médias existants."""
         medias_return: List[MediaFiles] = []
         for media_data in media_data_list:
             data_id = media_data.get("id")
-            if data_id is None :
-                raise ValueError("Chaque média à mettre à jour doit avoir un champ 'id'.")
-            selected_media_id = next((mid for mid in media_ids if mid == data_id), None) \
-                                    if media_ids else None
-            selected_media = next((m for m in medias if m.id == selected_media_id), None) \
-                                    if medias else None
-            medias_return.append(self.update_one(media_data, media=selected_media,
-                                                 media_id=selected_media_id))
+            if data_id is None:
+                raise ValueError(
+                    "Chaque média à mettre à jour doit avoir un champ 'id'."
+                )
+            selected_media_id = (
+                next((mid for mid in media_ids if mid == data_id), None)
+                if media_ids
+                else None
+            )
+            selected_media = (
+                next((m for m in medias if m.id == selected_media_id), None)
+                if medias
+                else None
+            )
+            medias_return.append(
+                self.update_one(
+                    media_data, media=selected_media, media_id=selected_media_id
+                )
+            )
         return medias_return
 
-
-    def save_from_form(self,
-                       form: Any,
-                       general_object_id: int,
-                       parent_instance: Optional[MediaFiles]=None,
-                       ) -> None:
+    def save_from_form(
+        self,
+        form: Any,
+        general_object_id: int,
+        parent_instance: Optional[MediaFiles] = None,
+    ) -> None:
         """
         Met à jour les champs d'un média à partir des données d'un formulaire.
         Les champs d'un média sont :
@@ -104,5 +121,5 @@ class MediaRepository(BaseRepository):
             attr_name="media_files",
             form_fieldlist=form.media_files,
             model_class=MediaFiles,
-            session=self.session
+            session=self.session,
         )

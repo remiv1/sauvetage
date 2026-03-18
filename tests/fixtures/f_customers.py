@@ -19,7 +19,7 @@ from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type:
 
 @pytest.fixture
 def complete_customer_pro(
-    db_session_main: Session,   # pylint: disable=redefined-outer-name, unused-argument
+    db_session_main: Session,  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Customers:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un client professionnel complet avec tous les champs."""
     customer = Customers(wpwc_id="1", henrri_id="2", customer_type="pro")
@@ -85,7 +85,7 @@ def complete_customer_pro(
 
 @pytest.fixture
 def complete_customer_part(
-    db_session_main: Session,   # pylint: disable=redefined-outer-name, unused-argument
+    db_session_main: Session,  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Customers:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un client particulier complet avec tous les champs."""
     customer = Customers(wpwc_id="1", henrri_id="2", customer_type="part")

@@ -3,10 +3,12 @@ Module pour la gestion des expéditions. Contient la classe ShipmentsRepository 
 opérations liées aux expéditions, telles que la création, la récupération, la mise à jour et la
 suppression des expéditions dans la base de données.
 """
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Shipment
+
 
 class ShipmentsRepository(BaseRepository):
     """
@@ -16,6 +18,7 @@ class ShipmentsRepository(BaseRepository):
     - create_shipment : Crée une nouvelle expédition.
     - update_shipment : Met à jour une expédition existante.
     """
+
     def get_by_id(self, shipment_id: int) -> "Shipment | None":
         """Récupère une expédition par son identifiant.
         Args:
@@ -27,8 +30,9 @@ class ShipmentsRepository(BaseRepository):
         stmt = select(Shipment).where(Shipment.id == shipment_id)
         return self.session.execute(stmt).scalar_one_or_none()
 
-    def create_shipment(self, *, reference: str, carrier: str, tracking_number: str,
-                        create_source: str) -> "Shipment":
+    def create_shipment(
+        self, *, reference: str, carrier: str, tracking_number: str, create_source: str
+    ) -> "Shipment":
         """Crée une nouvelle expédition.
         Args:
             reference (str): La référence de l'expédition.
@@ -38,21 +42,31 @@ class ShipmentsRepository(BaseRepository):
         Returns:
             Shipment: L'expédition créée mais pas encore commité en base de données.
         """
-        shipment = Shipment(reference= reference,
-                            carrier=carrier,
-                            tracking_number=tracking_number,
-                            create_source=create_source)
+        shipment = Shipment(
+            reference=reference,
+            carrier=carrier,
+            tracking_number=tracking_number,
+            create_source=create_source,
+        )
         try:
             self.session.add(shipment)
             self.session.commit()
             return shipment
         except IntegrityError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la création de l'expédition : {e.orig}") from e
+            raise ValueError(
+                f"Erreur lors de la création de l'expédition : {e.orig}"
+            ) from e
 
-    def update_shipment(self, shipment: Shipment, *, reference: str | None = None,
-                        carrier: str | None = None, tracking_number: str | None = None,
-                        update_source: str | None = None) -> "Shipment":
+    def update_shipment(
+        self,
+        shipment: Shipment,
+        *,
+        reference: str | None = None,
+        carrier: str | None = None,
+        tracking_number: str | None = None,
+        update_source: str | None = None,
+    ) -> "Shipment":
         """Met à jour les informations d'une expédition existante.
         Args:
             shipment (Shipment): L'expédition à mettre à jour.
@@ -76,4 +90,6 @@ class ShipmentsRepository(BaseRepository):
             return shipment
         except IntegrityError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la mise à jour de l'expédition : {e.orig}") from e
+            raise ValueError(
+                f"Erreur lors de la mise à jour de l'expédition : {e.orig}"
+            ) from e

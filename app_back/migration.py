@@ -22,8 +22,8 @@ MAIN = {
         "-c",
         getenv("ALEMBIC_CONFIG_MAIN", "/app/main/alembic.ini"),
         "upgrade",
-        "head"
-    ]
+        "head",
+    ],
 }
 SECURE = {
     "index": "secure",
@@ -32,18 +32,18 @@ SECURE = {
         "-c",
         getenv("ALEMBIC_CONFIG_SECURE", "/app/users/alembic.ini"),
         "upgrade",
-        "head"
-    ]
+        "head",
+    ],
 }
 
 
 def _build_dsn() -> str:
     """Construit la DSN de connexion pour le rôle de migration."""
-    user = quote(getenv('POSTGRES_USER_MIGR', 'migr'), safe='')
-    password = quote(getenv('POSTGRES_PASSWORD_MIGR', ''), safe='')
-    host = getenv('POSTGRES_HOST', 'db-main')
-    port = getenv('POSTGRES_PORT', '5432')
-    db = getenv('POSTGRES_DB_MAIN', 'sauvetage_main')
+    user = quote(getenv("POSTGRES_USER_MIGR", "migr"), safe="")
+    password = quote(getenv("POSTGRES_PASSWORD_MIGR", ""), safe="")
+    host = getenv("POSTGRES_HOST", "db-main")
+    port = getenv("POSTGRES_PORT", "5432")
+    db = getenv("POSTGRES_DB_MAIN", "sauvetage_main")
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 
@@ -86,7 +86,7 @@ def run_migrations_with_lock(timeout: int = 300) -> None:
 
         # Tentative non-bloquante
         cur.execute("SELECT pg_try_advisory_lock(%s)", (ADVISORY_LOCK_ID,))
-        got_lock = cur.fetchone()[0]    # type: ignore
+        got_lock = cur.fetchone()[0]  # type: ignore
 
         if got_lock:
             # Ce worker est le premier — il exécute les migrations

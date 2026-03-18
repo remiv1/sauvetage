@@ -1,0 +1,29 @@
+<ul id="objects-results">
+    {% if not items %}
+        <li>Aucun résultat trouvé.</li>
+    {% endif %}
+    {% for i in items %}
+        <li class="dropdown-item"
+            data-object-id="{{ i.id }}"
+            data-object-name="{{ i.name }}"
+            style="cursor:pointer">
+            {{ i.name }}
+        </li>
+    {% endfor %}
+</ul>
+<script>
+(function() {
+    document.querySelectorAll('#objects-results .dropdown-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            var objId = this.dataset.objectId;
+            var objName = this.dataset.objectName;
+            var idField = document.getElementById('general_object_id');
+            var nameField = document.getElementById('object-wrapper');
+            if (idField) idField.value = objId;
+            if (nameField) nameField.value = objName;
+            var results = document.getElementById('article-search-results');
+            if (results) results.innerHTML = '';
+        });
+    });
+})();
+</script>

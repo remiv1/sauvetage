@@ -5,8 +5,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Tags
 
+
 class TagsRepository(BaseRepository):
     """Dépôt pour la gestion des tags associés ou non aux objets"""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.model = Tags
@@ -30,8 +32,12 @@ class TagsRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Erreur lors de la création du tag : {str(e)}") from e
 
-    def update(self, update_data: Dict[str, Any], tag_id: Optional[int]=None,
-               tag: Optional[Tags]=None) -> Tags:
+    def update(
+        self,
+        update_data: Dict[str, Any],
+        tag_id: Optional[int] = None,
+        tag: Optional[Tags] = None,
+    ) -> Tags:
         """Mettre à jour un tag existant"""
         # Vérification des champs attendus pour la mise à jour d'un tag
         # Gestion de la levée d'exceptions

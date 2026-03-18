@@ -3,7 +3,7 @@
     <h2>Commandes fournisseurs</h2>
     <div class="orders-actions">
         <div class="btn btn-primary" id="new-order"
-             hx-get="{{ url_for('stock_htmx.new_order_section') }}"
+             hx-get="{{ url_for('stock_htmx_orders.new_order_section') }}"
              hx-target="#orders-management"
              hx-swap="innerHTML">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
@@ -15,7 +15,7 @@
             Nouvelle commande
         </div>
         <div class="btn btn-secondary" id="new-return"
-             hx-get="{{ url_for('stock_htmx.returns') }}"
+             hx-get="{{ url_for('stock_htmx_return.returns') }}"
              hx-target="#orders-management"
              hx-swap="innerHTML">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
@@ -51,7 +51,7 @@
             <td class="text-right">{{ "%.2f"|format(order.value|float) }} €</td>
             <td class="text-center">{{ order.orderin_lines | length }}</td>
             <td class="text-center actions-cell">
-                <a hx-get="{{ url_for('stock_htmx.view_order', order_id=order.id) }}"
+                <a hx-get="{{ url_for('stock_htmx_orders.view_order', order_id=order.id) }}"
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
                     class="action-icon"
@@ -59,7 +59,7 @@
                     {% include "svg/eye.html" %}
                 </a>
                 {% if order.order_state == "draft" %}
-                <a hx-get="{{ url_for('stock_htmx.edit_order', order_id=order.id) }}"
+                <a hx-get="{{ url_for('stock_htmx_orders.edit_order', order_id=order.id) }}"
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
                     class="action-icon"
@@ -68,8 +68,8 @@
                 </a>
                 {% endif %}
                 <button class="action-icon action-cancel"
-                        hx-post="{{ url_for('stock_htmx.cancel_order', order_id=order.id) }}"
-                        hx-target="#orders-management"
+                        hx-get="{{ url_for('stock_htmx_orders.cancel_order', order_id=order.id) }}"
+                        hx-target="#order-modale"
                         hx-swap="innerHTML"
                         title="Annuler la commande"
                         data-order-id="{{ order.id }}"
@@ -81,6 +81,9 @@
         {% endfor %}
     </tbody>
 </table>
+<div id="order-modale">
+
+</div>
 {% else %}
 <div class="no-order">
     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"

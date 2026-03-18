@@ -53,7 +53,7 @@
             <div class="modal-buttons">
                 <button type="button" class="btn btn-secondary btn-close-modal">Annuler</button>
                 <button class="btn {{ 'btn-danger' if obj.is_active else 'btn-success' }}"
-                        hx-post="{{ url_for('stock_htmx.object_toggle_active', object_id=obj.id) }}"
+                        hx-post="{{ url_for('stock_htmx_search.object_toggle_active', object_id=obj.id) }}"
                         hx-target="#object-modal-container"
                         hx-swap="innerHTML">
                     {% if obj.is_active %}Désactiver{% else %}Activer{% endif %}

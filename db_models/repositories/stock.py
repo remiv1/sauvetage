@@ -6,9 +6,15 @@ routes du blueprint stock.
 from decimal import Decimal
 from typing import Sequence, Optional, Any, Dict
 from sqlalchemy import select, func, or_, and_
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 from db_models.objects import (
-    InventoryMovements, GeneralObjects, OrderIn, OrderInLine, DilicomReferencial, Suppliers
+    InventoryMovements,
+    GeneralObjects,
+    OrderIn,
+    OrderInLine,
+    DilicomReferencial,
+    Suppliers,
 )
 from db_models.repositories.base_repo import BaseRepository
 
@@ -17,6 +23,31 @@ class StockRepository(BaseRepository):
     """Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilisées par les
     routes du blueprint stock.
     """
+
+    def _compensate_inventory_movements(self, movement_ids: set, order_id: int) -> None:
+        """Crée des mouvements de compensation inverse pour annuler les mouvements d'inventaire
+        liés à une commande annulée.
+
+        Args:
+            movement_ids: Ensemble des IDs des mouvements d'inventaire à compenser.
+            order_id: L'identifiant de la commande annulée (pour les notes du mouvement).
+        """
+        inventory_movements = self.session.execute(
+            select(InventoryMovements).where(InventoryMovements.id.in_(movement_ids))
+        ).scalars().all()
+        for movement in inventory_movements:
+            note = f"Compensation du mouvement #{movement.id} lié à la commande annulée #{order_id}"
+            source = f"Compensation annulation commande #{order_id}"
+            compensation = InventoryMovements(
+                general_object_id=movement.general_object_id,
+                movement_type="in" if movement.movement_type == "out" else "out",
+                quantity=movement.quantity * -1,
+                price_at_movement=movement.price_at_movement,
+                source=source,
+                destination=movement.destination,
+                notes=note,
+            )
+            self.session.add(compensation)
 
     def get_zero_price_items(self) -> Sequence[dict]:
         """Récupère les articles dont le dernier inventaire a un prix de revient à zéro.
@@ -29,7 +60,9 @@ class StockRepository(BaseRepository):
 
         # Sous-requête simple : timestamp max par general_object_id (mouvements d'inventaire)
         latest = (
-            select(im.general_object_id, func.max(im.movement_timestamp).label("max_ts"))
+            select(
+                im.general_object_id, func.max(im.movement_timestamp).label("max_ts")
+            )
             .where(im.movement_type == "inventory")
             .group_by(im.general_object_id)
             .subquery()
@@ -64,7 +97,6 @@ class StockRepository(BaseRepository):
             }
             for row in result
         ]
-
 
     def update_movement_price(self, movement_id: int, price: float) -> int:
         """Crée un nouveau mouvement d'inventaire en dupliquant le mouvement
@@ -101,10 +133,45 @@ class StockRepository(BaseRepository):
             self.session.commit()
         except Exception as exc:
             self.session.rollback()
-            raise RuntimeError(f"Erreur lors de la mise à jour du prix : {exc}") from exc
+            raise RuntimeError(
+                f"Erreur lors de la mise à jour du prix : {exc}"
+            ) from exc
 
         return new_movement.id
 
+    def update_order_in_price(self, order_id: int) -> None:
+        """Met à jour le prix total d'une commande fournisseur en recalculant le total
+        à partir des lignes de commande.
+
+        Args:
+            order_id: L'identifiant de la commande à mettre à jour.
+
+        Raises:
+            ValueError: Si la commande n'existe pas.
+            RuntimeError: En cas d'erreur lors du commit.
+        """
+        order = self.session.get(OrderIn, order_id)
+        if order is None:
+            raise ValueError(f"Commande {order_id} introuvable")
+        stmt = select(
+            func.coalesce(
+                func.sum(
+                    OrderInLine.qty_ordered
+                    * OrderInLine.unit_price
+                    * (1 + OrderInLine.vat_rate / 100)
+                ),
+                0,
+            ).label("total_ttc")
+        ).where(OrderInLine.order_in_id == order_id)
+        total_ttc = self.session.execute(stmt).scalar_one()
+        print(f"DEBUG Calculated total TTC for order {order_id}: {total_ttc}")  # Debug log
+        order.value = float(total_ttc)
+        try:
+            self.session.commit()
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            message = f"Erreur lors de la mise à jour du prix de la commande : {exc}"
+            raise SQLAlchemyError(message) from exc
 
     def get_supplier_orders(self) -> Sequence[OrderIn]:
         """Récupère la liste des commandes fournisseurs avec toutes les relations chargées.
@@ -118,23 +185,24 @@ class StockRepository(BaseRepository):
         stmt = (
             select(OrderIn)
             .options(
-                selectinload(OrderIn.supplier),
-                selectinload(OrderIn.orderin_lines)
+                selectinload(OrderIn.supplier), selectinload(OrderIn.orderin_lines)
             )
-            .where(or_(
-                OrderIn.orderin_lines.any(OrderInLine.qty_ordered >= 0),  # Exclure les retours
-                OrderIn.orderin_lines == None  # Inclure les commandes sans lignes # pylint: disable=singleton-comparison
-            ))
+            .where(
+                or_(
+                    OrderIn.orderin_lines.any(
+                        OrderInLine.qty_ordered >= 0
+                    ),  # Exclure les retours
+                    OrderIn.orderin_lines == None,  # pylint: disable=singleton-comparison
+                )
+            )
             .order_by(OrderIn.id.desc())
         )
         return self.session.execute(stmt).scalars().all()
 
-
     def cancel_supplier_order(self, order_id: int) -> None:
-        """Supprime une commande fournisseur et ses lignes associées.
-
-        Les mouvements d'inventaire liés aux lignes sont désassociés (inventory_movement_id
-        mis à NULL sur la ligne) mais conservés à titre de traçabilité.
+        """
+        Supprime une commande fournisseur et ses lignes associées et compense les mouvements
+        d'inventaire liés.
 
         Args:
             order_id: L'identifiant de la commande à annuler.
@@ -149,15 +217,22 @@ class StockRepository(BaseRepository):
 
         # Chargement ORM des lignes pour passer par les relations SQLAlchemy
         lines = (
-            self.session.execute(select(OrderInLine).where(OrderInLine.order_in_id == order_id))
+            self.session.execute(
+                select(OrderInLine).where(OrderInLine.order_in_id == order_id)
+            )
             .scalars()
             .all()
         )
 
+        # Suppression des lignes et déliaison des mouvements d'inventaire associés
+        lines_to_compensate: set = set()
         for line in lines:
-            # Désassociation du mouvement d'inventaire (FK nullable) avant suppression
-            line.inventory_movement_id = None   # type: ignore
+            lines_to_compensate.add(line.inventory_movement_id)
+            line.inventory_movement_id = None  # type: ignore
             self.session.delete(line)
+
+        # Création des mouvements de compensation pour annuler l'impact sur le stock
+        self._compensate_inventory_movements(lines_to_compensate, order_id)
 
         # Flush pour propager les changements sur les lignes avant de supprimer la commande
         self.session.flush()
@@ -171,7 +246,6 @@ class StockRepository(BaseRepository):
                 f"Erreur lors de l'annulation de la commande : {exc}"
             ) from exc
 
-
     def get_supplier_returns(self) -> Sequence[OrderIn]:
         """Récupère la liste des retours fournisseurs avec toutes les relations chargées.
 
@@ -184,14 +258,12 @@ class StockRepository(BaseRepository):
         stmt = (
             select(OrderIn)
             .options(
-                selectinload(OrderIn.supplier),
-                selectinload(OrderIn.return_in_lines)
+                selectinload(OrderIn.supplier), selectinload(OrderIn.return_in_lines)
             )
             .where(OrderIn.return_in_id.isnot(None))  # Inclure seulement les retours
             .order_by(OrderIn.id.desc())
         )
         return self.session.execute(stmt).scalars().all()
-
 
     def create_order_in_db(self, id_supplier: int) -> int:
         """Crée une nouvelle commande fournisseur en base à partir des données du formulaire.
@@ -211,10 +283,11 @@ class StockRepository(BaseRepository):
             self.session.commit()
         except Exception as exc:
             self.session.rollback()
-            raise RuntimeError(f"Erreur lors de la création de la commande : {exc}") from exc
+            raise RuntimeError(
+                f"Erreur lors de la création de la commande : {exc}"
+            ) from exc
 
         return new_order.id
-
 
     def create_return_in_db(self, id_supplier: int) -> int:
         """Crée un nouveau retour fournisseur en base à partir des données du formulaire.
@@ -238,91 +311,59 @@ class StockRepository(BaseRepository):
 
         return new_return.id
 
-
-    def create_order_in_line_db(self, order_in_id: int,
-                                general_object_id: int,
-                                quantity: int,
-                                price_at_movement: float = 0.0,
-                                vat_rate: float = 0.0) -> int:
-        """Crée une nouvelle ligne de commande fournisseur en base à partir des données
-        du formulaire.
-
-        Args:
-            order_in_id: L'identifiant de la commande fournisseur associée.
-            general_object_id: L'identifiant de l'article commandé.
-            quantity: La quantité commandée.
-            price_at_movement: Le prix unitaire de l'article au moment du mouvement.
-            vat_rate: Le taux de TVA applicable.
-
-        Returns:
-            L'ID de la ligne de commande créée.
+    def edit_order_in_line_db(self, new_line: OrderInLine, action: str = "edit") -> int:
         """
-        new_line = OrderInLine(
-            order_in_id=order_in_id,
-            general_object_id=general_object_id,
-            qty_ordered=quantity,
-            unit_price=price_at_movement,
-            vat_rate=vat_rate,
-        )
-        new_movement = InventoryMovements(
-            general_object_id=general_object_id,
-            movement_type="in",
-            quantity=quantity,
-            price_at_movement=price_at_movement,
-            source=f"Commande fournisseur #{order_in_id}",
-            destination="Stock",
-            notes=f"Commande fournisseur #{order_in_id} - Ligne #{general_object_id}",
-        )
-        self.session.add(new_movement)
-        self.session.flush()
-        new_line.inventory_movement_id = new_movement.id
-        self.session.add(new_line)
+        Modifie/crée une ligne de commande fournisseur en base à partir des données du formulaire.
+        """
+        # Gestion de l'opération de création
+        if action == "create":
+            movement = InventoryMovements(
+                general_object_id=new_line.general_object_id,
+                movement_type="in",
+                quantity=new_line.qty_ordered,
+                price_at_movement=Decimal(new_line.unit_price),
+                source=f"Commande fournisseur #{new_line.order_in_id}",
+                destination="Stock",
+                notes=f"Commande fournisseur #{new_line.order_in_id} " \
+                      + f"- Ligne #{new_line.general_object_id}",
+            )
+            self.session.add(movement)
+            self.session.flush()
+            new_line.inventory_movement_id = movement.id
+            self.session.add(new_line)
+
+        # Gestion de l'opération d'édition
+        elif action == "edit":
+            existing_line = self.session.get(OrderInLine, new_line.id)
+            if existing_line is None:
+                raise ValueError(f"Ligne de commande {new_line.id} introuvable")
+            existing_movement = self.session.get(
+                InventoryMovements, existing_line.inventory_movement_id
+            )
+            if existing_movement is None:
+                raise ValueError(
+                    f"Mouvement d'inventaire {existing_line.inventory_movement_id} introuvable"
+                )
+            existing_line.general_object_id = new_line.general_object_id
+            existing_line.qty_ordered = new_line.qty_ordered
+            existing_line.unit_price = new_line.unit_price
+            existing_line.vat_rate = new_line.vat_rate
+
+            existing_movement.general_object_id = new_line.general_object_id
+            existing_movement.quantity = new_line.qty_ordered
+            existing_movement.price_at_movement = new_line.unit_price
+
+        else:
+            raise ValueError(f"Action inconnue : {action}")
         try:
             self.session.commit()
-        except Exception as exc:
+            return new_line.id
+        except SQLAlchemyError as exc:
             self.session.rollback()
-            message = f"Erreur lors de la création de la ligne de commande : {exc}"
+            message = f"Erreur lors de la modification/création de la ligne de commande : {exc}"
             raise RuntimeError(message) from exc
 
-        return new_line.id
-
-
-    def edit_order_in_line_db(self, line_id: int,
-                                general_object_id: int,
-                                quantity: int,
-                                price_at_movement: float = 0.0,
-                                vat_rate: float = 0.0) -> None:
-        """Modifie une ligne de commande fournisseur en base à partir des données du formulaire.
-
-        Args:
-            line_id: L'identifiant de la ligne de commande à modifier.
-            general_object_id: L'identifiant de l'article commandé.
-            quantity: La quantité commandée.
-            price_at_movement: Le prix unitaire de l'article au moment du mouvement.
-            vat_rate: Le taux de TVA applicable.
-
-        Raises:
-            ValueError: Si la ligne de commande n'existe pas.
-            RuntimeError: En cas d'erreur lors du commit.
-        """
-        line = self.session.get(OrderInLine, line_id)
-        if line is None:
-            raise ValueError(f"Ligne de commande {line_id} introuvable")
-
-        line.general_object_id = general_object_id
-        line.qty_ordered = quantity
-        line.unit_price = Decimal(price_at_movement)
-        line.vat_rate = Decimal(vat_rate)
-
-        try:
-            self.session.commit()
-        except Exception as exc:
-            self.session.rollback()
-            message = f"Erreur lors de la modification de la ligne de commande : {exc}"
-            raise RuntimeError(message) from exc
-
-
-    def delete_order_in_line_db(self, line_id: int) -> None:
+    def delete_order_in_line_db(self, line_id: int) -> int:
         """Supprime une ligne de commande fournisseur en base.
 
         Args:
@@ -340,17 +381,20 @@ class StockRepository(BaseRepository):
 
         try:
             self.session.commit()
+            return line_id
         except Exception as exc:
             self.session.rollback()
             message = f"Erreur lors de la suppression de la ligne de commande : {exc}"
             raise RuntimeError(message) from exc
 
-
-    def create_return_in_line_db(self, return_in_id: int,
-                                general_object_id: int,
-                                quantity: int,
-                                price_at_movement: float = 0.0,
-                                vat_rate: float = 0.0) -> int:
+    def create_return_in_line_db(
+        self,
+        return_in_id: int,
+        general_object_id: int,
+        quantity: int,
+        price_at_movement: float = 0.0,
+        vat_rate: float = 0.0,
+    ) -> int:
         """Crée une nouvelle ligne de retour fournisseur en base à partir des données
         du formulaire.
 
@@ -391,7 +435,6 @@ class StockRepository(BaseRepository):
 
         return new_line.id
 
-
     def get_order_by_id(self, order_id: int) -> OrderIn:
         """Récupère les détails d'une commande fournisseur à partir de son ID.
 
@@ -409,8 +452,7 @@ class StockRepository(BaseRepository):
         stmt = (
             select(OrderIn)
             .options(
-                selectinload(OrderIn.supplier),
-                selectinload(OrderIn.orderin_lines)
+                selectinload(OrderIn.supplier), selectinload(OrderIn.orderin_lines)
             )
             .where(OrderIn.id == order_id)
         )
@@ -419,7 +461,6 @@ class StockRepository(BaseRepository):
         if result is None:
             raise ValueError(f"Commande {order_id} introuvable")
         return result
-
 
     def get_return_by_id(self, return_id: int) -> OrderIn:
         """Récupère les détails d'un retour fournisseur à partir de son ID.
@@ -438,8 +479,7 @@ class StockRepository(BaseRepository):
         stmt = (
             select(OrderIn)
             .options(
-                selectinload(OrderIn.supplier),
-                selectinload(OrderIn.return_in_lines)
+                selectinload(OrderIn.supplier), selectinload(OrderIn.return_in_lines)
             )
             .where(OrderIn.id == return_id)
         )
@@ -448,7 +488,6 @@ class StockRepository(BaseRepository):
         if result is None:
             raise ValueError(f"Retour {return_id} introuvable")
         return result
-
 
     def search_stock_global(
         self,
@@ -485,42 +524,62 @@ class StockRepository(BaseRepository):
 
         # --- Sous-requête : quantité du dernier inventaire par objet ---
         latest_inv_ts = (
-            select(im.general_object_id, func.max(im.movement_timestamp).label("max_ts"))
+            select(
+                im.general_object_id, func.max(im.movement_timestamp).label("max_ts")
+            )
             .where(im.movement_type == "inventory")
             .group_by(im.general_object_id)
             .subquery()
         )
         latest_inv_qty = (
-            select(im.general_object_id,
-                   im.quantity.label("inv_qty"),
-                   im.movement_timestamp.label("inv_ts"))
-            .join(latest_inv_ts,
-                  and_(im.general_object_id == latest_inv_ts.c.general_object_id,
-                       im.movement_timestamp == latest_inv_ts.c.max_ts))
+            select(
+                im.general_object_id,
+                im.quantity.label("inv_qty"),
+                im.movement_timestamp.label("inv_ts"),
+            )
+            .join(
+                latest_inv_ts,
+                and_(
+                    im.general_object_id == latest_inv_ts.c.general_object_id,
+                    im.movement_timestamp == latest_inv_ts.c.max_ts,
+                ),
+            )
             .where(im.movement_type == "inventory")
             .subquery()
         )
 
         # --- Sous-requête : somme des mouvements 'in' après le dernier inventaire ---
         in_after = (
-            select(im.general_object_id,
-                   func.coalesce(func.sum(im.quantity), 0).label("in_qty"))
-            .join(latest_inv_qty,
-                  im.general_object_id == latest_inv_qty.c.general_object_id)
-            .where(im.movement_type == "in",
-                   im.movement_timestamp > latest_inv_qty.c.inv_ts)
+            select(
+                im.general_object_id,
+                func.coalesce(func.sum(im.quantity), 0).label("in_qty"),
+            )
+            .join(
+                latest_inv_qty,
+                im.general_object_id == latest_inv_qty.c.general_object_id,
+            )
+            .where(
+                im.movement_type == "in",
+                im.movement_timestamp > latest_inv_qty.c.inv_ts,
+            )
             .group_by(im.general_object_id)
             .subquery()
         )
 
         # --- Sous-requête : somme des mouvements 'out' après le dernier inventaire ---
         out_after = (
-            select(im.general_object_id,
-                   func.coalesce(func.sum(im.quantity), 0).label("out_qty"))
-            .join(latest_inv_qty,
-                  im.general_object_id == latest_inv_qty.c.general_object_id)
-            .where(im.movement_type == "out",
-                   im.movement_timestamp > latest_inv_qty.c.inv_ts)
+            select(
+                im.general_object_id,
+                func.coalesce(func.sum(im.quantity), 0).label("out_qty"),
+            )
+            .join(
+                latest_inv_qty,
+                im.general_object_id == latest_inv_qty.c.general_object_id,
+            )
+            .where(
+                im.movement_type == "out",
+                im.movement_timestamp > latest_inv_qty.c.inv_ts,
+            )
             .group_by(im.general_object_id)
             .subquery()
         )
@@ -552,12 +611,10 @@ class StockRepository(BaseRepository):
             )
             .select_from(go)
             .join(Suppliers, go.supplier_id == Suppliers.id)
-            .outerjoin(latest_inv_qty,
-                       go.id == latest_inv_qty.c.general_object_id)
+            .outerjoin(latest_inv_qty, go.id == latest_inv_qty.c.general_object_id)
             .outerjoin(in_after, go.id == in_after.c.general_object_id)
             .outerjoin(out_after, go.id == out_after.c.general_object_id)
-            .outerjoin(DilicomReferencial,
-                       go.ean13 == DilicomReferencial.ean13)
+            .outerjoin(DilicomReferencial, go.ean13 == DilicomReferencial.ean13)
         )
 
         # --- Filtres ---
@@ -571,7 +628,9 @@ class StockRepository(BaseRepository):
         if object_type:
             where_clauses.append(go.general_object_type == object_type)
         if is_active is not None:
-            where_clauses.append(go.is_active == is_active)  # pylint: disable=singleton-comparison
+            where_clauses.append(
+                go.is_active == is_active
+            )  # pylint: disable=singleton-comparison
         dilicom_filter = self._dilicom_status_filter(dilicom_status)
         if dilicom_filter is not None:
             where_clauses.append(dilicom_filter)
@@ -580,7 +639,9 @@ class StockRepository(BaseRepository):
             base = base.where(and_(*where_clauses))
 
         # --- Comptage total ---
-        count_stmt = select(func.count()).select_from(base.subquery())  # pylint: disable=not-callable
+        count_stmt = select(func.count()).select_from(  # pylint: disable=not-callable
+            base.subquery()
+        )
         total = self.session.execute(count_stmt).scalar() or 0
 
         # --- Pagination ---
@@ -593,22 +654,23 @@ class StockRepository(BaseRepository):
             dilicom_st = self._compute_dilicom_status(
                 row.dilicom_id, row.create_ref, row.delete_ref, row.dilicom_synced
             )
-            items.append({
-                "id": row.id,
-                "name": row.name,
-                "ean13": row.ean13,
-                "general_object_type": row.general_object_type,
-                "is_active": row.is_active,
-                "price": float(row.price) if row.price else 0.0,
-                "supplier_name": row.supplier_name,
-                "supplier_id": row.sid,
-                "stock_qty": int(row.stock_qty) if row.stock_qty else 0,
-                "dilicom_status": dilicom_st,
-                "dilicom_id": row.dilicom_id,
-            })
+            items.append(
+                {
+                    "id": row.id,
+                    "name": row.name,
+                    "ean13": row.ean13,
+                    "general_object_type": row.general_object_type,
+                    "is_active": row.is_active,
+                    "price": float(row.price) if row.price else 0.0,
+                    "supplier_name": row.supplier_name,
+                    "supplier_id": row.sid,
+                    "stock_qty": int(row.stock_qty) if row.stock_qty else 0,
+                    "dilicom_status": dilicom_st,
+                    "dilicom_id": row.dilicom_id,
+                }
+            )
 
         return {"items": items, "total": total, "page": page, "per_page": per_page}
-
 
     @staticmethod
     def _compute_dilicom_status(
@@ -629,29 +691,28 @@ class StockRepository(BaseRepository):
             return "deleting"
         return "inactive"
 
-
     @staticmethod
     def _dilicom_status_filter(dilicom_status: Optional[str]):
         """Retourne une clause WHERE SQLAlchemy pour le filtre Dilicom, ou None."""
         mapping = {
             "active": and_(
                 DilicomReferencial.create_ref == True,  # pylint: disable=singleton-comparison
-                DilicomReferencial.dilicom_synced == True  # pylint: disable=singleton-comparison
+                DilicomReferencial.dilicom_synced == True,  # pylint: disable=singleton-comparison
             ),
             "pending": and_(
                 DilicomReferencial.create_ref == True,  # pylint: disable=singleton-comparison
-                DilicomReferencial.dilicom_synced == False  # pylint: disable=singleton-comparison
+                DilicomReferencial.dilicom_synced == False,  # pylint: disable=singleton-comparison
             ),
             "deleting": and_(
                 DilicomReferencial.delete_ref == True,  # pylint: disable=singleton-comparison
-                DilicomReferencial.dilicom_synced == False  # pylint: disable=singleton-comparison
+                DilicomReferencial.dilicom_synced == False,  # pylint: disable=singleton-comparison
             ),
             "inactive": or_(
                 DilicomReferencial.id == None,  # pylint: disable=singleton-comparison
                 and_(
                     DilicomReferencial.delete_ref == True,  # pylint: disable=singleton-comparison
-                    DilicomReferencial.dilicom_synced == True  # pylint: disable=singleton-comparison
-                )
+                    DilicomReferencial.dilicom_synced == True,  # pylint: disable=singleton-comparison
+                ),
             ),
         }
         return mapping.get(dilicom_status) if dilicom_status else None
@@ -663,8 +724,13 @@ class DilicomReferencialRepository(BaseRepository):
     routes du blueprint stock.
     """
 
-    def _get_select(self, to_create: Optional[bool] = None, created: Optional[bool] = None,
-                    to_delete: Optional[bool] = None, deleted: Optional[bool] = None) -> Any:
+    def _get_select(
+        self,
+        to_create: Optional[bool] = None,
+        created: Optional[bool] = None,
+        to_delete: Optional[bool] = None,
+        deleted: Optional[bool] = None,
+    ) -> Any:
         """Construit une requête SQLAlchemy pour filtrer les références Dilicom en fonction
         des critères de création/suppression.
 
@@ -677,21 +743,36 @@ class DilicomReferencialRepository(BaseRepository):
         stmt = select(DilicomReferencial)
         where_clauses = []
         if to_create is True:
-            where_clauses.append(DilicomReferencial.create_ref == True)  # pylint: disable=singleton-comparison
-            where_clauses.append(DilicomReferencial.dilicom_synced == False)  # pylint: disable=singleton-comparison
+            where_clauses.append(
+                DilicomReferencial.create_ref == True  # pylint: disable=singleton-comparison
+            )
+            where_clauses.append(
+                DilicomReferencial.dilicom_synced == False  # pylint: disable=singleton-comparison
+            )
         if created is True:
-            where_clauses.append(DilicomReferencial.create_ref == True)  # pylint: disable=singleton-comparison
-            where_clauses.append(DilicomReferencial.dilicom_synced == True)  # pylint: disable=singleton-comparison
+            where_clauses.append(
+                DilicomReferencial.create_ref == True  # pylint: disable=singleton-comparison
+            )
+            where_clauses.append(
+                DilicomReferencial.dilicom_synced == True  # pylint: disable=singleton-comparison
+            )
         if to_delete is True:
-            where_clauses.append(DilicomReferencial.delete_ref == True)  # pylint: disable=singleton-comparison
-            where_clauses.append(DilicomReferencial.dilicom_synced == False)  # pylint: disable=singleton-comparison
+            where_clauses.append(
+                DilicomReferencial.delete_ref == True  # pylint: disable=singleton-comparison
+            )
+            where_clauses.append(
+                DilicomReferencial.dilicom_synced == False  # pylint: disable=singleton-comparison
+            )
         if deleted is True:
-            where_clauses.append(DilicomReferencial.delete_ref == True)  # pylint: disable=singleton-comparison
-            where_clauses.append(DilicomReferencial.dilicom_synced == True)  # pylint: disable=singleton-comparison
+            where_clauses.append(
+                DilicomReferencial.delete_ref == True  # pylint: disable=singleton-comparison
+            )
+            where_clauses.append(
+                DilicomReferencial.dilicom_synced == True  # pylint: disable=singleton-comparison
+            )
         if where_clauses:
             stmt = stmt.where(and_(*where_clauses))
         return stmt
-
 
     def _update_status(self, status: str) -> Dict[str, bool]:
         """Met à jour les champs de statut d'une référence Dilicom en fonction du statut
@@ -715,7 +796,6 @@ class DilicomReferencialRepository(BaseRepository):
         else:
             raise ValueError(f"Statut inconnu : {status}")
 
-
     def get_one_by_ean13(self, ean13: str) -> Optional[DilicomReferencial]:
         """Récupère une référence Dilicom à partir de son EAN13.
 
@@ -729,8 +809,9 @@ class DilicomReferencialRepository(BaseRepository):
         result = self.session.execute(stmt).scalar_one_or_none()
         return result
 
-
-    def create_status(self, ean13: str, gln13: str, movement: str) -> DilicomReferencial:
+    def create_status(
+        self, ean13: str, gln13: str, movement: str
+    ) -> DilicomReferencial:
         """Crée une nouvelle référence Dilicom en base.
 
         Args:
@@ -748,15 +829,11 @@ class DilicomReferencialRepository(BaseRepository):
         status_fields = self._update_status(movement)
         ref = self.get_one_by_ean13(ean13)
         if not ref:
-            ref = DilicomReferencial(
-                ean13=ean13,
-                gln13=gln13
-            )
+            ref = DilicomReferencial(ean13=ean13, gln13=gln13)
         for field, value in status_fields.items():
             setattr(ref, field, value)
         self.session.add(ref)
         try:
-            print(f"Création/modification référence Dilicom : EAN13={ean13}, GLN13={gln13}, status={movement}")
             self.session.commit()
             print(f"Référence Dilicom créée/modifiée avec succès : ID={ref.id}")
         except Exception as exc:

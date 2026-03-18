@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 class BaseRepository:
     """Repository de base pour les opérations sur les modèles de la base de données."""
+
     def __init__(self, session: Session):
         self.session = session
 

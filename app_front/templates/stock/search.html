@@ -22,7 +22,7 @@
         </summary>
 
         <form id="search-filters"
-              hx-get="{{ url_for('stock_htmx.search_table') }}"
+              hx-get="{{ url_for('stock_htmx_search.search_table') }}"
               hx-target="#stock-table-wrapper"
               hx-swap="innerHTML"
               hx-trigger="submit"
@@ -53,7 +53,7 @@
                                class="filter-control"
                                placeholder="Nom du fournisseur…"
                                autocomplete="off"
-                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_and_name') }}"
+                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='filter') }}"
                                hx-trigger="keyup changed delay:300ms"
                                hx-target="#supplier-search-results"
                                hx-swap="innerHTML"
@@ -69,6 +69,10 @@
                     <select id="filter-type" name="object_type" class="filter-control">
                         <option value="">Tous</option>
                         <option value="book">Livre</option>
+                        <option value="dvd">DVD</option>
+                        <option value="cd">CD</option>
+                        <option value="games">Jeux</option>
+                        <option value="spiritual_object">Objet spirituel</option>
                         <option value="other">Autre</option>
                     </select>
                 </div>
@@ -110,7 +114,7 @@
     {# ── Bouton ajouter article ─────────────────────────────────────────── #}
     <div class="search-actions">
         <button class="btn btn-primary"
-                hx-get="{{ url_for('stock_htmx.object_form') }}"
+                hx-get="{{ url_for('stock_htmx_search.object_form') }}"
                 hx-target="#object-modal-container"
                 hx-swap="innerHTML">
             {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Ajouter un article
@@ -119,8 +123,8 @@
 
     {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}
     <div id="stock-table-wrapper"
-         hx-get="{{ url_for('stock_htmx.search_table') }}"
-         hx-trigger="load"
+         hx-get="{{ url_for('stock_htmx_search.search_table') }}"
+         hx-trigger="load, refreshTable from:body"
          hx-swap="innerHTML">
         <div class="loading-indicator">
             <p>Chargement du stock…</p>

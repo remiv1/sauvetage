@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app_front.config.db_conf import get_main_session
 from db_models.objects import Suppliers
 
+
 def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str, Any]]:
     """
     Recherche de fournisseurs par nom (ILIKE, accès DB direct).
@@ -30,7 +31,9 @@ def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str,
         if data_returned == "id":
             return [{"id": s.id} for s in results]
         if data_returned == "id_name_gln":
-            return [{"id": s.id, "name": s.name, "gln13": s.gln13 or ""} for s in results]
+            return [
+                {"id": s.id, "name": s.name, "gln13": s.gln13 or ""} for s in results
+            ]
         return [{"id": s.id, "name": s.name} for s in results]
     finally:
         session.close()

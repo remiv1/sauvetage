@@ -28,14 +28,12 @@ app = FastAPI(
 # Include API routers
 app.include_router(v1_api_router, prefix="/api")
 
+
 @app.get("/")
 async def read_root():
     """Endpoint racine pour vérifier que l'API fonctionne"""
-    return {
-        "status": "ok",
-        "message": "Sauvetage Backend API",
-        "version": "1.0.0"
-    }
+    return {"status": "ok", "message": "Sauvetage Backend API", "version": "1.0.0"}
+
 
 @app.get("/health")
 async def health_check():
@@ -49,9 +47,10 @@ async def health_check():
         content={
             "status": "healthy",
             "service": "sauvetage-backend",
-            "version": "1.0.0"
-        }
+            "version": "1.0.0",
+        },
     )
+
 
 @app.get("/ready")
 async def readiness_check():
@@ -62,11 +61,7 @@ async def readiness_check():
     """
     try:
         return JSONResponse(
-            status_code=200,
-            content={
-                "status": "ready",
-                "service": "sauvetage-backend"
-            }
+            status_code=200, content={"status": "ready", "service": "sauvetage-backend"}
         )
     except (ConnectionError, TimeoutError) as e:
         return JSONResponse(
@@ -74,6 +69,6 @@ async def readiness_check():
             content={
                 "status": "not_ready",
                 "error": str(e),
-                "service": "sauvetage-backend"
-            }
+                "service": "sauvetage-backend",
+            },
         )

@@ -348,7 +348,7 @@
         var desc = descInput ? descInput.value.trim() : '';
         if (!name) return;
         // Appel HTMX via fetch pour créer le tag
-        var url = "{{ url_for('stock_htmx.create_tag_htmx') }}";
+        var url = "{{ url_for('stock_htmx_search.create_tag_htmx') }}";
         var body = new URLSearchParams({name: name, description: desc});
         fetch(url, {method: 'POST', body: body, headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(function(resp) { return resp.text(); })
@@ -424,7 +424,7 @@
     {% if not disabled %}
 
     // Récupérer l'URL de base pour les requêtes d'autocomplete (sans le segment du champ)
-    var sampleUrl = "{{ url_for('stock_htmx.object_autocomplete', field='author') }}";
+    var sampleUrl = "{{ url_for('stock_htmx_search.object_autocomplete', field='author') }}";
     var acBasePath = sampleUrl.replace('/author', '');  // Remove the field part
 
     // Création d'un objet : setup de l'autocomplete sur les champs concernés
@@ -485,7 +485,7 @@
     });
 
     // URL de base pour l'autocomplete tag
-    var tagAcUrl = "{{ url_for('stock_htmx.object_autocomplete', field='tag') }}";
+    var tagAcUrl = "{{ url_for('stock_htmx_search.object_autocomplete', field='tag') }}";
 
     // Compteur pour les indices WTForms des tags (part du nombre de tags existants)
     var tagIdx = {{ (obj.object_tags | length) if (obj and obj.object_tags) else 0 }};

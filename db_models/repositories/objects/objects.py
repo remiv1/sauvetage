@@ -12,7 +12,6 @@ from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import GeneralObjects, ObjectTags
 
 
-
 class ObjectsRepository(BaseRepository):
     """
     Dépôt de données pour les objets vendus par la librairie.
@@ -25,6 +24,7 @@ class ObjectsRepository(BaseRepository):
                         (books, other_objects, obj_metadata, object_tags, media).
     - delete : pour supprimer un objet (soft delete).
     """
+
     def __init__(self, *args: Any, **kwargs: str) -> None:
         """Initialise le dépôt de données pour les objets vendus par la librairie."""
         super().__init__(*args, **kwargs)
@@ -32,27 +32,37 @@ class ObjectsRepository(BaseRepository):
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
         # Importations locales pour casser l'import circulaire
         from .books import BooksRepository  # pylint: disable=import-outside-toplevel
-        from .other_objects import OtherObjectsRepository   # pylint: disable=import-outside-toplevel
-        from .obj_metadatas import ObjMetadatasRepository   # pylint: disable=import-outside-toplevel
-        from .object_tags import ObjectTagsRepository   # pylint: disable=import-outside-toplevel
+        from .other_objects import (
+            OtherObjectsRepository,
+        )  # pylint: disable=import-outside-toplevel
+        from .obj_metadatas import (
+            ObjMetadatasRepository,
+        )  # pylint: disable=import-outside-toplevel
+        from .object_tags import (
+            ObjectTagsRepository,
+        )  # pylint: disable=import-outside-toplevel
         from .media import MediaRepository  # pylint: disable=import-outside-toplevel
+
         self.book_repo = BooksRepository(self.session)
         self.other_object_repo = OtherObjectsRepository(self.session)
         self.obj_metadata_repo = ObjMetadatasRepository(self.session)
         self.object_tags_repo = ObjectTagsRepository(self.session)
         self.media_repo = MediaRepository(self.session)
 
-
     def _get_global_select(self):
         """Retourne une requête de base pour les objets, avec tous les éléments liés."""
-        return (select(self.model).where(self.model.is_active == True)   # pylint: disable=singleton-comparison
-            .options(joinedload(self.model.supplier),
-                 joinedload(self.model.book),
-                 joinedload(self.model.other_object),
-                 joinedload(self.model.inventory_movements),
-                 joinedload(self.model.obj_metadatas),
-                 joinedload(self.model.object_tags).joinedload(ObjectTags.tag)))
-
+        return (
+            select(self.model)
+            .where(self.model.is_active == True)  # pylint: disable=singleton-comparison
+            .options(
+                joinedload(self.model.supplier),
+                joinedload(self.model.book),
+                joinedload(self.model.other_object),
+                joinedload(self.model.inventory_movements),
+                joinedload(self.model.obj_metadatas),
+                joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
+            )
+        )
 
     def get_all(self) -> Sequence["GeneralObjects"]:
         """
@@ -65,23 +75,26 @@ class ObjectsRepository(BaseRepository):
 
         return self.session.execute(stmt).unique().scalars().all()
 
-
     def get_by_ref(self, reference: str | int) -> "GeneralObjects":
         """Récupère un objet par une référence (id ou ean13)."""
         if isinstance(reference, str) and not reference.isdigit():
             stmt = self._get_global_select().where(self.model.ean13 == reference)
-        elif isinstance(reference, int) or (isinstance(reference, str) and reference.isdigit()):
+        elif isinstance(reference, int) or (
+            isinstance(reference, str) and reference.isdigit()
+        ):
             stmt = self._get_global_select().where(self.model.id == int(reference))
         else:
             raise ValueError("Reference must be an integer id or a string ean13.")
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
-
     def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
         """Récupère une liste d'objets dont le nom correspond à la recherche."""
-        stmt = self._get_global_select().where(self.model.name.ilike(f"%{name}%")).limit(10)
+        stmt = (
+            self._get_global_select()
+            .where(self.model.name.ilike(f"%{name}%"))
+            .limit(10)
+        )
         return self.session.execute(stmt).unique().scalars().all()
-
 
     def commit_object(self) -> None:
         """
@@ -94,7 +107,6 @@ class ObjectsRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Error committing object changes: {str(e)}") from e
 
-
     def delete(self, object_id: int):
         """Supprime un objet (soft delete)."""
         obj = self.get_by_ref(object_id)
@@ -102,7 +114,6 @@ class ObjectsRepository(BaseRepository):
             raise ValueError(f"Object with id {object_id} not found.")
         obj.is_active = False
         self.session.commit()
-
 
     def toggle_active(self, object_id: int) -> bool:
         """Bascule le statut actif/inactif d'un objet. Retourne le nouveau statut."""
@@ -113,8 +124,9 @@ class ObjectsRepository(BaseRepository):
         self.session.commit()
         return obj.is_active
 
-
-    def save_from_form(self, form: Any, instance: Optional[GeneralObjects]=None) -> int:
+    def save_from_form(
+        self, form: Any, instance: Optional[GeneralObjects] = None
+    ) -> int:
         """
         Sauvegarde un objet à partir d'un formulaire.
         Si instance est fourni, met à jour l'objet existant, sinon en crée un nouveau.
@@ -134,13 +146,10 @@ class ObjectsRepository(BaseRepository):
 
         if form.general_object_type.data == "book":
             self.book_repo.save_from_form(
-                form=form.book,
-                general_object_id=instance.id,
-                instance=instance.book
+                form=form.book, general_object_id=instance.id, instance=instance.book
             )
         else:
             self.other_object_repo.save_from_form(
-                form=form.other_object,
                 general_object_id=instance.id,
                 instance=instance.other_object,
             )

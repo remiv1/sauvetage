@@ -3,11 +3,16 @@
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from sqlalchemy import select, distinct
 from app_front.config.db_conf import get_main_session
-from app_front.blueprints.stock.forms import CreateObjectForm, OrderInCreateForm, OrderInLineForm
+from app_front.blueprints.stock.forms import (
+    CreateObjectForm,
+    OrderInCreateForm,
+    OrderInLineForm,
+)
 from db_models.objects import (
     Books,
     Tags,
     OrderIn,
+    OrderInLine,
     GeneralObjects,
 )
 from db_models.repositories.stock import (
@@ -17,6 +22,7 @@ from db_models.repositories.stock import (
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.tags import TagsRepository
 
+VALUE_TYPE_NBR_MSG = "L'ID de la ligne doit être un nombre entier."
 
 
 def get_zero_price_items() -> Sequence[dict]:
@@ -156,7 +162,9 @@ def get_return_by_id(return_id: int) -> Sequence[OrderIn]:
     return stock_repo.get_return_by_id(return_id)
 
 
-def create_order_in_line_db(form: OrderInLineForm, action: str = "create", line_id: int = 0) -> int:
+def edit_order_in_line_db(
+    form: OrderInLineForm, order_id: int, action: str = "create", line_id: int = 0
+) -> int:
     """Crée une nouvelle ligne de commande fournisseur en base à partir des données du formulaire.
 
     Args:
@@ -166,37 +174,49 @@ def create_order_in_line_db(form: OrderInLineForm, action: str = "create", line_
         ValueError: Si les données du formulaire sont invalides.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    order_id, general_object_id, quantity, unit_price, vat_rate = form.validate_form_data()
+    try:
+        line_id = int(line_id)
+    except ValueError as e:
+        raise ValueError(VALUE_TYPE_NBR_MSG) from e
     stock_repo = StockRepository(get_main_session())
-    if action == "create":
-        return stock_repo.create_order_in_line_db(
-            order_id,
-            general_object_id,
-            quantity,
-            unit_price,
-            vat_rate
-        )
-    if action == "edit":
-        try:
-            line_id = int(line_id)
-            stock_repo.edit_order_in_line_db(
-                line_id,
-                general_object_id,
-                quantity,
-                unit_price,
-                vat_rate
-            )
-            return line_id
-        except ValueError as e:
-            raise ValueError("L'ID de la ligne doit être un nombre entier.") from e
+
+    # Gestion de la suppression d'une ligne de commande
     if action == "delete":
-        try:
-            line_id = int(line_id)
-            stock_repo.delete_order_in_line_db(line_id)
-            return line_id
-        except ValueError as e:
-            raise ValueError("L'ID de la ligne doit être un nombre entier.") from e
-    raise ValueError("Action inconnue : " + action)
+        line_id = stock_repo.delete_order_in_line_db(line_id)
+
+    # Gestion de la création d'une ligne de commande
+    elif action == "create":
+        order_id, general_object_id, quantity, unit_price, vat_rate = (
+            form.validate_form_data()
+        )
+        new_line = OrderInLine(
+            order_in_id=order_id,
+            general_object_id=general_object_id,
+            qty_ordered=quantity,
+            unit_price=unit_price,
+            vat_rate=vat_rate,
+        )
+        line_id = stock_repo.edit_order_in_line_db(new_line=new_line, action=action)
+
+    # Gestion de l'édition d'une ligne de commande
+    elif action == "edit":
+        order_id, general_object_id, quantity, unit_price, vat_rate = (
+            form.validate_form_data()
+        )
+        edited_line = OrderInLine(
+            id=line_id,
+            order_in_id=order_id,
+            general_object_id=general_object_id,
+            qty_ordered=quantity,
+            unit_price=unit_price,
+            vat_rate=vat_rate,
+        )
+        line_id = stock_repo.edit_order_in_line_db(new_line=edited_line, action=action)
+
+    else:
+        raise ValueError("Action inconnue : " + action)
+    stock_repo.update_order_in_price(order_id)
+    return line_id
 
 
 def search_stock_global(
@@ -225,7 +245,9 @@ def search_stock_global(
     )
 
 
-def get_dilicom_referencial(object_id: int) -> Tuple[Optional[dict], Optional[GeneralObjects]]:
+def get_dilicom_referencial(
+    object_id: int,
+) -> Tuple[Optional[dict], Optional[GeneralObjects]]:
     """Récupère les données de référentiel Dilicom pour un objet donné.
 
     Args:
@@ -271,7 +293,6 @@ def add_object_to_dilicom(object_id: int, gln13: str) -> Any:
     general_object_repo = ObjectsRepository(get_main_session())
     obj = general_object_repo.get_by_ref(object_id)
     if obj is None:
-        print(f"DEBUG Object with id {object_id} not found when trying to add to Dilicom.")
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
     dilicom_repo = DilicomReferencialRepository(get_main_session())
     dilicom_ref = dilicom_repo.create_status(obj.ean13, gln13, movement="to_create")
@@ -290,16 +311,20 @@ def remove_object_from_dilicom(object_id: int) -> Any:
     general_object_repo = ObjectsRepository(get_main_session())
     obj = general_object_repo.get_by_ref(object_id)
     if obj is None:
-        print(f"DEBUG Object with id {object_id} not found when trying to remove from Dilicom.")
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
     dilicom_repo = DilicomReferencialRepository(get_main_session())
     existing = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
     if existing is None:
         raise ValueError("Aucun référentiel Dilicom trouvé pour cet objet.")
-    dilicom_ref = dilicom_repo.create_status(obj.ean13, existing.gln13, movement="to_delete")
+    dilicom_ref = dilicom_repo.create_status(
+        obj.ean13, existing.gln13, movement="to_delete"
+    )
     return dilicom_ref
 
-def save_object_complete(form: CreateObjectForm, object_id: Optional[int] = None) -> int:
+
+def save_object_complete(
+    form: CreateObjectForm, object_id: Optional[int] = None
+) -> int:
     """Crée un objet complet à partir du formulaire CreateObjectForm.
 
     Args:
@@ -362,11 +387,7 @@ def search_tags(query: str) -> List[Dict[str, Any]]:
         .limit(10)
     )
     return [
-        {
-            "id": row[0],
-            "name": row[1],
-            "description": row[2]
-        }
+        {"id": row[0], "name": row[1], "description": row[2]}
         for row in session.execute(stmt).all()
     ]
 

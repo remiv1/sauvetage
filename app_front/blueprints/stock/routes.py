@@ -38,7 +38,7 @@ def orders():
         try:
             create_order_in_db(form)
             flash("Commande créée avec succès.", "success")
-            return redirect(url_for("stock_htmx.new_order_table"))
+            return redirect(url_for("stock_htmx_orders.new_order_table"))
         except (ValueError, RuntimeError) as exc:
             flash(str(exc), "error")
     return render_page("stock_order", orders=orders_list)
@@ -52,7 +52,7 @@ def create_order():
         try:
             create_order_in_db(form)
             flash("Commande créée avec succès.", "success")
-            return redirect(url_for("stock_htmx.new_order_table"))
+            return redirect(url_for("stock_htmx_orders.new_order_table"))
         except (ValueError, RuntimeError) as exc:
             flash(str(exc), "error")
     return render_page("stock_order")
@@ -63,17 +63,6 @@ def create_return():
     """Création d'un retour fournisseur"""
     # TODO: implémenter le formulaire de retour
     return render_page("stock_order")
-
-
-@bp_stock.route("/orders/<int:order_id>/cancel", methods=["POST"])
-def cancel_order(order_id: int):
-    """Annule une commande fournisseur"""
-    try:
-        cancel_supplier_order(order_id)
-        flash("Commande annulée avec succès.", "success")
-    except (ValueError, RuntimeError) as exc:
-        flash(str(exc), "error")
-    return redirect(url_for("stock.orders"))
 
 
 @bp_stock.route("/reservations", methods=["GET"])

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from db_models.objects import Users
 from db_models.repositories.user import UsersRepository
 
+
 class UserService:
     """
     Service de gestion des utilisateurs. Il comporte plusieurs méthodes :
@@ -21,6 +22,7 @@ class UserService:
     - update_permissions : pour mettre à jour les permissions d'un utilisateur.
     - get_by_username : pour récupérer un utilisateur par son nom d'utilisateur.
     """
+
     def __init__(self, session: Any) -> None:
         """
         Initialise le service de gestion des utilisateurs.
@@ -30,8 +32,9 @@ class UserService:
         self.session = session
         self.user_repo = UsersRepository(session)
 
-    def create_user(self, *, username: str, email: str, password: str,
-                    permissions: str) -> Users:
+    def create_user(
+        self, *, username: str, email: str, password: str, permissions: str
+    ) -> Users:
         """
         Cree un utilisateur et initialise son mot de passe.
         Args:
@@ -45,11 +48,7 @@ class UserService:
             ValueError: Si la création de l'utilisateur échoue (par exemple, en cas de conflit
                         de nom d'utilisateur ou d'email).
         """
-        user = Users(
-            username=username,
-            email=email,
-            permissions=permissions
-        )
+        user = Users(username=username, email=email, permissions=permissions)
         try:
             self.session.add(user)
             self.session.flush()
@@ -58,7 +57,9 @@ class UserService:
             return user
         except IntegrityError as e:
             self.session.rollback()
-            raise ValueError("Erreur lors de la création de l'utilisateur : " + str(e)) from e
+            raise ValueError(
+                "Erreur lors de la création de l'utilisateur : " + str(e)
+            ) from e
 
     def deactivate_user(self, user: Users) -> Users:
         """

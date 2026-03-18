@@ -1,0 +1,78 @@
+{#
+  Fragment HTMX pour la suppression d'une ligne de commande.
+  - Si `deleted` est vrai, affiche la confirmation de suppression (POST).
+  - Sinon, affiche la demande de confirmation (GET).
+  Le template utilise `request.view_args` pour récupérer `order_id` et `line_id`
+  lorsque la route ne transmet pas explicitement ces valeurs.
+#}
+
+{%- set order_id = request.view_args.get('order_id') if request and request.view_args else None -%}
+{%- set line_id = request.view_args.get('line_id') if request and request.view_args else None -%}
+{% if not mod %}
+    {% set mod = 'line' %}
+{% endif %}
+
+{% if deleted %}
+<div class="modal show" id="delete-{{ mod }}-modal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal__content text-center p-4">
+            <div class="mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <h3>Suppression effectuée</h3>
+            <p class="small">La {{ 'ligne' if mod == 'line' else 'commande' }} {{ line_id if mod == 'line' else order_id }} a été supprimée avec succès.</p>
+            <div class="mt-3 d-flex justify-content-center gap-2">
+                {% if mod == 'line' %}
+                <button class="btn btn-primary"
+                        hx-get="{{ url_for('stock_htmx_orders.orders') }}"
+                        hx-target="#orders-management"
+                        hx-swap="innerHTML">
+                    Retourner aux commandes
+                </button>
+                {% endif %}
+                <button class="btn btn-secondary"
+                        hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                        hx-target="#delete-{{ mod }}-modal"
+                        hx-swap="outerHTML">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="modal show" id="delete-{{ mod }}-modal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal__content p-3">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirmer la suppression</h3>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Voulez-vous vraiment supprimer la {{ 'ligne' if mod == 'line' else 'commande' }} {{ line_id if mod == 'line' else order_id }} ? <br>
+                    Cette action est irréversible.
+                </p>
+            </div>
+            <div class="modal-footer d-flex justify-content-end gap-2">
+                <button class="btn btn-secondary"
+                        hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                        hx-target="#delete-{{ mod }}-modal"
+                        hx-swap="innerHTML">
+                    Annuler
+                </button>
+                {# Utilise request.view_args pour construire l'URL POST (robuste si la route n'envoie pas order/line) #}
+                <button class="btn btn-danger"
+                        {% if mod == 'line' %}
+                        hx-post="{{ url_for('stock_htmx_orders.edit_order_line', order_id=order_id, action='delete') }}"
+                        {% else %}
+                        hx-post="{{ url_for('stock_htmx_orders.cancel_order', order_id=order_id or 0) }}"
+                        {% endif %}
+                        hx-target="#delete-{{ mod }}-modal"
+                        hx-swap="outerHTML">
+                    Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

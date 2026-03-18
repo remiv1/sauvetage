@@ -1,7 +1,7 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
 from datetime import datetime, timezone
-from flask import Flask, jsonify, session, request, redirect, url_for
+from flask import Flask, jsonify, session, request, redirect, url_for, make_response
 from app_front.utils.pages import render_page
 from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
@@ -15,7 +15,7 @@ from app_front.config.db_conf import DATABASE_URL, MONGODB_URL
 
 # Création de l'application Flask
 app = Flask(__name__)
-app.config["SECRET_KEY"] = FLASK_SECRET_KEY
+app.secret_key = FLASK_SECRET_KEY
 app.config["DEBUG"] = DEBUG
 
 # Enregistrement des blueprints
@@ -61,13 +61,13 @@ def after_request(response):
     return response
 
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
     """Endpoint racine du frontend"""
     return render_page("home")
 
 
-@app.route("/health")
+@app.route("/health", methods=["GET"])
 def health():
     """Endpoint de santé pour load balancer"""
     return (
@@ -83,7 +83,7 @@ def health():
     )
 
 
-@app.route("/ready")
+@app.route("/ready", methods=["GET"])
 def ready():
     """Endpoint de disponibilité (readiness check)"""
     return (
@@ -101,31 +101,23 @@ def ready():
 
 @app.errorhandler(404)
 def not_found(_error: Exception):
-    """Gestion des erreurs 404"""
-    return (
-        jsonify(
-            {
-                "status": "error",
-                "code": 404,
-                "message": "Resource not found",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-        ),
-        404,
-    )
+    """Gestion des erreurs 404 avec code HTTP explicite"""
+    payload = {
+        "status": "error",
+        "code": 404,
+        "message": "Resource not found",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    return make_response(jsonify(payload), 404)
 
 
 @app.errorhandler(500)
 def internal_error(_error: Exception):
-    """Gestion des erreurs 500"""
-    return (
-        jsonify(
-            {
-                "status": "error",
-                "code": 500,
-                "message": "Internal server error",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-        ),
-        500,
-    )
+    """Gestion des erreurs 500 avec code HTTP explicite"""
+    payload = {
+        "status": "error",
+        "code": 500,
+        "message": "Internal server error",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    return make_response(jsonify(payload), 500)

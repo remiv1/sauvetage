@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Books
 
+
 class BooksRepository(BaseRepository):
     """
     Repository pour la gestion des livres liés aux objets généraux.
@@ -14,7 +15,6 @@ class BooksRepository(BaseRepository):
         super().__init__(*args, **kwargs)
         self.model = Books()
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
-
 
     def create(self, book_data: Dict[str, Any]) -> Books:
         """
@@ -44,9 +44,12 @@ class BooksRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Erreur lors de la création du livre : {str(e)}") from e
 
-
-    def update(self, book_data: Dict[str, Any], book: Optional[Books]=None,
-                    book_id: Optional[int]=None) -> Books:
+    def update(
+        self,
+        book_data: Dict[str, Any],
+        book: Optional[Books] = None,
+        book_id: Optional[int] = None,
+    ) -> Books:
         """
         Met à jour un livre existant avec les données fournies.
         Les champs pouvant être mis à jour pour un livre sont :
@@ -82,12 +85,13 @@ class BooksRepository(BaseRepository):
             return book
         except SQLAlchemyError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la mise à jour du livre : {str(e)}") from e
+            raise ValueError(
+                f"Erreur lors de la mise à jour du livre : {str(e)}"
+            ) from e
 
-
-    def save_from_form(self, form: Any,
-                       general_object_id: int,
-                       instance: Optional[Books]=None) -> Books:
+    def save_from_form(
+        self, form: Any, general_object_id: int, instance: Optional[Books] = None
+    ) -> Books:
         """
         Met à jour un livre à partir des données d'un formulaire.
         Les champs pouvant être mis à jour pour un livre sont :

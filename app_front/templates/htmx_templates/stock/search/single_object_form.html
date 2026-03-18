@@ -38,9 +38,9 @@
             <form id="object-form"
                   {% if not disabled %}
                     {% if form_state == 'create' %}
-                            hx-post="{{ url_for('stock_htmx.create_object') }}"
+                            hx-post="{{ url_for('stock_htmx_search.create_object') }}"
                         {% elif form_state == 'edit' and obj %}
-                            hx-post="{{ url_for('stock_htmx.edit_object', object_id=obj.id) }}"
+                            hx-post="{{ url_for('stock_htmx_search.edit_object', object_id=obj.id) }}"
                         {% endif %}
                     hx-target="#object-modal-container"
                     hx-swap="innerHTML"
@@ -88,7 +88,7 @@
                                 class="form-control"
                                 {% if disabled %}disabled{% endif %}
                                 {% if not disabled %}
-                                hx-get="{{ url_for('stock_htmx.object_complement') }}"
+                                hx-get="{{ url_for('stock_htmx_search.object_complement') }}"
                                 hx-target="#object-complement-container"
                                 hx-swap="innerHTML"
                                 hx-trigger="change"
@@ -136,17 +136,17 @@
                 {# ── Conteneur du complément (onglets) ──────────── #}
                 <div id="object-complement-container"
                      {% if form_state == 'create' %}
-                     hx-get="{{ url_for('stock_htmx.object_complement', general_object_type=form.general_object_type.data or 'book') }}"
+                     hx-get="{{ url_for('stock_htmx_search.object_complement', general_object_type=form.general_object_type.data or 'book') }}"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML"
                      {% elif form_state == 'edit' and obj %}
-                     hx-get="{{ url_for('stock_htmx.object_complement_edit', object_id=obj.id) }}"
+                     hx-get="{{ url_for('stock_htmx_search.object_complement_edit', object_id=obj.id) }}"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML"
                      {% elif form_state == 'view' and obj %}
-                     hx-get="{{ url_for('stock_htmx.object_complement_view', object_id=obj.id) }}"
+                     hx-get="{{ url_for('stock_htmx_search.object_complement_view', object_id=obj.id) }}"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML"

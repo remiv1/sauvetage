@@ -6,7 +6,6 @@ from app_front.blueprints.supplier.utils import search_suppliers, create_supplie
 bp_supplier_data = Blueprint("supplier_data", __name__, url_prefix="/supplier/data")
 
 
-
 @bp_supplier_data.route("/search", methods=["GET"])
 def api_search_suppliers():
     """Recherche de fournisseurs par nom (autocomplete, accès DB direct)."""

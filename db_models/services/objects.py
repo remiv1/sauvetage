@@ -6,19 +6,20 @@ Ce module implémente le pattern de synchronisation pour les relations 1→N bid
 permettant de maintenir la cohérence entre les données de formulaire WTForms et les objets
 SQLAlchemy persistants en base de données.
 """
+
 from typing import Any, Iterable, Type
 from sqlalchemy import LargeBinary
 from db_models.objects import GeneralObjects
 
 
 def sync_collection(
-        parent: GeneralObjects,
-        general_object_id: int,
-        attr_name: str,
-        form_fieldlist: Iterable,
-        model_class: Type[Any],
-        session: Any
-        ) -> None:
+    parent: GeneralObjects,
+    general_object_id: int,
+    attr_name: str,
+    form_fieldlist: Iterable,
+    model_class: Type[Any],
+    session: Any,
+) -> None:
     """
     Synchronise une relation 1→N entre un parent SQLAlchemy et une FieldList WTForms.
     """
@@ -61,11 +62,11 @@ def _binary_gestion(value: Any, model_class: Type[Any], name: str) -> Any:
     - Si value est une chaîne vide, retourne None (pour les champs de fichier vides).
     - Sinon, retourne la valeur encodée en bytes si c'est une chaîne, ou la valeur telle quelle.
     """
-    if hasattr(value, 'read'):
+    if hasattr(value, "read"):
         content = value.read()
         return content if content else None
     elif isinstance(value, str):
         col = model_class.__table__.columns.get(name)
         if col is not None and isinstance(col.type, LargeBinary):
-            value = value.encode('utf-8') if value else None
+            value = value.encode("utf-8") if value else None
     return value

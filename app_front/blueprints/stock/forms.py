@@ -19,8 +19,9 @@ class OrderInCreateForm(FlaskForm):
     """Formulaire de création de commande fournisseur (étape 1)."""
 
     supplier_id = StringField("Fournisseur", validators=[DataRequired()])
-    supplier_name = StringField("Nom du fournisseur (auto-complete)",
-                                validators=[DataRequired()])
+    supplier_name = StringField(
+        "Nom du fournisseur (auto-complete)", validators=[DataRequired()]
+    )
     submit = SubmitField("Créer la commande")
 
 
@@ -37,7 +38,7 @@ class OrderInLineForm(FlaskForm):
     def validate_form_data(self) -> tuple[int, int, int, float, float]:
         """
         Valide si les données sont complètes pour être utilisées.
-        
+
         Return:
             tuple[int, int, int, float, float]: Un tuple contenant les données validées
             (order_id, general_object_id, quantity, unit_price, vat_rate).
@@ -63,10 +64,9 @@ class OrderInLineForm(FlaskForm):
         except (ValueError, TypeError) as e:
             raise TypeError("Données du formulaire invalides : " + str(e)) from e
 
-
     def line_to_form(self, line: Any):
         """Remplit les champs du formulaire à partir d'une ligne de commande existante."""
-        self.order_id.data = str(line.order_id)
+        self.order_id.data = str(line.order_in_id)
         self.general_object_id.data = str(line.general_object_id)
         self.quantity.data = str(line.qty_ordered)
         self.unit_price.data = str(line.unit_price)
@@ -75,8 +75,10 @@ class OrderInLineForm(FlaskForm):
 
 class BookForm(FlaskForm):
     """Formulaire de création/édition d'un livre."""
+
     class Meta:
         """Désactive CSRF pour ce formulaire imbriqué."""
+
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
     author = StringField("Auteur du livre")
@@ -89,8 +91,10 @@ class BookForm(FlaskForm):
 
 class KeyValueForm(FlaskForm):
     """Formulaire générique pour les paires clé-valeur."""
+
     class Meta:
         """Désactive CSRF pour ce formulaire imbriqué."""
+
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
     key = StringField("Clé", validators=[DataRequired()])
@@ -99,37 +103,44 @@ class KeyValueForm(FlaskForm):
 
 class MetadataForm(FlaskForm):
     """Formulaire de création/édition de métadonnée."""
+
     class Meta:
         """Désactive CSRF pour ce formulaire imbriqué."""
+
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
-    items = FieldList(FormField(KeyValueForm), min_entries=0)   # type: ignore[arg-type]
+    items = FieldList(FormField(KeyValueForm), min_entries=0)  # type: ignore[arg-type]
 
 
 class TagForm(FlaskForm):
     """Formulaire de création/édition de tag."""
+
     class Meta:
         """Désactive CSRF pour ce formulaire imbriqué."""
+
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
+
     id = HiddenField("ID de la liaison object_tags")
     tag_id = HiddenField("ID du tag")
 
 
 class MediaFileForm(FlaskForm):
     """Formulaire de création/édition de fichier média."""
+
     class Meta:
         """Désactive CSRF pour ce formulaire imbriqué."""
+
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
     file_name = StringField("Nom du fichier média", validators=[DataRequired()])
     file_type = SelectField(
         "Type de fichier média",
         choices=[
-            ('lnk', 'Lien'),
-            ('img', 'Image'),
-            ('oth', 'Autre'),
+            ("lnk", "Lien"),
+            ("img", "Image"),
+            ("oth", "Autre"),
         ],
-        validators=[DataRequired()]
+        validators=[DataRequired()],
     )
     alt_text = StringField("Texte alternatif pour les images")
     file_data = FileField("Fichier média")
@@ -141,25 +152,27 @@ class CreateObjectForm(FlaskForm):
 
     supplier_id = StringField("Fournisseur", validators=[DataRequired()])
     general_object_id = HiddenField("ID de l'objet (pour les mises à jour)")
-    supplier_name = StringField("Nom du fournisseur (auto-complete)",
-                                validators=[DataRequired()])
-    general_object_type = SelectField("Type d'objet",
-                                      choices=[
-                                          ('book', 'Livre'),
-                                          ('dvd', 'DVD'),
-                                          ('cd', 'CD'),
-                                          ('games', 'Jeux'),
-                                          ('spiritual_object', 'Objet spirituel'),
-                                          ('other', 'Autre'),
-                                          ],
-                                      validators=[DataRequired()]
-                                     )
+    supplier_name = StringField(
+        "Nom du fournisseur (auto-complete)", validators=[DataRequired()]
+    )
+    general_object_type = SelectField(
+        "Type d'objet",
+        choices=[
+            ("book", "Livre"),
+            ("dvd", "DVD"),
+            ("cd", "CD"),
+            ("games", "Jeux"),
+            ("spiritual_object", "Objet spirituel"),
+            ("other", "Autre"),
+        ],
+        validators=[DataRequired()],
+    )
     ean_13 = StringField("EAN13", validators=[DataRequired()])
     name = StringField("Nom de l'objet", validators=[DataRequired()])
     description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
     price = StringField("Prix de l'objet", validators=[DataRequired()])
     book = FormField(BookForm)  # type: ignore[arg-type]
-    object_tags = FieldList(FormField(TagForm), min_entries=0) # type: ignore[arg-type]
+    object_tags = FieldList(FormField(TagForm), min_entries=0)  # type: ignore[arg-type]
     obj_metadatas = FormField(MetadataForm)  # type: ignore[arg-type]
-    media_files = FieldList(FormField(MediaFileForm), min_entries=0)    # type: ignore[arg-type]
+    media_files = FieldList(FormField(MediaFileForm), min_entries=0)  # type: ignore[arg-type]
     submit = SubmitField("Valider")

@@ -54,7 +54,7 @@
                         {# Bouton Dilicom #}
                         <button class="action-icon action-dilicom"
                                 title="Gérer Dilicom"
-                                hx-get="{{ url_for('stock_htmx.dilicom_modal', object_id=item.id) }}"
+                                hx-get="{{ url_for('stock_htmx_search.dilicom_modal', object_id=item.id) }}"
                                 hx-target="#dilicom-modal-container"
                                 hx-swap="innerHTML">
                             <span class="action-letter">D</span>
@@ -62,7 +62,7 @@
                         {# Bouton Voir #}
                         <button class="action-icon action-view"
                                 title="Voir le détail"
-                                hx-get="{{ url_for('stock_htmx.object_view', object_id=item.id) }}"
+                                hx-get="{{ url_for('stock_htmx_search.object_view', object_id=item.id) }}"
                                 hx-target="#object-modal-container"
                                 hx-swap="innerHTML">
                             {% include "svg/eye.html" %}
@@ -70,7 +70,7 @@
                         {# Bouton Éditer #}
                         <button class="action-icon action-edit"
                                 title="Éditer l'article"
-                                hx-get="{{ url_for('stock_htmx.object_edit', object_id=item.id) }}"
+                                hx-get="{{ url_for('stock_htmx_search.object_edit', object_id=item.id) }}"
                                 hx-target="#object-modal-container"
                                 hx-swap="innerHTML">
                             {% include "svg/edit.html" %}
@@ -78,7 +78,7 @@
                         {# Bouton Activer / Désactiver #}
                         <button class="action-icon action-cancel"
                                 title="{{ 'Désactiver' if item.is_active else 'Activer' }} l'article"
-                                hx-get="{{ url_for('stock_htmx.object_toggle_active_modal', object_id=item.id) }}"
+                                hx-get="{{ url_for('stock_htmx_search.object_toggle_active_modal', object_id=item.id) }}"
                                 hx-target="#object-modal-container"
                                 hx-swap="innerHTML">
                             {% include "svg/del.html" %}
@@ -96,7 +96,7 @@
 <nav class="pagination">
     {% if page > 1 %}
     <button class="btn btn-secondary btn-sm"
-            hx-get="{{ url_for('stock_htmx.search_table', page=page - 1) }}"
+            hx-get="{{ url_for('stock_htmx_search.search_table', page=page - 1) }}"
             hx-target="#stock-table-wrapper"
             hx-swap="innerHTML"
             hx-include="#search-filters">
@@ -110,7 +110,7 @@
                 <span class="page-num current">{{ p }}</span>
             {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
                 <button class="page-num"
-                        hx-get="{{ url_for('stock_htmx.search_table', page=p) }}"
+                        hx-get="{{ url_for('stock_htmx_search.search_table', page=p) }}"
                         hx-target="#stock-table-wrapper"
                         hx-swap="innerHTML"
                         hx-include="#search-filters">
@@ -124,7 +124,7 @@
 
     {% if page < total_pages %}
     <button class="btn btn-secondary btn-sm"
-            hx-get="{{ url_for('stock_htmx.search_table', page=page + 1) }}"
+            hx-get="{{ url_for('stock_htmx_search.search_table', page=page + 1) }}"
             hx-target="#stock-table-wrapper"
             hx-swap="innerHTML"
             hx-include="#search-filters">

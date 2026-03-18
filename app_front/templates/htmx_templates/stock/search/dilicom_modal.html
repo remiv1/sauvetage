@@ -69,7 +69,7 @@
                     <button class="btn btn-primary"
                             id="btn-dilicom-add"
                             disabled
-                            hx-post="{{ url_for('stock_htmx.dilicom_add', object_id=obj.id) }}"
+                            hx-post="{{ url_for('stock_htmx_search.dilicom_add', object_id=obj.id) }}"
                             hx-include="#dilicom-gln13"
                             hx-target="#dilicom-modal-overlay"
                             hx-swap="outerHTML"
@@ -89,7 +89,7 @@
                     <button class="btn btn-secondary btn-close-modal">Annuler</button>
                     <button class="btn btn-danger"
                             id="btn-dilicom-delete"
-                            hx-post="{{ url_for('stock_htmx.dilicom_remove', object_id=obj.id) }}"
+                            hx-post="{{ url_for('stock_htmx_search.dilicom_remove', object_id=obj.id) }}"
                             hx-target="#dilicom-modal-overlay"
                             hx-swap="outerHTML"
                             title="Supprimer du référentiel Dilicom">

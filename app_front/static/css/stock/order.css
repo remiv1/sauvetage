@@ -196,7 +196,7 @@
   display: none;
 }
 
-.modal-box {
+.modal-box, .modal__content {
   background: #fff;
   border-radius: 10px;
   padding: 2rem;
@@ -204,11 +204,11 @@
   width: 90%;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
 }
-.modal-box h3 {
+.modal-box h3, .modal__content h3 {
   margin: 0 0 0.5rem;
   color: #00086f;
 }
-.modal-box p {
+.modal-box p, .modal__content p {
   margin: 0 0 2rem;
   color: #404040;
 }

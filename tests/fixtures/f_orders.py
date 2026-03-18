@@ -4,8 +4,10 @@ import pytest
 from sqlalchemy.orm import Session
 from db_models.objects import (
     GeneralObjects,
-    Customers, CustomerAddresses,
-    Order, OrderLine,
+    Customers,
+    CustomerAddresses,
+    Order,
+    OrderLine,
     Invoice,
     Shipment,
 )
@@ -33,7 +35,8 @@ def order(
         db_session_main.query(CustomerAddresses)
         .filter(
             CustomerAddresses.customer_id == complete_customer_part.id,
-            CustomerAddresses.is_billing == True,  # pylint: disable=singleton-comparison
+            CustomerAddresses.is_billing
+            == True,  # pylint: disable=singleton-comparison
             CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
         )
         .first()
@@ -44,7 +47,8 @@ def order(
         db_session_main.query(CustomerAddresses)
         .filter(
             CustomerAddresses.customer_id == complete_customer_part.id,
-            CustomerAddresses.is_shipping == True,  # pylint: disable=singleton-comparison
+            CustomerAddresses.is_shipping
+            == True,  # pylint: disable=singleton-comparison
             CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
         )
         .first()
@@ -86,7 +90,8 @@ def order(
 
 @pytest.fixture
 def invoice(
-    db_session_main: Session, order  # pylint: disable=redefined-outer-name # type: ignore
+    db_session_main: Session,
+    order,  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Invoice:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer une facture de test."""
     total_amount = sum(ol.unit_price * ol.quantity for ol in order.order_lines)  # type: ignore
@@ -111,7 +116,8 @@ def invoice(
 
 @pytest.fixture
 def shipment(
-    db_session_main: Session, order  # pylint: disable=redefined-outer-name # type: ignore
+    db_session_main: Session,
+    order,  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Shipment:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer un envoi de test."""
     shipment_object = Shipment(

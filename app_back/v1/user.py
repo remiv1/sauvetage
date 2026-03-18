@@ -13,6 +13,7 @@ router = APIRouter(
     tags=["users", "admin", "auth"],
 )
 
+
 @router.get("/search/{username}")
 def read_users(username: str):
     """Recherche d'un utilisateur par le username."""
@@ -24,11 +25,12 @@ def read_users(username: str):
         "username": user.username if user else None,
         "permissions": user.permissions if user else None,
         "email": user.email if user else None,
-        "error": None if user else f"Utilisateur non trouvé : {username}"
+        "error": None if user else f"Utilisateur non trouvé : {username}",
     }
     if user is None:
         raise ValueError(f"Utilisateur non trouvé : {username}")
     return return_dict
+
 
 @router.post("/login")
 async def log_user(request: Request):
@@ -45,12 +47,12 @@ async def log_user(request: Request):
         "valid": (user is not None and not user.is_locked and ok),
         "username": user.username if user else None,
         "permissions": user.permissions if (user and ok) else None,
-        "mail": user.email if (user and ok) else None
+        "mail": user.email if (user and ok) else None,
     }
     if user and user.is_locked:
         return_dict["error"] = "Compte vérouillé après 3 erreurs de connexion."
     elif user and ok:
-        pass    # type: ignore
+        pass  # type: ignore
     elif user:
         user_obj.add_failed_login(user)
         return_dict["error"] = "Mot de passe incorrect."
@@ -59,12 +61,14 @@ async def log_user(request: Request):
 
     return return_dict
 
+
 @router.get("/no-user")
 def exists_first():
     """Vérifie s'il n'existe aucun utilisateur dans la base de données."""
     user_obj = UsersRepository(get_secure_session())
     no_user = user_obj.no_users_exists()
     return {"exists": no_user}
+
 
 @router.post("/create")
 async def create_user(request: Request):
@@ -84,8 +88,7 @@ async def create_user(request: Request):
     stmt = select(Users).where(Users.username == username)
     existing_user = session.execute(stmt).scalar_one_or_none()
     if existing_user:
-        return {"valid": False,
-                "error": "L'utilisateur existe déjà."}
+        return {"valid": False, "error": "L'utilisateur existe déjà."}
 
     # Création du nouvel utilisateur et de son mot de passe
     try:
@@ -101,12 +104,12 @@ async def create_user(request: Request):
     # Rollback en cas d'erreur (ex: violation de contrainte) et retour d'une erreur claire
     except (ValueError, TypeError) as e:
         session.rollback()
-        return {"valid": False,
-                "error": f"Erreur lors de la création de l'utilisateur : {str(e)}"
-                }
-    return {"valid": True,
-            "message": f"Utilisateur {username} créé avec succès."
-            }
+        return {
+            "valid": False,
+            "error": f"Erreur lors de la création de l'utilisateur : {str(e)}",
+        }
+    return {"valid": True, "message": f"Utilisateur {username} créé avec succès."}
+
 
 @router.post("/change-password")
 async def change_password(request: Request):
@@ -120,14 +123,19 @@ async def change_password(request: Request):
     user = user_obj.get_by_username(username)
     if not user:
         raise ValueError(f"Utilisateur non trouvé : {username}")
-    auth = user_obj.validate_password(user = user, password = old_password)
+    auth = user_obj.validate_password(user=user, password=old_password)
     if not auth:
         raise ValueError("Mot de passe actuel incorrect.")
     ok = user_obj.new_password(user=user, password=new_password)
     if not ok:
-        raise ValueError("Échec du changement de mot de passe. Vérifiez les informations fournies.")
-    return {"valid": True,
-            "message": f"Mot de passe changé avec succès pour l'utilisateur {username}."}
+        raise ValueError(
+            "Échec du changement de mot de passe. Vérifiez les informations fournies."
+        )
+    return {
+        "valid": True,
+        "message": f"Mot de passe changé avec succès pour l'utilisateur {username}.",
+    }
+
 
 @router.post("/modify/{username}")
 async def modify_user(username: str, request: Request):
@@ -146,9 +154,10 @@ async def modify_user(username: str, request: Request):
     except (ValueError, TypeError) as e:
         message = f"Erreur lors de la modification de l'utilisateur : {str(e)}"
         raise ValueError(message) from e
-    return {"valid": True,
-            "message": f"Utilisateur {username} modifié avec succès.",
-            "username": user.username,
-            "email": user.email,
-            "permissions": user.permissions
-            }
+    return {
+        "valid": True,
+        "message": f"Utilisateur {username} modifié avec succès.",
+        "username": user.username,
+        "email": user.email,
+        "permissions": user.permissions,
+    }

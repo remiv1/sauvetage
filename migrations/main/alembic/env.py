@@ -1,4 +1,5 @@
 """env.py"""
+
 import sys
 import os
 from logging.config import fileConfig
@@ -7,22 +8,22 @@ from sqlalchemy import pool
 from alembic import context
 
 # Ajout du chemin du projet au sys.path
-sys.path.insert(0, '/app')
+sys.path.insert(0, "/app")
 
 # Import main base model après avoir chargé les variables
-from db_models import WorkingBase   # pylint: disable=wrong-import-position
-from db_models.objects.customers import * # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.orders import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.invoices import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.shipments import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.suppliers import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.objects import * # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.inventory import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.stocks import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models import WorkingBase  # pylint: disable=wrong-import-position
+from db_models.objects.customers import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.orders import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.invoices import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.shipments import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.suppliers import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.objects import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.inventory import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.stocks import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 
 # this is the Alembic Config object, which provides access to the values within
 # the .ini file in use, as well as the Python logging config.
-config = context.config # pylint: disable=no-member
+config = context.config  # pylint: disable=no-member
 
 # Construire l'URL SQLAlchemy avec les variables d'environnement
 database_url = (
@@ -42,6 +43,7 @@ if config.config_file_name is not None:
 
 target_metadata = WorkingBase.metadata
 
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -59,12 +61,12 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         dialect_opts={"paramstyle": "named"},
-        version_table_schema="migr_main"
+        version_table_schema="migr_main",
     )
     print("offline")
 
-    with context.begin_transaction():   # pylint: disable=no-member
-        context.run_migrations()    # pylint: disable=no-member
+    with context.begin_transaction():  # pylint: disable=no-member
+        context.run_migrations()  # pylint: disable=no-member
 
 
 def run_migrations_online() -> None:
@@ -85,14 +87,15 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             version_table_schema="migr_main",
-            version_table = "alembic_version",
+            version_table="alembic_version",
         )
         print("online")
 
-        with context.begin_transaction():   # pylint: disable=no-member
-            context.run_migrations()    # pylint: disable=no-member
+        with context.begin_transaction():  # pylint: disable=no-member
+            context.run_migrations()  # pylint: disable=no-member
 
-if context.is_offline_mode():   # pylint: disable=no-member
+
+if context.is_offline_mode():  # pylint: disable=no-member
     run_migrations_offline()
 else:
     run_migrations_online()

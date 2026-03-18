@@ -6,6 +6,7 @@ Ce module utilise la bibliothèque bcrypt pour le hashage sécurisé des mots de
 
 import bcrypt
 
+
 class PwdHasher:
     """
     Service de hashage/validation des mots de passe.
@@ -31,8 +32,8 @@ class PwdHasher:
             str: Le mot de passe hashé.
         """
         salt = bcrypt.gensalt(rounds=self.rounds)
-        hashed = bcrypt.hashpw(password=password.encode('utf-8'), salt=salt)
-        return hashed.decode('utf-8')
+        hashed = bcrypt.hashpw(password=password.encode("utf-8"), salt=salt)
+        return hashed.decode("utf-8")
 
     def verify(self, password: str, hashed: str) -> bool:
         """Vérifie si un mot de passe correspond à un hash donné.
@@ -42,4 +43,4 @@ class PwdHasher:
         Returns:
             bool: True si le mot de passe correspond au hash, False sinon.
         """
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))

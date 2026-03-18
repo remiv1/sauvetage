@@ -1,0 +1,142 @@
+"""Blueprint API HTMX pour le module stock."""
+
+from flask import Blueprint, render_template, request
+from app_front.blueprints.stock.forms import (
+    OrderInCreateForm,
+    OrderInLineForm,
+)
+from app_front.blueprints.stock.utils import (
+    get_supplier_orders,
+    get_order_by_id,
+    cancel_supplier_order,
+    create_order_in_db,
+    edit_order_in_line_db,
+)
+
+bp_stock_htmx_orders = Blueprint(
+    "stock_htmx_orders",
+    __name__,
+    url_prefix="/stock/htmx/orders",
+    template_folder="htmx_templates/stock",
+)
+
+EDIT_TABLE = "htmx_templates/stock/orders/sections/view.html"
+NEW_LINE = "htmx_templates/stock/orders/fragments/new_line.html"
+SECTION_NEW = "htmx_templates/stock/orders/sections/new.html"
+SECTION_HOME = "htmx_templates/stock/orders/sections/home.html"
+SECTION_CANCELED = "htmx_templates/stock/orders/sections/canceled.html"
+UNKNOWN_OBJECT = "<p>Objet introuvable.</p>"
+
+
+@bp_stock_htmx_orders.get("/cleared")
+def cleared():
+    """Retourne une section vide pour réinitialiser l'affichage (HTMX)."""
+    return ""
+
+
+@bp_stock_htmx_orders.get("/")
+def orders():
+    """Retourne la section complète de gestion des commandes fournisseurs (HTMX)."""
+    orders_list = get_supplier_orders()
+    return render_template(SECTION_HOME, orders=orders_list)
+
+
+@bp_stock_htmx_orders.route("/section/create", methods=["GET", "POST"])
+def new_order_section():
+    """Retourne la section complète pour la création d'une nouvelle commande fournisseur (HTMX)."""
+    form = OrderInCreateForm()
+    if form.validate_on_submit():
+        id_order = create_order_in_db(form)
+        if not id_order:
+            raise ValueError("Failed to create order in database")
+        order = get_order_by_id(id_order)
+        return render_template(EDIT_TABLE, view_state="new", order=order)
+    return render_template(SECTION_NEW, form=form)
+
+
+@bp_stock_htmx_orders.route("/<int:order_id>/section/edit", methods=["GET", "POST"])
+def edit_order(order_id: int):
+    """Retourne la section complète d'une commande fournisseur existante (HTMX)."""
+    if request.method == "POST":
+        form = OrderInCreateForm()
+        if form.validate_on_submit():
+            pass  # TODO: implémenter la logique de mise à jour de la commande
+    order = get_order_by_id(order_id)
+    return render_template(
+        EDIT_TABLE, id_order=order_id, order=order, view_state="edit"
+    )
+
+
+@bp_stock_htmx_orders.get("/view/<int:order_id>")
+def view_order(order_id: int):
+    """Retourne la vue détaillée d'une commande fournisseur (HTMX)."""
+    # Récupérer les détails de la commande à partir de l'ID
+    order = get_order_by_id(order_id)
+    return render_template(EDIT_TABLE, order=order, view_state="view")
+
+
+@bp_stock_htmx_orders.route("/cancel/<int:order_id>", methods=["GET", "POST"])
+def cancel_order(order_id: int):
+    """Annule une commande fournisseur (HTMX)."""
+    if request.method == "POST":
+        cancel_supplier_order(order_id)
+        return render_template(SECTION_CANCELED, order_id=order_id, deleted=True, mod="order")
+    return render_template(SECTION_CANCELED, order_id=order_id, deleted=False, mod="order")
+
+
+@bp_stock_htmx_orders.route("/<int:order_id>/line/create", methods=["GET", "POST"])
+def new_order_line(order_id: int):
+    """Retourne le formulaire de création d'une ligne de commande fournisseur (HTMX)."""
+    form = OrderInLineForm()
+    form.order_id.data = str(order_id)
+    if form.validate_on_submit():
+        id_line = edit_order_in_line_db(form, action="create", order_id=order_id)
+        if not id_line:
+            raise ValueError("Failed to create order line in database")
+        order = get_order_by_id(order_id)
+        return render_template(EDIT_TABLE, order=order, form=form, view_state="new")
+    return render_template(NEW_LINE, form=form, view_state="create")
+
+
+@bp_stock_htmx_orders.route(
+    "/<int:order_id>/line/<int:line_id>/<action>", methods=["GET", "POST"]
+)
+def edit_order_line(order_id: int, line_id: int, action: str):
+    """Retourne le formulaire d'édition d'une ligne de commande fournisseur (HTMX)."""
+    # Récupération du formulaire
+    form = OrderInLineForm()
+
+    # Gestion de la méthode POST pour les actions d'édition ou de suppression
+    if request.method == "POST":
+
+        # If deletion was requested, return the canceled fragment indicating success
+        if action == "delete":
+            line_id = edit_order_in_line_db(form, action=action, line_id=line_id, order_id=order_id)
+            return render_template(SECTION_CANCELED, deleted=True, line_id=line_id)
+
+        # Gestion de l'action d'édition
+        edit_order_in_line_db(form, action=action, line_id=line_id, order_id=order_id)
+
+        # For create/edit, show the updated order section
+        order = get_order_by_id(order_id)
+        line = next((l for l in order.orderin_lines if l.id == line_id), None)
+        if not line:
+            raise ValueError(f"Line with ID {line_id} not found in order {order_id}")
+        return render_template(
+            EDIT_TABLE, order=order, line=line, form=form, view_state="edit"
+        )
+
+    # Gestion de la méthode GET pour l'action de suppression
+    if action == "delete":
+        return render_template(SECTION_CANCELED, line_id=line_id)
+
+    # Gestion de la méthode GET pour l'action d'édition
+    order = get_order_by_id(order_id)
+    line = next((l for l in order.orderin_lines if l.id == line_id), None)
+    if not line:
+        raise ValueError(f"Line with ID {line_id} not found in order {order_id}")
+
+    # Remplissage du formulaire avec les données de la ligne existante
+    form.line_to_form(line)
+
+    return render_template(NEW_LINE, form=form, line=line, view_state="edit")

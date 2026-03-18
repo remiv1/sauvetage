@@ -10,13 +10,13 @@
             <form id="order-line-form"
                     method="post"
                     hx-post="{{
-                    url_for('stock_htmx.new_order_line_form',
+                    url_for('stock_htmx_orders.new_order_line',
                         order_id=form.order_id.data
                     )
-                    if action == 'create' else
-                    url_for('stock_htmx.edit_order_line',
+                    if view_state == 'create' else
+                    url_for('stock_htmx_orders.edit_order_line',
                         order_id=form.order_id.data,
-                        line_id=line_id,
+                        line_id=line.id,
                         action='edit'
                     )
                     }}"
@@ -34,6 +34,9 @@
                                class="form-control"
                                name="object-wrapper"
                                id="object-wrapper"
+                               {% if line and line.general_object.name %}
+                               value="{{ line.general_object.name }}"
+                               {% endif %}
                                placeholder="Saisissez l'ID ou le nom de l'article"
                                required
                                hx-get="{{ url_for('inventory_htmx.get_items_search') }}"
@@ -138,7 +141,7 @@
                             class="btn btn-secondary"
                             data-bs-dismiss="modal"
                             title="Annuler la création de la ligne de commande"
-                            hx-get="{{ url_for('stock_htmx.cleared') }}"
+                            hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
                             hx-target="#new-line-modal"
                             hx-swap="innerHTML"
                     >
