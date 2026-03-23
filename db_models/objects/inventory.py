@@ -22,7 +22,7 @@ class InventoryMovements(WorkingBase, QueryMixin):
         comment="ID de l'objet",
     )
     movement_type: Mapped[str] = mapped_column(
-        String, nullable=False, comment="Type de mouvement (in/out/reserved/inventory)"
+        String, nullable=False, comment="Type de mouvement (in/out/reserved/inventory/pending)"
     )
     quantity: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="Quantité du mouvement"

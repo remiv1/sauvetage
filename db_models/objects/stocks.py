@@ -34,6 +34,7 @@ class OrderIn(WorkingBase, QueryMixin):
         nullable=False,
         comment="Valeur totale de la commande",
     )
+    # État de la commande : 'draft', 'sended', 'received', 'cancelled'
     order_state: Mapped[str] = mapped_column(
         String, default="draft", nullable=False, comment="État de la commande"
     )
@@ -109,6 +110,7 @@ class OrderInLine(WorkingBase, QueryMixin):
     vat_rate: Mapped[Decimal] = mapped_column(
         Numeric(10, 3, True, True), nullable=False, comment="Taux de TVA en pourcentage"
     )
+    # État de la ligne : 'pending', 'received', 'cancelled'
     line_state: Mapped[str] = mapped_column(
         String,
         default="pending",

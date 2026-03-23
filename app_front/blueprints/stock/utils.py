@@ -61,10 +61,10 @@ def update_movement_price(movement_id: int, price: float) -> int:
         RuntimeError: en cas d'erreur lors du commit.
     """
     stock_repo = StockRepository(get_main_session())
-    return stock_repo.update_movement_price(movement_id, price)
+    return stock_repo.clone_movement_with_updated_price(movement_id, price)
 
 
-def get_supplier_orders() -> Sequence[OrderIn]:
+def get_supplier_orders(out: bool = False) -> Sequence[OrderIn]:
     """Récupère la liste des commandes fournisseurs avec le nom du fournisseur
     et le nombre de lignes de commande.
 
@@ -72,18 +72,7 @@ def get_supplier_orders() -> Sequence[OrderIn]:
         Sequence[OrderIn]: Liste des commandes avec relations complètement chargées.
     """
     stock_repo = StockRepository(get_main_session())
-    return stock_repo.get_supplier_orders()
-
-
-def get_supplier_returns() -> Sequence[OrderIn]:
-    """Récupère la liste des retours fournisseurs avec le nom du fournisseur
-    et le nombre de lignes de retour.
-
-    Returns:
-        Sequence[OrderIn]: Liste des retours avec relations complètement chargées.
-    """
-    stock_repo = StockRepository(get_main_session())
-    return stock_repo.get_supplier_returns()
+    return stock_repo.get_supplier_orders(out=out)
 
 
 def cancel_supplier_order(order_id: int) -> bool:
@@ -127,7 +116,11 @@ def create_order_in_db(form: OrderInCreateForm) -> int:
     except ValueError as e:
         raise ValueError("Le champ fournisseur doit être un nombre entier.") from e
     stock_repo = StockRepository(get_main_session())
-    return stock_repo.create_order_in_db(supplier_id)
+    order = OrderIn(
+        order_ref="temp",
+        supplier_id=supplier_id,
+    )
+    return stock_repo.edit_order_in_db(order, action="create")
 
 
 def get_order_by_id(order_id: int) -> OrderIn:
@@ -144,22 +137,6 @@ def get_order_by_id(order_id: int) -> OrderIn:
     """
     stock_repo = StockRepository(get_main_session())
     return stock_repo.get_order_by_id(order_id)
-
-
-def get_return_by_id(return_id: int) -> Sequence[OrderIn]:
-    """Récupère les détails d'un retour fournisseur à partir de son ID.
-
-    Args:
-        return_id: L'identifiant du retour à récupérer.
-
-    Returns:
-        Sequence[OrderIn]: Une séquence contenant les objets récupérés.
-
-    Raises:
-        ValueError: Si le retour n'existe pas.
-    """
-    stock_repo = StockRepository(get_main_session())
-    return stock_repo.get_return_by_id(return_id)
 
 
 def edit_order_in_line_db(

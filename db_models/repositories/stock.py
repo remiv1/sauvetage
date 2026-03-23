@@ -98,7 +98,7 @@ class StockRepository(BaseRepository):
             for row in result
         ]
 
-    def update_movement_price(self, movement_id: int, price: float) -> int:
+    def clone_movement_with_updated_price(self, movement_id: int, price: float) -> int:
         """Crée un nouveau mouvement d'inventaire en dupliquant le mouvement
         d'origine et en y appliquant le nouveau prix de revient.
 
@@ -173,7 +173,7 @@ class StockRepository(BaseRepository):
             message = f"Erreur lors de la mise à jour du prix de la commande : {exc}"
             raise SQLAlchemyError(message) from exc
 
-    def get_supplier_orders(self) -> Sequence[OrderIn]:
+    def get_supplier_orders(self, out: bool = False) -> Sequence[OrderIn]:
         """Récupère la liste des commandes fournisseurs avec toutes les relations chargées.
 
         Charge les fournisseurs et les lignes de commande de manière eager pour éviter
@@ -182,6 +182,10 @@ class StockRepository(BaseRepository):
         Returns:
             Sequence[OrderIn]: Liste des commandes avec relations complètement chargées.
         """
+        if out:
+            order_sens = OrderInLine.qty_ordered < 0
+        else:
+            order_sens = OrderInLine.qty_ordered >= 0
         stmt = (
             select(OrderIn)
             .options(
@@ -190,8 +194,8 @@ class StockRepository(BaseRepository):
             .where(
                 or_(
                     OrderIn.orderin_lines.any(
-                        OrderInLine.qty_ordered >= 0
-                    ),  # Exclure les retours
+                        order_sens
+                    ),  # Exclure les retours ou les commandes selon le sens
                     OrderIn.orderin_lines == None,  # pylint: disable=singleton-comparison
                 )
             )
@@ -246,86 +250,90 @@ class StockRepository(BaseRepository):
                 f"Erreur lors de l'annulation de la commande : {exc}"
             ) from exc
 
-    def get_supplier_returns(self) -> Sequence[OrderIn]:
-        """Récupère la liste des retours fournisseurs avec toutes les relations chargées.
-
-        Charge les fournisseurs et les lignes de retour de manière eager pour éviter
-        le lazy loading.
-
-        Returns:
-            Sequence[OrderIn]: Liste des retours avec relations complètement chargées.
-        """
-        stmt = (
-            select(OrderIn)
-            .options(
-                selectinload(OrderIn.supplier), selectinload(OrderIn.return_in_lines)
-            )
-            .where(OrderIn.return_in_id.isnot(None))  # Inclure seulement les retours
-            .order_by(OrderIn.id.desc())
-        )
-        return self.session.execute(stmt).scalars().all()
-
-    def create_order_in_db(self, id_supplier: int) -> int:
-        """Crée une nouvelle commande fournisseur en base à partir des données du formulaire.
+    def edit_order_in_db(self, order_in: OrderIn, action: str = "create", out: bool = False) -> int:
+        """Crée/ modifie une commande fournisseur en base à partir des données du formulaire.
 
         Args:
-            id_supplier: L'identifiant du fournisseur pour la commande.
+            order_in: L'objet OrderIn contenant les données de la commande à créer ou modifier.
+            action: "create" pour une nouvelle commande, "edit" pour une modification.
+            out: True si c'est un retour fournisseur (quantité négative), False pour une commande.
 
         Returns:
-            L'ID de la commande créée.
+            L'ID de la commande créée/modifiée.
         """
-        new_order = OrderIn(supplier_id=id_supplier, order_ref="temp")
-        self.session.add(new_order)
-        self.session.flush()
-        new_order.order_ref = f"CMD-{new_order.id:06d}"
-        new_order.order_state = "draft"
+        # Gestion de l'opération de création de commande
+        if action == "create":
+            self.session.add(order_in)
+            self.session.flush()
+            if out is True:
+                ref = f"RET-{order_in.id:06d}"
+            else:
+                ref = f"CMD-{order_in.id:06d}"
+            order_in.order_ref = ref
+            order_in.order_state = "draft"
+
+        # Gestion de l'opération de modification de commande
+        elif action == "edit":
+            existing_order = self.session.get(OrderIn, order_in.id)
+            if existing_order is None:
+                raise ValueError(f"Commande {order_in.id} introuvable")
+            existing_order.supplier_id = order_in.supplier_id
+            existing_order.supplier_id = order_in.supplier_id
+            existing_order.order_ref = order_in.order_ref
+            existing_order.external_ref = order_in.external_ref
+            existing_order.orderin_lines = order_in.orderin_lines
+            existing_order.order_state = order_in.order_state
+            existing_order.value = order_in.value
+
+        # Gestion de l'action inconnue
+        else:
+            raise ValueError(f"Action inconnue : {action}")
+
+        # Commit de la transaction avec gestion des erreurs
         try:
             self.session.commit()
         except Exception as exc:
             self.session.rollback()
-            raise RuntimeError(
-                f"Erreur lors de la création de la commande : {exc}"
-            ) from exc
+            message = f"Erreur lors de la création/modification de la commande : {exc}"
+            raise RuntimeError(message) from exc
 
-        return new_order.id
+        return order_in.id
 
-    def create_return_in_db(self, id_supplier: int) -> int:
-        """Crée un nouveau retour fournisseur en base à partir des données du formulaire.
-
-        Args:
-            id_supplier: L'identifiant du fournisseur pour le retour.
-
-        Returns:
-            L'ID du retour créé.
-        """
-        new_return = OrderIn(supplier_id=id_supplier, order_ref="temp")
-        self.session.add(new_return)
-        self.session.flush()
-        new_return.order_ref = f"RET-{new_return.id:06d}"
-        new_return.order_state = "draft"
-        try:
-            self.session.commit()
-        except Exception as exc:
-            self.session.rollback()
-            raise RuntimeError(f"Erreur lors de la création du retour : {exc}") from exc
-
-        return new_return.id
-
-    def edit_order_in_line_db(self, new_line: OrderInLine, action: str = "edit") -> int:
+    def edit_order_in_line_db(
+            self, new_line: OrderInLine,
+            action: str = "edit",
+            out: bool = False
+        ) -> int:
         """
         Modifie/crée une ligne de commande fournisseur en base à partir des données du formulaire.
+        Gère également la création ou la mise à jour du mouvement d'inventaire associé.
+        Args:
+            new_line: L'objet OrderInLine contenant les données de la ligne à créer ou modifier.
+            action: "create" pour une nouvelle ligne, "edit" pour une modification.
+            out: True si c'est un retour fournisseur (quantité négative), False pour une commande.
         """
         # Gestion de l'opération de création
         if action == "create":
+            if out is True:
+                source = f"Retour fournisseur #{new_line.order_in_id}"
+                notes = f"Retour fournisseur #{new_line.order_in_id}" \
+                       + f" - Ligne #{new_line.general_object_id}"
+                destination = "Fournisseur"
+                movement_type = "out"
+            else:
+                source = f"Commande fournisseur #{new_line.order_in_id}"
+                notes = f"Commande fournisseur #{new_line.order_in_id}" \
+                       + f" - Ligne #{new_line.general_object_id}"
+                destination = "Stock"
+                movement_type = "in"
             movement = InventoryMovements(
                 general_object_id=new_line.general_object_id,
-                movement_type="in",
+                movement_type=movement_type,
                 quantity=new_line.qty_ordered,
                 price_at_movement=Decimal(new_line.unit_price),
-                source=f"Commande fournisseur #{new_line.order_in_id}",
-                destination="Stock",
-                notes=f"Commande fournisseur #{new_line.order_in_id} " \
-                      + f"- Ligne #{new_line.general_object_id}",
+                source=source,
+                destination=destination,
+                notes=notes,
             )
             self.session.add(movement)
             self.session.flush()
@@ -387,54 +395,6 @@ class StockRepository(BaseRepository):
             message = f"Erreur lors de la suppression de la ligne de commande : {exc}"
             raise RuntimeError(message) from exc
 
-    def create_return_in_line_db(
-        self,
-        return_in_id: int,
-        general_object_id: int,
-        quantity: int,
-        price_at_movement: float = 0.0,
-        vat_rate: float = 0.0,
-    ) -> int:
-        """Crée une nouvelle ligne de retour fournisseur en base à partir des données
-        du formulaire.
-
-        Args:
-            return_in_id: L'identifiant du retour fournisseur associé.
-            general_object_id: L'identifiant de l'article retourné.
-            quantity: La quantité retournée.
-
-        Returns:
-            L'ID de la ligne de retour créée.
-        """
-        new_line = OrderInLine(
-            return_in_id=return_in_id,
-            general_object_id=general_object_id,
-            qty_ordered=quantity,
-            unit_price=price_at_movement,
-            vat_rate=vat_rate,
-        )
-        new_movement = InventoryMovements(
-            general_object_id=general_object_id,
-            movement_type="out",
-            quantity=quantity * -1,  # Quantité négative pour un retour
-            price_at_movement=price_at_movement,
-            source=f"Retour fournisseur #{return_in_id}",
-            destination="Stock",
-            notes=f"Retour fournisseur #{return_in_id} - Ligne #{general_object_id}",
-        )
-        self.session.add(new_movement)
-        self.session.flush()
-        new_line.inventory_movement_id = new_movement.id
-        self.session.add(new_line)
-        try:
-            self.session.commit()
-        except Exception as exc:
-            self.session.rollback()
-            message = f"Erreur lors de la création de la ligne de retour : {exc}"
-            raise RuntimeError(message) from exc
-
-        return new_line.id
-
     def get_order_by_id(self, order_id: int) -> OrderIn:
         """Récupère les détails d'une commande fournisseur à partir de son ID.
 
@@ -460,33 +420,6 @@ class StockRepository(BaseRepository):
         result = self.session.execute(stmt).scalar_one_or_none()
         if result is None:
             raise ValueError(f"Commande {order_id} introuvable")
-        return result
-
-    def get_return_by_id(self, return_id: int) -> OrderIn:
-        """Récupère les détails d'un retour fournisseur à partir de son ID.
-
-        Charge le fournisseur et les lignes de retour de manière eager.
-
-        Args:
-            return_id: L'identifiant du retour à récupérer.
-
-        Returns:
-            L'objet OrderIn avec toutes les relations chargées.
-
-        Raises:
-            ValueError: Si le retour n'existe pas.
-        """
-        stmt = (
-            select(OrderIn)
-            .options(
-                selectinload(OrderIn.supplier), selectinload(OrderIn.return_in_lines)
-            )
-            .where(OrderIn.id == return_id)
-        )
-
-        result = self.session.execute(stmt).scalar_one_or_none()
-        if result is None:
-            raise ValueError(f"Retour {return_id} introuvable")
         return result
 
     def search_stock_global(

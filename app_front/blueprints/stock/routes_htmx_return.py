@@ -5,8 +5,8 @@ from app_front.blueprints.stock.forms import (
     OrderInCreateForm,
 )
 from app_front.blueprints.stock.utils import (
-    get_supplier_returns,
-    get_return_by_id,
+    get_supplier_orders,
+    get_order_by_id,
 )
 
 bp_stock_htmx_return = Blueprint(
@@ -29,7 +29,7 @@ def cleared():
 @bp_stock_htmx_return.get("/")
 def returns():
     """Retourne la section complète de gestion des retours fournisseurs (HTMX)."""
-    returns_list = get_supplier_returns()
+    returns_list = get_supplier_orders(out=True)
     return render_template(SECTION_HOME, returns=returns_list)
 
 
@@ -45,7 +45,7 @@ def new_return_section():
 def view_return(return_id: int):
     """Retourne la vue détaillée d'un retour fournisseur (HTMX)."""
     # Récupérer les détails du retour à partir de l'ID
-    return_info = get_return_by_id(return_id)
+    return_info = get_order_by_id(return_id)
     return render_template(
         "htmx_templates/stock/returns/sections/view.html", return_info=return_info
     )
