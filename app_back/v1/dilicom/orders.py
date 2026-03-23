@@ -14,7 +14,7 @@ from fastapi import APIRouter
 from app_back.v1.schems.dilicom import DilicomReferencialSchema
 
 
-router = APIRouter(prefix="/dilicom/orders", tags=["dilicom"])
+router = APIRouter(prefix="/orders", tags=["dilicom"])
 
 
 @router.post("/send", response_model=List[DilicomReferencialSchema])

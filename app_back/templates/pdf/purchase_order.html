@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Commande {{ commande.numero }}</title>
+
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 20mm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #222;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .header-info {
+            margin-bottom: 20px;
+        }
+
+        .header-info p {
+            margin: 2px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #444;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #f0f0f0;
+        }
+
+        .right {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Commande {{ commande.numero }}</h1>
+
+<div class="header-info">
+    <p><strong>Date :</strong> {{ commande.date }}</p>
+    <p><strong>Fournisseur :</strong> {{ fournisseur.nom }}</p>
+    <p><strong>Librairie :</strong> {{ librairie.nom }}</p>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Titre</th>
+            <th>ISBN</th>
+            <th>Qté</th>
+            <th>PU HT</th>
+            <th>Total HT</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ligne in lignes %}
+        <tr>
+            <td>{{ ligne.titre }}</td>
+            <td>{{ ligne.isbn }}</td>
+            <td class="right">{{ ligne.quantite }}</td>
+            <td class="right">{{ ligne.prix_unitaire_ht }} €</td>
+            <td class="right">{{ ligne.total_ht }} €</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

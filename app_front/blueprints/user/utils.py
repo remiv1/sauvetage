@@ -2,19 +2,12 @@
 
 from urllib.parse import quote
 import requests
-from app_front.config import (
-    NO_USERS_URL,
-    LOGIN_URL,
-    CREATE_USER_URL,
-    SEARCH_USER_URL,
-    CHANGE_PASSWORD_URL,
-    MODIFY_USER_URL,
-)
+from app_front.config import USERS
 
 
 def user_search(username: str) -> dict:
     """Recherche d'un utilisateur par le username."""
-    response = requests.get(f"{SEARCH_USER_URL}/{username}", timeout=10)
+    response = requests.get(f"{USERS['search']}/{username}", timeout=10)
     if response.status_code // 100 != 2:
         message = f"Erreur lors de la recherche de l'utilisateur : {response.text}"
         raise requests.RequestException(message)
@@ -24,7 +17,7 @@ def user_search(username: str) -> dict:
 
 def check_no_users() -> bool:
     """Vérifie s'il n'existe aucun utilisateur dans la base de données."""
-    response = requests.get(NO_USERS_URL, timeout=10)
+    response = requests.get(USERS["no_users"], timeout=10)
     if response.status_code // 100 != 2:
         message = f"Erreur lors de la vérification des utilisateurs : {response.text}"
         raise requests.RequestException(message)
@@ -35,7 +28,7 @@ def check_no_users() -> bool:
 def log_user(username: str, password: str) -> dict:
     """Recherche d'un utilisateur par le username."""
     body = {"username": username, "password": password}
-    response = requests.post(LOGIN_URL, json=body, timeout=10)
+    response = requests.post(USERS["login"], json=body, timeout=10)
     if response.status_code // 100 != 2:
         message = f"Erreur lors de la connexion : {response.text}"
         raise requests.RequestException(message)
@@ -51,7 +44,7 @@ def create_user(username: str, email: str, password: str, permissions: str) -> b
         "password": password,
         "permissions": permissions,
     }
-    response = requests.post(CREATE_USER_URL, json=body, timeout=10)
+    response = requests.post(USERS["create"], json=body, timeout=10)
     if response.status_code // 100 != 2:
         message = f"Erreur lors de la création de l'utilisateur : {response.text}"
         raise requests.RequestException(message)
@@ -65,7 +58,7 @@ def change_password(username: str, old_password: str, new_password: str) -> bool
         "old_password": old_password,
         "new_password": new_password,
     }
-    response = requests.post(CHANGE_PASSWORD_URL, json=body, timeout=10)
+    response = requests.post(USERS["change_password"], json=body, timeout=10)
     if response.status_code // 100 != 2:
         message = f"Erreur lors du changement de mot de passe : {response.text}"
         raise requests.RequestException(message)
@@ -76,7 +69,7 @@ def modify_user(username: str, email: str, permissions: str) -> bool:
     """Modifie les informations d'un utilisateur spécifique."""
     body = {"username": username, "email": email, "permissions": permissions}
     response = requests.post(
-        f"{MODIFY_USER_URL}/{quote(username)}", json=body, timeout=10
+        f"{USERS['modify']}/{quote(username)}", json=body, timeout=10
     )
     if response.status_code // 100 != 2:
         message = f"Erreur lors de la modification de l'utilisateur : {response.text}"

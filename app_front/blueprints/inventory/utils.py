@@ -6,10 +6,9 @@ Opérations lourdes (commit, prepare, validate…) : délèguent au micro-servic
 FastAPI (app-back) qui gère les traitements asynchrones.
 """
 
-from os import getenv
 from typing import Any, Dict, List, Optional, Sequence
-import requests
 from sqlalchemy import select, func
+from app_front.config import get, post, INVENTORY
 from app_front.config.db_conf import get_main_session
 from db_models.objects import GeneralObjects, Books, OtherObjects, Suppliers
 from db_models.repositories.objects import ObjectsRepository
@@ -17,36 +16,6 @@ from db_models.repositories.objects import ObjectsRepository
 # =========================================================================== #
 #  Helpers HTTP – uniquement pour les opérations lourdes (FastAPI)            #
 # =========================================================================== #
-
-FASTAPI_BASE = getenv("FASTAPI_BASE_URL", "http://app-back:8000/api/v1")
-_TIMEOUT = 30  # secondes
-
-
-def _post(path: str, payload: Dict[str, Any] | List[Any]) -> Dict[str, Any]:
-    """POST JSON vers le micro-service FastAPI (opérations lourdes uniquement)."""
-    url = f"{FASTAPI_BASE}{path}"
-    try:
-        resp = requests.post(url, json=payload, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.RequestException as exc:
-        raise RuntimeError(
-            f"Erreur de communication avec le service d'inventaire : {exc}"
-        ) from exc
-
-
-def _get(path: str, params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """GET vers le micro-service FastAPI (opérations lourdes uniquement)."""
-    url = f"{FASTAPI_BASE}{path}"
-    try:
-        resp = requests.get(url, params=params, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.RequestException as exc:
-        raise RuntimeError(
-            f"Erreur de communication avec le service d'inventaire : {exc}"
-        ) from exc
-
 
 def parse_ean13(
     raw: str, inventory_type: str = "complete", category: Optional[str] = None
@@ -56,8 +25,8 @@ def parse_ean13(
     Returns:
         {"ean13": [...], "unknown": [...], "known": [...]}
     """
-    return _post(
-        "/inventory/parse",
+    return post(
+        INVENTORY["parse"],
         {
             "raw": raw,
             "inventory_type": inventory_type,
@@ -73,7 +42,7 @@ def get_unknown_products(ean13_list: List[str]) -> Dict[str, Any]:
     Returns:
         {"unknown": [...]}
     """
-    return _post("/inventory/unknown-products", {"ean13": ean13_list})
+    return post(INVENTORY["unknown_products"], {"ean13": ean13_list})
 
 
 def prepare_inventory(ean13_list: List[str], inventory_type: str = "partial") -> Any:
@@ -82,8 +51,8 @@ def prepare_inventory(ean13_list: List[str], inventory_type: str = "partial") ->
     Returns:
         Liste de dicts avec ean13, title, stock_theorique, stock_reel, difference.
     """
-    return _post(
-        "/inventory/prepare", {"ean13": ean13_list, "inventory_type": inventory_type}
+    return post(
+        INVENTORY["prepare"], {"ean13": ean13_list, "inventory_type": inventory_type}
     )
 
 
@@ -95,8 +64,8 @@ def validate_inventory(
     Returns:
         {"planned": [...]}
     """
-    return _post(
-        "/inventory/validate", {"lines": lines, "inventory_type": inventory_type}
+    return post(
+        INVENTORY["validate"], {"lines": lines, "inventory_type": inventory_type}
     )
 
 
@@ -108,8 +77,8 @@ def commit_inventory(
     Returns:
         {"status": "started"}
     """
-    return _post(
-        "/inventory/commit", {"planned": planned, "inventory_type": inventory_type}
+    return post(
+        INVENTORY["commit"], {"planned": planned, "inventory_type": inventory_type}
     )
 
 
@@ -119,7 +88,7 @@ def get_inventory_status() -> Dict[str, Any]:
     Returns:
         {"running": false} ou {"status": "running", "progress": N, ...}
     """
-    return _get("/inventory/status")
+    return get(INVENTORY["status"])
 
 
 # =========================================================================== #
