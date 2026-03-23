@@ -1,0 +1,31 @@
+{#
+  Modale de confirmation de validation d'une commande fournisseur.
+  Affichée après le passage de la commande de 'draft' à 'sended'.
+#}
+<div class="modal show" id="confirm-order-modal-dialog" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal__content text-center p-4">
+            <div class="mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     style="color: var(--success, #28a745);">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+            </div>
+            <h3>Commande validée</h3>
+            <p class="small">
+                La commande <strong>{{ order.order_ref }}</strong> a été envoyée avec succès.<br>
+                Elle est maintenant en état <strong>« Envoyée »</strong>.
+            </p>
+            <div class="mt-3 d-flex justify-content-center gap-2">
+                <button class="btn btn-primary"
+                        hx-get="{{ url_for('stock_htmx_orders.orders') }}"
+                        hx-target="#orders-management"
+                        hx-swap="innerHTML">
+                    Retourner aux commandes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

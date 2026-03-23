@@ -37,6 +37,7 @@
             <th>Référence</th>
             <th>Réf. externe</th>
             <th>Fournisseur</th>
+            <th>État</th>
             <th>Montant</th>
             <th>Nb articles</th>
             <th class="text-center">Actions</th>
@@ -48,6 +49,19 @@
             <td class="identifiant">{{ order.order_ref }}</td>
             <td>{{ order.external_ref or '—' }}</td>
             <td>{{ order.supplier.name }}</td>
+            <td>
+                {% if order.order_state == 'draft' %}
+                <span class="badge badge-warning">Brouillon</span>
+                {% elif order.order_state == 'sended' %}
+                <span class="badge badge-info">Envoyée</span>
+                {% elif order.order_state == 'received' %}
+                <span class="badge badge-success">Reçue</span>
+                {% elif order.order_state == 'cancelled' %}
+                <span class="badge badge-danger">Annulée</span>
+                {% else %}
+                <span class="badge">{{ order.order_state | capitalize }}</span>
+                {% endif %}
+            </td>
             <td class="text-right">{{ "%.2f"|format(order.value|float) }} €</td>
             <td class="text-center">{{ order.orderin_lines | length }}</td>
             <td class="text-center actions-cell">
@@ -65,6 +79,15 @@
                     class="action-icon"
                     title="Modifier la commande">
                     {% include "svg/edit.html" %}
+                </a>
+                {% endif %}
+                {% if order.order_state == "sended" %}
+                <a hx-get="{{ url_for('stock_htmx_orders.receipt_order', order_id=order.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Réceptionner la commande">
+                    {% include "svg/box.html" %}
                 </a>
                 {% endif %}
                 <button class="action-icon action-cancel"

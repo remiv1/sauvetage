@@ -19,8 +19,8 @@ class OrderIn(WorkingBase, QueryMixin):
     order_ref: Mapped[str] = mapped_column(
         String, nullable=False, comment="Numéro de commande"
     )
-    external_ref: Mapped[int] = mapped_column(
-        Integer, nullable=True, comment="Ref externe"
+    external_ref: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Ref externe"
     )
     supplier_id: Mapped[int] = mapped_column(
         Integer,

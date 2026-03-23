@@ -42,9 +42,43 @@
             </span>
         </div>
         <div class="info-group">
+            <span class="info-label">Réf. externe :</span>
+            {% if view_state == 'receipt' and order.external_ref | length < 1 %}
+            <span class="info-value" id="external-ref">
+                <form class="d-inline"
+                      hx-post="{{ url_for('stock_htmx_orders.update_external_ref', order_id=order.id) }}"
+                      hx-target="#orders-management"
+                      hx-swap="innerHTML">
+                    {{ ext_ref_form.hidden_tag() }}
+                    <input type="text" name="external_ref" class="form-control form-control-sm d-inline-block"
+                           style="width: auto; min-width: 150px;"
+                           value="{{ order.external_ref or '' }}"
+                           placeholder="Réf. fournisseur">
+                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Enregistrer">
+                        ✓
+                    </button>
+                </form>
+            </span>
+            {% else %}
+            <span class="info-value" id="external-ref">
+                {{ order.external_ref or '—' }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="info-group">
             <span class="info-label">Statut :</span>
             <span class="info-value" id="order-status">
-                {{ order.order_state | capitalize or '—' }}
+                {% if order.order_state == 'draft' %}
+                <span class="badge badge-warning">Brouillon</span>
+                {% elif order.order_state == 'sended' %}
+                <span class="badge badge-info">Envoyée</span>
+                {% elif order.order_state == 'received' %}
+                <span class="badge badge-success">Reçue</span>
+                {% elif order.order_state == 'cancelled' %}
+                <span class="badge badge-danger">Annulée</span>
+                {% else %}
+                <span class="badge">{{ order.order_state | capitalize }}</span>
+                {% endif %}
             </span>
         </div>
     </div>
@@ -72,6 +106,7 @@
                     {% if view_state == 'receipt' or view_state == 'view' %}
                     <th>Nb commandé</th>
                     <th>Nb reçu</th>
+                    <th>État</th>
                     {% else %}
                     <th>Qté</th>
                     {% endif %}
@@ -85,11 +120,19 @@
             </thead>
             <tfoot>
                 <tr>
-                    <td colspan="{{ 4 if view_state != 'receipt' else 6 }}" class="text-right"><strong>Total TTC :</strong></td>
+                    {% if view_state == 'receipt' %}
+                    <td colspan="6" class="text-right"><strong>Total TTC :</strong></td>
+                    {% elif view_state == 'view' %}
+                    <td colspan="6" class="text-right"><strong>Total TTC :</strong></td>
+                    {% else %}
+                    <td colspan="4" class="text-right"><strong>Total TTC :</strong></td>
+                    {% endif %}
                     <td class="text-right" id="total-ttc">
                         {{ "%.2f"|format(order.value|float) }} €
                     </td>
+                    {% if view_state == 'edit' or view_state == 'new' or view_state == 'receipt' %}
                     <td></td>
+                    {% endif %}
                 </tr>
             </tfoot>
             <tbody id="order-lines-tbody">
@@ -101,6 +144,17 @@
                     {% if view_state == 'receipt' or view_state == 'view' %}
                     <td class="text-right">{{ line.qty_ordered }}</td>
                     <td class="text-right">{{ line.qty_received }}</td>
+                    <td>
+                        {% if line.line_state == 'pending' %}
+                        <span class="badge badge-warning">En attente</span>
+                        {% elif line.line_state == 'received' %}
+                        <span class="badge badge-success">Reçue</span>
+                        {% elif line.line_state == 'cancelled' %}
+                        <span class="badge badge-danger">Annulée</span>
+                        {% else %}
+                        <span class="badge">{{ line.line_state | capitalize }}</span>
+                        {% endif %}
+                    </td>
                     {% else %}
                     <td class="text-right">{{ line.qty_ordered }}</td>
                     {% endif %}
@@ -127,13 +181,19 @@
                     
                     {% elif view_state == 'receipt' %}
                     <td class="text-center actions-cell">
+                        {% if line.line_state == 'pending' %}
                         <button class="action-icon action-receipt"
                                 title="Recevoir la ligne"
-                                hx-get="{{ url_for('stock_htmx_orders.receive_order_line', line_id=line.id) }}"
+                                hx-get="{{ url_for('stock_htmx_orders.receive_order_line_route', order_id=order.id, line_id=line.id) }}"
                                 hx-target="#receive-line-modal"
                                 hx-swap="innerHTML">
-                            {% include "svg/receipt.html" %}
+                            {% include "svg/box.html" %}
                         </button>
+                        {% else %}
+                        <span class="badge badge-{{ 'success' if line.line_state == 'received' else 'danger' }}">
+                            {{ line.line_state | capitalize }}
+                        </span>
+                        {% endif %}
                     </td>
                     {% endif %}
                 </tr>
@@ -158,18 +218,26 @@
     </div>
     {% endif %}
 
-    {# ── Bouton de retour en haut de page ───────────────────────────────────── #}
+    {# ── Modale de confirmation de suppression de ligne ──────────────────────── #}
     {% if view_state == 'edit' or view_state == 'new' %}
     <div id="delete-line-modal">
         <!-- Contenu de la modale de confirmation de suppression de ligne -->
     </div>
     {% endif %}
 
+    {# ── Modale de réception d'une ligne ─────────────────────────────────────── #}
+    {% if view_state == 'receipt' %}
+    <div id="receive-line-modal"></div>
+    {% endif %}
+
     {# ── Bouton de retour en bas de page ────────────────────────────────────── #}
     {% if view_state == 'edit' or view_state == 'new' %}
     <div class="order-actions-section">
-        <button class="btn {{ 'btn-success' if order.lines | length > 0 else 'btn-secondary' }}" id="confirm-order"
-                {% if order.lines | length == 0  %}disabled{% endif %}>
+        <button class="btn {{ 'btn-success' if order.orderin_lines | length > 0 else 'btn-secondary' }}" id="confirm-order"
+                {% if order.orderin_lines | length == 0 %}disabled{% endif %}
+                hx-post="{{ url_for('stock_htmx_orders.confirm_order', order_id=order.id) }}"
+                hx-target="#confirm-order-modal"
+                hx-swap="innerHTML">
             Valider la commande
         </button>
         <button class="btn btn-secondary"
@@ -179,5 +247,6 @@
             Annuler
         </button>
     </div>
+    <div id="confirm-order-modal"></div>
     {% endif %}
 </div>

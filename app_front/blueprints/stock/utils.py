@@ -375,3 +375,57 @@ def create_tag(name: str, description: str = "") -> Dict[str, Any]:
     repo = TagsRepository(session)
     tag = repo.create({"name": name, "description": description})
     return {"id": tag.id, "name": tag.name, "description": tag.description}
+
+
+# ============================================================================
+# Workflow commandes fournisseurs
+# ============================================================================
+
+
+def confirm_supplier_order(order_id: int) -> OrderIn:
+    """Confirme une commande fournisseur (draft → sended).
+
+    Args:
+        order_id: L'identifiant de la commande à confirmer.
+
+    Returns:
+        L'objet OrderIn mis à jour.
+
+    Raises:
+        ValueError: Si la commande n'existe pas ou n'est pas en état 'draft'.
+        RuntimeError: En cas d'erreur lors du commit.
+    """
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.confirm_order(order_id)
+
+
+def receive_order_line(
+    line_id: int, qty_received: int, qty_cancelled: int
+) -> int:
+    """Traite la réception d'une ligne de commande avec split possible.
+
+    Args:
+        line_id: L'identifiant de la ligne de commande.
+        qty_received: La quantité reçue.
+        qty_cancelled: La quantité annulée.
+
+    Returns:
+        L'ID de la commande parente.
+
+    Raises:
+        ValueError: Si les quantités sont incohérentes.
+        RuntimeError: En cas d'erreur lors du commit.
+    """
+    stock_repo = StockRepository(get_main_session())
+    return stock_repo.receive_order_line(line_id, qty_received, qty_cancelled)
+
+
+def update_order_external_ref(order_id: int, external_ref: str) -> None:
+    """Met à jour la référence externe d'une commande fournisseur.
+
+    Args:
+        order_id: L'identifiant de la commande.
+        external_ref: La référence externe du fournisseur.
+    """
+    stock_repo = StockRepository(get_main_session())
+    stock_repo.update_order_external_ref(order_id, external_ref)

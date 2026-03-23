@@ -1,0 +1,145 @@
+{# ── Modale de réception d'une ligne de commande ──────────────────────────── #}
+<div class="modal show" id="receive-line-modal-dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Réception de ligne</h2>
+                <button type="button" class="btn-close"
+                        hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                        hx-target="#receive-line-modal"
+                        hx-swap="innerHTML"
+                        aria-label="Fermer"></button>
+            </div>
+
+            <form id="receive-line-form"
+                  method="post"
+                  hx-post="{{ url_for('stock_htmx_orders.receive_order_line_route', order_id=order.id, line_id=line.id) }}"
+                  hx-target="#orders-management"
+                  hx-swap="innerHTML">
+                <div class="modal-body">
+                    {{ form.hidden_tag() }}
+                    {{ form.line_id() }}
+                    {{ form.order_id() }}
+
+                    {# ── Informations sur la ligne ───────────────────────────── #}
+                    <div class="alert alert-info mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><small>Article :</small></p>
+                                <p class="fw-bold">{{ line.general_object.name }}</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="mb-1"><small>Qté commandée :</small></p>
+                                <p class="fw-bold">{{ line.qty_ordered }}</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="mb-1"><small>PU HT :</small></p>
+                                <p class="fw-bold">{{ "%.2f"|format(line.unit_price|float) }} €</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Champs de saisie des quantités ──────────────────────── #}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                {{ form.qty_received.label(class="form-label") }}
+                                {{ form.qty_received(
+                                    class="form-control",
+                                    id="qty_received",
+                                    type="number",
+                                    min="0",
+                                    max=line.qty_ordered,
+                                    step="1",
+                                    required=True
+                                ) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                {{ form.qty_cancelled.label(class="form-label") }}
+                                {{ form.qty_cancelled(
+                                    class="form-control",
+                                    id="qty_cancelled",
+                                    type="number",
+                                    min="0",
+                                    max=line.qty_ordered,
+                                    step="1",
+                                    required=True
+                                ) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="qty_pending">En attente</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="qty_pending"
+                                       value="{{ line.qty_ordered }}"
+                                       disabled
+                                       readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Message d'erreur de validation ──────────────────────── #}
+                    <div id="receive-validation-error" class="text-danger small mt-1" style="display: none;"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                            hx-target="#receive-line-modal"
+                            hx-swap="innerHTML">
+                        Annuler
+                    </button>
+                    {{ form.submit(class="btn btn-primary", id="submit-receive") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Script de calcul dynamique du reste en attente ──────────────── #}
+<script>
+(function() {
+    const qtyOrdered = {{ line.qty_ordered }};
+    const qtyReceived = document.getElementById('qty_received');
+    const qtyCancelled = document.getElementById('qty_cancelled');
+    const qtyPending = document.getElementById('qty_pending');
+    const errorDiv = document.getElementById('receive-validation-error');
+    const submitBtn = document.getElementById('submit-receive');
+
+    function updatePending() {
+        const r = parseInt(qtyReceived.value || 0, 10);
+        const c = parseInt(qtyCancelled.value || 0, 10);
+        const remaining = qtyOrdered - r - c;
+
+        qtyPending.value = remaining >= 0 ? remaining : '—';
+
+        if (r + c > qtyOrdered) {
+            errorDiv.textContent = 'La somme reçus + annulés dépasse la quantité commandée (' + qtyOrdered + ').';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = true;
+        } else if (r < 0 || c < 0) {
+            errorDiv.textContent = 'Les quantités ne peuvent pas être négatives.';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = true;
+        } else if (r === 0 && c === 0) {
+            errorDiv.textContent = 'Veuillez saisir au moins une quantité.';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = true;
+        } else {
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    }
+
+    if (qtyReceived && qtyCancelled) {
+        qtyReceived.addEventListener('input', updatePending);
+        qtyCancelled.addEventListener('input', updatePending);
+        updatePending();
+    }
+})();
+</script>

@@ -647,3 +647,119 @@
         background: variables.$gray-100;
     }
 }
+
+/* ============================================================================ */
+/* receive_line.html — Modale de réception de ligne de commande               */
+/* ============================================================================ */
+#receive-line-modal {
+    &:empty {
+        display: none;
+    }
+
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+
+    .modal-dialog {
+        width: 90%;
+        max-width: 640px;
+        margin: 0;
+    }
+
+    .modal-content {
+        background: #fff;
+        border-radius: variables.$radius-sm;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+        overflow: hidden;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: variables.$space-md variables.$space-lg;
+        border-bottom: 1px solid variables.$gray-200;
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.15rem;
+            color: variables.$primary-color;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: variables.$gray-500;
+            line-height: 1;
+            padding: 0;
+            transition: color 0.2s;
+
+            &:hover {
+                color: variables.$gray-800;
+            }
+        }
+    }
+
+    .modal-body {
+        padding: variables.$space-lg;
+
+        .form-group {
+            margin-bottom: variables.$space-md;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: variables.$space-xs;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: variables.$gray-700;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: variables.$space-sm variables.$space-md;
+            border: 1px solid variables.$gray-300;
+            border-radius: variables.$radius-xs;
+            font-family: variables.$font-primary;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+
+            &:focus {
+                outline: none;
+                border-color: variables.$primary-color;
+                box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
+            }
+
+            &:disabled {
+                background: variables.$gray-100;
+                color: variables.$gray-600;
+            }
+        }
+
+        .row {
+            display: flex;
+            gap: variables.$space-md;
+
+            > div {
+                flex: 1;
+            }
+        }
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: variables.$space-sm;
+        padding: variables.$space-md variables.$space-lg;
+        border-top: 1px solid variables.$gray-200;
+        background: variables.$gray-100;
+    }
+}
