@@ -132,46 +132,18 @@ def object_form():
     return render_template(OBJECT_FORM, form=form, form_state="create")
 
 
-@bp_stock_htmx_search.get("/object/view/<int:object_id>")
-def object_view(object_id: int):
-    """Retourne le formulaire de l'objet en mode consultation (HTMX)."""
+@bp_stock_htmx_search.get("/object/<action>/<int:object_id>")
+def object_view_or_edit(action: str, object_id: int):
+    """Retourne le formulaire de l'objet en mode consultation ou édition (HTMX)."""
     obj = get_object_by_id(object_id)
     if obj is None:
         return UNKNOWN_OBJECT, 404
     form = CreateObjectForm()
-    form.supplier_id.data = str(obj.supplier_id)
-    form.supplier_name.data = obj.supplier.name if obj.supplier else ""
-    form.general_object_type.data = obj.general_object_type
-    form.ean_13.data = obj.ean13
-    form.name.data = obj.name
-    form.description.data = obj.description or ""
-    form.price.data = str(obj.price)
+    form.populate_from_object(obj)
     return render_template(
         OBJECT_FORM,
         form=form,
-        form_state="view",
-        obj=obj,
-    )
-
-
-@bp_stock_htmx_search.get("/object/edit/<int:object_id>")
-def object_edit(object_id: int):
-    """Retourne le formulaire de l'objet en mode édition (HTMX)."""
-    obj = get_object_by_id(object_id)
-    if obj is None:
-        return UNKNOWN_OBJECT, 404
-    form = CreateObjectForm()
-    form.supplier_id.data = str(obj.supplier_id)
-    form.supplier_name.data = obj.supplier.name if obj.supplier else ""
-    form.general_object_type.data = obj.general_object_type
-    form.ean_13.data = obj.ean13
-    form.name.data = obj.name
-    form.description.data = obj.description or ""
-    form.price.data = str(obj.price)
-    return render_template(
-        OBJECT_FORM,
-        form=form,
-        form_state="edit",
+        form_state=action,
         obj=obj,
     )
 
@@ -182,11 +154,24 @@ def object_complement():
     object_type = request.args.get("general_object_type", "other")
     form_state = request.args.get("form_state", "create")
     form = CreateObjectForm()
+    obj = None
+    if form_state == "edit" or form_state == "view":
+        object_id = request.args.get("object_id")
+        try:
+            if object_id is None:
+                raise ValueError("object_id est requis pour l'édition ou la consultation")
+            object_id = int(object_id)
+        except ValueError as exc:
+            raise ValueError("object_id doit être un entier valide") from exc
+        obj = get_object_by_id(object_id)
+        if obj is None:
+            raise ValueError("Objet introuvable pour l'ID fourni")
     return render_template(
         OBJECT_COMPLEMENT,
         form=form,
         object_type=object_type,
         form_state=form_state,
+        obj=obj
     )
 
 

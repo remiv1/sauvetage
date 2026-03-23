@@ -176,3 +176,14 @@ class CreateObjectForm(FlaskForm):
     obj_metadatas = FormField(MetadataForm)  # type: ignore[arg-type]
     media_files = FieldList(FormField(MediaFileForm), min_entries=0)  # type: ignore[arg-type]
     submit = SubmitField("Valider")
+
+    def populate_from_object(self, obj: Any):
+        """Remplit les champs du formulaire à partir d'un objet existant."""
+        self.general_object_id.data = str(obj.id)
+        self.supplier_id.data = str(obj.supplier_id)
+        self.supplier_name.data = obj.supplier.name
+        self.general_object_type.data = obj.general_object_type
+        self.ean_13.data = obj.ean13
+        self.name.data = obj.name
+        self.description.data = obj.description
+        self.price.data = str(obj.price)

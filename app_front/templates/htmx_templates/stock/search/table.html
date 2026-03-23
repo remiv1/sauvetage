@@ -62,7 +62,7 @@
                         {# Bouton Voir #}
                         <button class="action-icon action-view"
                                 title="Voir le détail"
-                                hx-get="{{ url_for('stock_htmx_search.object_view', object_id=item.id) }}"
+                                hx-get="{{ url_for('stock_htmx_search.object_view_or_edit', action='view', object_id=item.id) }}"
                                 hx-target="#object-modal-container"
                                 hx-swap="innerHTML">
                             {% include "svg/eye.html" %}
@@ -70,7 +70,7 @@
                         {# Bouton Éditer #}
                         <button class="action-icon action-edit"
                                 title="Éditer l'article"
-                                hx-get="{{ url_for('stock_htmx_search.object_edit', object_id=item.id) }}"
+                                hx-get="{{ url_for('stock_htmx_search.object_view_or_edit', action='edit', object_id=item.id) }}"
                                 hx-target="#object-modal-container"
                                 hx-swap="innerHTML">
                             {% include "svg/edit.html" %}

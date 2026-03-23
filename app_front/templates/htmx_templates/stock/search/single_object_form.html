@@ -39,7 +39,7 @@
                   {% if not disabled %}
                     {% if form_state == 'create' %}
                             hx-post="{{ url_for('stock_htmx_search.create_object') }}"
-                        {% elif form_state == 'edit' and obj %}
+                        {% elif form_state in ['edit', 'view'] and obj %}
                             hx-post="{{ url_for('stock_htmx_search.edit_object', object_id=obj.id) }}"
                         {% endif %}
                     hx-target="#object-modal-container"
@@ -141,12 +141,12 @@
                      hx-target="this"
                      hx-swap="innerHTML"
                      {% elif form_state == 'edit' and obj %}
-                     hx-get="{{ url_for('stock_htmx_search.object_complement_edit', object_id=obj.id) }}"
+                     hx-get="{{ url_for('stock_htmx_search.object_complement', object_id=obj.id, form_state=form_state) }}"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML"
                      {% elif form_state == 'view' and obj %}
-                     hx-get="{{ url_for('stock_htmx_search.object_complement_view', object_id=obj.id) }}"
+                     hx-get="{{ url_for('stock_htmx_search.object_complement', object_id=obj.id, form_state=form_state) }}"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML"
