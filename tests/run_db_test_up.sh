@@ -121,3 +121,6 @@ echo "✅ Migrations appliquées avec succès"
 
 echo "🚀 Lancement des tests (db_objects/) via tests/scripts/run_tests_db_objects.sh"
 "$SCRIPT_DIR/scripts/run_tests_db_objects.sh" "$SCRIPT_DIR"
+
+echo "🚀 Lancement des tests (front/) via tests/scripts/run_tests_front.sh"
+"$SCRIPT_DIR/scripts/run_tests_front.sh" "$SCRIPT_DIR"

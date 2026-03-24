@@ -55,19 +55,19 @@ cols = list(zip(*rows))
 headers = ("File", "Test", "Status", "Message")
 col_widths = [max(len(headers[i]), max(len(str(x)) for x in cols[i])) for i in range(4)]
 
-sep = (
+SEP = (
     "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
 )  # pylint: disable=invalid-name
-fmt = (
+FMT = (
     "| " + " | ".join("{:" + str(w) + "}" for w in col_widths) + " |"
 )  # pylint: disable=invalid-name
 
-print("\n" + sep)
-print(fmt.format(*headers))
-print(sep)
+print("\n" + SEP)
+print(FMT.format(*headers))
+print(SEP)
 for r in rows:
-    print(fmt.format(*r))
-print(sep + "\n")
+    print(FMT.format(*r))
+print(SEP + "\n")
 
 # Exit code not handled here; caller should use pytest rc
 sys.exit(0)

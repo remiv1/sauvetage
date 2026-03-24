@@ -35,12 +35,12 @@ def tags(
 
 @pytest.fixture
 def book_object(
-    db_session_main: Session,
+    db_session_main: Session,   # pylint: disable=redefined-outer-name, unused-argument
     supplier: Suppliers,
     tags: list[Tags],  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Books:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un objet de type livre."""
-    general_object = GeneralObjects(
+    general_object = GeneralObjects(    # pylint: disable=redefined-outer-name
         supplier_id=supplier.id,
         general_object_type="book",
         ean13="9781234567890",
@@ -85,3 +85,21 @@ def book_object(
     db_session_main.add(media)
     db_session_main.commit()
     return general_object
+
+@pytest.fixture
+def general_object(
+    db_session_main: Session,   # pylint: disable=redefined-outer-name, unused-argument
+    supplier: Suppliers,
+) -> GeneralObjects:  # pylint: disable=redefined-outer-name
+    """Fixture pour créer un objet générique de test."""
+    obj = GeneralObjects(
+        supplier_id=supplier.id,
+        general_object_type="generic",
+        ean13="9789876543210",
+        name="Test Generic Object",
+        description="This is a generic test object.",
+        price=29.99,
+    )
+    db_session_main.add(obj)
+    db_session_main.commit()
+    return obj

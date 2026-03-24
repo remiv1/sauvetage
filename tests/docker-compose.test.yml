@@ -8,3 +8,12 @@ services:
       - ../databases/main/.env.db_main
     ports:
       - "5433:5432"
+
+  db-logs:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.mongo.test
+    env_file:
+      - ../databases/logs/.env.db_logs
+    ports:
+      - "27018:27017"

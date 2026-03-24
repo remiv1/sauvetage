@@ -1,5 +1,6 @@
 """Tests pour les modèles d'objets dans la base de données."""
 
+from decimal import Decimal
 from sqlalchemy.orm import Session, joinedload
 from db_models.objects import InventoryMovements, GeneralObjects, Books, Suppliers
 
@@ -25,12 +26,11 @@ def test_add_movements(
         assert retrieved[i].source == movement.source
         assert retrieved[i].destination == movement.destination
         assert retrieved[i].notes == movement.notes
-    assert retrieved is not None
-    assert retrieved.is_active is False  # type: ignore
-    assert retrieved.name == "Test Book"  # type: ignore
-    assert retrieved.supplier.name == "Fournisseur Test"  # type: ignore
-    assert retrieved.book.author == "John Doe"  # type: ignore
-    assert len(retrieved.object_tags) == 3  # type: ignore
-    assert retrieved.obj_metadatas[0].semistructured_data == {"key": "value"}  # type: ignore
-    assert len(retrieved.media_files) == 1  # type: ignore
-    assert retrieved.media_files[0].file_name == "test_image.jpg"  # type: ignore
+    
+    # Vérifier les propriétés du general_object fixture
+    assert general_object is not None
+    assert general_object.is_active is True
+    assert general_object.name == "Test Generic Object"
+    assert general_object.price == Decimal("29.99")
+    assert general_object.supplier is not None
+    assert general_object.supplier.name == "Fournisseur Test"

@@ -1,0 +1,25 @@
+FROM docker.io/library/mongo:7.0.16
+
+# Installer des outils supplémentaires
+RUN apt-get update && apt-get install -y bash gettext
+
+# Copier les fichiers d'environnement et scripts
+COPY databases/logs/.env.db_logs /tmp/.env.db_logs
+COPY tests/init_mongo/02_immutable_collections.js /docker-entrypoint-initdb.d/02_immutable_collections.js
+COPY tests/init_mongo/03_collections_rotation.js /docker-entrypoint-initdb.d/03_collections_rotation.js
+COPY tests/init_mongo/00_generate_config.sh /tmp/00_generate_config.sh
+COPY tests/init_mongo/*.js.pattern /tmp/
+
+# Rendre exécutable et générer les fichiers JS
+RUN chmod +x /tmp/00_generate_config.sh && \
+    set -a && \
+    . /tmp/.env.db_logs && \
+    set +a && \
+    cd /tmp && \
+    ./00_generate_config.sh && \
+    mkdir -p /docker-entrypoint-initdb.d && \
+    cp /tmp/*.js /docker-entrypoint-initdb.d/ 2>/dev/null || true
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD mongosh --eval "db.adminCommand('ping')" || exit 1

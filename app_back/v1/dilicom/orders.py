@@ -23,5 +23,6 @@ def send_dilicom_order():
 
     Cette route récupère les références à créer/supprimer, les traite et retourne la liste
     des références traitées avec leur statut de synchronisation.
+    # TODO: Documenter les paramètres attendus et les réponses possibles.
     """
     pass  # TODO: implémenter la logique d'envoi des commandes Dilicom

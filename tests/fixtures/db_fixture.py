@@ -14,29 +14,33 @@ On expose désormais deux engines / deux sessions dédiées:
 """
 
 from typing import Generator
+from urllib.parse import quote_plus
+from contextlib import contextmanager
 import os
 import pytest
 from dotenv import load_dotenv
+from flask import Flask
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.engine import Engine
 from db_models import WorkingBase, SecureBase  # type: ignore # pylint: disable=unused-import
 from db_models.objects import (  # type: ignore # pylint: disable=unused-import
     Order,
-    OrderLine,  # pylint: disable=unused-import# type: ignore
+    OrderLine,
     GeneralObjects,
     Books,
     OtherObjects,
     MediaFiles,
     ObjMetadatas,
     Tags,
-    ObjectTags,  # type: ignore # pylint: disable=unused-import
-    Shipment,  # type: ignore # pylint: disable=unused-import
-    InventoryMovements,  # type: ignore # pylint: disable=unused-import
-    Invoice,  # type: ignore # pylint: disable=unused-import
-    Suppliers,  # type: ignore # pylint: disable=unused-import
-    Users,  # type: ignore # pylint: disable=unused-import
+    ObjectTags,
+    Shipment,
+    InventoryMovements,
+    Invoice,
+    Suppliers,
+    Users,
 )  # type: ignore # pylint: disable=unused-import
+from tests.front.conftest import app    # pylint: disable=unused-import # type: ignore
 
 
 def _load_env() -> None:
@@ -53,6 +57,16 @@ def _load_env() -> None:
     if os.path.exists(dotenv_file_path):
         load_dotenv(dotenv_file_path)
 
+    # Also load MongoDB env vars if available
+    mongo_env_path = join(
+        abspath(join(dirname(__file__), "..", "..")),
+        "databases",
+        "logs",
+        ".env.db_logs",
+    )
+    if os.path.exists(mongo_env_path):
+        load_dotenv(mongo_env_path)
+
 
 def _make_engine(dbname: str, username: str, password: str, port: str) -> Engine:
     """Créer un engine en connectant toujours sur localhost et le port fourni.
@@ -65,6 +79,7 @@ def _make_engine(dbname: str, username: str, password: str, port: str) -> Engine
     return create_engine(url, pool_pre_ping=True, future=True)
 
 
+@contextmanager
 def _session_scope(engine_to_use: Engine) -> Generator[Session, None, None]:
     connection = engine_to_use.connect()
     transaction = connection.begin()
@@ -86,7 +101,7 @@ def _session_scope(engine_to_use: Engine) -> Generator[Session, None, None]:
 def engine_main() -> Engine:
     """Engine pour `POSTGRES_DB_MAIN` (utilisateur app)."""
     _load_env()
-    port = "5433"
+    port = os.environ.get("PYTEST_DB_PORT", "5433")
     db = os.environ.get("POSTGRES_DB_MAIN", "sauvetage_main")
     user = os.environ.get("POSTGRES_USER_APP", "app")
     pw = os.environ.get("POSTGRES_PASSWORD_APP", "")
@@ -97,7 +112,7 @@ def engine_main() -> Engine:
 def engine_users() -> Engine:
     """Engine pour `POSTGRES_DB_USERS` (utilisateur migr)."""
     _load_env()
-    port = "5433"
+    port = os.environ.get("PYTEST_DB_PORT", "5433")
     db = os.environ.get("POSTGRES_DB_USERS", "sauvetage_users")
     user = os.environ.get("POSTGRES_USER_MIGR", "migr")
     pw = os.environ.get("POSTGRES_PASSWORD_MIGR", "")
@@ -128,8 +143,8 @@ def engine(
 
 
 @pytest.fixture(scope="function")
-def db_session_main(
-    engine_main: Engine,
+def db_session_main(app: Flask,  # pylint: disable=redefined-outer-name, unused-argument
+    engine_main: Engine,    # pylint: disable=redefined-outer-name, unused-argument
     engine_users: Engine,  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Generator[
     Session, None, None
@@ -142,12 +157,73 @@ def db_session_main(
     """
     # Utiliser toujours `engine_main` pour la session principale. Si vous
     # avez besoin d'accéder à la DB users, utilisez la fixture `db_session_users`.
-    yield from _session_scope(engine_main)
+    with _session_scope(engine_main) as session:
+        app.db_session_main = session  # type: ignore
+        yield session
 
 
 @pytest.fixture(scope="function")
-def db_session_users(
+def db_session_users(app: Flask,  # pylint: disable=redefined-outer-name, unused-argument
     engine_users: Engine,  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Generator[Session, None, None]:  # pylint: disable=redefined-outer-name
     """Session pour la DB `users` (transaction rollbackée par test)."""
-    yield from _session_scope(engine_users)
+    with _session_scope(engine_users) as session:
+        app.db_session_users = session  # type: ignore
+        yield session
+
+
+# MongoDB fixtures for tests running on the host (not inside container)
+@pytest.fixture(scope="session")
+def mongo_client():
+    """MongoClient for tests running on localhost.
+    
+    Uses localhost:27017 for tests running on the host.
+    Reads credentials from .env.db_logs.
+    """
+    try:
+        from pymongo import MongoClient # pylint: disable=import-outside-toplevel, unused-import
+    except ImportError:
+        pytest.skip("pymongo not installed")
+        return None
+
+    _load_env()
+
+    host = os.environ.get("MONGO_HOST", "db-logs")  # pylint: disable=unused-variable # type: ignore
+    # Use TEST_MONGO_PORT if set (for tests), fall back to MONGO_PORT or default
+    port = int(os.environ.get("TEST_MONGO_PORT", os.environ.get("MONGO_PORT", 27018)))
+    username = os.environ.get("MONGO_USER_APP", "app")
+    password = os.environ.get("MONGO_PASSWORD_APP", "")
+    database = os.environ.get("MONGO_DB_LOGS", "sauvetage_logs")
+
+    # When running tests from host, override host to localhost
+    # (db-logs only works inside compose network)
+    test_host = os.environ.get("TEST_MONGO_HOST", "localhost")
+
+    client = None
+    try:
+        username_enc = quote_plus(username)
+        password_enc = quote_plus(password)
+        connection_string = (
+            f"mongodb://{username_enc}:{password_enc}@"
+            f"{test_host}:{port}/{database}"
+            f"?authSource={database}&connectTimeoutMS=5000"
+        )
+
+        client = MongoClient(connection_string)
+        # Test connection
+        client.admin.command("ping")
+        yield client
+    finally:
+        if client:
+            client.close()
+
+
+@pytest.fixture(scope="session")
+def mongo_db(mongo_client): # pylint: disable=redefined-outer-name, unused-argument
+    """MongoDB database instance for tests."""
+    if mongo_client is None:
+        pytest.skip("MongoDB not available")
+
+    _load_env()
+    database = os.environ.get("MONGO_DB_LOGS", "sauvetage_logs")
+    return mongo_client[database]
