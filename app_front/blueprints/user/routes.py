@@ -63,8 +63,8 @@ def login():
     return render_page("login", form=form, first_user=no_users)
 
 
-@permission_required(SUPER_ADMIN)
 @bp_user.route("/register", methods=["GET", "POST"])
+@permission_required(SUPER_ADMIN)
 def register():
     """Route pour la création d'un nouvel utilisateur."""
     form = UserCreateForm()
@@ -85,8 +85,8 @@ def register():
     return render_page("register", form=form)
 
 
+@bp_user.get("/logout")
 @permission_required(ALL, _and=False)
-@bp_user.route("/logout")
 def logout():
     """Route pour la déconnexion de l'utilisateur connecté."""
     session.clear()
@@ -94,8 +94,8 @@ def logout():
     return redirect(url_for("user.login"))
 
 
-@permission_required(ALL, _and=False)
 @bp_user.route("/change-password/<username>", methods=["GET", "POST"])
+@permission_required(ALL, _and=False)
 def chg_pwd(username):
     """Route pour changer le mot de passe d'un utilisateur spécifique."""
     form = UserPasswordChangeForm()
@@ -130,8 +130,8 @@ def chg_pwd(username):
     return render_page("change_password", form=form, username=username)
 
 
-@permission_required([ADMIN, SUPER_ADMIN], _and=False)
 @bp_user.route("/modify/<username>", methods=["GET", "POST"])
+@permission_required([ADMIN, SUPER_ADMIN], _and=False)
 def modify(username):
     """Route pour éditer les informations d'un utilisateur spécifique."""
     form = UserEditForm()

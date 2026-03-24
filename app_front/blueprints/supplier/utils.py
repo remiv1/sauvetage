@@ -1,12 +1,13 @@
 """Utilitaires pour les fournisseurs, utilisés par les routes et tests."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from sqlalchemy import select
+from sqlalchemy.sql import and_
 from app_front.config.db_conf import get_main_session
 from db_models.objects import Suppliers
 
 
-def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str, Any]]:
+def search_suppliers(q: str = "", data_returned: str = "name") -> Optional[List[Dict[str, Any]]]:
     """
     Recherche de fournisseurs par nom (ILIKE, accès DB direct).
 
@@ -21,7 +22,12 @@ def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str,
     try:
         query = (
             select(Suppliers)
-            .where(Suppliers.is_active.is_(True), Suppliers.name.ilike(f"%{q}%"))
+            .where(
+                and_(
+                    Suppliers.is_active.is_(True),
+                    Suppliers.name.ilike(f"%{q}%")
+                )
+            )
             .order_by(Suppliers.name)
             .limit(10)
         )
@@ -33,7 +39,7 @@ def search_suppliers(q: str = "", data_returned: str = "name") -> List[Dict[str,
         if data_returned == "id_name_gln":
             return [
                 {"id": s.id, "name": s.name, "gln13": s.gln13 or ""} for s in results
-            ]
+            ] if results else None
         return [{"id": s.id, "name": s.name} for s in results]
     finally:
         session.close()

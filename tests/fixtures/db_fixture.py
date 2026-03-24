@@ -188,7 +188,7 @@ def mongo_client():
 
     _load_env()
 
-    host = os.environ.get("MONGO_HOST", "db-logs")  # pylint: disable=unused-variable # type: ignore
+    _ = os.environ.get("MONGO_HOST", "db-logs")  # pylint: disable=unused-variable # type: ignore
     # Use TEST_MONGO_PORT if set (for tests), fall back to MONGO_PORT or default
     port = int(os.environ.get("TEST_MONGO_PORT", os.environ.get("MONGO_PORT", 27018)))
     username = os.environ.get("MONGO_USER_APP", "app")

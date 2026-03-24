@@ -32,29 +32,14 @@ def council():
 @bp_stock.route("/orders", methods=["GET", "POST"])
 def orders():
     """Page de gestion des commandes fournisseurs (entrantes)"""
-    form = OrderInCreateForm()
     orders_list = get_supplier_orders()
-    if form.validate_on_submit():
-        try:
-            create_order_in_db(form)
-            flash("Commande créée avec succès.", "success")
-            return redirect(url_for("stock_htmx_orders.new_order_table"))
-        except (ValueError, RuntimeError) as exc:
-            flash(str(exc), "error")
     return render_page("stock_order", orders=orders_list)
 
 
 @bp_stock.route("/orders/new", methods=["GET", "POST"])
 def create_order():
     """Création d'une nouvelle commande fournisseur"""
-    form = OrderInCreateForm()
-    if form.validate_on_submit():
-        try:
-            create_order_in_db(form)
-            flash("Commande créée avec succès.", "success")
-            return redirect(url_for("stock_htmx_orders.new_order_table"))
-        except (ValueError, RuntimeError) as exc:
-            flash(str(exc), "error")
+    # TODO: implémenter le formulaire de création de commande et le traitement associé
     return render_page("stock_order")
 
 

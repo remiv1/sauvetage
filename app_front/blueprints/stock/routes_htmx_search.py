@@ -166,6 +166,8 @@ def object_complement():
         obj = get_object_by_id(object_id)
         if obj is None:
             raise ValueError("Objet introuvable pour l'ID fourni")
+    else:
+        raise ValueError("Opération introuvable.")
     return render_template(
         OBJECT_COMPLEMENT,
         form=form,
@@ -175,14 +177,12 @@ def object_complement():
     )
 
 
-@bp_stock_htmx_search.route("/object/create", methods=["POST"])
+@bp_stock_htmx_search.post("/object/create")
 def create_object():
     """Valide et crée un nouvel objet à partir du formulaire global (HTMX)."""
     form = CreateObjectForm()
     if form.validate_on_submit():
         try:
-            print("DEBUG Form data for object creation:")
-            print(form)
             new_obj_id = save_object_complete(form)
             return render_template(
                 OBJECT_FORM,
@@ -192,7 +192,6 @@ def create_object():
             )
         except ValueError as exc:
             flash(str(exc), "danger")
-            print(f"DEBUG Error creating object: {exc}")
             return (
                 render_template(
                     OBJECT_FORM,
@@ -201,14 +200,13 @@ def create_object():
                 ),
                 422,
             )
-    print(f"DEBUG Form errors: {form.errors}")
     return (
         render_template(
             OBJECT_FORM,
             form=form,
             form_state="create",
         ),
-        422,
+        423,
     )
 
 

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import pytest
+from fastapi.testclient import TestClient
 
 
 # Charger les variables d'environnement au niveau du module
@@ -35,6 +36,7 @@ if main_pwd and secure_pwd:
 
 # Lazy import of Flask app - deferred until after patching
 _flask_app = None   # pylint: disable=invalid-name
+_fast_app = None    # pylint: disable=invalid-name
 
 
 def get_flask_app():
@@ -44,6 +46,15 @@ def get_flask_app():
         from app_front.main import app  # pylint: disable=import-outside-toplevel, redefined-outer-name
         _flask_app = app
     return _flask_app
+
+
+def get_fast_app():
+    """Getter for FastAPI app."""
+    global _fast_app    # pylint: disable=global-statement
+    if _fast_app is None:
+        from app_back.main import app as fastapi_app  # pylint: disable=import-outside-toplevel, redefined-outer-name
+        _fast_app = fastapi_app
+    return _fast_app
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -93,3 +104,25 @@ def authenticated_client(client):   # pylint: disable=redefined-outer-name, unus
         sess["is_logged_in"] = True
 
     return client
+
+@pytest.fixture(scope="session")
+def fastapi_test_client():
+    """Fixture pour créer un test client FastAPI."""
+    fastapi_app = get_fast_app()
+    with TestClient(fastapi_app) as client_fastapi:
+        yield client_fastapi
+
+
+@pytest.fixture
+@pytest.fixture
+def patch_requests_to_fastapi(fastapi_test_client): # pylint: disable=redefined-outer-name, unused-argument
+    """Fixture pour patcher les appels requests vers FastAPI local."""
+    API_URL = "http://localhost:8000"  # URL de base pour les appels FastAPI # pylint: disable=invalid-name
+    def fake_request(method, url, **kwargs):
+        # Convertit l’URL absolue en path FastAPI
+        path = url.replace(API_URL, "")
+        # Redirige vers FastAPI local
+        return fastapi_test_client.request(method, path, **kwargs)
+
+    with patch("app_front.utils.log_user.requests.request", side_effect=fake_request):
+        yield

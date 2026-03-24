@@ -1,6 +1,6 @@
-<!-- template dilicom_suppliers_dropdown.html -->
 {# Dropdown fournisseurs dans le contexte Dilicom (avec GLN13) #}
-{% if suppliers %}
+{% if suppliers is not none %}
+    <!-- template dilicom_suppliers_dropdown.html -->
     {% for s in suppliers %}
     <div class="dropdown-item"
          hx-get="{{ url_for('supplier_htmx.select_dilicom_supplier', supplier_id=s.id, supplier_name=s.name, gln13=s.gln13) }}"
@@ -11,5 +11,6 @@
     </div>
     {% endfor %}
 {% else %}
+    <!-- template dilicom_suppliers_dropdown.html - vide -->
     <div class="dropdown-item text-muted">Aucun fournisseur trouvé.</div>
 {% endif %}

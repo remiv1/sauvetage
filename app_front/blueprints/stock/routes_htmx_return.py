@@ -57,7 +57,7 @@ def new_return_table():
     return render_template("htmx_templates/stock/returns/fragments/new_table.html")
 
 
-@bp_stock_htmx_return.route("/returns/line/create", methods=["GET", "POST"])
+@bp_stock_htmx_return.get("/returns/line/create")
 def new_return_line_form():
     """Retourne le formulaire de création d'une ligne de retour fournisseur (HTMX)."""
     return render_template(NEW_LINE)

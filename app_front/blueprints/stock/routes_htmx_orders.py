@@ -60,16 +60,16 @@ def new_order_section():
         return render_template(
             EDIT_TABLE, view_state="new", order=order, ext_ref_form=ExternalRefForm()
             )
+    else:
+        if request.method == "POST":
+            msg = "Formulaire de création de commande invalide : " + str(form.errors)
+            raise ValueError(msg)
     return render_template(SECTION_NEW, form=form)
 
 
-@bp_stock_htmx_orders.route("/<int:order_id>/section/edit", methods=["GET", "POST"])
+@bp_stock_htmx_orders.get("/<int:order_id>/section/edit")
 def edit_order(order_id: int):
     """Retourne la section complète d'une commande fournisseur existante (HTMX)."""
-    if request.method == "POST":
-        form = OrderInCreateForm()
-        if form.validate_on_submit():
-            pass  # TODO: implémenter la logique de mise à jour de la commande
     order = get_order_by_id(order_id)
     return render_template(
         EDIT_TABLE, id_order=order_id, order=order,

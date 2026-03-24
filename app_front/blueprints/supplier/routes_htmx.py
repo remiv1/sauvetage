@@ -28,11 +28,7 @@ def get_suppliers(type_of_data: str):
             suppliers=suppliers,
             query=supplier_name,
         )
-    return render_template(
-        "htmx_templates/supplier/suppliers_dropdown.html",
-        suppliers=suppliers,
-        query=supplier_name,
-    )
+    raise ValueError(f"Type de données non supporté : {type_of_data}")
 
 
 @bp_supplier_htmx.get("/add-new/<name>")
@@ -43,7 +39,7 @@ def add_new_supplier(name: str):
     return render_template(ADD_FORM_TEMPLATE, form=form, name=name)
 
 
-@bp_supplier_htmx.route("/create", methods=["POST"])
+@bp_supplier_htmx.post("/create")
 def create_supplier_htmx():
     """Crée un fournisseur via HTMX (form-encoded + WTForms)."""
     form = SupplierCreateForm()
@@ -57,8 +53,9 @@ def create_supplier_htmx():
         try:
             result = create_supplier(data)
         except ValueError as exc:
+            print(f"Erreur lors de la création du fournisseur : {exc}")
             form.supplier_name.errors = list(form.supplier_name.errors) + [str(exc)]
-            return render_template(ADD_FORM_TEMPLATE, form=form), 422
+            return render_template(ADD_FORM_TEMPLATE, form=form), 423
         # Succès : vider la modale et notifier l'application
         response = make_response("", 200)
         response.headers["HX-Trigger"] = json.dumps({"supplier:created": result})
