@@ -1,9 +1,10 @@
 """Module de routage pour les utilisateurs (users) de l'application Sauvetage."""
 
 from urllib.parse import unquote
-from typing import Any, Dict
-from fastapi import APIRouter, Request
+from typing import Any, Dict, Annotated
+from fastapi import APIRouter, Request, Depends
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 from app_back.db_connection.config import get_secure_session
 from db_models.objects import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
@@ -33,13 +34,13 @@ def read_users(username: str):
 
 
 @router.post("/login")
-async def log_user(request: Request):
+async def log_user(request: Request, session: Annotated[Session, Depends(get_secure_session)]):
     """Recherche d'un utilisateur par le username."""
     data = await request.json()
     username = data.get("username")
     clear_password = data.get("password")
 
-    user_obj = UsersRepository(get_secure_session())
+    user_obj = UsersRepository(session)
     user = user_obj.get_by_username(username)
     ok = user_obj.validate_password(user=user, password=clear_password)
 
@@ -52,7 +53,7 @@ async def log_user(request: Request):
     if user and user.is_locked:
         return_dict["error"] = "Compte vérouillé après 3 erreurs de connexion."
     elif user and ok:
-        pass  # type: ignore
+        user_obj.reset_failed_logins(user)
     elif user:
         user_obj.add_failed_login(user)
         return_dict["error"] = "Mot de passe incorrect."

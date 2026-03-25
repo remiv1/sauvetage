@@ -8,7 +8,7 @@
 """
 
 from urllib.parse import unquote
-from flask import Blueprint, redirect, url_for, flash, session
+from flask import Blueprint, redirect, url_for, flash, session, request
 from app_front.blueprints.user.forms import (
     LoginForm,
     UserCreateForm,
@@ -58,6 +58,9 @@ def login():
             session["permissions"] = permissions
             flash("Connexion réussie.", "success")
             return redirect(url_for("home"))
+    else:
+        if form.errors:
+            flash("Veuillez remplir tous les champs du formulaire de connexion.", "danger")
 
     # Afficher le formulaire de connexion
     return render_page("login", form=form, first_user=no_users)
@@ -127,6 +130,9 @@ def chg_pwd(username):
             return redirect(url_for("home"))
         except (ValueError, KeyError) as e:
             flash(str(e), "danger")
+    else:
+        if request.method == "POST":
+            raise ValueError("Le formulaire de changement de mot de passe n'est pas valide.")
     return render_page("change_password", form=form, username=username)
 
 

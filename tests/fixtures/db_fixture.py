@@ -172,6 +172,32 @@ def db_session_users(app: Flask,  # pylint: disable=redefined-outer-name, unused
         yield session
 
 
+@pytest.fixture(scope="function")
+def db_session_users_shared(
+    app: Flask,  # pylint: disable=redefined-outer-name, unused-argument
+    engine_users: Engine,  # pylint: disable=redefined-outer-name, unused-argument
+) -> Generator[Session, None, None]:  # pylint: disable=redefined-outer-name
+    """Session pour la DB `users` - reste ouverte pendant tout le test (pour FastAPI TestClient).
+    
+    Cette version ne ferme PAS la connexion entre les requêtes HTTP, ce qui permet
+    aux TestClient avec follow_redirects de fonctionner correctement.
+    """
+    connection = engine_users.connect()
+    transaction = connection.begin()
+    session_factory = sessionmaker(bind=connection)
+    local_session = scoped_session(session_factory)
+    session = local_session()
+    app.db_session_users = session  # type: ignore
+    try:
+        yield session
+    finally:
+        try:
+            session.close()
+        finally:
+            transaction.rollback()
+            connection.close()
+
+
 # MongoDB fixtures for tests running on the host (not inside container)
 @pytest.fixture(scope="session")
 def mongo_client():

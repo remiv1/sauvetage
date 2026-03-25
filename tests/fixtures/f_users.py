@@ -3,30 +3,44 @@
 import pytest
 from sqlalchemy.orm import Session
 from db_models.objects import Users, UsersPasswords
+from db_models.security.secur_sauv import PwdHasher
 from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type : ignore
     db_session_main,  # pylint: disable=unused-import # type : ignore
     engine,  # pylint: disable=unused-import # type : ignore
 )  # pylint: disable=unused-import # type : ignore
 
-FAKE_P_HASH = "pbkdf2:sha256:150000$test_salt$test_hash"
+# Mot de passe clair de test
+TEST_PASSWORD = "test_password_123"
+FAKE_P_HASH = PwdHasher().hash(TEST_PASSWORD)
 
 @pytest.fixture
-def user(
-    db_session_users: Session,  # pylint: disable=redefined-outer-name
+def make_user(
+    db_session_users_shared: Session,
     patch_requests_to_fastapi,  # pylint: disable=redefined-outer-name, unused-argument
-) -> Users:  # pylint: disable=redefined-outer-name
-    """Fixture pour créer un utilisateur de test."""
-    user = Users(  # pylint: disable=redefined-outer-name
+):
+    """Factory pour créer des utilisateurs de test paramétrables."""
+
+    def _create_user(
         username="Utilisateur Test",
         email="test@test.fr",
         permissions="9",
-    )
-    db_session_users.add(user)
-    db_session_users.flush()
-    password = UsersPasswords(
-        user_id=user.id,
         password_hash=FAKE_P_HASH,
-    )
-    db_session_users.add(password)
-    db_session_users.flush()
-    return user
+    ):
+        user_to_create = Users(
+            username=username,
+            email=email,
+            permissions=permissions,
+        )
+        db_session_users_shared.add(user_to_create)
+        db_session_users_shared.flush()
+
+        password = UsersPasswords(
+            user_id=user_to_create.id,
+            password_hash=password_hash,
+        )
+        db_session_users_shared.add(password)
+        db_session_users_shared.flush()
+
+        return user_to_create
+
+    return _create_user

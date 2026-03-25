@@ -6,7 +6,7 @@ Informations et scripts pour lancer les tests d'intégration et unitaires.
 
 ## Prérequis
 
-- Python 3.10+ (venv recommandé)
+- Python 3.12+ (venv recommandé)
 - `docker` ou `podman` pour lancer la base Postgres de test
 
 ## Scripts principaux
