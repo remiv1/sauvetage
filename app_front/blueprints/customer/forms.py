@@ -36,6 +36,7 @@ class CustomerMainForm(FlaskForm):
     civil_title = SelectField(
         "Civilité",
         choices=[
+            ("", "-- Sélectionner --"),
             ("m", "M."),
             ("mme", "Mme"),
             ("mlle", "Mlle"),

@@ -8,9 +8,9 @@ import pytest
 # |                          Gestion des tests de routes_htmx_search                               |
 # +================================================================================================+
 
-def test_cleared_authenticated(authenticated_client):
+def test_cleared_authenticated(client_all):
     """Tester que la route /stock/htmx/orders/cleared fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/htmx/orders/cleared")
+    response = client_all.get("/stock/htmx/orders/cleared")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
@@ -24,42 +24,42 @@ def test_cleared_unauthenticated(client):
     assert response.status_code == 302
 
 
-def test_search_table(authenticated_client,
+def test_search_table(client_all,
                       db_session_main,      # pylint: disable=redefined-outer-name, unused-argument
                       inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/htmx/search/table fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/htmx/search/table?ean13=9789876543210")
+    response = client_all.get("/stock/htmx/search/table?ean13=9789876543210")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template table.html -->")
 
 
-def test_dilicom_modal(authenticated_client,
+def test_dilicom_modal(client_all,
                       db_session_main,      # pylint: disable=redefined-outer-name, unused-argument
                       dilicom_referencial):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/htmx/search/dilicom/1 fonctionne avec une session authentifiée."""
-    response = authenticated_client.get(f"/stock/htmx/search/dilicom/{dilicom_referencial.id}")
+    response = client_all.get(f"/stock/htmx/search/dilicom/{dilicom_referencial.id}")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<p>Aucun référentiel Dilicom trouvé pour cet objet.</p>")
 
 
-def test_object_autocomplete(authenticated_client,
+def test_object_autocomplete(client_all,
                          db_session_main,      # pylint: disable=redefined-outer-name, unused-argument
                          dilicom_referencial):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/autocomplete/name?q=test
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/search/object/autocomplete/name?q=test")
+    response = client_all.get("/stock/htmx/search/object/autocomplete/name?q=test")
 
     assert response.status_code == 200
     assert response.text.startswith("<!-- template autocomplete_dropdown.html -->")
 
 
-def test_create_tag_htmx(authenticated_client,
+def test_create_tag_htmx(client_all,
                          db_session_main,):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/tag/create
@@ -67,7 +67,7 @@ def test_create_tag_htmx(authenticated_client,
     """
     alphabet = string.ascii_letters + string.digits
     aleatory_string = ''.join(secrets.choice(alphabet) for _ in range(16))
-    response = authenticated_client.post(
+    response = client_all.post(
         "/stock/htmx/search/object/tag/create",
         data={
             "name": aleatory_string,
@@ -78,37 +78,37 @@ def test_create_tag_htmx(authenticated_client,
     assert response.text.startswith("<!-- template tag_selected.html -->")
 
 
-def test_object_form(authenticated_client,
+def test_object_form(client_all,
                          db_session_main):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/form
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/search/object/form")
+    response = client_all.get("/stock/htmx/search/object/form")
 
     assert response.status_code == 200
     assert response.text.startswith("<!-- template single_object_form.html -->")
 
 
-def test_object_view_or_edit(authenticated_client,
+def test_object_view_or_edit(client_all,
                          general_object):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/view/1
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get(f"/stock/htmx/search/object/view/{general_object.id}")
+    response = client_all.get(f"/stock/htmx/search/object/view/{general_object.id}")
 
     assert response.status_code == 200
     assert response.text.startswith("<!-- template single_object_form.html -->")
 
 
-def test_object_complement(authenticated_client,
+def test_object_complement(client_all,
                          book_object):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/complement
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/search/object/complement",
+    response = client_all.get("/stock/htmx/search/object/complement",
                                         query_string={
                                             "general_object_type": "book",
                                             "form_state": "view",
@@ -119,7 +119,7 @@ def test_object_complement(authenticated_client,
     assert response.text.startswith("<!-- template object_complement.html -->")
 
     with pytest.raises(ValueError, match="Opération introuvable."):
-        authenticated_client.get("/stock/htmx/search/object/complement",
+        client_all.get("/stock/htmx/search/object/complement",
                                     query_string={
                                         "general_object_type": "other",
                                         "form_state": "monkey",
@@ -127,14 +127,14 @@ def test_object_complement(authenticated_client,
                                     })
 
 
-def test_create_object(authenticated_client, supplier, tags):   # pylint: disable=redefined-outer-name, unused-argument
+def test_create_object(client_all, supplier, tags):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/create
     fonctionne avec une session authentifiée.
     """
     alphabet = string.ascii_letters + string.digits
     aleatory_string = ''.join(secrets.choice(alphabet) for _ in range(16))
-    response = authenticated_client.post(
+    response = client_all.post(
         "/stock/htmx/search/object/create",
         data={
             "supplier_id": supplier.id,
@@ -166,17 +166,17 @@ def test_create_object(authenticated_client, supplier, tags):   # pylint: disabl
     assert response.status_code == 200
     assert response.text.startswith("<!-- template single_object_form.html -->")
 
-    response = authenticated_client.post("/stock/htmx/search/object/create", data={})
+    response = client_all.post("/stock/htmx/search/object/create", data={})
     assert response.status_code == 423
     assert response.text.startswith("<!-- template single_object_form.html -->")
 
 
-def test_edit_object(authenticated_client, book_object, supplier):   # pylint: disable=redefined-outer-name, unused-argument
+def test_edit_object(client_all, book_object, supplier):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/edit/1
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get(f"/stock/htmx/search/object/edit/{book_object.id}",
+    response = client_all.get(f"/stock/htmx/search/object/edit/{book_object.id}",
                                         data={
                                             "supplier_id": supplier.id,
                                             "supplier_name": supplier.name,
@@ -198,12 +198,12 @@ def test_edit_object(authenticated_client, book_object, supplier):   # pylint: d
     assert response.text.startswith("<!-- template single_object_form.html -->")
 
 
-def test_object_toggle_active_modal(authenticated_client, book_object):   # pylint: disable=redefined-outer-name, unused-argument
+def test_object_toggle_active_modal(client_all, book_object):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/toggle_active_modal/{id}
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get(
+    response = client_all.get(
         f"/stock/htmx/search/object/toggle_active_modal/{book_object.id}"
         )
 
@@ -211,12 +211,12 @@ def test_object_toggle_active_modal(authenticated_client, book_object):   # pyli
     assert response.text.startswith("<!-- template single_object_form.html -->")
 
 
-def test_object_toggle_active(authenticated_client, book_object):   # pylint: disable=redefined-outer-name, unused-argument
+def test_object_toggle_active(client_all, book_object):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/toggle-active/{id}
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.post(
+    response = client_all.post(
         f"/stock/htmx/search/object/toggle-active/{book_object.id}"
         )
 
@@ -224,12 +224,12 @@ def test_object_toggle_active(authenticated_client, book_object):   # pylint: di
     assert response.text.startswith("<!-- template toggle_active_modal.html -->")
 
 
-def test_dilicom_add(authenticated_client, book_object):   # pylint: disable=redefined-outer-name, unused-argument
+def test_dilicom_add(client_all, book_object):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/dilicom/{id}/add
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.post(f"/stock/htmx/search/dilicom/{book_object.id}/add",
+    response = client_all.post(f"/stock/htmx/search/dilicom/{book_object.id}/add",
                                          data={
                                             "gln13": book_object.supplier.gln13,
                                          })
@@ -238,12 +238,12 @@ def test_dilicom_add(authenticated_client, book_object):   # pylint: disable=red
     assert response.text.startswith("<!-- template dilicom_modal.html -->")
 
 
-def test_dilicom_remove(authenticated_client, book_object, dilicom_referencial):   # pylint: disable=redefined-outer-name, unused-argument
+def test_dilicom_remove(client_all, book_object, dilicom_referencial):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/dilicom/{id}/remove
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.post(
+    response = client_all.post(
         f"/stock/htmx/search/dilicom/{book_object.id}/remove"
         )
 
@@ -257,52 +257,52 @@ def test_dilicom_remove(authenticated_client, book_object, dilicom_referencial):
 COMPLETE_PAGE_START = "<!DOCTYPE html>\n<html lang=\"fr\">\n<head>"
 
 
-def test_index(authenticated_client, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_index(client_all, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/ fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/")
+    response = client_all.get("/stock/")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith(COMPLETE_PAGE_START)
 
 
-def test_council(authenticated_client, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_council(client_all, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/council fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/council")
+    response = client_all.get("/stock/council")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith(COMPLETE_PAGE_START)
 
 
-def test_orders(authenticated_client, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_orders(client_all, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/orders fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/orders")
+    response = client_all.get("/stock/orders")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith(COMPLETE_PAGE_START)
 
 
-def test_create_order(authenticated_client, book_object, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_create_order(client_all, book_object, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/orders/create fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/orders/new")
+    response = client_all.get("/stock/orders/new")
 
     assert response.status_code == 200
     assert response.text.startswith(COMPLETE_PAGE_START)
 
 
-def test_create_return(authenticated_client):   # pylint: disable=redefined-outer-name, unused-argument
+def test_create_return(client_all):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/returns/new fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/returns/new")
+    response = client_all.get("/stock/returns/new")
 
     assert response.status_code == 200
     assert response.text.startswith(COMPLETE_PAGE_START)
 
 
-def test_search(authenticated_client):   # pylint: disable=redefined-outer-name, unused-argument
+def test_search(client_all):   # pylint: disable=redefined-outer-name, unused-argument
     """Tester que la route /stock/search fonctionne avec une session authentifiée."""
-    response = authenticated_client.get("/stock/search")
+    response = client_all.get("/stock/search")
 
     assert response.status_code == 200
     assert response.text.startswith(COMPLETE_PAGE_START)
@@ -311,71 +311,71 @@ def test_search(authenticated_client):   # pylint: disable=redefined-outer-name,
 # |                          Gestion des tests de routes_htmx_return                               |
 # +================================================================================================+
 
-def test_cleared_return(authenticated_client):
+def test_cleared_return(client_all):
     """
     Tester que la route /stock/htmx/returns/cleared
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/returns/cleared")
+    response = client_all.get("/stock/htmx/returns/cleared")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text == ""  # Doit retourner une section vide
 
 
-def test_returns(authenticated_client, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_returns(client_all, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/returns/
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/returns/")
+    response = client_all.get("/stock/htmx/returns/")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template home.html -->")
 
 
-def test_new_return_section(authenticated_client):   # pylint: disable=redefined-outer-name, unused-argument
+def test_new_return_section(client_all):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/returns/section/create
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/returns/section/create")
+    response = client_all.get("/stock/htmx/returns/section/create")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 404
 
 
-def test_view_return(authenticated_client, order_in_return):   # pylint: disable=redefined-outer-name, unused-argument
+def test_view_return(client_all, order_in_return):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/returns/view/{return_id}
     fonctionne avec une session authentifiée.
     """
     # Récupérer l'ID d'un retour existant à partir des mouvements d'inventaire
     return_id = order_in_return.id
-    response = authenticated_client.get(f"/stock/htmx/returns/view/{return_id}")
+    response = client_all.get(f"/stock/htmx/returns/view/{return_id}")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 404
 
 
-def test_new_return_table(authenticated_client):   # pylint: disable=redefined-outer-name, unused-argument
+def test_new_return_table(client_all):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/returns/table/create
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.post("/stock/htmx/returns/table/create")
+    response = client_all.post("/stock/htmx/returns/table/create")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 404
 
 
-def test_new_return_line_form(authenticated_client):   # pylint: disable=redefined-outer-name, unused-argument
+def test_new_return_line_form(client_all):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/returns/line/create
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/returns/line/create")
+    response = client_all.get("/stock/htmx/returns/line/create")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 404
@@ -384,46 +384,46 @@ def test_new_return_line_form(authenticated_client):   # pylint: disable=redefin
 # |                          Gestion des tests de routes_htmx_orders                               |
 # +================================================================================================+
 
-def test_cleared_orders(authenticated_client):
+def test_cleared_orders(client_all):
     """
     Tester que la route /stock/htmx/orders/cleared
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/orders/cleared")
+    response = client_all.get("/stock/htmx/orders/cleared")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text == ""  # Doit retourner une section vide
 
 
-def test_orders_htmx(authenticated_client, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_orders_htmx(client_all, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/orders/")
+    response = client_all.get("/stock/htmx/orders/")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template home.html -->")
 
 
-def test_new_order_section(authenticated_client, supplier):   # pylint: disable=redefined-outer-name, unused-argument
+def test_new_order_section(client_all, supplier):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/section/create
     fonctionne avec une session authentifiée.
     """
-    response = authenticated_client.get("/stock/htmx/orders/section/create")
+    response = client_all.get("/stock/htmx/orders/section/create")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template new.html -->")
 
     with pytest.raises(ValueError, match="Formulaire de création de commande invalide"):
-        authenticated_client.post("/stock/htmx/orders/section/create",
+        client_all.post("/stock/htmx/orders/section/create",
                                              data={})
 
-    response = authenticated_client.post("/stock/htmx/orders/section/create",
+    response = client_all.post("/stock/htmx/orders/section/create",
                                          data={
                                             "supplier_id": supplier.id,
                                             "supplier_name": supplier.name,
@@ -432,80 +432,80 @@ def test_new_order_section(authenticated_client, supplier):   # pylint: disable=
     assert response.text.startswith("<!-- template view.html -->")
 
 
-def test_edit_order(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_edit_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/section/edit
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.get(f"/stock/htmx/orders/{order_id}/section/edit")
+    response = client_all.get(f"/stock/htmx/orders/{order_id}/section/edit")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template view.html -->")
 
 
-def test_view_order(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_view_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/view/{order_id}
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.get(f"/stock/htmx/orders/view/{order_id}")
+    response = client_all.get(f"/stock/htmx/orders/view/{order_id}")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template view.html -->")
 
 
-def test_cancel_order(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_cancel_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/cancel/{order_id}
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.post(f"/stock/htmx/orders/cancel/{order_id}")
+    response = client_all.post(f"/stock/htmx/orders/cancel/{order_id}")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template canceled.html -->")
 
-    reponse = authenticated_client.get(f"/stock/htmx/orders/cancel/{order_id}")
+    reponse = client_all.get(f"/stock/htmx/orders/cancel/{order_id}")
     assert reponse.status_code == 200
     assert reponse.text.startswith("<!-- template canceled.html -->")
 
-def test_new_order_line(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_new_order_line(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/line/create
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.post(f"/stock/htmx/orders/{order_id}/line/create")
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/line/create")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template new_line.html -->")
 
-    response = authenticated_client.get(f"/stock/htmx/orders/{order_id}/line/create")
+    response = client_all.get(f"/stock/htmx/orders/{order_id}/line/create")
 
     assert response.status_code == 200
     assert response.text.startswith("<!-- template new_line.html -->")
 
 
-def test_edit_order_line(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_edit_order_line(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/line/{line_id}/edit
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
     line_id = order_in.orderin_lines[0].id
-    response = authenticated_client.get(f"/stock/htmx/orders/{order_id}/line/{line_id}/edit")
+    response = client_all.get(f"/stock/htmx/orders/{order_id}/line/{line_id}/edit")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template new_line.html -->")
 
-    response = authenticated_client.post(f"/stock/htmx/orders/{order_id}/line/{line_id}/edit",
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/line/{line_id}/edit",
                                          data={
                                              "order_id": order_id,
                                              "general_object_id":
@@ -519,46 +519,46 @@ def test_edit_order_line(authenticated_client, order_in):   # pylint: disable=re
     assert response.text.startswith("<!-- template view.html -->")
 
 
-def test_confirm_order(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_confirm_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/confirm
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.post(f"/stock/htmx/orders/{order_id}/confirm")
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/confirm")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template confirmed.html -->")
 
 
-def test_receipt_order(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_receipt_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/receipt
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.get(f"/stock/htmx/orders/{order_id}/receipt")
+    response = client_all.get(f"/stock/htmx/orders/{order_id}/receipt")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template view.html -->")
 
 
-def test_receive_order_line(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_receive_order_line(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/line/{line_id}/receive
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
     line_id = order_in.orderin_lines[0].id
-    response = authenticated_client.get(f"/stock/htmx/orders/{order_id}/line/{line_id}/receive")
+    response = client_all.get(f"/stock/htmx/orders/{order_id}/line/{line_id}/receive")
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template receive_line.html -->")
 
-    response = authenticated_client.post(f"/stock/htmx/orders/{order_id}/line/{line_id}/receive",
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/line/{line_id}/receive",
                                          data={
                                             "qty_received": 5,
                                             "qty_canceled": 0,
@@ -568,13 +568,13 @@ def test_receive_order_line(authenticated_client, order_in):   # pylint: disable
     assert response.text.startswith("<!-- template receive_line.html -->")
 
 
-def test_update_external_ref(authenticated_client, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+def test_update_external_ref(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/orders/{order_id}/external-ref
     fonctionne avec une session authentifiée.
     """
     order_id = order_in.id
-    response = authenticated_client.post(f"/stock/htmx/orders/{order_id}/external-ref",
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/external-ref",
                                          data={
                                             "external_ref": "NEW-EXT-REF-123",
                                          })
@@ -588,31 +588,31 @@ def test_update_external_ref(authenticated_client, order_in):   # pylint: disabl
 # |                          Gestion des tests de routes_data                                      |
 # +================================================================================================+
 
-def test_api_update_price(authenticated_client, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
+def test_api_update_price(client_all, inventory_movements):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/data/council
     fonctionne avec une session authentifiée.
     """
-    response_1 = authenticated_client.post("/stock/data/council",
+    response_1 = client_all.post("/stock/data/council",
                                            json={
                                                "movement_id": inventory_movements[0].id,
                                                "price": "24.99",
                                            })
-    response_2 = authenticated_client.post("/stock/data/council",
+    response_2 = client_all.post("/stock/data/council",
                                            json={
                                                "movement_id": inventory_movements[1].id,
                                                "price": "test_string",
                                            })
-    response_3 = authenticated_client.post("/stock/data/council",
+    response_3 = client_all.post("/stock/data/council",
                                            json={
                                                "movement_id": 999999,
                                                "price": "19.99",
                                            })
-    response_4 = authenticated_client.post("/stock/data/council",
+    response_4 = client_all.post("/stock/data/council",
                                            json={
                                                "price": "19.99",
                                            })
-    response_5 = authenticated_client.post("/stock/data/council",
+    response_5 = client_all.post("/stock/data/council",
                                            json={
                                                "movement_id": inventory_movements[0].id,
                                            })
@@ -631,17 +631,17 @@ def test_api_update_price(authenticated_client, inventory_movements):   # pylint
     assert response_5.status_code == 400
 
 
-def test_api_create_order(authenticated_client, supplier):   # pylint: disable=redefined-outer-name, unused-argument
+def test_api_create_order(client_all, supplier):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/data/orderin/create
     fonctionne avec une session authentifiée.
     """
-    response_1 = authenticated_client.post("/stock/data/orderin/create",
+    response_1 = client_all.post("/stock/data/orderin/create",
                                            json={
                                                "supplier_id": supplier.id,
                                                "supplier_name": supplier.name,
                                            })
-    response_2 = authenticated_client.post("/stock/data/orderin/create",
+    response_2 = client_all.post("/stock/data/orderin/create",
                                            json={})
 
     assert response_1.status_code == 200

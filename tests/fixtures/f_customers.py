@@ -88,7 +88,7 @@ def complete_customer_part(
     db_session_main: Session,  # pylint: disable=redefined-outer-name, unused-argument
 ) -> Customers:  # pylint: disable=redefined-outer-name
     """Fixture pour créer un client particulier complet avec tous les champs."""
-    customer = Customers(wpwc_id="1", henrri_id="2", customer_type="part")
+    customer = Customers(wpwc_id="2", henrri_id="3", customer_type="part")
     db_session_main.add(customer)
     db_session_main.flush()
     customer_part = CustomerParts(
@@ -135,10 +135,10 @@ def complete_customer_part(
     ]
     phones = [
         CustomerPhones(
-            customer_id=customer.id, phone_name="Mobile", phone_number="+1234567890"
+            customer_id=customer.id, phone_name="Mobile", phone_number="+1234567894"
         ),
         CustomerPhones(
-            customer_id=customer.id, phone_name="Fixe", phone_number="+0987654321"
+            customer_id=customer.id, phone_name="Fixe", phone_number="+0987654324"
         ),
     ]
     db_session_main.add(customer_part)

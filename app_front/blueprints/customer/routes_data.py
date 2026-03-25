@@ -39,6 +39,7 @@ from app_front.blueprints.customer.utils.phones import (
     update_phone as util_update_phone,
     add_phone as util_add_phone,
 )
+from app_front.utils.decorators import permission_required, COMMERCIAL, COMPTA, DIRECTION
 
 bp_customer_data = Blueprint("customer_data", __name__, url_prefix="/customer/data")
 
@@ -47,6 +48,7 @@ _NO_CUSTOMER_ERROR = "Client non trouvé."
 
 
 @bp_customer_data.route("/search/fast", methods=["GET"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def search_fast():
     """Recherche rapide par nom / raison sociale (autocomplete).
 
@@ -68,6 +70,7 @@ def search_fast():
 
 
 @bp_customer_data.route("/search/long", methods=["GET"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def search_long():
     """Recherche avancée multi-critères.
 
@@ -96,6 +99,7 @@ def search_long():
 
 
 @bp_customer_data.route("/<int:customer_id>", methods=["GET"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_customer(customer_id: int):
     """Retourne les données complètes d'un client."""
     customer = util_get_customer(customer_id)
@@ -105,6 +109,7 @@ def get_customer(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/info", methods=["PATCH"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_info(customer_id: int):
     """Met à jour les informations principales d'un client (part ou pro).
 
@@ -130,6 +135,7 @@ def update_info(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/addresses", methods=["GET"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_addresses(customer_id: int):
     """Retourne la liste des adresses d'un client."""
     addresses = util_get_addresses(customer_id)
@@ -139,6 +145,7 @@ def get_addresses(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/address", methods=["POST"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def add_address(customer_id: int):
     """Ajoute une adresse à un client."""
     data = request.get_json()
@@ -153,6 +160,7 @@ def add_address(customer_id: int):
 @bp_customer_data.route(
     "/<int:customer_id>/address/<int:address_id>", methods=["PATCH"]
 )
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_address(customer_id: int, address_id: int):
     """Met à jour une adresse d'un client."""
     data = request.get_json()
@@ -165,6 +173,7 @@ def update_address(customer_id: int, address_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/emails", methods=["GET"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_emails(customer_id: int):
     """Retourne la liste des emails d'un client."""
     emails = util_get_emails(customer_id)
@@ -174,6 +183,7 @@ def get_emails(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/email", methods=["POST"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def add_email(customer_id: int):
     """Ajoute un email à un client."""
     data = request.get_json()
@@ -186,6 +196,7 @@ def add_email(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/email/<int:email_id>", methods=["PATCH"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_email(customer_id: int, email_id: int):
     """Met à jour un email d'un client."""
     data = request.get_json()
@@ -198,6 +209,7 @@ def update_email(customer_id: int, email_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/phones", methods=["GET"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_phones(customer_id: int):
     """Retourne la liste des téléphones d'un client."""
     phones = util_get_phones(customer_id)
@@ -207,6 +219,7 @@ def get_phones(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/phone", methods=["POST"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def add_phone(customer_id: int):
     """Ajoute un téléphone à un client."""
     data = request.get_json()
@@ -219,6 +232,7 @@ def add_phone(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/phone/<int:phone_id>", methods=["PATCH"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_phone(customer_id: int, phone_id: int):
     """Met à jour un téléphone d'un client."""
     data = request.get_json()
@@ -231,6 +245,7 @@ def update_phone(customer_id: int, phone_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/activate", methods=["POST"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def activate(customer_id: int):
     """Active un client."""
     customer = util_get_customer(customer_id)
@@ -242,6 +257,7 @@ def activate(customer_id: int):
 
 
 @bp_customer_data.route("/<int:customer_id>/deactivate", methods=["POST"])
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def deactivate(customer_id: int):
     """Désactive un client."""
     customer = util_get_customer(customer_id)

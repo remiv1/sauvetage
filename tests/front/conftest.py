@@ -159,44 +159,6 @@ def app():
     flask_app.config["TESTING"] = True
     return flask_app
 
-
-@pytest.fixture
-def client(app):    # pylint: disable=redefined-outer-name, unused-argument
-    """Fixture pour créer un test client Flask."""
-    app.config["WTF_CSRF_ENABLED"] = False  # Désactiver CSRF pour les tests
-    return app.test_client()
-
-
-@pytest.fixture
-def authenticated_client(app):   # pylint: disable=redefined-outer-name, unused-argument
-    """Fixture pour créer un client authentifié avec une session utilisateur."""
-    # Créer un client indépendant pour éviter la partage avec d'autres clients
-    client_instance = app.test_client()
-    with client_instance.session_transaction() as sess:
-        sess["user_id"] = "test-user-123"
-        sess["username"] = "testuser"
-        sess["email"] = "test@example.com"
-        sess["permissions"] = "123456789"  # Tous les niveaux de permission
-        sess["is_logged_in"] = True
-
-    return client_instance
-
-
-@pytest.fixture
-def authenticated_client_compta(app):   # pylint: disable=redefined-outer-name, unused-argument
-    """Fixture pour créer un client authentifié avec des permissions compta."""
-    # Créer un client indépendant pour éviter la partage avec d'autres clients
-    client_instance = app.test_client()
-    with client_instance.session_transaction() as sess:
-        sess["user_id"] = "compta-user-123"
-        sess["username"] = "comptauser"
-        sess["email"] = "compta@example.com"
-        sess["permissions"] = "2"  # Permissions compta
-        sess["is_logged_in"] = True
-
-    return client_instance
-
-
 _test_secure_session = None   # pylint: disable=invalid-name
 _test_main_session = None     # pylint: disable=invalid-name
 
