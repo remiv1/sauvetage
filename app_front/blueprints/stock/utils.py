@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from sqlalchemy import select, distinct
-from app_front.config.db_conf import get_main_session
+from app_front.config import db_conf
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
     OrderInCreateForm,
@@ -31,7 +31,7 @@ def get_zero_price_items() -> Sequence[dict]:
     Retourne une liste de dictionnaires avec les clés :
     - `general_object_id`, `name`, `ean13`, `price_at_movement`, `movement_id`.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.get_zero_price_items()
 
 
@@ -39,7 +39,7 @@ def is_zero_price_items() -> bool:
     """
     Indique s'il existes des articles dont le dernier inventaire a un prix de revient à zéro
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return len(stock_repo.get_zero_price_items()) > 0
 
 
@@ -60,7 +60,7 @@ def update_movement_price(movement_id: int, price: float) -> int:
         ValueError: si le mouvement d'origine n'existe pas.
         RuntimeError: en cas d'erreur lors du commit.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.clone_movement_with_updated_price(movement_id, price)
 
 
@@ -71,7 +71,7 @@ def get_supplier_orders(out: bool = False) -> Sequence[OrderIn]:
     Returns:
         Sequence[OrderIn]: Liste des commandes avec relations complètement chargées.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.get_supplier_orders(out=out)
 
 
@@ -88,7 +88,7 @@ def cancel_supplier_order(order_id: int) -> bool:
         RuntimeError: En cas d'erreur lors du commit.
     """
     try:
-        stock_repo = StockRepository(get_main_session())
+        stock_repo = StockRepository(db_conf.get_main_session())
         stock_repo.cancel_supplier_order(order_id)
         return True
     except ValueError as exc:
@@ -115,7 +115,7 @@ def create_order_in_db(form: OrderInCreateForm) -> int:
         supplier_id = int(supplier_id)
     except ValueError as e:
         raise ValueError("Le champ fournisseur doit être un nombre entier.") from e
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     order = OrderIn(
         order_ref="temp",
         supplier_id=supplier_id,
@@ -135,7 +135,7 @@ def get_order_by_id(order_id: int) -> OrderIn:
     Raises:
         ValueError: Si la commande n'existe pas.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.get_order_by_id(order_id)
 
 
@@ -155,7 +155,7 @@ def edit_order_in_line_db(
         line_id = int(line_id)
     except ValueError as e:
         raise ValueError(VALUE_TYPE_NBR_MSG) from e
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
 
     # Gestion de la suppression d'une ligne de commande
     if action == "delete":
@@ -210,7 +210,7 @@ def search_stock_global(
     Returns:
         Dict avec 'items', 'total', 'page', 'per_page'.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.search_stock_global(
         name=name,
         ean13=ean13,
@@ -234,7 +234,7 @@ def get_dilicom_referencial(
         Un tuple contenant un dictionnaire avec les données de référentiel Dilicom
         et l'objet GeneralObjects, ou None si non trouvé.
     """
-    session = get_main_session()
+    session = db_conf.get_main_session()
     obj = session.get(GeneralObjects, object_id)
     if obj is None:
         return None, None
@@ -246,14 +246,14 @@ def get_dilicom_referencial(
 
 def get_object_by_id(object_id: int) -> Optional[GeneralObjects]:
     """Récupère un objet complet par son identifiant (avec relations chargées)."""
-    session = get_main_session()
+    session = db_conf.get_main_session()
     repo = ObjectsRepository(session)
     return repo.get_by_ref(object_id)
 
 
 def toggle_object_active(object_id: int) -> bool:
     """Bascule le statut actif/inactif d'un objet. Retourne le nouveau statut."""
-    session = get_main_session()
+    session = db_conf.get_main_session()
     repo = ObjectsRepository(session)
     return repo.toggle_active(object_id)
 
@@ -267,11 +267,11 @@ def add_object_to_dilicom(object_id: int, gln13: str) -> Any:
         ValueError: si l'objet n'existe pas ou n'a pas d'EAN13.
         RuntimeError: en cas d'erreur lors du commit.
     """
-    general_object_repo = ObjectsRepository(get_main_session())
+    general_object_repo = ObjectsRepository(db_conf.get_main_session())
     obj = general_object_repo.get_by_ref(object_id)
     if obj is None:
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
-    dilicom_repo = DilicomReferencialRepository(get_main_session())
+    dilicom_repo = DilicomReferencialRepository(db_conf.get_main_session())
     dilicom_ref = dilicom_repo.create_status(obj.ean13, gln13, movement="to_create")
     return dilicom_ref
 
@@ -285,11 +285,11 @@ def remove_object_from_dilicom(object_id: int) -> Any:
         ValueError: si l'objet ou sa référence Dilicom n'existe pas.
         RuntimeError: en cas d'erreur lors du commit.
     """
-    general_object_repo = ObjectsRepository(get_main_session())
+    general_object_repo = ObjectsRepository(db_conf.get_main_session())
     obj = general_object_repo.get_by_ref(object_id)
     if obj is None:
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
-    dilicom_repo = DilicomReferencialRepository(get_main_session())
+    dilicom_repo = DilicomReferencialRepository(db_conf.get_main_session())
     existing = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
     if existing is None:
         raise ValueError("Aucun référentiel Dilicom trouvé pour cet objet.")
@@ -313,7 +313,7 @@ def save_object_complete(
     Raises:
         ValueError: Si la création ou la mise à jour échoue.
     """
-    session = get_main_session()
+    session = db_conf.get_main_session()
     repo = ObjectsRepository(session)
     if object_id is None:
         obj_id = repo.save_from_form(form)
@@ -342,7 +342,7 @@ def search_book_field(field_name: str, query: str) -> List[str]:
     column = _BOOK_FIELD_MAP.get(field_name)
     if column is None:
         return []
-    session = get_main_session()
+    session = db_conf.get_main_session()
     stmt = (
         select(distinct(column))
         .where(column.ilike(f"%{query}%"))
@@ -356,7 +356,7 @@ def search_book_field(field_name: str, query: str) -> List[str]:
 
 def search_tags(query: str) -> List[Dict[str, Any]]:
     """Recherche des tags (id + name) correspondant à la requête."""
-    session = get_main_session()
+    session = db_conf.get_main_session()
     stmt = (
         select(Tags.id, Tags.name, Tags.description)
         .where(Tags.name.ilike(f"%{query}%"))
@@ -371,7 +371,7 @@ def search_tags(query: str) -> List[Dict[str, Any]]:
 
 def create_tag(name: str, description: str = "") -> Dict[str, Any]:
     """Crée un nouveau tag et retourne son id + name."""
-    session = get_main_session()
+    session = db_conf.get_main_session()
     repo = TagsRepository(session)
     tag = repo.create({"name": name, "description": description})
     return {"id": tag.id, "name": tag.name, "description": tag.description}
@@ -395,7 +395,7 @@ def confirm_supplier_order(order_id: int) -> OrderIn:
         ValueError: Si la commande n'existe pas ou n'est pas en état 'draft'.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.confirm_order(order_id)
 
 
@@ -416,7 +416,7 @@ def receive_order_line(
         ValueError: Si les quantités sont incohérentes.
         RuntimeError: En cas d'erreur lors du commit.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     return stock_repo.receive_order_line(line_id, qty_received, qty_cancelled)
 
 
@@ -427,5 +427,5 @@ def update_order_external_ref(order_id: int, external_ref: str) -> None:
         order_id: L'identifiant de la commande.
         external_ref: La référence externe du fournisseur.
     """
-    stock_repo = StockRepository(get_main_session())
+    stock_repo = StockRepository(db_conf.get_main_session())
     stock_repo.update_order_external_ref(order_id, external_ref)

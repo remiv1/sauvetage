@@ -3,7 +3,7 @@
 from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.sql import and_
-from app_front.config.db_conf import get_main_session
+from app_front.config import db_conf
 from db_models.objects import Suppliers
 
 
@@ -18,7 +18,7 @@ def search_suppliers(q: str = "", data_returned: str = "name") -> Optional[List[
     Returns:
         [{"id": 1, "name": "Hachette"}, ...]
     """
-    session = get_main_session()
+    session = db_conf.get_main_session()
     try:
         query = (
             select(Suppliers)
@@ -70,7 +70,7 @@ def create_supplier(data: Dict[str, Any]) -> Dict[str, Any]:
     contact_email = (data.get("contact_email") or "").strip() or ""
     contact_phone = (data.get("contact_phone") or "").strip() or ""
 
-    session = get_main_session()
+    session = db_conf.get_main_session()
     try:
         # Chercher si un fournisseur du même nom existe
         existing = (

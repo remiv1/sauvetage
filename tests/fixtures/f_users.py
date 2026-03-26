@@ -74,7 +74,7 @@ def make_client(app):
 
 @pytest.fixture
 def client(app):    # pylint: disable=redefined-outer-name, unused-argument
-    """Fixture pour créer un test client Flask."""
+    """Fixture pour créer un test client Flask non authentifié."""
     app.config["WTF_CSRF_ENABLED"] = False  # Désactiver CSRF pour les tests
     return app.test_client()
 

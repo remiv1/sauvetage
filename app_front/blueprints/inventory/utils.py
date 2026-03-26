@@ -9,7 +9,7 @@ FastAPI (app-back) qui gère les traitements asynchrones.
 from typing import Any, Dict, List, Optional, Sequence
 from sqlalchemy import select, func
 from app_front.config import get, post, INVENTORY
-from app_front.config.db_conf import get_main_session
+from app_front.config import db_conf
 from db_models.objects import GeneralObjects, Books, OtherObjects, Suppliers
 from db_models.repositories.objects import ObjectsRepository
 
@@ -118,7 +118,7 @@ def create_product(product_data: Dict[str, Any]) -> Dict[str, Any]:
     ean13 = product_data.get("ean13", "")
     supplier_id = product_data.get("supplier_id")
 
-    session = get_main_session()
+    session = db_conf.get_main_session()
     try:
         # EAN13 déjà existant ?
         existing = (
@@ -186,7 +186,7 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
     - Liste des éditeurs filtrés dans la requête.
     - Liste des catégories filtrées dans la requête.
     """
-    session = get_main_session()
+    session = db_conf.get_main_session()
     modal = list(q.keys())
     if not modal:
         raise ValueError("Fournir au moins un critère de recherche")
@@ -250,6 +250,6 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
 
 def search_object_by_name(name: str) -> Sequence[GeneralObjects]:
     """Rechercher les objet dans la base par nom"""
-    repo = ObjectsRepository(get_main_session())
+    repo = ObjectsRepository(db_conf.get_main_session())
     items = repo.get_by_name(name)
     return items

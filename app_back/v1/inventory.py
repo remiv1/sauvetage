@@ -30,7 +30,7 @@ from app_back.v1.schems.inventory import (
     ValidatePayload,
     ObjectPrice,
 )
-from app_back.db_connection.config import get_main_session
+from app_back.db_connection import config
 from db_models.objects import GeneralObjects, InventoryMovements
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
@@ -111,7 +111,7 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
 
     # Récupération des EAN13 connus en base selon le type d'inventaire
     # Récupération des EAN13 connus en base selon le type d'inventaire
-    session = get_main_session()
+    session = config.get_main_session()
     if inventory_type in {"partial", "single"}:
         stmt = select(GeneralObjects.ean13).where(GeneralObjects.ean13.in_(unique_eans))
     else:
@@ -214,7 +214,7 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
     for ean in set_eans:
         counts[ean] = payload.ean13.count(ean)
 
-    session = get_main_session()
+    session = config.get_main_session()
     results: List[ReconciliationLine] = []
     if inventory_type == "complete":
         # Pour un inventaire complet, on doit aussi inclure les produits non scannés
@@ -272,7 +272,7 @@ def validate_inventory(payload: ValidatePayload) -> ValidateResponse:
     """Prépare les mouvements de stock pour chaque ligne validée."""
     planned: List[PlannedMovement] = []
     lines = payload.lines
-    session = get_main_session()
+    session = config.get_main_session()
     try:
         eans = {line.ean13 for line in lines}
         objects = (
@@ -370,7 +370,7 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
     if not objects_id:
         return []
 
-    session = get_main_session()
+    session = config.get_main_session()
     try:
         results: List[ObjectPrice] = []
         # travailler sur l'ensemble dédupliqué d'ids
@@ -436,7 +436,7 @@ def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> No
             }
         )
         total = len(planned)
-        session = get_main_session()
+        session = config.get_main_session()
         try:
             for idx, mvt in enumerate(planned, start=1):
                 movement = InventoryMovements(

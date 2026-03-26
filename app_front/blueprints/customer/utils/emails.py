@@ -5,7 +5,7 @@ from db_models.repositories.customers import (
     CustomersRepository,
     CustomerMailsRepository,
 )
-from app_front.config.db_conf import get_main_session
+from app_front.config import db_conf
 
 
 def get_emails(customer_id: int) -> List[Dict[str, Any]]:
@@ -15,7 +15,7 @@ def get_emails(customer_id: int) -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: Liste des emails du client sous forme de dictionnaires.
     """
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     customer = repo.get_by_id(customer_id, complete=True)
     if not customer:
         return []
@@ -30,7 +30,7 @@ def add_email(customer_id: int, email_data: Dict[str, Any]) -> Dict[str, Any] | 
     Returns:
         Dict[str, Any] | None: Les données de l'email ajouté ou None si échec.
     """
-    repo = CustomerMailsRepository(get_main_session())
+    repo = CustomerMailsRepository(db_conf.get_main_session())
     email_data["customer_id"] = customer_id
     email = repo.add_email(email_data)
     if not email:
@@ -50,7 +50,7 @@ def update_email(
     Returns:
         Dict[str, Any] | None: Les données de l'email mis à jour ou None si introuvable.
     """
-    repo = CustomerMailsRepository(get_main_session())
+    repo = CustomerMailsRepository(db_conf.get_main_session())
     try:
         email = repo.update_email(customer_id, email_id, email_data)
         return email.to_dict()
@@ -67,7 +67,7 @@ def delete_email(email_id: int) -> bool:
     Returns:
         bool: True si la suppression a réussi, False sinon.
     """
-    repo = CustomerMailsRepository(get_main_session())
+    repo = CustomerMailsRepository(db_conf.get_main_session())
     try:
         repo.delete_email(email_id)
         return True

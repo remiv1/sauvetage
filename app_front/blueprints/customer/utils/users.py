@@ -12,7 +12,7 @@ from db_models.objects import (
 )
 from db_models.repositories.customers import CustomersRepository
 from app_front.blueprints.customer.forms import CustomerMainForm
-from app_front.config.db_conf import get_main_session
+from app_front.config import db_conf
 
 
 def form_to_dict(form: CustomerMainForm) -> Dict[str, Any]:
@@ -39,7 +39,7 @@ def form_to_dict(form: CustomerMainForm) -> Dict[str, Any]:
 
 def create_from_dict(customer_data: Dict[str, Any]) -> int:
     """Crée un client à partir d'un dictionnaire de données et retourne son ID."""
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     new_customer = repo.create(customer_data)
     return new_customer.id
 
@@ -51,7 +51,7 @@ def get_customer(customer_id: int) -> Dict[str, Any] | None:
     Returns:
         Dict[str, Any] | None: Les données du client ou None s'il n'existe pas.
     """
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     customer = repo.get_by_id(customer_id, complete=True)
     if not customer:
         return None
@@ -68,7 +68,7 @@ def update_customer_info(
     Returns:
         Dict[str, Any] | None: Les données du client mis à jour ou None si introuvable.
     """
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     customer = repo.update_info(customer_id, data)
     return customer.to_dict()
 
@@ -83,7 +83,7 @@ def get_customers_by_name(name: str) -> list[Dict[str, Any]] | None:
         list[Dict[str, Any]] | None: Une liste de clients correspondant à la recherche
                                         ou None s'il n'y en a pas.
     """
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     customers = repo.get_by_name_like(name, complete=True)
     if not customers:
         return None
@@ -118,7 +118,7 @@ def multi_search_filter(
     Returns:
         list[Dict[str, Any]]: Une liste de clients correspondant à la recherche.
     """
-    session = get_main_session()
+    session = db_conf.get_main_session()
     filters = []
 
     # Recherche par nom (partiel)

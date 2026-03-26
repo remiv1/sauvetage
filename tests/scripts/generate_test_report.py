@@ -102,6 +102,8 @@ def generate_markdown_report(results: dict, output_file: str) -> None:  # pylint
     for test in results["tests"]:
         classname = test["classname"].replace("test_", "").replace(".py", "")
         name = test["name"].replace("test_", "")
+        if len(name) > 60:
+            name = name[:57] + "..."
         report += f"| {classname} | {name} | {test['status']} | {test['time']:.3f} |\n"
 
     # Footer

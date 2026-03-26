@@ -44,6 +44,7 @@ app_back.migration.run_migrations_with_lock = lambda *a, **k: None
 # ── 4. Importer config APRÈS le setup des env vars ──
 from fastapi.testclient import TestClient  # pylint: disable=wrong-import-position, wrong-import-order
 from app_back.db_connection import config  # pylint: disable=wrong-import-position
+from app_front.config import db_conf  # pylint: disable=wrong-import-position
 
 # ── 5. Forcer les URLs de test dans les variables module-level de config ──
 #    Certaines routes (ex: exists_first) appellent get_secure_session() directement
@@ -198,6 +199,7 @@ def init_test_sessions(db_session_main, db_session_users_shared, monkeypatch):
     # pour retourner les sessions de test lors d'appels directs
     monkeypatch.setattr(config, "get_secure_session", SessionProxy("secure"))
     monkeypatch.setattr(config, "get_main_session", SessionProxy("main"))
+    monkeypatch.setattr(db_conf, "get_main_session", SessionProxy("main"))
 
     yield
 

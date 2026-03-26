@@ -5,7 +5,7 @@ from db_models.repositories.customers import (
     CustomersRepository,
     CustomerAddressesRepository,
 )
-from app_front.config.db_conf import get_main_session
+from app_front.config import db_conf
 
 
 def get_addresses(customer_id: int) -> List[Dict[str, Any]] | None:
@@ -17,7 +17,7 @@ def get_addresses(customer_id: int) -> List[Dict[str, Any]] | None:
     Returns:
         List[Dict[str, Any]] | None: Les données des adresses du client ou None s'il n'existe pas.
     """
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     customer = repo.get_by_id(customer_id, complete=True)
     if not customer:
         return None
@@ -35,7 +35,7 @@ def add_address(
     Returns:
         Dict[str, Any] | None: Les données des adresses du client mis à jour ou None si introuvable.
     """
-    repo = CustomerAddressesRepository(get_main_session())
+    repo = CustomerAddressesRepository(db_conf.get_main_session())
     address_data["customer_id"] = customer_id
     address = repo.add_address(address_data)
     if not address:
@@ -56,7 +56,7 @@ def update_address(
     Returns:
         Dict[str, Any] | None: Les données des adresses du client mis à jour ou None si introuvable.
     """
-    repo = CustomerAddressesRepository(get_main_session())
+    repo = CustomerAddressesRepository(db_conf.get_main_session())
     address = repo.update_address(customer_id, address_id, address_data)
     if not address:
         return None
@@ -72,7 +72,7 @@ def delete_address(address_id: int) -> bool:
     Returns:
         bool: True si la suppression a réussi, False sinon.
     """
-    repo = CustomerAddressesRepository(get_main_session())
+    repo = CustomerAddressesRepository(db_conf.get_main_session())
     try:
         repo.delete_address(address_id)
     except ValueError:

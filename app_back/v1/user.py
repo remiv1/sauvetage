@@ -5,7 +5,7 @@ from typing import Any, Dict, Annotated
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app_back.db_connection.config import get_secure_session
+from app_back.db_connection import config
 from db_models.objects import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
 
@@ -18,7 +18,7 @@ router = APIRouter(
 @router.get("/search/{username}")
 def read_users(username: str):
     """Recherche d'un utilisateur par le username."""
-    session = get_secure_session()
+    session = config.get_secure_session()
     stmt = select(Users).where(Users.username == username)
     user = session.execute(stmt).scalar_one_or_none()
     return_dict: Dict[str, Any] = {
@@ -34,7 +34,8 @@ def read_users(username: str):
 
 
 @router.post("/login")
-async def log_user(request: Request, session: Annotated[Session, Depends(get_secure_session)]):
+async def log_user(request: Request,
+                   session: Annotated[Session, Depends(config.get_secure_session)]):
     """Recherche d'un utilisateur par le username."""
     data = await request.json()
     username = data.get("username")
@@ -66,7 +67,7 @@ async def log_user(request: Request, session: Annotated[Session, Depends(get_sec
 @router.get("/no-user")
 def exists_first():
     """Vérifie s'il n'existe aucun utilisateur dans la base de données."""
-    user_obj = UsersRepository(get_secure_session())
+    user_obj = UsersRepository(config.get_secure_session())
     no_user = user_obj.no_users_exists()
     return {"exists": no_user}
 
@@ -75,7 +76,7 @@ def exists_first():
 async def create_user(request: Request):
     """Création d'un nouvel utilisateur."""
     # Récupération de la session sécurisée
-    session = get_secure_session()
+    session = config.get_secure_session()
     user_obj = UsersRepository(session)
 
     # Récupération des données du formulaire
@@ -120,7 +121,7 @@ async def change_password(request: Request):
     old_password = data.get("old_password")
     new_password = data.get("new_password")
 
-    user_obj = UsersRepository(get_secure_session())
+    user_obj = UsersRepository(config.get_secure_session())
     user = user_obj.get_by_username(username)
     if not user:
         raise ValueError(f"Utilisateur non trouvé : {username}")
@@ -146,7 +147,7 @@ async def modify_user(username: str, request: Request):
     email = data.get("email")
     permissions = data.get("permissions")
 
-    user_obj = UsersRepository(get_secure_session())
+    user_obj = UsersRepository(config.get_secure_session())
     user = user_obj.get_by_username(username)
     if not user:
         raise ValueError(f"Utilisateur non trouvé : {username}")

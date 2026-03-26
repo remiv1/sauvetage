@@ -47,7 +47,7 @@ _NO_DATA_ERROR = "Aucune donnée reçue."
 _NO_CUSTOMER_ERROR = "Client non trouvé."
 
 
-@bp_customer_data.route("/search/fast", methods=["GET"])
+@bp_customer_data.get("/search/fast")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def search_fast():
     """Recherche rapide par nom / raison sociale (autocomplete).
@@ -69,7 +69,7 @@ def search_fast():
     return jsonify(customers)
 
 
-@bp_customer_data.route("/search/long", methods=["GET"])
+@bp_customer_data.get("/search/long")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def search_long():
     """Recherche avancée multi-critères.
@@ -98,7 +98,7 @@ def search_long():
     )
 
 
-@bp_customer_data.route("/<int:customer_id>", methods=["GET"])
+@bp_customer_data.get("/<int:customer_id>")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_customer(customer_id: int):
     """Retourne les données complètes d'un client."""
@@ -108,14 +108,14 @@ def get_customer(customer_id: int):
     return jsonify(customer)
 
 
-@bp_customer_data.route("/<int:customer_id>/info", methods=["PATCH"])
+@bp_customer_data.patch("/<int:customer_id>/info")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_info(customer_id: int):
     """Met à jour les informations principales d'un client (part ou pro).
 
     Body JSON attendu :
         Pour un particulier : {civil_title, first_name, last_name, date_of_birth}
-        Pour un professionnel : {company_name, siret_number, vat_number}
+        Pour un professionnel : {civil_title, company_name, siret_number, vat_number}
 
     Retourne le client complet mis à jour.
     """
@@ -134,7 +134,7 @@ def update_info(customer_id: int):
         raise ValueError("Données invalides ou incomplètes.") from e
 
 
-@bp_customer_data.route("/<int:customer_id>/addresses", methods=["GET"])
+@bp_customer_data.get("/<int:customer_id>/addresses")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_addresses(customer_id: int):
     """Retourne la liste des adresses d'un client."""
@@ -144,10 +144,24 @@ def get_addresses(customer_id: int):
     return jsonify(addresses)
 
 
-@bp_customer_data.route("/<int:customer_id>/address", methods=["POST"])
+@bp_customer_data.post("/<int:customer_id>/address")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def add_address(customer_id: int):
-    """Ajoute une adresse à un client."""
+    """
+    Ajoute une adresse à un client.
+    Body JSON attendu :
+    {
+        "address_name": "Domicile",
+        "address_line1": "123 Rue de Test",
+        "address_line2": "Appartement 4B",  # optionnel
+        "city": "Testville",
+        "state": "Test State",
+        "postal_code": "12345",
+        "country": "Test Country",
+        "is_billing": true,
+        "is_shipping": false
+    }
+    """
     data = request.get_json()
     if not data:
         raise ValueError(_NO_DATA_ERROR)
@@ -157,12 +171,24 @@ def add_address(customer_id: int):
     return jsonify(new_address), 201
 
 
-@bp_customer_data.route(
-    "/<int:customer_id>/address/<int:address_id>", methods=["PATCH"]
-)
+@bp_customer_data.patch("/<int:customer_id>/address/<int:address_id>")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_address(customer_id: int, address_id: int):
-    """Met à jour une adresse d'un client."""
+    """
+    Met à jour une adresse d'un client.
+    Body JSON attendu :
+    {
+        "address_name": "Domicile",
+        "address_line1": "123 Rue de Test",
+        "address_line2": "Appartement 4B",  # optionnel
+        "city": "Testville",
+        "state": "Test State",
+        "postal_code": "12345",
+        "country": "Test Country",
+        "is_billing": true,
+        "is_shipping": false
+    }
+    """
     data = request.get_json()
     if not data:
         raise ValueError(_NO_DATA_ERROR)
@@ -172,7 +198,7 @@ def update_address(customer_id: int, address_id: int):
     return jsonify(updated)
 
 
-@bp_customer_data.route("/<int:customer_id>/emails", methods=["GET"])
+@bp_customer_data.get("/<int:customer_id>/emails")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_emails(customer_id: int):
     """Retourne la liste des emails d'un client."""
@@ -182,10 +208,17 @@ def get_emails(customer_id: int):
     return jsonify(emails)
 
 
-@bp_customer_data.route("/<int:customer_id>/email", methods=["POST"])
+@bp_customer_data.post("/<int:customer_id>/email")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def add_email(customer_id: int):
-    """Ajoute un email à un client."""
+    """
+    Ajoute un email à un client.
+    Body JSON attendu :
+    {
+        "email": "test@example.com",
+        "is_primary": true
+    }
+    """
     data = request.get_json()
     if not data:
         raise ValueError(_NO_DATA_ERROR)
@@ -195,7 +228,7 @@ def add_email(customer_id: int):
     return jsonify(new_email), 201
 
 
-@bp_customer_data.route("/<int:customer_id>/email/<int:email_id>", methods=["PATCH"])
+@bp_customer_data.patch("/<int:customer_id>/email/<int:email_id>")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_email(customer_id: int, email_id: int):
     """Met à jour un email d'un client."""
@@ -208,7 +241,7 @@ def update_email(customer_id: int, email_id: int):
     return jsonify(updated)
 
 
-@bp_customer_data.route("/<int:customer_id>/phones", methods=["GET"])
+@bp_customer_data.get("/<int:customer_id>/phones")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def get_phones(customer_id: int):
     """Retourne la liste des téléphones d'un client."""
@@ -218,7 +251,7 @@ def get_phones(customer_id: int):
     return jsonify(phones)
 
 
-@bp_customer_data.route("/<int:customer_id>/phone", methods=["POST"])
+@bp_customer_data.post("/<int:customer_id>/phone")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def add_phone(customer_id: int):
     """Ajoute un téléphone à un client."""
@@ -231,7 +264,7 @@ def add_phone(customer_id: int):
     return jsonify(new_phone), 201
 
 
-@bp_customer_data.route("/<int:customer_id>/phone/<int:phone_id>", methods=["PATCH"])
+@bp_customer_data.patch("/<int:customer_id>/phone/<int:phone_id>")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def update_phone(customer_id: int, phone_id: int):
     """Met à jour un téléphone d'un client."""
@@ -244,7 +277,7 @@ def update_phone(customer_id: int, phone_id: int):
     return jsonify(updated)
 
 
-@bp_customer_data.route("/<int:customer_id>/activate", methods=["POST"])
+@bp_customer_data.post("/<int:customer_id>/activate")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def activate(customer_id: int):
     """Active un client."""
@@ -256,7 +289,7 @@ def activate(customer_id: int):
     return jsonify(updated)
 
 
-@bp_customer_data.route("/<int:customer_id>/deactivate", methods=["POST"])
+@bp_customer_data.post("/<int:customer_id>/deactivate")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def deactivate(customer_id: int):
     """Désactive un client."""

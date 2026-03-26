@@ -41,10 +41,9 @@ def create():
         customer_id = create_from_dict(form_to_dict(form))
         flash(f"Client n°{customer_id} créé avec succès.", "success")
         return redirect(url_for("customer.view", customer_id=customer_id))
-    else:
-        if request.method == "POST":
-            raise ValueError("Formulaire invalide")
 
+    if request.method == "POST":
+        flash("Formulaire invalide : vérifiez les champs.", "error")
     return render_page("customer_create", form=form)
 
 
