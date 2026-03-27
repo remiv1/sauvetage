@@ -9,9 +9,6 @@ styles = [
     "css/stock/council.css"
 ]
 scripts = ["js/main.js"]
-modules = [
-    "js/stock/council.js"
-]
 # Clées
 [meta]
 title = "Stock | Intranet"
@@ -32,3 +29,4 @@ extend_layout = "index.html"
 navbar = true
 searchbar = false
 userbar = true
+htmx = true

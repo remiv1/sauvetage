@@ -1,48 +1,28 @@
 {% extends layout.extend_layout %}
 
 {% block content %}
-<div class="inventory-container">
-    <h2 class="inventory-title">Conciliation — Articles à prix zéro</h2>
-
-    {% if items_to_council %}
-    <table class="inventory-table" id="council-table">
-        <thead>
-            <tr>
-                <th>Titre</th>
-                <th>EAN13</th>
-                <th>Prix de revient</th>
-                <th>Validation</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items_to_council %}
-            <tr data-movement-id="{{ item.movement_id }}"
-                data-object-id="{{ item.general_object_id }}">
-                <td>{{ item.name }}</td>
-                <td>{{ item.ean13 }}</td>
-                <td class="cell-price">
-                    <input type="number"
-                           class="form-control form-control-sm price-input"
-                           min="0" step="0.01"
-                           placeholder="0.00"
-                           aria-label="Prix de revient" />
-                </td>
-                <td class="cell-action">
-                    <button type="button"
-                            class="btn btn-primary btn-sm btn-validate">
-                        Valider
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="inventory-subtitle">Aucun article à traiter.</p>
-    {% endif %}
-
-    <div class="inventory-actions">
-        <a href="{{ url_for('stock.index') }}" class="btn btn-secondary">← Retour</a>
+<section class="council-container" id="council-management">
+    {# ── En-tête ─────────────────────────────────────────────────────────── #}
+    <div class="council-header">
+        <div class="search-header">
+            <div class="header-top">
+                <a href="{{ url_for('stock.index') }}" class="btn btn-back"
+                   title="Retour à la gestion des stocks">
+                    {% include "svg/back.html" %}
+                </a>
+                <h2>Conciliation — Articles à prix zéro</h2>
+            </div>
+        </div>
+        {% if items_to_council %}
+        <div class="council-actions">
+            <span class="badge badge-warning">
+                {{ items_to_council | length }} article{{ 's' if items_to_council | length > 1 }} à traiter
+            </span>
+        </div>
+        {% endif %}
     </div>
-</div>
+
+    {# ── Contenu chargé par HTMX ─────────────────────────────────────────── #}
+    {% include "htmx_templates/stock/council/sections/home.html" %}
+</section>
 {% endblock %}

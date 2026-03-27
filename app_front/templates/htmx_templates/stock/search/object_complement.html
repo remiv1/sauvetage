@@ -110,7 +110,7 @@
                                value="{{ ot.tag.name if ot.tag else '' }}" disabled>
                     </div>
                     {% endfor %}
-                {% elif form_state == 'edit' and obj and obj.object_tags %}
+                {% elif form_state in ['edit', 'create'] and obj and obj.object_tags %}
                     {% for ot in obj.object_tags %}
                     <div class="dynamic-list-item">
                         <input type="hidden" name="object_tags-{{ loop.index0 }}-id" value="{{ ot.id }}">
@@ -337,12 +337,16 @@
 
     // ── Tag : créer un nouveau tag via HTMX ─────────────────────────────
     window.createTag = function(btn) {
+        // Récupère le dropdown de recherche
         var dropdown = btn.closest('.search-dropdown');
         if (!dropdown) return;
+        // Récupère le wrapper d'autocomplete
         var wrapper = dropdown.closest('.autocomplete-wrapper');
         if (!wrapper) return;
+        // Récupère la liste de tags (dynamic-list)
         var item = wrapper.closest('.dynamic-list-item');
         if (!item) return;
+        // Récupère les inputs du formulaire de création
         var nameInput = dropdown.querySelector('.tag-new-name');
         var descInput = dropdown.querySelector('.tag-new-desc');
         var name = nameInput ? nameInput.value.trim() : '';

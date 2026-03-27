@@ -13,14 +13,18 @@ ADD_FORM_TEMPLATE = "htmx_templates/supplier/add_supplier_form.html"
 
 @bp_supplier_htmx.get("/get/suppliers/<type_of_data>")
 def get_suppliers(type_of_data: str):
-    """Retourne la liste des fournisseurs"""
+    """Retourne la liste des fournisseurs."""
     supplier_name = request.args.get("supplier_name", "")
     suppliers = search_suppliers(supplier_name, data_returned=type_of_data)
     if type_of_data == "id_name_gln":
+        allow_create = request.args.get("allow_create", "false") == "true"
+        context = request.args.get("context", "stock")
         return render_template(
-            "htmx_templates/supplier/dilicom_suppliers_dropdown.html",
+            "htmx_templates/supplier/suppliers_dropdown.html",
             suppliers=suppliers,
             query=supplier_name,
+            allow_create=allow_create,
+            context=context,
         )
     if type_of_data == "filter":
         return render_template(
@@ -66,25 +70,22 @@ def create_supplier_htmx():
 
 @bp_supplier_htmx.get("/select/<int:supplier_id>")
 def select_supplier(supplier_id: int):
-    """Retourne le fragment de sélection d'un fournisseur (id + nom via OOB)."""
+    """Retourne le fragment OOB de sélection d'un fournisseur.
+
+    Le paramètre ``context`` ("stock" par défaut, ou "dilicom") détermine
+    les IDs DOM utilisés pour les swaps OOB.
+    """
     supplier_name = request.args.get("supplier_name", "")
+    gln13 = request.args.get("gln13", "")
+    context = request.args.get("context", "stock")
+    allow_create = request.args.get("allow_create", "false") == "true"
     return render_template(
         "htmx_templates/supplier/select_supplier.html",
         supplier_id=supplier_id,
         supplier_name=supplier_name,
-    )
-
-
-@bp_supplier_htmx.get("/select/dilicom/<int:supplier_id>")
-def select_dilicom_supplier(supplier_id: int):
-    """Retourne les fragments OOB pour la sélection d'un fournisseur dans le contexte Dilicom."""
-    supplier_name = request.args.get("supplier_name", "")
-    gln13 = request.args.get("gln13", "")
-    return render_template(
-        "htmx_templates/supplier/select_dilicom_supplier.html",
-        supplier_id=supplier_id,
-        supplier_name=supplier_name,
         gln13=gln13,
+        context=context,
+        allow_create=allow_create,
     )
 
 

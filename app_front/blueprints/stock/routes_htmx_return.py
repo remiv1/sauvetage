@@ -16,8 +16,8 @@ bp_stock_htmx_return = Blueprint(
     template_folder="htmx_templates/stock",
 )
 
-NEW_LINE = "htmx_templates/stock/orders/fragments/new_line.html"
-SECTION_HOME = "htmx_templates/stock/orders/sections/home.html"
+NEW_LINE = "htmx_templates/stock/returns/fragments/new_line.html"
+SECTION_HOME = "htmx_templates/stock/returns/sections/home.html"
 
 
 @bp_stock_htmx_return.get("/cleared")

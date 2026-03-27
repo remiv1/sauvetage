@@ -18,7 +18,7 @@
     <div class="modal-dialog modal-sm">
         <div class="modal__content text-center p-4">
             <div class="mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                {% include "svg/checkmark.html" %}
             </div>
             <h3>Suppression effectuée</h3>
             <p class="small">La {{ 'ligne' if mod == 'line' else 'commande' }} {{ line_id if mod == 'line' else order_id }} a été supprimée avec succès.</p>

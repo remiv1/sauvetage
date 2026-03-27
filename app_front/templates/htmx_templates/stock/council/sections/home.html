@@ -1,0 +1,24 @@
+{# Section tableau de conciliation — chargé par HTMX #}
+{% if items_to_council %}
+<table class="council-table" id="council-table">
+    <thead>
+        <tr>
+            <th>Titre</th>
+            <th>EAN13</th>
+            <th>Prix de revient</th>
+            <th class="text-center">Validation</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items_to_council %}
+        {% include "htmx_templates/stock/council/fragments/row.html" %}
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<!-- Ne devrait jamais arriver car l'accès n'est possible que si des articles sont présents -->
+<div class="no-items">
+    {% include "svg/check-circle.html" %}
+    <p>Aucun article à traiter.</p>
+</div>
+{% endif %}

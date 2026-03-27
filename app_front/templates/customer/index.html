@@ -20,10 +20,7 @@
         {# Carte 1 — Recherche rapide #}
         <div class="choice-card" id="card-fast-search">
             <div class="choice-card__icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2"/>
-                    <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                {% include "svg/search.html" %}
             </div>
             <h3 class="choice-card__title">Recherche rapide</h3>
             <p class="choice-card__desc">Trouvez un client par nom ou raison sociale en temps réel.</p>
@@ -42,12 +39,7 @@
         {# Carte 2 — Recherche avancée #}
         <a href="{{ url_for('customer.search') }}" class="choice-card choice-card--link" id="card-advanced-search">
             <div class="choice-card__icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="4" width="18" height="2" rx="1" fill="currentColor"/>
-                    <rect x="5" y="9" width="14" height="2" rx="1" fill="currentColor"/>
-                    <rect x="7" y="14" width="10" height="2" rx="1" fill="currentColor"/>
-                    <rect x="9" y="19" width="6" height="2" rx="1" fill="currentColor"/>
-                </svg>
+                {% include "svg/filter.html" %}
             </div>
             <h3 class="choice-card__title">Recherche avancée</h3>
             <p class="choice-card__desc">Recherchez des clients par critères : nom, type, adresse, email, téléphone.</p>
@@ -57,12 +49,7 @@
         {# Carte 3 — Nouveau client #}
         <a href="{{ url_for('customer.create') }}" class="choice-card choice-card--link" id="card-create">
             <div class="choice-card__icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
-                    <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="19" y1="3" x2="19" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="16" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                {% include "svg/add-user.html" %}
             </div>
             <h3 class="choice-card__title">Nouveau client</h3>
             <p class="choice-card__desc">Créer une fiche pour un nouveau client particulier ou professionnel.</p>

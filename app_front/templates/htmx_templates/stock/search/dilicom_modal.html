@@ -56,7 +56,7 @@
                                class="form-control"
                                placeholder="Rechercher un fournisseur…"
                                autocomplete="off"
-                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln') }}"
+                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln', context='dilicom') }}"
                                hx-trigger="keyup changed delay:300ms"
                                hx-target="#dilicom-supplier-results"
                                hx-swap="innerHTML"

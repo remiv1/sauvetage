@@ -10,12 +10,7 @@
         <!-- Dashboard -->
         <a href="{{ url_for('dashboard.index') }}" class="card card-dashboard">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="14" width="7" height="7"></rect>
-                    <rect x="3" y="14" width="7" height="7"></rect>
-                </svg>
+                {% include "svg/dashboard.html" %}
             </div>
             <h2>Tableau de Bord</h2>
             <p>Vue d'ensemble des données clés</p>
@@ -24,10 +19,7 @@
         <!-- Customers -->
         <a href="{{ url_for('customer.index') }}" class="card card-customer">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+                {% include "svg/user.html" %}
             </div>
             <h2>Clients</h2>
             <p>Gestion de la clientèle</p>
@@ -36,11 +28,7 @@
         <!-- Orders -->
         <a href="{{ url_for('order.index') }}" class="card card-order">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="9" cy="21" r="1"></circle>
-                    <circle cx="20" cy="21" r="1"></circle>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                </svg>
+                {% include "svg/cart.html" %}
             </div>
             <h2>Commandes</h2>
             <p>Suivi des commandes</p>
@@ -49,11 +37,7 @@
         <!-- Stock -->
         <a href="{{ url_for('stock.index') }}" class="card card-stock">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 2L6.61 6.59C6.28 7.09 6 8 6 8.72V17a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8.72C18 8 17.72 7.09 17.39 6.59L15 2"></path>
-                    <line x1="6" y1="5" x2="18" y2="5"></line>
-                    <line x1="9" y1="14" x2="15" y2="14"></line>
-                </svg>
+                {% include "svg/bag.html" %}
             </div>
             <h2>Stocks</h2>
             <p>Gestion des inventaires</p>
@@ -62,9 +46,7 @@
         <!-- Inventory -->
         <a href="{{ url_for('inventory.index') }}" class="card card-inventory">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"></path>
-                </svg>
+                {% include "svg/smiley.html" %}
             </div>
             <h2>Inventaire</h2>
             <p>Catalogue des produits</p>
@@ -73,9 +55,7 @@
         <!-- Suppliers -->
         <a href="{{ url_for('supplier.index') }}" class="card card-supplier">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10.5c-2.49 0-4.5-2.01-4.5-4.5s2.01-4.5 4.5-4.5 4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"></path>
-                </svg>
+                {% include "svg/target.html" %}
             </div>
             <h2>Fournisseurs</h2>
             <p>Gestion des partenaires</p>
@@ -85,13 +65,7 @@
         {% if session and ('1' in session['permissions'] or '9' in session['permissions']) %}
         <a href="{{ url_for('admin.index', _external=False) }}" class="card card-admin">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="1"></circle>
-                    <path d="M12 1v6m0 6v6"></path>
-                    <path d="M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24"></path>
-                    <path d="M1 12h6m6 0h6"></path>
-                    <path d="M4.22 19.78l4.24-4.24m3.08-3.08l4.24-4.24"></path>
-                </svg>
+                {% include "svg/settings.html" %}
             </div>
             <h2>Administration</h2>
             <p>Paramètres système</p>
@@ -101,10 +75,7 @@
         <!-- User Settings -->
         <a href="{{ url_for('user.modify', username=session['username'] | urlencode) }}" class="card card-user">
             <div class="card-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+                {% include "svg/profile.html" %}
             </div>
             <h2>Mon Profil</h2>
             <p>Paramètres personnels</p>

@@ -16,6 +16,12 @@
     cursor: pointer;
     border: none;
 
+    svg {
+        width: 1em;
+        height: 1em;
+        flex-shrink: 0;
+    }
+
     &.btn-primary {
         background: variables.$primary-color;
         color: white;

@@ -18,7 +18,7 @@
             {{ form.supplier_name(class="form-control", id="supplier_name",
                 placeholder="ID ou nom du fournisseur", required=True,
                 **{
-                    "hx-get": url_for("supplier_htmx.get_suppliers", type_of_data="id_and_name"),
+                    "hx-get": url_for("supplier_htmx.get_suppliers", type_of_data="id_name_gln", allow_create="true"),
                     "hx-trigger": "input changed delay:500ms",
                     "hx-target": "#search-results",
                     "hx-swap": "innerHTML"
@@ -30,6 +30,7 @@
                  class="dropdown-menu show">
                  <!-- Les résultats de la recherche seront injectés ici -->
             </div>
+            <div id="supplier-create-modal"></div>
             {% if form.supplier_name.errors %}
                 <div class="text-danger small">{{ form.supplier_name.errors[0] }}</div>
             {% endif %}

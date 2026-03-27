@@ -68,7 +68,7 @@
                                    value="{{ form.supplier_name.data or '' }}"
                                    {% if disabled %}disabled{% endif %}
                                    {% if not disabled %}
-                                   hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='name_and_id') }}"
+                                   hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln', allow_create='true') }}"
                                    hx-trigger="input changed delay:500ms"
                                    hx-target="#search-results"
                                    hx-swap="innerHTML"

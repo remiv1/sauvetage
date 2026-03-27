@@ -1,0 +1,258 @@
+@use "../core/variables" as variables;
+@use "sass:color";
+
+/* ============================================================================ */
+/* Conciliation — Page des articles à prix zéro                               */
+/* ============================================================================ */
+
+.council-container {
+    max-width: 1100px;
+    margin: variables.$space-lg auto;
+    padding: 0 variables.$space-lg;
+}
+
+/* ── En-tête ─────────────────────────────────────────────────────────────── */
+.council-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: variables.$space-md;
+    margin-bottom: variables.$space-lg;
+
+    h2 {
+        color: variables.$primary-color;
+        margin: 0;
+    }
+}
+
+.council-actions {
+    display: flex;
+    gap: variables.$space-sm;
+    flex-wrap: wrap;
+}
+
+.header-top {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-md;
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 1px solid variables.$gray-200;
+        border-radius: variables.$radius-xs;
+        background: #fff;
+        color: variables.$gray-600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            color: variables.$primary-color;
+            border-color: variables.$primary-color;
+            background: rgba(variables.$primary-color, 0.06);
+        }
+
+        svg {
+            width: 18px;
+            height: 18px;
+        }
+    }
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: variables.$space-xs;
+    padding: variables.$space-sm variables.$space-md;
+    border: none;
+    border-radius: variables.$radius-xs;
+    font-family: variables.$font-primary;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, opacity 0.2s;
+
+    svg {
+        flex-shrink: 0;
+    }
+
+    &:hover {
+        text-decoration: none;
+        opacity: 0.9;
+    }
+}
+
+.btn-primary {
+    background: variables.$primary-color;
+    color: #fff;
+
+    &:hover {
+        background: variables.$primary-color-dark;
+    }
+}
+
+.btn-secondary {
+    background: variables.$gray-200;
+    color: variables.$gray-800;
+
+    &:hover {
+        background: variables.$gray-300;
+    }
+}
+
+.btn-sm {
+    padding: variables.$space-xs variables.$space-sm;
+    font-size: 0.85rem;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 0.2em 0.65em;
+    border-radius: variables.$radius-xs;
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.badge-warning {
+    background: variables.$warning-bg;
+    color: variables.$warning-color;
+}
+
+/* ── Tableau ─────────────────────────────────────────────────────────────── */
+.council-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: variables.$space-md;
+
+    th,
+    td {
+        padding: variables.$space-sm;
+        border: 1px solid variables.$gray-200;
+        font-size: 0.9rem;
+    }
+
+    th {
+        background: variables.$primary-color;
+        color: white;
+        text-align: left;
+        font-weight: 500;
+    }
+
+    tbody tr {
+        transition: background 0.15s;
+    }
+
+    tbody tr:nth-child(even) {
+        background: variables.$gray-100;
+    }
+
+    tbody tr:hover {
+        background: rgba(variables.$primary-color, 0.06);
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .identifiant {
+        font-weight: 600;
+        font-family: monospace;
+    }
+}
+
+/* ── Cellule prix ────────────────────────────────────────────────────────── */
+.cell-price {
+    width: 160px;
+
+    .price-input {
+        width: 100%;
+        padding: variables.$space-xs variables.$space-sm;
+        border: 1px solid variables.$gray-300;
+        border-radius: variables.$radius-xs;
+        font-family: variables.$font-primary;
+        font-size: 0.9rem;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+
+        &:focus {
+            outline: none;
+            border-color: variables.$primary-color;
+            box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
+        }
+    }
+}
+
+/* ── Cellule action ──────────────────────────────────────────────────────── */
+.actions-cell {
+    vertical-align: middle;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* ── État vide ───────────────────────────────────────────────────────────── */
+.no-items {
+    text-align: center;
+    padding: variables.$space-xl;
+    color: variables.$gray-500;
+    font-size: 0.95rem;
+}
+
+/* ── Validation réussie ──────────────────────────────────────────────────── */
+.council-row-success td {
+    background: rgba(variables.$success-color, 0.08);
+}
+
+.council-success {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-sm;
+    color: variables.$success-color;
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: variables.$space-xs 0;
+
+    svg {
+        flex-shrink: 0;
+    }
+}
+
+/* ── Erreur inline ───────────────────────────────────────────────────────── */
+.council-error {
+    display: flex;
+    align-items: center;
+    gap: variables.$space-xs;
+    color: variables.$danger-color;
+    font-size: 0.85rem;
+    margin-top: variables.$space-xs;
+
+    svg {
+        flex-shrink: 0;
+    }
+}
+
+/* ── État vide ───────────────────────────────────────────────────────────── */
+.no-items {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: variables.$space-md;
+    padding: variables.$space-xl variables.$space-md;
+    color: variables.$gray-500;
+    text-align: center;
+
+    svg {
+        opacity: 0.4;
+    }
+
+    p {
+        font-size: 1.1rem;
+    }
+}

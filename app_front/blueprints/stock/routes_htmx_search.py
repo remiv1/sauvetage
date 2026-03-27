@@ -49,7 +49,7 @@ def search_table():
     supplier_id_str = request.args.get("supplier_id", "").strip()
     supplier_id = int(supplier_id_str) if supplier_id_str else None
     object_type = request.args.get("object_type", "").strip() or None
-    is_active_str = request.args.get("is_active", "").strip()
+    is_active_str = request.args.get("is_active", "true").strip()
     is_active = None
     if is_active_str == "true":
         is_active = True
@@ -166,6 +166,8 @@ def object_complement():
         obj = get_object_by_id(object_id)
         if obj is None:
             raise ValueError("Objet introuvable pour l'ID fourni")
+    elif form_state == "create":
+        obj = None
     else:
         raise ValueError("Opération introuvable.")
     return render_template(

@@ -60,7 +60,7 @@
         background: #fff;
         color: variables.$primary-color-dark;
         border: 2px solid variables.$primary-color-light;
-        border-radius: variables.$radius-md;
+        border-radius: variables.$radius-sm;
         box-shadow: 0 4px 16px rgba(0,0,0,0.10);
         padding: 0.7rem 0;
         display: none;
@@ -79,7 +79,7 @@
         padding: 0.7rem 1.2rem;
         cursor: pointer;
         white-space: nowrap;
-        border-radius: variables.$radius-sm;
+        border-radius: variables.$radius-xs;
         transition: background .15s, color .15s;
         &:hover {
             background: variables.$primary-color-light;
@@ -104,7 +104,7 @@
         background: variables.$primary-color-dark;
         border: 1px solid variables.$primary-color-light;
         padding: variables.$space-md;
-        border-radius: variables.$radius-md;
+        border-radius: variables.$radius-sm;
         cursor: pointer;
         font-size: 1rem;
         color: variables.$text-light;
@@ -138,7 +138,7 @@
         top: calc(100% + 4px);
         background: variables.$primary-color-dark;
         border: 1px solid variables.$primary-color-light;
-        border-radius: variables.$radius-md;
+        border-radius: variables.$radius-sm;
         padding: 0.5rem 0;
         margin: 0;
         list-style: none;
@@ -156,7 +156,7 @@
             &:hover {
                 background: variables.$primary-color-light;
                 color: variables.$text-light;
-                border-radius: variables.$radius-sm;
+                border-radius: variables.$radius-xs;
             }
         }
         &.open {

@@ -29,9 +29,9 @@ def test_get_suppliers(client_all, supplier):     # pylint: disable=redefined-ou
     for response in [response_2, response_3, response_4]:
         assert response.status_code == 200
     assert response_2.text.startswith(
-                    "\n\n    <!-- template dilicom_suppliers_dropdown.html - vide -->"
+                    "\n\n    <!-- template suppliers_dropdown.html - vide -->"
                     )
-    assert response_3.text.startswith("\n\n    <!-- template dilicom_suppliers_dropdown.html -->")
+    assert response_3.text.startswith("\n\n    <!-- template suppliers_dropdown.html -->")
     assert response_4.text.startswith("<!-- template filter_suppliers_dropdown.html -->")
 
 
@@ -71,10 +71,13 @@ def test_select_supplier(client_all, supplier):   # pylint: disable=redefined-ou
 
 
 def test_select_dilicom_supplier(client_all, supplier):   # pylint: disable=redefined-outer-name, unused-argument
-    """Test de la route HTMX de sélection d'un fournisseur Dilicom."""
-    response = client_all.get(f"/supplier/htmx/select/dilicom/{supplier.id}")
+    """Test de la route HTMX de sélection d'un fournisseur (contexte Dilicom)."""
+    response = client_all.get(
+        f"/supplier/htmx/select/{supplier.id}",
+        query_string={"supplier_name": "test", "gln13": "1234567890123", "context": "dilicom"}
+    )
     assert response.status_code == 200
-    assert response.text.startswith("<!-- template select_dilicom_supplier.html -->")
+    assert response.text.startswith("<!-- template select_supplier.html -->")
 
 
 def test_close_modal(client_all):
