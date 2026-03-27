@@ -78,8 +78,6 @@
                             <div id="search-results" class="dropdown-menu"></div>
                             {% endif %}
                         </div>
-                        {# Conteneur pour le formulaire de création fournisseur #}
-                        <div id="supplier-create-modal"></div>
                     </div>
 
                     {# Type d'objet #}
@@ -167,6 +165,8 @@
                     {% endif %}
                 </div>
             </form>
+            {# Conteneur pour le formulaire de création fournisseur — hors du <form> pour éviter les nested forms #}
+            <div id="supplier-create-modal"></div>
             {% endif %}
         </div>
     </div>

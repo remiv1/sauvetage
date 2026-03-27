@@ -11,23 +11,23 @@
 			{{ form.hidden_tag() }}
 
 			<div class="form-group">
-				{{ form.supplier_name.label }}
-				{{ form.supplier_name(id='supplier_name', class='form-control') }}
+				{{ form.supplier_name.label(for='create_supplier_name') }}
+				{{ form.supplier_name(id='create_supplier_name', class='form-control') }}
 			</div>
 
 			<div class="form-group">
-				{{ form.gln13.label }}
-				{{ form.gln13(id='gln13', class='form-control') }}
+				{{ form.gln13.label(for='create_gln13') }}
+				{{ form.gln13(id='create_gln13', class='form-control') }}
 			</div>
 
 			<div class="form-group">
-				{{ form.contact_email.label }}
-				{{ form.contact_email(id='contact_email', class='form-control') }}
+				{{ form.contact_email.label(for='create_contact_email') }}
+				{{ form.contact_email(id='create_contact_email', class='form-control') }}
 			</div>
 
 			<div class="form-group">
-				{{ form.contact_phone.label }}
-				{{ form.contact_phone(id='contact_phone', class='form-control') }}
+				{{ form.contact_phone.label(for='create_contact_phone') }}
+				{{ form.contact_phone(id='create_contact_phone', class='form-control') }}
 			</div>
 
 			<div class="form-actions" style="margin-top: .8rem; display:flex; gap:.6rem;">
