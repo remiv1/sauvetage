@@ -11,11 +11,15 @@ from app_front.blueprints.inventory.forms import (
     SupplierCreateForm,
 )
 from app_front.utils.pages import render_page
+from app_front.utils.decorators import (
+    permission_required, DIRECTION, LOGISTIQUE, SUPPORT, ADMIN
+)
 
 bp_inventory = Blueprint("inventory", __name__, url_prefix="/inventory")
 
 
-@bp_inventory.route("/")
+@bp_inventory.get("/")
+@permission_required([DIRECTION, LOGISTIQUE, SUPPORT, ADMIN], _and=False)
 def index():
     """Page principale du workflow d'inventaire."""
     ean_form = EanInputForm()

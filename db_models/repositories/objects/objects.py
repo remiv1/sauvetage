@@ -32,15 +32,9 @@ class ObjectsRepository(BaseRepository):
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
         # Importations locales pour casser l'import circulaire
         from .books import BooksRepository  # pylint: disable=import-outside-toplevel
-        from .other_objects import (
-            OtherObjectsRepository,
-        )  # pylint: disable=import-outside-toplevel
-        from .obj_metadatas import (
-            ObjMetadatasRepository,
-        )  # pylint: disable=import-outside-toplevel
-        from .object_tags import (
-            ObjectTagsRepository,
-        )  # pylint: disable=import-outside-toplevel
+        from .other_objects import OtherObjectsRepository  # pylint: disable=import-outside-toplevel
+        from .obj_metadatas import ObjMetadatasRepository  # pylint: disable=import-outside-toplevel
+        from .object_tags import ObjectTagsRepository  # pylint: disable=import-outside-toplevel
         from .media import MediaRepository  # pylint: disable=import-outside-toplevel
 
         self.book_repo = BooksRepository(self.session)
@@ -91,7 +85,7 @@ class ObjectsRepository(BaseRepository):
         """Récupère une liste d'objets dont le nom correspond à la recherche."""
         stmt = (
             self._get_global_select()
-            .where(self.model.name.ilike(f"%{name}%"))
+            .where(self.model.name.ilike(f"%{name.lower()}%"))
             .limit(10)
         )
         return self.session.execute(stmt).unique().scalars().all()

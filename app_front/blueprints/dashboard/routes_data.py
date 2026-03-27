@@ -7,11 +7,15 @@ Endpoints:
 """
 
 from flask import Blueprint, jsonify
+from app_front.utils.decorators import (
+    permission_required, DIRECTION, ADMIN, COMMERCIAL, COMPTA, LOGISTIQUE
+)
 
 bp_dashboard_data = Blueprint("dashboard_data", __name__, url_prefix="/dashboard/data")
 
 
-@bp_dashboard_data.route("/finances", methods=["GET"])
+@bp_dashboard_data.get("/finances")
+@permission_required([DIRECTION, ADMIN, COMMERCIAL, COMPTA, LOGISTIQUE], _and=False)
 def finances():
     """Retourne les KPIs financiers pour une plage donnée.
 
@@ -46,7 +50,8 @@ def finances():
     return jsonify({"months": months, "charges": charges, "ressources": ressources})
 
 
-@bp_dashboard_data.route("/commandes", methods=["GET"])
+@bp_dashboard_data.get("/commandes")
+@permission_required([DIRECTION, ADMIN, COMMERCIAL, COMPTA, LOGISTIQUE], _and=False)
 def commandes():
     """Liste des commandes avec filtres de base pour le dashboard.
 
@@ -133,7 +138,8 @@ def commandes():
     return jsonify(orders)
 
 
-@bp_dashboard_data.route("/stock", methods=["GET"])
+@bp_dashboard_data.get("/stock")
+@permission_required([DIRECTION, ADMIN, COMMERCIAL, COMPTA, LOGISTIQUE], _and=False)
 def stock():
     """Endpoints pour vues stock: slow_moving ou by_category
 
