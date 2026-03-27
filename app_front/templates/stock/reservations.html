@@ -1,0 +1,14 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+
+<section class="orders-container" id="orders-management">
+    {% with reservation=True %}
+    {% include "htmx_templates/stock/orders/sections/home.html" %}
+    {% endwith %}
+</section>
+<div id="supplier-create-modal">
+    <!-- Le formulaire d'ajout rapide de fournisseur sera injecté ici -->
+</div>
+
+{% endblock %}

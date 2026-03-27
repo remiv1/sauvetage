@@ -1,4 +1,5 @@
 <!-- template home.html -->
+{% set reservation = reservation|default(false) %}
 {# ── En-tête + boutons d'action ──────────────────────────────────────── #}
 <div class="orders-header">
     <div class="search-header">
@@ -7,10 +8,19 @@
                title="Retour à la gestion des stocks">
                 {% include "svg/back.html" %}
             </a>
-            <h2>Commandes fournisseurs</h2>
+            <h2>{{ 'Réservations' if reservation else 'Commandes fournisseurs' }}</h2>
         </div>
     </div>
     <div class="orders-actions">
+        {% if reservation %}
+        <div class="btn btn-primary" id="new-order"
+             hx-get="{{ url_for('stock_htmx_reservations.new_reservation_section') }}"
+             hx-target="#orders-management"
+             hx-swap="innerHTML">
+            {% include "svg/plus.html" %}
+            Nouvelle réservation
+        </div>
+        {% else %}
         <div class="btn btn-primary" id="new-order"
              hx-get="{{ url_for('stock_htmx_orders.new_order_section') }}"
              hx-target="#orders-management"
@@ -25,6 +35,7 @@
             {% include "svg/refresh.html" %}
             Retour fournisseur
         </div>
+        {% endif %}
     </div>
 </div>
 
@@ -34,7 +45,9 @@
     <thead>
         <tr>
             <th>Référence</th>
+            {% if not reservation %}
             <th>Réf. externe</th>
+            {% endif %}
             <th>Fournisseur</th>
             <th>État</th>
             <th>Montant</th>
@@ -46,15 +59,17 @@
         {% for order in orders %}
         <tr>
             <td class="identifiant">{{ order.order_ref }}</td>
+            {% if not reservation %}
             <td>{{ order.external_ref or '—' }}</td>
+            {% endif %}
             <td>{{ order.supplier.name }}</td>
             <td>
                 {% if order.order_state == 'draft' %}
                 <span class="badge badge-warning">Brouillon</span>
                 {% elif order.order_state == 'sended' %}
-                <span class="badge badge-info">Envoyée</span>
+                <span class="badge badge-info">{{ 'Confirmée' if reservation else 'Envoyée' }}</span>
                 {% elif order.order_state == 'received' %}
-                <span class="badge badge-success">Reçue</span>
+                <span class="badge badge-success">{{ 'Retournée' if reservation else 'Reçue' }}</span>
                 {% elif order.order_state == 'cancelled' %}
                 <span class="badge badge-danger">Annulée</span>
                 {% else %}
@@ -64,6 +79,44 @@
             <td class="text-right">{{ "%.2f"|format(order.value|float) }} €</td>
             <td class="text-center">{{ order.orderin_lines | length }}</td>
             <td class="text-center actions-cell">
+                {% if reservation %}
+                <a hx-get="{{ url_for('stock_htmx_reservations.view_reservation', order_id=order.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Voir la réservation">
+                    {% include "svg/eye.html" %}
+                </a>
+                {% if order.order_state == "draft" %}
+                <a hx-get="{{ url_for('stock_htmx_reservations.edit_reservation', order_id=order.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Modifier la réservation">
+                    {% include "svg/edit.html" %}
+                </a>
+                {% endif %}
+                {% if order.order_state == "sended" %}
+                <a hx-get="{{ url_for('stock_htmx_reservations.return_reservation_route', order_id=order.id) }}"
+                    hx-target="#order-modale"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Retourner la réservation">
+                    {% include "svg/refresh.html" %}
+                </a>
+                {% endif %}
+                {% if order.order_state == "draft" %}
+                <button class="action-icon action-cancel"
+                        hx-get="{{ url_for('stock_htmx_reservations.cancel_reservation', order_id=order.id) }}"
+                        hx-target="#order-modale"
+                        hx-swap="innerHTML"
+                        title="Supprimer la réservation"
+                        data-order-id="{{ order.id }}"
+                        data-order-ref="{{ order.order_ref }}">
+                    {% include "svg/del.html" %}
+                </button>
+                {% endif %}
+                {% else %}
                 <a hx-get="{{ url_for('stock_htmx_orders.view_order', order_id=order.id) }}"
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
@@ -89,6 +142,7 @@
                     {% include "svg/box.html" %}
                 </a>
                 {% endif %}
+                {% if order.order_state == "draft" %}
                 <button class="action-icon action-cancel"
                         hx-get="{{ url_for('stock_htmx_orders.cancel_order', order_id=order.id) }}"
                         hx-target="#order-modale"
@@ -98,6 +152,8 @@
                         data-order-ref="{{ order.order_ref }}">
                     {% include "svg/del.html" %}
                 </button>
+                {% endif %}
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
@@ -109,6 +165,6 @@
 {% else %}
 <div class="no-order">
     {% include "svg/truck.html" %}
-    <p>Aucune commande fournisseur en cours.</p>
+    <p>{{ 'Aucune réservation en cours.' if reservation else 'Aucune commande fournisseur en cours.' }}</p>
 </div>
 {% endif %}

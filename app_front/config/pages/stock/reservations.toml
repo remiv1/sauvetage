@@ -6,7 +6,7 @@
 tab = "Stock"
 styles = [
     "css/main.css",
-    "css/stock/reservations.css"
+    "css/stock/order.css"
 ]
 scripts = ["js/main.js"]
 # Clées
@@ -28,4 +28,5 @@ extend_layout = "index.html"
 [flags]
 navbar = true
 searchbar = false
+htmx = true
 userbar = true

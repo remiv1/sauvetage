@@ -2,10 +2,11 @@
 
 from decimal import Decimal
 from typing import Sequence
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 from db_models.objects import (
+    GeneralObjects,
     InventoryMovements,
     OrderIn,
     OrderInLine,
@@ -75,32 +76,33 @@ class OrderRepository(BaseRepository):
 
     # ── Lecture ────────────────────────────────────────────────────────────
 
-    def get_supplier_orders(self, out: bool = False) -> Sequence[OrderIn]:
+    def get_supplier_orders(
+        self, out: bool = False, reservation: bool = False
+    ) -> Sequence[OrderIn]:
         """Récupère la liste des commandes fournisseurs avec toutes les relations chargées.
 
         Charge les fournisseurs et les lignes de commande de manière eager pour éviter
         le lazy loading.
 
+        Args:
+            out: True pour les retours fournisseur (RET-).
+            reservation: True pour les réservations (RES-).
+
         Returns:
             Sequence[OrderIn]: Liste des commandes avec relations complètement chargées.
         """
-        if out:
-            order_sens = OrderInLine.qty_ordered < 0
+        if reservation:
+            prefix = "RES-"
+        elif out:
+            prefix = "RET-"
         else:
-            order_sens = OrderInLine.qty_ordered >= 0
+            prefix = "CMD-"
         stmt = (
             select(OrderIn)
             .options(
                 selectinload(OrderIn.supplier), selectinload(OrderIn.orderin_lines)
             )
-            .where(
-                or_(
-                    OrderIn.orderin_lines.any(
-                        order_sens
-                    ),  # Exclure les retours ou les commandes selon le sens
-                    OrderIn.orderin_lines == None,  # pylint: disable=singleton-comparison
-                )
-            )
+            .where(OrderIn.order_ref.startswith(prefix))
             .order_by(OrderIn.id.desc())
         )
         return self.session.execute(stmt).scalars().all()
@@ -137,13 +139,17 @@ class OrderRepository(BaseRepository):
 
     # ── CRUD commandes ────────────────────────────────────────────────────
 
-    def edit_order_in_db(self, order_in: OrderIn, action: str = "create", out: bool = False) -> int:
+    def edit_order_in_db(
+        self, order_in: OrderIn, action: str = "create",
+        out: bool = False, reservation: bool = False
+    ) -> int:
         """Crée/ modifie une commande fournisseur en base à partir des données du formulaire.
 
         Args:
             order_in: L'objet OrderIn contenant les données de la commande à créer ou modifier.
             action: "create" pour une nouvelle commande, "edit" pour une modification.
             out: True si c'est un retour fournisseur (quantité négative), False pour une commande.
+            reservation: True pour créer une réservation (RES-).
 
         Returns:
             L'ID de la commande créée/modifiée.
@@ -152,7 +158,9 @@ class OrderRepository(BaseRepository):
         if action == "create":
             self.session.add(order_in)
             self.session.flush()
-            if out is True:
+            if reservation:
+                ref = f"RES-{order_in.id:06d}"
+            elif out is True:
                 ref = f"RET-{order_in.id:06d}"
             else:
                 ref = f"CMD-{order_in.id:06d}"
@@ -186,21 +194,34 @@ class OrderRepository(BaseRepository):
 
         return order_in.id
 
-    def cancel_supplier_order(self, order_id: int) -> None:
+    def cancel_supplier_order(
+        self, order_id: int, reservation: bool = False
+    ) -> None:
         """
-        Supprime une commande fournisseur et ses lignes associées et compense les mouvements
-        d'inventaire liés.
+        Supprime une commande fournisseur (ou réservation) et ses lignes associées
+        et compense les mouvements d'inventaire liés.
 
         Args:
             order_id: L'identifiant de la commande à annuler.
+            reservation: True pour supprimer une réservation (vérifie l'état brouillon).
 
         Raises:
             ValueError: Si la commande n'existe pas.
             RuntimeError: En cas d'erreur lors du commit.
         """
+        label = "Réservation" if reservation else "Commande"
         order = self.session.get(OrderIn, order_id)
         if order is None:
-            raise ValueError(f"Commande {order_id} introuvable")
+            raise ValueError(f"{label} {order_id} introuvable")
+
+        if reservation:
+            if not order.order_ref.startswith("RES-"):
+                raise ValueError(f"La commande {order_id} n'est pas une réservation")
+            if order.order_state != "draft":
+                raise ValueError(
+                    f"Seules les réservations à l'état brouillon peuvent être supprimées "
+                    f"(état actuel : {order.order_state})"
+                )
 
         # Chargement ORM des lignes pour passer par les relations SQLAlchemy
         lines = (
@@ -295,7 +316,8 @@ class OrderRepository(BaseRepository):
     def edit_order_in_line_db(
             self, new_line: OrderInLine,
             action: str = "edit",
-            out: bool = False
+            out: bool = False,
+            reservation: bool = False,
         ) -> int:
         """
         Modifie/crée une ligne de commande fournisseur en base à partir des données du formulaire.
@@ -304,16 +326,32 @@ class OrderRepository(BaseRepository):
             new_line: L'objet OrderInLine contenant les données de la ligne à créer ou modifier.
             action: "create" pour une nouvelle ligne, "edit" pour une modification.
             out: True si c'est un retour fournisseur (quantité négative), False pour une commande.
+            reservation: True pour une ligne de réservation (mouvement 'reserved', prix auto).
         """
         # Gestion de l'opération de création
         if action == "create":
-            if out is True:
+            if reservation:
+                obj = self.session.get(GeneralObjects, new_line.general_object_id)
+                if obj is None:
+                    raise ValueError(f"Objet {new_line.general_object_id} introuvable")
+                order = self.session.get(OrderIn, new_line.order_in_id)
+                if order is None:
+                    raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
+                price = float(obj.purchase_price) if obj.purchase_price else 0.0
+                source = "stock"
+                destination = "reserve"
+                movement_type = "reserved"
+                notes = f"Réservation {order.order_ref} — objet #{new_line.general_object_id}"
+                new_line.unit_price = price
+            elif out is True:
+                price = float(new_line.unit_price)
                 source = f"Retour fournisseur #{new_line.order_in_id}"
                 notes = f"Retour fournisseur #{new_line.order_in_id}" \
                        + f" - Ligne #{new_line.general_object_id}"
                 destination = "Fournisseur"
                 movement_type = "out"
             else:
+                price = float(new_line.unit_price)
                 source = f"Commande fournisseur #{new_line.order_in_id}"
                 notes = f"Commande fournisseur #{new_line.order_in_id}" \
                        + f" - Ligne #{new_line.general_object_id}"
@@ -323,7 +361,7 @@ class OrderRepository(BaseRepository):
                 general_object_id=new_line.general_object_id,
                 movement_type=movement_type,
                 quantity=new_line.qty_ordered,
-                price_at_movement=Decimal(new_line.unit_price),
+                price_at_movement=Decimal(str(price)),
                 source=source,
                 destination=destination,
                 notes=notes,
@@ -558,3 +596,60 @@ class OrderRepository(BaseRepository):
         self._check_order_completion(order_id)
 
         return order_id
+
+    # ── Réservations ───────────────────────────────────────────────────────
+
+    def return_reservation(self, order_id: int) -> None:
+        """Retourne (clôture) une réservation : crée des mouvements inverses pour chaque ligne.
+
+        Pour chaque ligne, duplique le mouvement d'inventaire avec :
+        - quantity = -quantity (inverse)
+        - source et destination inversées
+
+        Puis passe la commande et toutes ses lignes à l'état 'received'.
+
+        Args:
+            order_id: L'identifiant de la réservation à retourner.
+        """
+        order = self.get_order_by_id(order_id)
+        if not order.order_ref.startswith("RES-"):
+            raise ValueError(f"La commande {order_id} n'est pas une réservation")
+        if order.order_state not in ("draft", "sended"):
+            raise ValueError(
+                f"La réservation {order_id} ne peut pas être retournée "
+                f"(état actuel : {order.order_state})"
+            )
+
+        for line in order.orderin_lines:
+            if line.line_state != "pending":
+                continue
+            if line.inventory_movement_id is None:
+                continue
+
+            original = self.session.get(InventoryMovements, line.inventory_movement_id)
+            if original is None:
+                continue
+
+            inverse = InventoryMovements(
+                general_object_id=original.general_object_id,
+                movement_type="reserved",
+                quantity=-original.quantity,
+                price_at_movement=original.price_at_movement,
+                source=original.destination,
+                destination=original.source,
+                notes=f"Retour réservation {order.order_ref} — mouvement #{original.id}",
+            )
+            self.session.add(inverse)
+
+            line.line_state = "received"
+            line.qty_received = line.qty_ordered
+
+        order.order_state = "received"
+
+        try:
+            self.session.commit()
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise RuntimeError(
+                f"Erreur lors du retour de la réservation : {exc}"
+            ) from exc

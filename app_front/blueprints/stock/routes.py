@@ -48,7 +48,8 @@ def create_return():
 @bp_stock.route("/reservations", methods=["GET"])
 def reservations():
     """Page de gestion des réservations de stocks"""
-    return render_page("stock_reservations")
+    orders_list = get_supplier_orders(reservation=True)
+    return render_page("stock_reservations", orders=orders_list, reservation=True)
 
 
 @bp_stock.route("/search", methods=["GET"])

@@ -1,16 +1,21 @@
 <!-- template new_line.html -->
-{# ── Modale de création de ligne de commande ──────────────────────────────── #}
+{% set reservation = reservation|default(false) %}
+{# ── Modale de création de ligne de commande / réservation ────────────── #}
 <div class="modal show" id="order-line-modal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Nouvelle ligne de commande</h2>
+                <h2 class="modal-title">{{ 'Nouvelle ligne de réservation' if reservation else 'Nouvelle ligne de commande' }}</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
 
             <form id="order-line-form"
                     method="post"
                     hx-post="{{
+                    url_for('stock_htmx_reservations.new_reservation_line',
+                        order_id=form.order_id.data
+                    )
+                    if reservation and view_state == 'create' else
                     url_for('stock_htmx_orders.new_order_line',
                         order_id=form.order_id.data
                     )
@@ -60,7 +65,7 @@
 
                     {# ── Ligne de quantité et prix unitaire ──────────────────────── #}
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="{{ 'col-md-12' if reservation else 'col-md-6' }}">
                             <div class="form-group mb-3">
                                 {{ form.quantity.label(class="form-label") }}
                                 {{ form.quantity(
@@ -78,6 +83,7 @@
                                 {% endif %}
                             </div>
                         </div>
+                        {% if not reservation %}
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 {{ form.unit_price.label(class="form-label") }}
@@ -99,8 +105,10 @@
                                 {% endif %}
                             </div>
                         </div>
+                        {% endif %}
                     </div>
 
+                    {% if not reservation %}
                     {# ── Taux de TVA ──────────────────────────────────────────── #}
                     <div class="form-group mb-3">
                         {{ form.vat_rate.label(class="form-label") }}
@@ -135,14 +143,19 @@
                             </div>
                         </div>
                     </div>
+                    {% else %}
+                    <div class="alert alert-info mt-4">
+                        <p class="mb-0 small">Le prix unitaire et la TVA sont calculés automatiquement à partir du prix d'achat de l'article.</p>
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <div class="modal-footer">
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal"
-                            title="Annuler la création de la ligne de commande"
-                            hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                            title="{{ 'Annuler la création de la ligne de réservation' if reservation else 'Annuler la création de la ligne de commande' }}"
+                            hx-get="{{ url_for('stock_htmx_reservations.cleared') if reservation else url_for('stock_htmx_orders.cleared') }}"
                             hx-target="#new-line-modal"
                             hx-swap="innerHTML"
                     >

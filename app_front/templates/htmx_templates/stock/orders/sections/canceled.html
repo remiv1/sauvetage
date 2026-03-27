@@ -1,6 +1,7 @@
 <!-- template canceled.html -->
+{% set reservation = reservation|default(false) %}
 {#
-  Fragment HTMX pour la suppression d'une ligne de commande.
+  Fragment HTMX pour la suppression d'une ligne de commande / réservation.
   - Si `deleted` est vrai, affiche la confirmation de suppression (POST).
   - Sinon, affiche la demande de confirmation (GET).
   Le template utilise `request.view_args` pour récupérer `order_id` et `line_id`
@@ -13,6 +14,16 @@
     {% set mod = 'line' %}
 {% endif %}
 
+{# Label selon le type d'entité #}
+{% if mod == 'reservation' %}
+    {% set entity_label = 'réservation' %}
+{% elif mod == 'line' %}
+    {% set entity_label = 'ligne' %}
+{% else %}
+    {% set entity_label = 'commande' %}
+{% endif %}
+{% set entity_id = line_id if mod == 'line' else order_id %}
+
 {% if deleted %}
 <div class="modal show" id="delete-{{ mod }}-modal" tabindex="-1">
     <div class="modal-dialog modal-sm">
@@ -21,18 +32,18 @@
                 {% include "svg/checkmark.html" %}
             </div>
             <h3>Suppression effectuée</h3>
-            <p class="small">La {{ 'ligne' if mod == 'line' else 'commande' }} {{ line_id if mod == 'line' else order_id }} a été supprimée avec succès.</p>
+            <p class="small">La {{ entity_label }} {{ entity_id }} a été supprimée avec succès.</p>
             <div class="mt-3 d-flex justify-content-center gap-2">
                 {% if mod == 'line' %}
                 <button class="btn btn-primary"
-                        hx-get="{{ url_for('stock_htmx_orders.orders') }}"
+                        hx-get="{{ url_for('stock_htmx_reservations.reservations_list') if reservation else url_for('stock_htmx_orders.orders') }}"
                         hx-target="#orders-management"
                         hx-swap="innerHTML">
-                    Retourner aux commandes
+                    {{ 'Retourner aux réservations' if reservation else 'Retourner aux commandes' }}
                 </button>
                 {% endif %}
                 <button class="btn btn-secondary"
-                        hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                        hx-get="{{ url_for('stock_htmx_reservations.cleared') if reservation else url_for('stock_htmx_orders.cleared') }}"
                         hx-target="#delete-{{ mod }}-modal"
                         hx-swap="outerHTML">
                     Fermer
@@ -50,21 +61,26 @@
             </div>
             <div class="modal-body">
                 <p>
-                    Voulez-vous vraiment supprimer la {{ 'ligne' if mod == 'line' else 'commande' }} {{ line_id if mod == 'line' else order_id }} ? <br>
+                    Voulez-vous vraiment supprimer la {{ entity_label }} {{ entity_id }} ? <br>
                     Cette action est irréversible.
                 </p>
             </div>
             <div class="modal-footer d-flex justify-content-end gap-2">
                 <button class="btn btn-secondary"
-                        hx-get="{{ url_for('stock_htmx_orders.cleared') }}"
+                        hx-get="{{ url_for('stock_htmx_reservations.cleared') if reservation else url_for('stock_htmx_orders.cleared') }}"
                         hx-target="#delete-{{ mod }}-modal"
                         hx-swap="innerHTML">
                     Annuler
                 </button>
-                {# Utilise request.view_args pour construire l'URL POST (robuste si la route n'envoie pas order/line) #}
                 <button class="btn btn-danger"
                         {% if mod == 'line' %}
-                        hx-post="{{ url_for('stock_htmx_orders.edit_order_line', order_id=order_id, action='delete') }}"
+                            {% if reservation %}
+                            hx-post="{{ url_for('stock_htmx_reservations.delete_reservation_line', order_id=order_id, line_id=line_id) }}"
+                            {% else %}
+                            hx-post="{{ url_for('stock_htmx_orders.edit_order_line', order_id=order_id, action='delete') }}"
+                            {% endif %}
+                        {% elif mod == 'reservation' %}
+                        hx-post="{{ url_for('stock_htmx_reservations.cancel_reservation', order_id=order_id or 0) }}"
                         {% else %}
                         hx-post="{{ url_for('stock_htmx_orders.cancel_order', order_id=order_id or 0) }}"
                         {% endif %}

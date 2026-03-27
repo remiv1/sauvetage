@@ -64,49 +64,54 @@ def update_movement_price(movement_id: int, price: float) -> int:
     return stock_repo.clone_movement_with_updated_price(movement_id, price)
 
 
-def get_supplier_orders(out: bool = False) -> Sequence[OrderIn]:
+def get_supplier_orders(
+    out: bool = False, reservation: bool = False
+) -> Sequence[OrderIn]:
     """Récupère la liste des commandes fournisseurs avec le nom du fournisseur
     et le nombre de lignes de commande.
+
+    Args:
+        out: True pour les retours fournisseur.
+        reservation: True pour les réservations.
 
     Returns:
         Sequence[OrderIn]: Liste des commandes avec relations complètement chargées.
     """
     stock_repo = StockRepository(db_conf.get_main_session())
-    return stock_repo.get_supplier_orders(out=out)
+    return stock_repo.get_supplier_orders(out=out, reservation=reservation)
 
 
-def cancel_supplier_order(order_id: int) -> bool:
-    """Supprime une commande fournisseur et ses lignes associées.
+def cancel_supplier_order(
+    order_id: int, reservation: bool = False
+) -> bool:
+    """Supprime une commande fournisseur (ou réservation) et ses lignes associées.
 
     Les mouvements d'inventaire liés sont désassociés et un mouvement inverse est créé.
 
     Args:
         order_id: L'identifiant de la commande à annuler.
-
-    Raises:
-        ValueError: Si la commande n'existe pas.
-        RuntimeError: En cas d'erreur lors du commit.
+        reservation: True pour supprimer une réservation (vérifie l'état brouillon).
     """
     try:
         stock_repo = StockRepository(db_conf.get_main_session())
-        stock_repo.cancel_supplier_order(order_id)
+        stock_repo.cancel_supplier_order(order_id, reservation=reservation)
         return True
     except ValueError as exc:
-        msg = f"Erreur lors de l'annulation de la commande {order_id} : {str(exc)}"
+        msg = f"Erreur lors de l'annulation : {str(exc)}"
         raise ValueError(msg) from exc
     except Exception as exc:
-        msg = f"Erreur inattendue lors de l'annulation de la commande {order_id} : {str(exc)}"
+        msg = f"Erreur inattendue lors de l'annulation : {str(exc)}"
         raise RuntimeError(msg) from exc
 
 
-def create_order_in_db(form: OrderInCreateForm) -> int:
-    """Crée une nouvelle commande fournisseur en base à partir des données du formulaire.
+def create_order_in_db(
+    form: OrderInCreateForm, reservation: bool = False
+) -> int:
+    """Crée une nouvelle commande fournisseur (ou réservation) en base.
 
     Args:
         form: Le formulaire contenant les données de la commande.
-
-    Raises:
-        RuntimeError: En cas d'erreur lors du commit.
+        reservation: True pour créer une réservation (RES-).
     """
     supplier_id = form.supplier_id.data
     if supplier_id is None:
@@ -120,7 +125,7 @@ def create_order_in_db(form: OrderInCreateForm) -> int:
         order_ref="temp",
         supplier_id=supplier_id,
     )
-    return stock_repo.edit_order_in_db(order, action="create")
+    return stock_repo.edit_order_in_db(order, action="create", reservation=reservation)
 
 
 def get_order_by_id(order_id: int) -> OrderIn:
@@ -140,16 +145,17 @@ def get_order_by_id(order_id: int) -> OrderIn:
 
 
 def edit_order_in_line_db(
-    form: OrderInLineForm, order_id: int, action: str = "create", line_id: int = 0
+    form: OrderInLineForm, order_id: int, action: str = "create",
+    line_id: int = 0, reservation: bool = False
 ) -> int:
-    """Crée une nouvelle ligne de commande fournisseur en base à partir des données du formulaire.
+    """Crée/édite/supprime une ligne de commande fournisseur en base.
 
     Args:
         form: Le formulaire contenant les données de la ligne de commande.
-
-    Raises:
-        ValueError: Si les données du formulaire sont invalides.
-        RuntimeError: En cas d'erreur lors du commit.
+        order_id: L'identifiant de la commande.
+        action: "create", "edit" ou "delete".
+        line_id: L'identifiant de la ligne (pour edit/delete).
+        reservation: True pour une ligne de réservation (prix auto depuis purchase_price).
     """
     try:
         line_id = int(line_id)
@@ -163,17 +169,35 @@ def edit_order_in_line_db(
 
     # Gestion de la création d'une ligne de commande
     elif action == "create":
-        order_id, general_object_id, quantity, unit_price, vat_rate = (
-            form.validate_form_data()
+        if reservation:
+            try:
+                general_object_id = int(form.general_object_id.data or 0)
+                quantity = int(form.quantity.data or 0)
+            except (ValueError, TypeError) as e:
+                raise ValueError("Données du formulaire invalides : " + str(e)) from e
+            if general_object_id == 0 or quantity == 0:
+                raise ValueError("L'article et la quantité sont obligatoires.")
+            new_line = OrderInLine(
+                order_in_id=order_id,
+                general_object_id=general_object_id,
+                qty_ordered=quantity,
+                unit_price=0,
+                vat_rate=0,
+            )
+        else:
+            order_id, general_object_id, quantity, unit_price, vat_rate = (
+                form.validate_form_data()
+            )
+            new_line = OrderInLine(
+                order_in_id=order_id,
+                general_object_id=general_object_id,
+                qty_ordered=quantity,
+                unit_price=unit_price,
+                vat_rate=vat_rate,
+            )
+        line_id = stock_repo.edit_order_in_line_db(
+            new_line=new_line, action=action, reservation=reservation
         )
-        new_line = OrderInLine(
-            order_in_id=order_id,
-            general_object_id=general_object_id,
-            qty_ordered=quantity,
-            unit_price=unit_price,
-            vat_rate=vat_rate,
-        )
-        line_id = stock_repo.edit_order_in_line_db(new_line=new_line, action=action)
 
     # Gestion de l'édition d'une ligne de commande
     elif action == "edit":
@@ -429,3 +453,14 @@ def update_order_external_ref(order_id: int, external_ref: str) -> None:
     """
     stock_repo = StockRepository(db_conf.get_main_session())
     stock_repo.update_order_external_ref(order_id, external_ref)
+
+
+# ============================================================================
+# Workflow réservations
+# ============================================================================
+
+
+def return_reservation(order_id: int) -> None:
+    """Retourne (clôture) une réservation."""
+    stock_repo = StockRepository(db_conf.get_main_session())
+    stock_repo.return_reservation(order_id)

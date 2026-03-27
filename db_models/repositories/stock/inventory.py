@@ -199,11 +199,30 @@ class InventoryRepository(BaseRepository):
             .subquery()
         )
 
+        # --- Sous-requête : somme des mouvements 'reserved' après le dernier inventaire ---
+        reserved_after = (
+            select(
+                im.general_object_id,
+                func.coalesce(func.sum(im.quantity), 0).label("reserved_qty"),
+            )
+            .join(
+                latest_inv_qty,
+                im.general_object_id == latest_inv_qty.c.general_object_id,
+            )
+            .where(
+                im.movement_type == "reserved",
+                im.movement_timestamp > latest_inv_qty.c.inv_ts,
+            )
+            .group_by(im.general_object_id)
+            .subquery()
+        )
+
         # --- Quantité calculée ---
         qty_expr = (
             func.coalesce(latest_inv_qty.c.inv_qty, 0)
             + func.coalesce(in_after.c.in_qty, 0)
             - func.abs(func.coalesce(out_after.c.out_qty, 0))
+            - func.coalesce(reserved_after.c.reserved_qty, 0)
         ).label("stock_qty")
 
         # --- Requête principale ---

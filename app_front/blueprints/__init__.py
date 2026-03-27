@@ -13,6 +13,7 @@ from .stock.routes import bp_stock  # type: ignore
 from .stock.routes_data import bp_stock_data  # type: ignore
 from .stock.routes_htmx_council import bp_stock_htmx_council  # type: ignore
 from .stock.routes_htmx_orders import bp_stock_htmx_orders  # type: ignore
+from .stock.routes_htmx_reservations import bp_stock_htmx_reservations  # type: ignore
 from .stock.routes_htmx_return import bp_stock_htmx_return  # type: ignore
 from .stock.routes_htmx_search import bp_stock_htmx_search  # type: ignore
 from .supplier.routes import bp_supplier  # type: ignore

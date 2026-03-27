@@ -1,12 +1,13 @@
 <!-- template new.html -->
+{% set reservation = reservation|default(false) %}
 <div class="orders-header">
-    <h2 id="create-order-title">Nouvelle commande</h2>
+    <h2 id="create-order-title">{{ 'Nouvelle réservation' if reservation else 'Nouvelle commande' }}</h2>
 </div>
-<!-- Formulaire de création de commandes. -->
+<!-- Formulaire de création de commandes / réservations. -->
 <div id="new-order-form">
     <form
         method="post"
-        hx-post="{{ url_for('stock_htmx_orders.new_order_section') }}"
+        hx-post="{{ url_for('stock_htmx_reservations.new_reservation_section') if reservation else url_for('stock_htmx_orders.new_order_section') }}"
         hx-target="#orders-management"
         hx-swap="innerHTML"
     >
