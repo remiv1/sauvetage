@@ -91,6 +91,18 @@ class ObjectsRepository(BaseRepository):
         )
         return self.session.execute(stmt).unique().scalars().all()
 
+    def get_vat_rate(self, object_id: int) -> Optional[float]:
+        """Récupère le taux de TVA d'un objet à partir de son id."""
+        stmt = (
+            select(self.model)
+            .where(self.model.id == object_id, self.model.is_active == True)  # pylint: disable=singleton-comparison
+            .options(joinedload(self.model.vat_rate))
+        )
+        obj = self.session.execute(stmt).unique().scalar_one_or_none()
+        if obj and obj.vat_rate:
+            return obj.vat_rate.rate
+        return None
+
     def commit_object(self) -> None:
         """
         Commit les changements liés à un objet (création, mise à jour, suppression).
