@@ -163,6 +163,8 @@ def edit_order_in_line_db(
     except ValueError as e:
         raise ValueError(VALUE_TYPE_NBR_MSG) from e
     stock_repo = StockRepository(db_conf.get_main_session())
+    inventory_repo = InventoryRepository(db_conf.get_main_session())
+    object_repo = ObjectsRepository(db_conf.get_main_session())
 
     # Gestion de la suppression d'une ligne de commande
     if action == "delete":
@@ -174,9 +176,8 @@ def edit_order_in_line_db(
             try:
                 general_object_id = int(form.general_object_id.data or 0)
                 quantity = int(form.quantity.data or 0)
-                inventory_repo = InventoryRepository(db_conf.get_main_session())
-                # TODO: Comprendre pourquoi le repo ne me retourne pas les méthodes de la classe InventoryRepository (même après import explicite) --- IGNORE ---
-                avg_price = inventory_repo.get_
+                avg_price = inventory_repo.get_average_price(general_object_id)
+                vat_rate = object_repo.get_vat_rate(general_object_id)
             except (ValueError, TypeError) as e:
                 raise ValueError("Données du formulaire invalides : " + str(e)) from e
             if general_object_id == 0 or quantity == 0:
@@ -185,8 +186,8 @@ def edit_order_in_line_db(
                 order_in_id=order_id,
                 general_object_id=general_object_id,
                 qty_ordered=quantity,
-                unit_price=0,
-                vat_rate=0,
+                unit_price=avg_price,
+                vat_rate=vat_rate,
             )
         else:
             order_id, general_object_id, quantity, unit_price, vat_rate = (
