@@ -248,6 +248,7 @@ class InventoryRepository(BaseRepository):
             .outerjoin(latest_inv_qty, go.id == latest_inv_qty.c.general_object_id)
             .outerjoin(in_after, go.id == in_after.c.general_object_id)
             .outerjoin(out_after, go.id == out_after.c.general_object_id)
+            .outerjoin(reserved_after, go.id == reserved_after.c.general_object_id)
             .outerjoin(DilicomReferencial, go.ean13 == DilicomReferencial.ean13)
         )
 

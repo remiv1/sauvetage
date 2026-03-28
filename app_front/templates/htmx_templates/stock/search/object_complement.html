@@ -137,44 +137,50 @@
         <div class="tab-panel" id="tab-metadata">
             <div id="metadata-list" class="dynamic-list">
                 {% if form_state == 'view' and obj and obj.obj_metadatas %}
-                    {% for md in obj.obj_metadatas %}
-                        {% set data = md.semistructured_data %}
-                        {% if data is mapping and data.get('items') %}
-                            {% for it in data.get('items') %}
-                            <div class="dynamic-list-item kv-pair">
-                                <input type="text" class="form-control" value="{{ it.key }}" disabled placeholder="Clé">
-                                <input type="text" class="form-control" value="{{ it.value }}" disabled placeholder="Valeur">
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            {% for k, v in data.items() %}
+                    {% set data = obj.obj_metadatas.semistructured_data %}
+                    {% for k, v in data.items() %}
+                        {% if v is string %}
+                        <div class="dynamic-list-item kv-pair">
+                            <input type="text" class="form-control" value="{{ k }}" disabled placeholder="Clé">
+                            <input type="text" class="form-control" value="{{ v }}" disabled placeholder="Valeur">
+                        </div>
+                        {% elif v is iterable %}
+                            {% for val in v %}
                             <div class="dynamic-list-item kv-pair">
                                 <input type="text" class="form-control" value="{{ k }}" disabled placeholder="Clé">
-                                <input type="text" class="form-control" value="{{ v }}" disabled placeholder="Valeur">
+                                <input type="text" class="form-control" value="{{ val }}" disabled placeholder="Valeur">
                             </div>
                             {% endfor %}
                         {% endif %}
                     {% endfor %}
                 {% elif form_state == 'edit' and obj and obj.obj_metadatas %}
                     {% set idx = namespace(value=0) %}
-                    {% for md in obj.obj_metadatas %}
-                        {% set data = md.semistructured_data %}
-                        {% if data is mapping and data.get('items') %}
-                            {% for it in data.get('items') %}
-                            <div class="dynamic-list-item kv-pair">
-                                <input type="hidden" value="{{ md.id }}" name="obj_metadatas-items-{{ idx.value }}-id">
-                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-key" class="form-control" value="{{ it.key }}" placeholder="Clé">
-                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ it.value }}" placeholder="Valeur">
-                                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
+                    {% set data = obj.obj_metadatas.semistructured_data %}
+                    {% for k, v in data.items() %}
+                        {% if v is string %}
+                        <div class="dynamic-list-item kv-pair">
+                            <input type="hidden" value="{{ obj.obj_metadatas.id }}" name="obj_metadatas-items-{{ idx.value }}-id">
+                            <div class="autocomplete-wrapper" style="flex:1">
+                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-key"
+                                       class="form-control ac-input" data-ac-field="metadata_key"
+                                       value="{{ k }}" placeholder="Clé">
+                                <div class="search-dropdown"></div>
                             </div>
-                            {% set idx.value = idx.value + 1 %}
-                            {% endfor %}
-                        {% else %}
-                            {% for k, v in data.items() %}
+                            <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ v }}" placeholder="Valeur">
+                            <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
+                        </div>
+                        {% set idx.value = idx.value + 1 %}
+                        {% elif v is iterable %}
+                            {% for val in v %}
                             <div class="dynamic-list-item kv-pair">
-                                <input type="hidden" value="{{ md.id }}" name="obj_metadatas-items-{{ idx.value }}-id">
-                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-key" class="form-control" value="{{ k }}" placeholder="Clé">
-                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ v }}" placeholder="Valeur">
+                                <input type="hidden" value="{{ obj.obj_metadatas.id }}" name="obj_metadatas-items-{{ idx.value }}-id">
+                                <div class="autocomplete-wrapper" style="flex:1">
+                                    <input type="text" name="obj_metadatas-items-{{ idx.value }}-key"
+                                           class="form-control ac-input" data-ac-field="metadata_key"
+                                           value="{{ k }}" placeholder="Clé">
+                                    <div class="search-dropdown"></div>
+                                </div>
+                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ val }}" placeholder="Valeur">
                                 <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
                             </div>
                             {% set idx.value = idx.value + 1 %}
@@ -183,8 +189,12 @@
                     {% endfor %}
                 {% elif form_state == 'create' %}
                     <div class="dynamic-list-item kv-pair">
-                        <input type="text" name="obj_metadatas-items-0-key"
-                               class="form-control" placeholder="Clé">
+                        <div class="autocomplete-wrapper" style="flex:1">
+                            <input type="text" name="obj_metadatas-items-0-key"
+                                   class="form-control ac-input" data-ac-field="metadata_key"
+                                   placeholder="Clé">
+                            <div class="search-dropdown"></div>
+                        </div>
                         <input type="text" name="obj_metadatas-items-0-value"
                                class="form-control" placeholder="Valeur">
                         <button type="button" class="btn btn-sm btn-danger btn-remove-item"
@@ -399,13 +409,6 @@
         }
     });
 
-    // ── Event listener pour afficher le formulaire de création ─────────────
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('toggle-create-form-btn')) {
-            toggleTagCreateForm(e.target);
-        }
-    });
-
     // Fermer les dropdowns au clic en dehors
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.autocomplete-wrapper')) {
@@ -529,10 +532,14 @@
             var idx = list.querySelectorAll('.dynamic-list-item').length;
             var div = document.createElement('div');
             div.className = 'dynamic-list-item kv-pair';
-            div.innerHTML = '<input type="text" name="obj_metadatas-items-' + idx + '-key" class="form-control" placeholder="Clé">'
+            div.innerHTML = '<div class="autocomplete-wrapper" style="flex:1">'
+                          + '<input type="text" name="obj_metadatas-items-' + idx + '-key" class="form-control ac-input" data-ac-field="metadata_key" placeholder="Clé">'
+                          + '<div class="search-dropdown"></div>'
+                          + '</div>'
                           + '<input type="text" name="obj_metadatas-items-' + idx + '-value" class="form-control" placeholder="Valeur">'
                           + '<button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>';
             list.appendChild(div);
+            setupAutocomplete(div.querySelector('.ac-input'));
         });
     }
 

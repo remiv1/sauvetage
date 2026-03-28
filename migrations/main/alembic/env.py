@@ -20,6 +20,7 @@ from db_models.objects.suppliers import *  # pylint: disable=wrong-import-positi
 from db_models.objects.objects import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.inventory import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 from db_models.objects.stocks import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models.objects.vat import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 
 # this is the Alembic Config object, which provides access to the values within
 # the .ini file in use, as well as the Python logging config.

@@ -28,4 +28,5 @@ from .objects import (
     ObjMetadatas,
     MediaFiles,
 )
+from .vat import VatRate
 from .suppliers import Suppliers

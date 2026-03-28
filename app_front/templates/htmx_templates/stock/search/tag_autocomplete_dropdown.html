@@ -11,7 +11,8 @@
 {% else %}
     <div class="dropdown-item text-muted">Aucun résultat</div>
 {% endif %}
-<button type="button" class="dropdown-item dropdown-item-create toggle-create-form-btn">
+<button type="button" class="dropdown-item dropdown-item-create toggle-create-form-btn"
+        onclick="toggleTagCreateForm(this)">
     ✨ Créer un mot-clé
 </button>
 <div class="tag-create-form" style="display:none; padding: .5rem;">

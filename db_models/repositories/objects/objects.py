@@ -55,6 +55,7 @@ class ObjectsRepository(BaseRepository):
                 joinedload(self.model.inventory_movements),
                 joinedload(self.model.obj_metadatas),
                 joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
+                joinedload(self.model.vat_rate),
             )
         )
 
@@ -150,7 +151,7 @@ class ObjectsRepository(BaseRepository):
         self.obj_metadata_repo.save_from_form(
             form=form.obj_metadatas,
             general_object_id=instance.id,
-            instance=instance.obj_metadatas[0] if instance.obj_metadatas else None,
+            instance=instance.obj_metadatas if instance.obj_metadatas else None,
         )
         self.object_tags_repo.save_from_form(
             form=form,

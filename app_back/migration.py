@@ -4,12 +4,14 @@ Utilise un advisory lock PostgreSQL pour garantir qu'un seul processus
 exécute les migrations Alembic, même quand Gunicorn forke plusieurs workers
 qui importent tous ce module simultanément.
 """
-
+from datetime import datetime, timezone
+from collections import namedtuple
 import subprocess
 from os import getenv
 from urllib.parse import quote
-
 import psycopg2
+from db_models.objects.vat import VatRate
+
 
 # Identifiant arbitraire pour le verrou consultatif PostgreSQL.
 # Tous les workers utilisant le même ID partagent le même verrou.
@@ -118,3 +120,29 @@ def run_migrations_with_lock(timeout: int = 300) -> None:
     finally:
         if conn:
             conn.close()
+
+def ensure_vat(session):
+    """S'assure que les taux de TVA de base sont présents dans la base."""
+
+    existing_rates = session.query(VatRate).filter(VatRate.rate.in_([2.1, 5.5, 10.0, 20.0])).all()
+    existing_codes = {rate.code for rate in existing_rates}
+
+    Rates = namedtuple("Rates", ["code", "rate", "label"])
+    default_rates = [
+        Rates(00, 2.1, "Taux super-réduit"),
+        Rates(10, 5.5, "Taux réduit"),
+        Rates(20, 10.0, "Taux intermédiaire"),
+        Rates(30, 20.0, "Taux normal"),
+    ]
+
+    for rate in default_rates:
+        if rate.code not in existing_codes:
+            new_rate = VatRate(
+                code=rate.code,
+                rate=rate.rate,
+                label=rate.label,
+                date_start=datetime.now(timezone.utc),
+            )
+            session.add(new_rate)
+            print(f"[migrations] Ajout du taux de TVA manquant : {new_rate}")
+    session.commit()

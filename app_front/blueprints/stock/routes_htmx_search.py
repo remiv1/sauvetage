@@ -11,6 +11,7 @@ from app_front.blueprints.stock.utils import (
     save_object_complete,
     search_book_field,
     search_tags,
+    search_metadata_keys,
     create_tag,
     toggle_object_active,
     add_object_to_dilicom,
@@ -101,6 +102,9 @@ def object_autocomplete(field: str):
     if field == "tag":
         results = search_tags(q)
         return render_template(TAG_AUTOCOMPLETE, results=results, query=q)
+    elif field == "metadata_key":
+        results = search_metadata_keys(q)
+        return render_template(AUTOCOMPLETE_DROPDOWN, results=results, field=field)
     else:
         results = search_book_field(field, q)
         return render_template(AUTOCOMPLETE_DROPDOWN, results=results, field=field)

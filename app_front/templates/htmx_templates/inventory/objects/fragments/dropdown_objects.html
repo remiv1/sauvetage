@@ -7,6 +7,8 @@
         <li class="dropdown-item"
             data-object-id="{{ i.id }}"
             data-object-name="{{ i.name }}"
+            data-purchase-price="{{ i.purchase_price | float if i.purchase_price else 0 }}"
+            data-vat-rate="{{ i.vat_rate.rate | float if i.vat_rate else 0 }}"
             style="cursor:pointer">
             {{ i.name }}
         </li>
@@ -18,10 +20,16 @@
         item.addEventListener('click', function() {
             var objId = this.dataset.objectId;
             var objName = this.dataset.objectName;
+            var purchasePrice = this.dataset.purchasePrice;
+            var vatRate = this.dataset.vatRate;
             var idField = document.getElementById('general_object_id');
             var nameField = document.getElementById('object-wrapper');
+            var priceField = document.getElementById('unit_price');
+            var vatField = document.getElementById('vat_rate');
             if (idField) idField.value = objId;
             if (nameField) nameField.value = objName;
+            if (priceField && purchasePrice) priceField.value = purchasePrice;
+            if (vatField && vatRate) vatField.value = vatRate;
             var results = document.getElementById('article-search-results');
             if (results) results.innerHTML = '';
         });

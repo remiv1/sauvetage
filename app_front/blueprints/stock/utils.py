@@ -1,7 +1,7 @@
 """Module utils pour le blueprint stock"""
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from sqlalchemy import select, distinct
+from sqlalchemy import select, distinct, text
 from app_front.config import db_conf
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
@@ -18,6 +18,7 @@ from db_models.objects import (
 from db_models.repositories.stock import (
     StockRepository,
     DilicomReferencialRepository,
+    InventoryRepository,
 )
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.tags import TagsRepository
@@ -173,6 +174,9 @@ def edit_order_in_line_db(
             try:
                 general_object_id = int(form.general_object_id.data or 0)
                 quantity = int(form.quantity.data or 0)
+                inventory_repo = InventoryRepository(db_conf.get_main_session())
+                # TODO: Comprendre pourquoi le repo ne me retourne pas les méthodes de la classe InventoryRepository (même après import explicite) --- IGNORE ---
+                avg_price = inventory_repo.get_
             except (ValueError, TypeError) as e:
                 raise ValueError("Données du formulaire invalides : " + str(e)) from e
             if general_object_id == 0 or quantity == 0:
@@ -391,6 +395,20 @@ def search_tags(query: str) -> List[Dict[str, Any]]:
         {"id": row[0], "name": row[1], "description": row[2]}
         for row in session.execute(stmt).all()
     ]
+
+
+def search_metadata_keys(query: str) -> List[str]:
+    """Recherche des clés de métadonnées distinctes correspondant à la requête."""
+    session = db_conf.get_main_session()
+    stmt = text(
+        "SELECT DISTINCT k"
+        " FROM app_schema.obj_metadatas,"
+        " json_object_keys(semistructured_data) AS k"
+        " WHERE k ILIKE :pattern"
+        " ORDER BY k"
+        " LIMIT 10"
+    )
+    return [row[0] for row in session.execute(stmt, {"pattern": f"%{query}%"}).all()]
 
 
 def create_tag(name: str, description: str = "") -> Dict[str, Any]:

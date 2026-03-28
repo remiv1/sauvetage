@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import Any, Dict
+from typing import Optional
 from sqlalchemy import (
     Integer,
     String,
@@ -57,6 +58,12 @@ class GeneralObjects(WorkingBase, QueryMixin):
         Numeric(10, 2), nullable=True, default=0.0,
         comment="Prix d'achat de l'objet"
     )
+    vat_rate_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.vat_rates.id"),
+        nullable=True,
+        comment="Code TVA associé à l'objet (référence la table vat_rates)",
+    )
 
     # Méta-données de suivi
     created_at: Mapped[datetime] = mapped_column(
@@ -84,6 +91,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
     # Relations
     supplier = relationship("Suppliers", back_populates="objects")
+    vat_rate = relationship("VatRate", back_populates="general_objects")
     book = relationship(
         "Books",
         uselist=False,
@@ -100,7 +108,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
         "InventoryMovements", back_populates="general_object", cascade=CASCADE_OPTIONS
     )
     obj_metadatas = relationship(
-        "ObjMetadatas", back_populates="general_object", cascade=CASCADE_OPTIONS
+        "ObjMetadatas", back_populates="general_object", cascade=CASCADE_OPTIONS, uselist=False
     )
     object_tags = relationship(
         "ObjectTags", back_populates="general_object", cascade=CASCADE_OPTIONS

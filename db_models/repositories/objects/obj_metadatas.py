@@ -135,16 +135,29 @@ class ObjMetadatasRepository(BaseRepository):
         """
         Sauvegarde une métadonnée à partir d'un formulaire.
         Si instance est fourni, met à jour la métadonnée existante, sinon en crée une nouvelle.
+        Regroupe les valeurs par clé : si une clé apparaît plusieurs fois, les valeurs sont
+        stockées dans une liste, sinon une simple paire clé/valeur est créée.
         """
         if instance is None:
             instance = ObjMetadatas()
             self.session.add(instance)
-        data = form.data
-        items = data.get("items")
-        instance.semistructured_data = {
-            it["key"]: it.get("value")
-            for it in items
-            if isinstance(it, dict) and it.get("key")
-        }
+        items = form.items.data if hasattr(form, "items") else []
+
+        # Construire le dictionnaire en regroupant par clé
+        result = {}
+        for it in items:
+            if isinstance(it, dict) and it.get("key"):
+                _key = it["key"]
+                _value = it.get("value")
+                if _key in result:
+                    # La clé existe déjà : convertir en liste si nécessaire
+                    if not isinstance(result[_key], list):
+                        result[_key] = [result[_key]]
+                    result[_key].append(_value)
+                else:
+                    result[_key] = _value
+
+        instance.semistructured_data = result
         instance.general_object_id = general_object_id
+        self.session.flush()
         return instance
