@@ -1,6 +1,7 @@
 """Module contenant les formulaires liés à la gestion des stocks."""
 
 from typing import Any
+from collections import namedtuple
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
@@ -14,6 +15,8 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired
 
+
+OrderTuple = namedtuple("Order", ["id", "general_object_id", "qty", "pu", "vat_rate"])
 
 class OrderInCreateForm(FlaskForm):
     """Formulaire de création de commande fournisseur (étape 1)."""
@@ -35,12 +38,12 @@ class OrderInLineForm(FlaskForm):
     vat_rate = StringField("Taux de TVA", validators=[DataRequired()])
     submit = SubmitField("Ajouter à la commande")
 
-    def validate_form_data(self) -> tuple[int, int, int, float, float]:
+    def validate_form_data(self) -> OrderTuple:
         """
         Valide si les données sont complètes pour être utilisées.
 
         Return:
-            tuple[int, int, int, float, float]: Un tuple contenant les données validées
+            OrderTuple: Un namedtuple contenant les données validées
             (order_id, general_object_id, quantity, unit_price, vat_rate).
         Raises:
             TypeError: Si les données du formulaire sont invalides.
@@ -60,7 +63,7 @@ class OrderInLineForm(FlaskForm):
                 or vat_rate == 0
             ):
                 raise ValueError("Remplir tous les champs du formulaire.")
-            return (order_id, general_object_id, quantity, unit_price, vat_rate)
+            return OrderTuple(order_id, general_object_id, quantity, unit_price, vat_rate)
         except (ValueError, TypeError) as e:
             raise TypeError("Données du formulaire invalides : " + str(e)) from e
 

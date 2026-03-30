@@ -18,8 +18,7 @@ from db_models.objects import (
 from db_models.repositories.stock import (
     StockRepository,
     DilicomReferencialRepository,
-    InventoryRepository,
-)
+    )
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.tags import TagsRepository
 
@@ -163,61 +162,24 @@ def edit_order_in_line_db(
     except ValueError as e:
         raise ValueError(VALUE_TYPE_NBR_MSG) from e
     stock_repo = StockRepository(db_conf.get_main_session())
-    inventory_repo = InventoryRepository(db_conf.get_main_session())
-    object_repo = ObjectsRepository(db_conf.get_main_session())
 
     # Gestion de la suppression d'une ligne de commande
     if action == "delete":
         line_id = stock_repo.delete_order_in_line_db(line_id)
 
     # Gestion de la création d'une ligne de commande
-    elif action == "create":
-        if reservation:
-            try:
-                general_object_id = int(form.general_object_id.data or 0)
-                quantity = int(form.quantity.data or 0)
-                avg_price = inventory_repo.get_average_price(general_object_id)
-                vat_rate = object_repo.get_vat_rate(general_object_id)
-            except (ValueError, TypeError) as e:
-                raise ValueError("Données du formulaire invalides : " + str(e)) from e
-            if general_object_id == 0 or quantity == 0:
-                raise ValueError("L'article et la quantité sont obligatoires.")
-            new_line = OrderInLine(
-                order_in_id=order_id,
-                general_object_id=general_object_id,
-                qty_ordered=quantity,
-                unit_price=avg_price,
-                vat_rate=vat_rate,
-            )
-        else:
-            order_id, general_object_id, quantity, unit_price, vat_rate = (
-                form.validate_form_data()
-            )
-            new_line = OrderInLine(
-                order_in_id=order_id,
-                general_object_id=general_object_id,
-                qty_ordered=quantity,
-                unit_price=unit_price,
-                vat_rate=vat_rate,
+    elif action in ["create", "edit"]:
+        order = form.validate_form_data()
+        line = OrderInLine(
+            order_in_id=order.id,
+            general_object_id=order.general_object_id,
+            qty_ordered=order.qty,
+            unit_price=order.pu,
+            vat_rate=order.vat_rate,
             )
         line_id = stock_repo.edit_order_in_line_db(
-            new_line=new_line, action=action, reservation=reservation
+            new_line=line, action=action, reservation=reservation
         )
-
-    # Gestion de l'édition d'une ligne de commande
-    elif action == "edit":
-        order_id, general_object_id, quantity, unit_price, vat_rate = (
-            form.validate_form_data()
-        )
-        edited_line = OrderInLine(
-            id=line_id,
-            order_in_id=order_id,
-            general_object_id=general_object_id,
-            qty_ordered=quantity,
-            unit_price=unit_price,
-            vat_rate=vat_rate,
-        )
-        line_id = stock_repo.edit_order_in_line_db(new_line=edited_line, action=action)
 
     else:
         raise ValueError("Action inconnue : " + action)

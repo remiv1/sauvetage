@@ -1,7 +1,8 @@
 """Dépôt pour les opérations liées aux commandes fournisseurs et leurs lignes."""
 
 from decimal import Decimal
-from typing import Sequence
+from collections import namedtuple
+from typing import Sequence, Any
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
@@ -13,6 +14,7 @@ from db_models.objects import (
 )
 from db_models.repositories.base_repo import BaseRepository
 
+Order = namedtuple("Order", ["price", "source", "destination", "movement_type", "notes"])
 
 class OrderRepository(BaseRepository):
     """Dépôt pour le CRUD et le workflow des commandes fournisseurs."""
@@ -313,6 +315,46 @@ class OrderRepository(BaseRepository):
 
     # ── CRUD lignes de commande ───────────────────────────────────────────
 
+    def _create_reservation_line(self, new_line: OrderInLine) -> Any:
+        """Création d'une ligne de réservation"""
+        obj = self.session.get(GeneralObjects, new_line.general_object_id)
+        if obj is None:
+            raise ValueError(f"Objet {new_line.general_object_id} introuvable")
+        order = self.session.get(OrderIn, new_line.order_in_id)
+        if order is None:
+            raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
+        price = float(obj.purchase_price) if obj.purchase_price else 0.0
+        order_details = Order(
+            price=price,
+            source="stock",
+            destination="reserve",
+            movement_type="reserved",
+            notes=f"Réservation {order.order_ref} — objet #{new_line.general_object_id}"
+        )
+        return order_details
+
+    def _create_return_line(self, new_line: OrderInLine) -> Any:
+        """ Création d'une ligne de retour fournisseur """
+        return Order(
+            price=float(new_line.unit_price),
+            source="stock",
+            destination="fournisseur",
+            movement_type="out",
+            notes=f"Retour fournisseur #{new_line.order_in_id} — "
+                  f"ligne #{new_line.general_object_id}"
+        )
+
+    def _create_order_line(self, new_line: OrderInLine) -> Any:
+        """ Création d'une ligne de commande fournisseur classique """
+        return Order(
+            price=float(new_line.unit_price),
+            source="fournisseur",
+            destination="stock",
+            movement_type="in",
+            notes=f"Commande fournisseur #{new_line.order_in_id} — "
+                  f"ligne #{new_line.general_object_id}"
+        )
+
     def edit_order_in_line_db(
             self, new_line: OrderInLine,
             action: str = "edit",
@@ -331,40 +373,20 @@ class OrderRepository(BaseRepository):
         # Gestion de l'opération de création
         if action == "create":
             if reservation:
-                obj = self.session.get(GeneralObjects, new_line.general_object_id)
-                if obj is None:
-                    raise ValueError(f"Objet {new_line.general_object_id} introuvable")
-                order = self.session.get(OrderIn, new_line.order_in_id)
-                if order is None:
-                    raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
-                price = float(obj.purchase_price) if obj.purchase_price else 0.0
-                source = "stock"
-                destination = "reserve"
-                movement_type = "reserved"
-                notes = f"Réservation {order.order_ref} — objet #{new_line.general_object_id}"
-                new_line.unit_price = price
+                order = self._create_reservation_line(new_line)
+                new_line.unit_price = order.price
             elif out is True:
-                price = float(new_line.unit_price)
-                source = f"Retour fournisseur #{new_line.order_in_id}"
-                notes = f"Retour fournisseur #{new_line.order_in_id}" \
-                       + f" - Ligne #{new_line.general_object_id}"
-                destination = "Fournisseur"
-                movement_type = "out"
+                order = self._create_return_line(new_line)
             else:
-                price = float(new_line.unit_price)
-                source = f"Commande fournisseur #{new_line.order_in_id}"
-                notes = f"Commande fournisseur #{new_line.order_in_id}" \
-                       + f" - Ligne #{new_line.general_object_id}"
-                destination = "Stock"
-                movement_type = "in"
+                order = self._create_order_line(new_line)
             movement = InventoryMovements(
                 general_object_id=new_line.general_object_id,
-                movement_type=movement_type,
+                movement_type=order.movement_type,
                 quantity=new_line.qty_ordered,
-                price_at_movement=Decimal(str(price)),
-                source=source,
-                destination=destination,
-                notes=notes,
+                price_at_movement=Decimal(str(order.price)),
+                source=order.source,
+                destination=order.destination,
+                notes=order.notes,
             )
             self.session.add(movement)
             self.session.flush()
@@ -373,9 +395,7 @@ class OrderRepository(BaseRepository):
 
         # Gestion de l'opération d'édition
         elif action == "edit":
-            existing_line = self.session.get(OrderInLine, new_line.id)
-            if existing_line is None:
-                raise ValueError(f"Ligne de commande {new_line.id} introuvable")
+            existing_line = self.get_order_by_id(new_line.order_in_id)
             existing_movement = self.session.get(
                 InventoryMovements, existing_line.inventory_movement_id
             )
