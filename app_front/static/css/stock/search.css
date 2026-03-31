@@ -615,6 +615,27 @@ details[open] > .accordion-toggle {
 .modal-object .object-fields-grid .form-group-wide {
   grid-column: span 2;
 }
+.modal-object .input-group {
+  display: flex;
+  flex-wrap: nowrap;
+}
+.modal-object .input-group .form-control {
+  flex: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.modal-object .input-group .input-group-text {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+  border: 1px solid #c0c0c0;
+  border-left: none;
+  border-radius: 0 5px 5px 0;
+  font-size: 0.9rem;
+  color: #606060;
+  white-space: nowrap;
+}
 
 /* ── Onglets complémentaires ─────────────────────────────────────────────── */
 .complement-tabs {
@@ -745,5 +766,3 @@ details[open] > .accordion-toggle {
   width: 100%;
   justify-content: center;
 }
-
-/*# sourceMappingURL=search.css.map */

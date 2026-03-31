@@ -11,6 +11,7 @@ from os import getenv
 from urllib.parse import quote
 import psycopg2
 from db_models.objects.vat import VatRate
+from app_back.db_connection import config as db_config
 
 
 # Identifiant arbitraire pour le verrou consultatif PostgreSQL.
@@ -66,14 +67,16 @@ def _run_alembic(cmd: list, timeout: int = 300):
         return 255, "", str(e)
 
 
-def run_migrations_with_lock(timeout: int = 300) -> None:
-    """Exécute toutes les migrations Alembic en utilisant un advisory lock PostgreSQL.
+def run_startup_tasks(timeout: int = 300) -> None:
+    """Exécute les migrations Alembic et l'initialisation des données de référence
+    en utilisant un advisory lock PostgreSQL.
 
     Mécanisme :
     1. Ouvre une connexion à PostgreSQL avec le rôle de migration.
     2. Tente pg_try_advisory_lock(ADVISORY_LOCK_ID) — appel non-bloquant.
        - Si le lock est obtenu : ce worker est le premier arrivé.
-         Il exécute les deux migrations (main puis users) et libère le lock.
+         Il exécute les deux migrations (main puis users), puis ensure_vat,
+         et libère le lock.
        - Si le lock n'est PAS obtenu : un autre worker migre déjà.
          On attend avec pg_advisory_lock() (bloquant) que l'autre finisse,
          puis on continue sans migrer.
@@ -99,6 +102,10 @@ def run_migrations_with_lock(timeout: int = 300) -> None:
             ret_users = _run_alembic(SECURE["command"], timeout=timeout)
             print(f"[migrations] Migration users terminée (code={ret_users[0]})")
 
+            # Initialisation des données de référence (TVA, etc.)
+            ensure_vat(db_config.get_main_session())
+            print("[migrations] Données de référence initialisées")
+
             # Libération explicite du lock
             cur.execute("SELECT pg_advisory_unlock(%s)", (ADVISORY_LOCK_ID,))
             print("[migrations] Advisory lock libéré")
@@ -117,6 +124,7 @@ def run_migrations_with_lock(timeout: int = 300) -> None:
         print("[migrations] Fallback — tentative de migration sans verrou")
         _run_alembic(MAIN["command"], timeout=timeout)
         _run_alembic(SECURE["command"], timeout=timeout)
+        ensure_vat(db_config.get_main_session())
     finally:
         if conn:
             conn.close()

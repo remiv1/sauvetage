@@ -3,9 +3,8 @@
 from os import getenv
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from app_back.db_connection import config
 from app_back.router import v1_api_router
-from app_back.migration import run_migrations_with_lock, ensure_vat
+from app_back.migration import run_startup_tasks
 from logs.logger import get_logger
 
 # Configuration
@@ -16,8 +15,7 @@ sauv_logger = get_logger()
 # Chaque worker Gunicorn importe ce module, mais seul le premier
 # à obtenir le lock exécutera réellement les migrations.
 # Les autres attendront la fin puis continueront sans migrer.
-run_migrations_with_lock(timeout=300)
-ensure_vat(config.get_main_session())
+run_startup_tasks(timeout=300)
 
 # Create FastAPI app
 app = FastAPI(

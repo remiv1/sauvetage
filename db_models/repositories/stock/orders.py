@@ -14,7 +14,7 @@ from db_models.objects import (
 )
 from db_models.repositories.base_repo import BaseRepository
 
-Order = namedtuple("Order", ["price", "source", "destination", "movement_type", "notes"])
+Order = namedtuple("Order", ["price", "vat_rate", "source", "destination", "movement_type", "notes"])
 
 class OrderRepository(BaseRepository):
     """Dépôt pour le CRUD et le workflow des commandes fournisseurs."""
@@ -37,7 +37,7 @@ class OrderRepository(BaseRepository):
             source = f"Compensation annulation commande #{order_id}"
             compensation = InventoryMovements(
                 general_object_id=movement.general_object_id,
-                movement_type="in" if movement.movement_type == "out" else "out",
+                movement_type=movement.movement_type,
                 quantity=movement.quantity * -1,
                 price_at_movement=movement.price_at_movement,
                 source=source,
@@ -324,8 +324,10 @@ class OrderRepository(BaseRepository):
         if order is None:
             raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
         price = float(obj.purchase_price) if obj.purchase_price else 0.0
+        vat_rate = float(obj.vat_rate.rate) if obj.vat_rate else 20.0
         order_details = Order(
             price=price,
+            vat_rate=vat_rate,
             source="stock",
             destination="reserve",
             movement_type="reserved",
@@ -337,6 +339,7 @@ class OrderRepository(BaseRepository):
         """ Création d'une ligne de retour fournisseur """
         return Order(
             price=float(new_line.unit_price),
+            vat_rate=float(new_line.vat_rate),
             source="stock",
             destination="fournisseur",
             movement_type="out",
@@ -348,9 +351,10 @@ class OrderRepository(BaseRepository):
         """ Création d'une ligne de commande fournisseur classique """
         return Order(
             price=float(new_line.unit_price),
+            vat_rate=float(new_line.vat_rate),
             source="fournisseur",
             destination="stock",
-            movement_type="in",
+            movement_type="pending",
             notes=f"Commande fournisseur #{new_line.order_in_id} — "
                   f"ligne #{new_line.general_object_id}"
         )
@@ -375,6 +379,7 @@ class OrderRepository(BaseRepository):
             if reservation:
                 order = self._create_reservation_line(new_line)
                 new_line.unit_price = order.price
+                new_line.vat_rate = order.vat_rate
             elif out is True:
                 order = self._create_return_line(new_line)
             else:

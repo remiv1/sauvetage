@@ -38,7 +38,7 @@ class OrderInLineForm(FlaskForm):
     vat_rate = StringField("Taux de TVA", validators=[DataRequired()])
     submit = SubmitField("Ajouter à la commande")
 
-    def validate_form_data(self) -> OrderTuple:
+    def validate_form_data(self, reservation: bool = False) -> OrderTuple:
         """
         Valide si les données sont complètes pour être utilisées.
 
@@ -53,15 +53,21 @@ class OrderInLineForm(FlaskForm):
             order_id = int(self.order_id.data or 0)
             general_object_id = int(self.general_object_id.data or 0)
             quantity = int(self.quantity.data or 0)
-            unit_price = float(self.unit_price.data or 0)
-            vat_rate = float(self.vat_rate.data or 0)
-            if (
-                order_id == 0
-                or general_object_id == 0
-                or quantity == 0
-                or unit_price == 0
-                or vat_rate == 0
-            ):
+            if not reservation:
+                unit_price = float(self.unit_price.data or 0)
+                vat_rate = float(self.vat_rate.data or 0)
+                ok = (
+                    order_id != 0
+                    and general_object_id != 0
+                    and quantity > 0
+                    and unit_price != 0
+                    and vat_rate != 0
+                )
+            else:
+                unit_price = None
+                vat_rate = None
+                ok = order_id != 0 and general_object_id != 0 and quantity > 0
+            if not ok:
                 raise ValueError("Remplir tous les champs du formulaire.")
             return OrderTuple(order_id, general_object_id, quantity, unit_price, vat_rate)
         except (ValueError, TypeError) as e:
@@ -173,7 +179,14 @@ class CreateObjectForm(FlaskForm):
     ean_13 = StringField("EAN13", validators=[DataRequired()])
     name = StringField("Nom de l'objet", validators=[DataRequired()])
     description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
-    price = StringField("Prix de l'objet", validators=[DataRequired()])
+    price = StringField("Prix de vente", validators=[DataRequired()])
+    purchase_price = StringField("Prix d'achat")
+    vat_rate_id = SelectField(
+        "Taux de TVA",
+        coerce=str,
+        choices=[("", "— Aucun —")],
+        validate_choice=False,
+    )
     book = FormField(BookForm)  # type: ignore[arg-type]
     object_tags = FieldList(FormField(TagForm), min_entries=0)  # type: ignore[arg-type]
     obj_metadatas = FormField(MetadataForm)  # type: ignore[arg-type]
@@ -190,6 +203,61 @@ class CreateObjectForm(FlaskForm):
         self.name.data = obj.name
         self.description.data = obj.description
         self.price.data = str(obj.price)
+        self.purchase_price.data = str(obj.purchase_price) if obj.purchase_price is not None else ""
+        self.vat_rate_id.data = str(obj.vat_rate_id) if obj.vat_rate_id is not None else ""
+
+        self._populate_book(obj.book)
+        self._populate_object_tags(obj.object_tags)
+        self._populate_obj_metadatas(obj.obj_metadatas)
+        self._populate_media_files(obj.media_files)
+
+    def _populate_book(self, book: Any):
+        if not book:
+            return
+        self.book.author.data = book.author or ""
+        self.book.diffuser.data = book.diffuser or ""
+        self.book.editor.data = book.editor or ""
+        self.book.genre.data = book.genre or ""
+        self.book.publication_year.data = str(book.publication_year) \
+                                                if book.publication_year is not None \
+                                                else ""
+        self.book.pages.data = str(book.pages) if book.pages is not None else ""
+
+    def _populate_object_tags(self, object_tags: Any):
+        while len(self.object_tags) > 0:
+            self.object_tags.pop_entry()
+        for ot in object_tags:
+            # append_entry() retourne un FormField (Field) dont .id est la chaîne
+            # HTML-id (Field.__init__ : self.id = id). Il faut passer par .form
+            # pour accéder à la forme interne TagForm et utiliser l'accès par
+            # subscript afin d'éviter tout conflit avec l'attribut d'instance.
+            inner = self.object_tags.append_entry().form  # type: ignore[attr-defined]
+            inner["id"].data = str(ot.id)
+            inner["tag_id"].data = str(ot.tag_id)
+
+    def _populate_obj_metadatas(self, obj_metadatas: Any):
+        if not obj_metadatas:
+            return
+        data = obj_metadatas.semistructured_data
+        if not isinstance(data, dict):
+            return
+        metadata_items: FieldList = self.obj_metadatas.form["items"]  # type: ignore[attr-defined]
+        while len(metadata_items) > 0:
+            metadata_items.pop_entry()
+        for k, v in data.items():
+            inner = metadata_items.append_entry().form  # type: ignore[attr-defined]
+            inner["key"].data = k
+            inner["value"].data = v
+
+    def _populate_media_files(self, media_files: Any):
+        while len(self.media_files) > 0:
+            self.media_files.pop_entry()
+        for mf in media_files:
+            inner = self.media_files.append_entry().form  # type: ignore[attr-defined]
+            inner["file_name"].data = mf.file_name or ""
+            inner["file_type"].data = mf.file_type or ""
+            inner["alt_text"].data = mf.alt_text or ""
+            inner["file_link"].data = mf.file_link or ""
 
 
 class ReceiveLineForm(FlaskForm):

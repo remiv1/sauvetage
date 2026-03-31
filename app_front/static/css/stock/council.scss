@@ -81,6 +81,8 @@
 
     svg {
         flex-shrink: 0;
+        width: 1em;
+        height: 1em;
     }
 
     &:hover {
@@ -197,14 +199,6 @@
     text-align: center;
 }
 
-/* ── État vide ───────────────────────────────────────────────────────────── */
-.no-items {
-    text-align: center;
-    padding: variables.$space-xl;
-    color: variables.$gray-500;
-    font-size: 0.95rem;
-}
-
 /* ── Validation réussie ──────────────────────────────────────────────────── */
 .council-row-success td {
     background: rgba(variables.$success-color, 0.08);
@@ -221,6 +215,8 @@
 
     svg {
         flex-shrink: 0;
+        width: 1em;
+        height: 1em;
     }
 }
 
@@ -235,6 +231,8 @@
 
     svg {
         flex-shrink: 0;
+        width: 1em;
+        height: 1em;
     }
 }
 
@@ -250,6 +248,8 @@
 
     svg {
         opacity: 0.4;
+        width: 64px;
+        height: 64px;
     }
 
     p {

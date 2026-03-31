@@ -1,5 +1,6 @@
 """Blueprint API HTMX pour le module stock."""
 
+import json
 from flask import Blueprint, make_response, render_template, request, flash
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
@@ -16,6 +17,7 @@ from app_front.blueprints.stock.utils import (
     toggle_object_active,
     add_object_to_dilicom,
     remove_object_from_dilicom,
+    get_vat_rates,
 )
 
 bp_stock_htmx_search = Blueprint(
@@ -133,7 +135,16 @@ def create_tag_htmx():
 def object_form():
     """Retourne le formulaire de base de l'objet en mode création (HTMX)."""
     form = CreateObjectForm()
-    return render_template(OBJECT_FORM, form=form, form_state="create")
+    vat_rates = get_vat_rates()
+    form.vat_rate_id.choices = vat_rates
+    ean13 = request.args.get("ean13", "")
+    from_inventory = request.args.get("from_inventory", "")
+    if ean13:
+        form.ean_13.data = ean13
+    return render_template(
+        OBJECT_FORM, form=form, form_state="create", vat_rates=vat_rates,
+        from_inventory=from_inventory,
+    )
 
 
 @bp_stock_htmx_search.get("/object/<action>/<int:object_id>")
@@ -142,13 +153,16 @@ def object_view_or_edit(action: str, object_id: int):
     obj = get_object_by_id(object_id)
     if obj is None:
         return UNKNOWN_OBJECT, 404
+    vat_rates = get_vat_rates()
     form = CreateObjectForm()
+    form.vat_rate_id.choices = vat_rates
     form.populate_from_object(obj)
     return render_template(
         OBJECT_FORM,
         form=form,
         form_state=action,
         obj=obj,
+        vat_rates=vat_rates,
     )
 
 
@@ -170,6 +184,8 @@ def object_complement():
         obj = get_object_by_id(object_id)
         if obj is None:
             raise ValueError("Objet introuvable pour l'ID fourni")
+        # Populate the WTForms form with data from the object so subforms
+        form.populate_from_object(obj)
     elif form_state == "create":
         obj = None
     else:
@@ -186,16 +202,26 @@ def object_complement():
 @bp_stock_htmx_search.post("/object/create")
 def create_object():
     """Valide et crée un nouvel objet à partir du formulaire global (HTMX)."""
+    vat_rates = get_vat_rates()
     form = CreateObjectForm()
+    form.vat_rate_id.choices = vat_rates
+    from_inventory = request.form.get("from_inventory", "")
     if form.validate_on_submit():
         try:
             new_obj_id = save_object_complete(form)
-            return render_template(
+            ean13_created = form.ean_13.data
+            resp = make_response(render_template(
                 OBJECT_FORM,
                 form=form,
                 form_state="created",
                 created_id=new_obj_id,
-            )
+                from_inventory=from_inventory,
+            ))
+            if from_inventory:
+                resp.headers["HX-Trigger"] = json.dumps({
+                    "inventoryObjectCreated": {"ean13": ean13_created, "id": new_obj_id}
+                })
+            return resp
         except ValueError as exc:
             flash(str(exc), "danger")
             return (
@@ -203,6 +229,8 @@ def create_object():
                     OBJECT_FORM,
                     form=form,
                     form_state="create",
+                    vat_rates=vat_rates,
+                    from_inventory=from_inventory,
                 ),
                 422,
             )
@@ -211,6 +239,8 @@ def create_object():
             OBJECT_FORM,
             form=form,
             form_state="create",
+            vat_rates=vat_rates,
+            from_inventory=from_inventory,
         ),
         423,
     )
@@ -222,7 +252,9 @@ def edit_object(object_id: int):
     obj = get_object_by_id(object_id)
     if obj is None:
         return UNKNOWN_OBJECT, 404
+    vat_rates = get_vat_rates()
     form = CreateObjectForm()
+    form.vat_rate_id.choices = vat_rates
     if form.validate_on_submit():
         try:
             updated_obj_id = save_object_complete(form, object_id=obj.id)
@@ -238,6 +270,7 @@ def edit_object(object_id: int):
                     form=form,
                     form_state="edit",
                     obj=obj,
+                    vat_rates=vat_rates,
                 ),
                 422,
             )
@@ -248,6 +281,7 @@ def edit_object(object_id: int):
             form=form,
             form_state="edit",
             obj=obj,
+            vat_rates=vat_rates,
         ),
         422,
     )

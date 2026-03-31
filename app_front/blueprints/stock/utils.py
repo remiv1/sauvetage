@@ -14,6 +14,7 @@ from db_models.objects import (
     OrderIn,
     OrderInLine,
     GeneralObjects,
+    VatRate,
 )
 from db_models.repositories.stock import (
     StockRepository,
@@ -23,6 +24,18 @@ from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.tags import TagsRepository
 
 VALUE_TYPE_NBR_MSG = "L'ID de la ligne doit être un nombre entier."
+
+
+def get_vat_rates() -> List[tuple]:
+    """Retourne les taux de TVA actuellement en vigueur sous forme de liste de tuples (id, label).
+
+    Utilisé pour peupler le SelectField vat_rate_id du formulaire CreateObjectForm.
+    """
+    session = db_conf.get_main_session()
+    rates = session.execute(
+        select(VatRate).where(VatRate.date_end.is_(None)).order_by(VatRate.code)
+    ).scalars().all()
+    return [("", "— Aucun —")] + [(str(r.id), f"{r.label} ({r.rate} %)") for r in rates]
 
 
 def get_zero_price_items() -> Sequence[dict]:
@@ -169,7 +182,7 @@ def edit_order_in_line_db(
 
     # Gestion de la création d'une ligne de commande
     elif action in ["create", "edit"]:
-        order = form.validate_form_data()
+        order = form.validate_form_data(reservation=reservation)
         line = OrderInLine(
             order_in_id=order.id,
             general_object_id=order.general_object_id,

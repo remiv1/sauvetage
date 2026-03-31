@@ -39,7 +39,7 @@ os.environ["POSTGRES_PORT"] = "5433"
 
 # ── 3. Désactiver les migrations AVANT tout import de app_back.main ──
 import app_back.migration  # pylint: disable=wrong-import-position
-app_back.migration.run_migrations_with_lock = lambda *a, **k: None
+app_back.migration.run_startup_tasks = lambda *a, **k: None
 
 # ── 4. Importer config APRÈS le setup des env vars ──
 from fastapi.testclient import TestClient  # pylint: disable=wrong-import-position, wrong-import-order
@@ -146,8 +146,8 @@ def get_fast_app():
     global _fast_app    # pylint: disable=global-statement
     if _fast_app is None:
         # Patcher les migrations AVANT l'import de app_back.main,
-        # car run_migrations_with_lock() est appelé au niveau du module.
-        app_back.migration.run_migrations_with_lock = lambda *a, **k: None
+        # car run_startup_tasks() est appelé au niveau du module.
+        app_back.migration.run_startup_tasks = lambda *a, **k: None
         from app_back.main import app as fastapi_app  # pylint: disable=import-outside-toplevel, redefined-outer-name
         _fast_app = fastapi_app
     return _fast_app

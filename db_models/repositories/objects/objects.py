@@ -55,6 +55,7 @@ class ObjectsRepository(BaseRepository):
                 joinedload(self.model.inventory_movements),
                 joinedload(self.model.obj_metadatas),
                 joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
+                joinedload(self.model.media_files),
                 joinedload(self.model.vat_rate),
             )
         )
@@ -148,6 +149,9 @@ class ObjectsRepository(BaseRepository):
         instance.name = form.name.data
         instance.description = form.description.data
         instance.price = float(form.price.data or 0)
+        instance.purchase_price = float(form.purchase_price.data) if getattr(form, 'purchase_price', None) and form.purchase_price.data else None
+        vat_id = getattr(form, 'vat_rate_id', None) and form.vat_rate_id.data
+        instance.vat_rate_id = int(vat_id) if vat_id else None
         self.session.flush()
         form.general_object_id.data = instance.id
 
