@@ -1,0 +1,78 @@
+<!-- template home.html -->
+{# ── En-tête + boutons d'action ──────────────────────────────────────── #}
+<div class="orders-header">
+    <div class="search-header">
+        <div class="header-top">
+            <a href="{{ url_for('stock.index') }}" class="btn btn-back"
+               title="Retour à la gestion des stocks">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Retours fournisseurs</h2>
+        </div>
+    </div>
+    <div class="orders-actions">
+        <div class="btn btn-primary" id="new-order"
+             hx-get="{{ url_for('stock_htmx_return.new_return_section') }}"
+             hx-target="#orders-management"
+             hx-swap="innerHTML">
+            {% include "svg/plus.html" %}
+            Nouveau retour
+        </div>
+        <div class="btn btn-secondary" id="new-return"
+             hx-get="{{ url_for('stock_htmx_orders.orders') }}"
+             hx-target="#orders-management"
+             hx-swap="innerHTML">
+            {% include "svg/refresh.html" %}
+            Commandes fournisseurs
+        </div>
+    </div>
+</div>
+
+{# ── Tableau des retours en cours ──────────────────────────────────── #}
+{% if returns %}
+<table class="orders-table">
+    <thead>
+        <tr>
+            <th>Référence</th>
+            <th>Réf. externe</th>
+            <th>Fournisseur</th>
+            <th>Montant</th>
+            <th>Nb articles</th>
+            <th class="text-center">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in returns %}
+        <tr>
+            <td class="identifiant">{{ r.return_ref }}</td>
+            <td>{{ r.external_ref }}</td>
+            <td>{{ r.supplier_name }}</td>
+            <td class="text-right">{{ "%.2f"|format(r.value|float) }} €</td>
+            <td class="text-center">{{ r.line_count }}</td>
+            <td class="text-center actions-cell">
+                <a hx-get="{{ url_for('stock.view_return', order_id=r.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon" title="Voir le retour">
+                    {% include "svg/eye.html" %}
+                </a>
+                <button class="action-icon action-cancel"
+                        hx-post="{{ url_for('stock_htmx_return.cancel_order', order_id=r.id) }}"
+                        hx-target="#orders-management"
+                        hx-swap="innerHTML"
+                        title="Annuler la commande"
+                        data-order-id="{{ r.id }}"
+                        data-order-ref="{{ r.return_ref }}">
+                    {% include "svg/del.html" %}
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="no-order">
+    {% include "svg/truck.html" %}
+    <p>Aucun retour fournisseur en cours.</p>
+</div>
+{% endif %}

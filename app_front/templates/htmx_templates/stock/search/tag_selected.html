@@ -1,0 +1,8 @@
+<!-- template tag_selected.html -->
+{# Fragment HTMX — Tag sélectionné (remplace le contenu de l'autocomplete-wrapper) #}
+<input type="hidden" name="tag_id" value="{{ tag_id }}">
+<input type="text" class="form-control" 
+       value="{{ tag_name }}{% if tag_description %} - {{ tag_description }}{% endif %}" 
+       disabled>
+<button type="button" class="btn btn-sm btn-danger btn-remove-item"
+        title="Supprimer">&times;</button>

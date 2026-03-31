@@ -8,12 +8,14 @@ import json
 from typing import Any, Dict, Optional, List
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.objects import ObjMetadatas
+from db_models.objects import ObjMetadatas
+
 
 class ObjMetadatasRepository(BaseRepository):
     """
     Dépôt des données pour la gestion des métadonnées des objets généraux.
     """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.model = ObjMetadatas
@@ -43,17 +45,25 @@ class ObjMetadatasRepository(BaseRepository):
             return obj_metadata
         except SQLAlchemyError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la création de la métadonnée : {str(e)}") from e
+            raise ValueError(
+                f"Erreur lors de la création de la métadonnée : {str(e)}"
+            ) from e
 
-    def create_list(self, obj_metadata_data_list: List[Dict[str, Any]]) -> List[ObjMetadatas]:
+    def create_list(
+        self, obj_metadata_data_list: List[Dict[str, Any]]
+    ) -> List[ObjMetadatas]:
         """Crée une liste de métadonnées à partir d'une liste de dictionnaires de données."""
         obj_metadatas: List[ObjMetadatas] = []
         for obj_metadata_data in obj_metadata_data_list:
             obj_metadatas.append(self.create(obj_metadata_data))
         return obj_metadatas
 
-    def update_one(self, update_data: Dict[str, Any], obj_metadata: Optional[ObjMetadatas]=None,
-                   obj_metadata_id: Optional[int]=None) -> ObjMetadatas:
+    def update_one(
+        self,
+        update_data: Dict[str, Any],
+        obj_metadata: Optional[ObjMetadatas] = None,
+        obj_metadata_id: Optional[int] = None,
+    ) -> ObjMetadatas:
         """Mise àjour d'une métadonnée existante."""
         # Vérification des champs attendus pour la mise à jour d'une métadonnée
         extra_keys = set(update_data.keys()) - set(self._kwargs)
@@ -64,37 +74,90 @@ class ObjMetadatasRepository(BaseRepository):
         if obj_metadata_id is None and obj_metadata is None:
             raise ValueError("Fournir un identifiant ou un objet pour la mise à jour.")
         if obj_metadata is None:
-            obj_metadata = self.session.query(self.model).filter_by(id=obj_metadata_id).first()
+            obj_metadata = (
+                self.session.query(self.model).filter_by(id=obj_metadata_id).first()
+            )
             if not obj_metadata:
                 raise ValueError(f"Métadonnée avec id {obj_metadata_id} non trouvée.")
 
         # Mise à jour des champs pour la métadonnée
         for key, value in update_data.items():
-            if key == "semistructured_data":
-                # Transformer la valeur en JSON si ce n'est pas déjà une chaîne JSON
-                if not isinstance(value, str):
-                    value = json.dumps(value)
+            if key == "semistructured_data" and isinstance(value, str):
+                value = json.loads(value)
             setattr(obj_metadata, key, value)
         try:
             self.session.flush()
             return obj_metadata
         except SQLAlchemyError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la mise à jour des métadonnée : {str(e)}") from e
+            raise ValueError(
+                f"Erreur lors de la mise à jour des métadonnée : {str(e)}"
+            ) from e
 
-    def update_list(self, update_data_list: List[Dict[str, Any]],
-                    obj_metadata_ids: Optional[List[int]] = None,
-                    obj_metadatas: Optional[List[ObjMetadatas]] = None) -> List[ObjMetadatas]:
+    def update_list(
+        self,
+        update_data_list: List[Dict[str, Any]],
+        obj_metadata_ids: Optional[List[int]] = None,
+        obj_metadatas: Optional[List[ObjMetadatas]] = None,
+    ) -> List[ObjMetadatas]:
         """Mise à jour d'une liste de métadonnées existantes."""
         obj_metadatas_return: List[ObjMetadatas] = []
         for update_data in update_data_list:
             data_id = update_data.get("id")
             if data_id is None:
-                raise ValueError("Manque le champ 'id' de la métadonnée à mettre à jour.")
-            selected_obj_metadata_id = next((mid for mid in obj_metadata_ids if mid == data_id), None) \
-                                    if obj_metadata_ids else None
-            selected_obj_metadata = next((m for m in obj_metadatas if m.id == selected_obj_metadata_id), None) \
-                                    if obj_metadatas else None
-            obj_metadatas_return.append(self.update_one(update_data, obj_metadata=selected_obj_metadata,
-                                             obj_metadata_id=selected_obj_metadata_id))
+                raise ValueError(
+                    "Manque le champ 'id' de la métadonnée à mettre à jour."
+                )
+            selected_obj_metadata_id = (
+                next((mid for mid in obj_metadata_ids if mid == data_id), None)
+                if obj_metadata_ids
+                else None
+            )
+            selected_obj_metadata = (
+                next(
+                    (m for m in obj_metadatas if m.id == selected_obj_metadata_id), None
+                )
+                if obj_metadatas
+                else None
+            )
+            obj_metadatas_return.append(
+                self.update_one(
+                    update_data,
+                    obj_metadata=selected_obj_metadata,
+                    obj_metadata_id=selected_obj_metadata_id,
+                )
+            )
         return obj_metadatas_return
+
+    def save_from_form(
+        self, form: Any, general_object_id: int, instance: Optional[ObjMetadatas] = None
+    ) -> ObjMetadatas:
+        """
+        Sauvegarde une métadonnée à partir d'un formulaire.
+        Si instance est fourni, met à jour la métadonnée existante, sinon en crée une nouvelle.
+        Regroupe les valeurs par clé : si une clé apparaît plusieurs fois, les valeurs sont
+        stockées dans une liste, sinon une simple paire clé/valeur est créée.
+        """
+        if instance is None:
+            instance = ObjMetadatas()
+            self.session.add(instance)
+        items = form.items.data if hasattr(form, "items") else []
+
+        # Construire le dictionnaire en regroupant par clé
+        result = {}
+        for it in items:
+            if isinstance(it, dict) and it.get("key"):
+                _key = it["key"]
+                _value = it.get("value")
+                if _key in result:
+                    # La clé existe déjà : convertir en liste si nécessaire
+                    if not isinstance(result[_key], list):
+                        result[_key] = [result[_key]]
+                    result[_key].append(_value)
+                else:
+                    result[_key] = _value
+
+        instance.semistructured_data = result
+        instance.general_object_id = general_object_id
+        self.session.flush()
+        return instance

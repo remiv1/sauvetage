@@ -5,6 +5,7 @@ from typing import Dict, Any
 from flask import render_template
 import toml
 
+
 def load_page_params(page_name: str) -> Dict[str, Any]:
     """Charge les paramètres d'une page à partir du fichier de configuration.
     Args:
@@ -14,7 +15,9 @@ def load_page_params(page_name: str) -> Dict[str, Any]:
               paramètres par défaut.
     """
     # Chargement du fichier de base et des liens vers la page spécifique
-    base_path = join(abspath(join(dirname(__file__), "..")), "config", "pages", "pages.toml")
+    base_path = join(
+        abspath(join(dirname(__file__), "..")), "config", "pages", "pages.toml"
+    )
     base = toml.load(base_path)
     links = base.get("links", {})
 
@@ -26,14 +29,20 @@ def load_page_params(page_name: str) -> Dict[str, Any]:
         return base.get("default", {})
 
     # Récupération du chemin absolu du fichier de configuration de la page et chargement
-    full_path = join(abspath(join(dirname(__file__), "..")), "config", "pages", file_path)
+    full_path = join(
+        abspath(join(dirname(__file__), "..")), "config", "pages", file_path
+    )
     config = toml.load(full_path)
 
     return config
 
+
 def render_page(page_name: str, **context: Any) -> str:
     """Renders a page with its parameters and additional context."""
     params = load_page_params(page_name)
-    return render_template(params.get("layout", {}).get("main_layout", "index.html"),
-                           tab=params.get("tab", page_name.capitalize()),
-                           **params, **context)
+    return render_template(
+        params.get("layout", {}).get("main_layout", "index.html"),
+        tab=params.get("tab", page_name.capitalize()),
+        **params,
+        **context
+    )

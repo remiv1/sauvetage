@@ -1,9 +1,10 @@
 /**
- * Gestion de l'étape « Produits inconnus » (étape 3) et modale d'ajout (étape 4).
+ * Gestion de l'étape « Produits inconnus » (étape 3).
+ * L'ajout d'un article inconnu utilise le formulaire de création
+ * du workflow stock (chargé via HTMX dans #object-modal-container).
  */
 
 import { showStep } from './functions.js';
-import * as api from './api.js';
 
 /** @type {string[]} Liste courante des EAN13 inconnus. */
 let unknownList = [];
@@ -32,34 +33,27 @@ export function setupUnknown(onContinue) {
     // Délégation d'événement pour le bouton « Ajouter »
     document.getElementById('unknown-table')
         .querySelector('tbody')
-        .addEventListener('click', (ev) => {
+        .addEventListener('click', async (ev) => {
             const btn = ev.target.closest('.btn-add-product');
             if (!btn) return;
-            _openModal(btn.dataset.ean);
+            await _loadStockForm(btn.dataset.ean);
         });
 
-    // Modale : annuler
-    document.getElementById('btn-modal-cancel').addEventListener('click', _closeModal);
-    document.getElementById('product-modal').addEventListener('click', (ev) => {
-        if (ev.target === ev.currentTarget) _closeModal();
+    // Fermeture de la modale stock (bouton × ou .btn-close-modal)
+    document.addEventListener('click', (ev) => {
+        if (ev.target.closest('.btn-close-modal')) {
+            _closeStockForm();
+        }
     });
 
-    // Modale : changement du type de produit → afficher/masquer les champs livre
-    document.getElementById('modal-product-type').addEventListener('change', _toggleBookFields);
-
-    // Modale : autocomplete fournisseur
-    _setupSupplierAutocomplete();
-
-    // Modale : autocomplete champs produit
-    _setupFieldAutocomplete('modal-author',   'author-suggestions',   'author');
-    _setupFieldAutocomplete('modal-diffuser',  'diffuser-suggestions',  'diffuser');
-    _setupFieldAutocomplete('modal-editor',   'editor-suggestions',   'editor');
-    _setupFieldAutocomplete('modal-genre',    'genre-suggestions',    'genre');
-
-    // Modale : soumission du formulaire
-    document.getElementById('product-form').addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        await _submitProduct();
+    // Écouter l'événement déclenché par le serveur après création réussie
+    document.body.addEventListener('inventoryObjectCreated', (ev) => {
+        const ean13 = ev.detail?.ean13;
+        if (ean13) {
+            unknownList = unknownList.filter(e => e !== ean13);
+            _render();
+        }
+        _closeStockForm();
     });
 }
 
@@ -92,353 +86,34 @@ function _render() {
 }
 
 /**
- * Affiche/masque les champs spécifiques « Livre » selon le type sélectionné.
+ * Charge le formulaire de création d'article du stock dans le container
+ * #object-modal-container, avec l'EAN pré-rempli.
+ * @param {string} ean
  */
-function _toggleBookFields() {
-    const isBook = document.getElementById('modal-product-type').value === 'book';
-    document.querySelectorAll('.book-field').forEach(el => {
-        el.classList.toggle('hidden', !isBook);
-    });
-}
-
-// ----- Autocomplete champs produit (author, diffuser, editor, genre) ------- //
-
-/** Timers de debounce par champ. */
-const _fieldDebounces = {};
-
-/**
- * Branche un autocomplete générique sur un champ texte.
- * @param {string} inputId       - id de l'input
- * @param {string} suggestionsId - id de la ul de suggestions
- * @param {string} fieldName     - clé de recherche dans l'API (ex: 'author')
- */
-function _setupFieldAutocomplete(inputId, suggestionsId, fieldName) {
-    const input       = document.getElementById(inputId);
-    const suggestions = document.getElementById(suggestionsId);
-    if (!input || !suggestions) return;
-
-    // Saisie → recherche avec debounce
-    input.addEventListener('input', () => {
-        clearTimeout(_fieldDebounces[fieldName]);
-        const q = input.value.trim();
-        if (q.length < 2) {
-            suggestions.classList.add('hidden');
-            return;
+async function _loadStockForm(ean) {
+    const container = document.getElementById('object-modal-container');
+    if (!container) return;
+    try {
+        const resp = await fetch(
+            `/stock/htmx/search/object/form?ean13=${encodeURIComponent(ean)}&from_inventory=1`
+        );
+        const html = await resp.text();
+        container.innerHTML = html;
+        // Activer HTMX sur les nouveaux éléments chargés dynamiquement
+        if (window.htmx) {
+            htmx.process(container);
         }
-        _fieldDebounces[fieldName] = setTimeout(async () => {
-            const results = await api.searchObjectsInfo(fieldName, q);
-            _renderFieldSuggestions(suggestions, results);
-        }, 250);
-    });
-
-    // Clic sur une suggestion → remplir l'input
-    suggestions.addEventListener('click', (ev) => {
-        const li = ev.target.closest('li');
-        if (!li) return;
-        input.value = li.textContent;
-        suggestions.classList.add('hidden');
-    });
-
-    // Fermer la liste si clic en dehors
-    const wrapper = input.closest('.autocomplete-wrapper');
-    document.addEventListener('click', (ev) => {
-        if (wrapper && !wrapper.contains(ev.target)) {
-            suggestions.classList.add('hidden');
-        }
-    });
-
-    // Fermer avec Escape
-    input.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') suggestions.classList.add('hidden');
-    });
-}
-
-/**
- * Fonction de rendu des suggestions d'autocomplete pour les champs produit.
- * @param {HTMLElement} listEl
- * @param {string[]} results
- * @returns {void}
- */
-function _renderFieldSuggestions(listEl, results) {
-    listEl.innerHTML = '';
-    if (!results || results.length === 0) {
-        listEl.classList.add('hidden');
-        return;
-    }
-    results.forEach(value => {
-        const li = document.createElement('li');
-        li.textContent = value;
-        li.className = 'autocomplete-item';
-        listEl.appendChild(li);
-    });
-    listEl.classList.remove('hidden');
-}
-
-// ----- Autocomplete fournisseur ------------------------------------------ //
-
-/** @type {number} Timer de debounce pour la recherche fournisseur. */
-let _supplierDebounce = 0;
-
-/** @type {number|null} ID du fournisseur sélectionné. */
-let _selectedSupplierId = null;
-
-/**
- * Branche l'autocomplete sur le champ fournisseur de la modale.
- */
-function _setupSupplierAutocomplete() {
-    const input              = document.getElementById('modal-supplier-name');
-    const suggestions        = document.getElementById('supplier-suggestions');
-    const createZone         = document.getElementById('supplier-create-zone');
-    const btnCreate          = document.getElementById('btn-create-supplier');
-    const btnClear           = document.getElementById('btn-clear-supplier');
-    const formWrapper        = document.getElementById('supplier-form-wrapper');
-    const btnFormSubmit      = document.getElementById('btn-supplier-form-submit');
-    const btnFormCancel      = document.getElementById('btn-supplier-form-cancel');
-    const supplierFormName   = document.getElementById('supplier-form-name');
-
-    // Saisie → recherche avec debounce → suggestions ou option de création
-    input.addEventListener('input', () => {
-        clearTimeout(_supplierDebounce);
-        const q = input.value.trim();
-        if (q.length < 2) {
-            suggestions.classList.add('hidden');
-            createZone.classList.add('hidden');
-            return;
-        }
-        _supplierDebounce = setTimeout(async () => {
-            const results = await api.searchSuppliers(q);
-            _renderSuggestions(results, q);
-        }, 250);
-    });
-
-    // Clic sur une suggestion → sélectionner le fournisseur
-    suggestions.addEventListener('click', (ev) => {
-        const li = ev.target.closest('li');
-        if (!li) return;
-        _selectSupplier(Number(li.dataset.id), li.textContent);
-    });
-
-    // Créer un nouveau fournisseur → Afficher le formulaire complet
-    btnCreate.addEventListener('click', () => {
-        const name = input.value.trim();
-        if (!name) return;
-        supplierFormName.value = name;
-        formWrapper.classList.remove('hidden');
-        document.getElementById('supplier-form-name').focus();
-    });
-
-    // Soumettre le formulaire de création de fournisseur → Intègre le fournisseur au produit
-    btnFormSubmit.addEventListener('click', async (ev) => {
-        ev.preventDefault();
-        const name = (document.getElementById('supplier-form-name').value || '').trim();
-        // Validation basique du nom
-        if (!name) {
-            alert('Le nom du fournisseur est requis.');
-            return;
-        }
-        // Préparer les données à envoyer
-        const data = {
-            name,
-            gln13: (document.getElementById('supplier-form-gln13').value || '').trim() || "",
-            contact_email: (document.getElementById('supplier-form-email').value || '').trim() || "",
-            contact_phone: (document.getElementById('supplier-form-phone').value || '').trim() || "",
-        };
-        try {
-            const response = await api.createSupplier(data);
-            if (!response.ok) {
-                const errorData = await response.json();
-                alert(`Erreur : ${errorData.error || 'Impossible de créer le fournisseur.'}`);
-                return;
-            }
-            const result = await response.json();
-            _selectSupplier(result.id, result.name);
-            _hideSupplierForm();
-        } catch (err) {
-            console.error('Erreur création fournisseur:', err);
-            alert('Erreur de connexion.');
-        }
-    });
-
-    // Annuler le formulaire
-    btnFormCancel.addEventListener('click', () => {
-        _hideSupplierForm();
-    });
-
-    // Effacer la sélection
-    btnClear.addEventListener('click', () => {
-        _clearSupplier();
-        input.focus();
-    });
-
-    // Fermer la liste si clic en dehors
-    document.addEventListener('click', (ev) => {
-        if (!ev.target.closest('#group-supplier')) {
-            suggestions.classList.add('hidden');
-            createZone.classList.add('hidden');
-        }
-    });
-}
-
-/**
- * Masque le formulaire de création de fournisseur et réinitialise les champs.
- */
-/**
- * Masque le formulaire de création de fournisseur et réinitialise les champs.
- */
-function _hideSupplierForm() {
-    const formWrapper = document.getElementById('supplier-form-wrapper');
-    formWrapper.classList.add('hidden');
-    // Réinitialiser les champs
-    document.getElementById('supplier-form-name').value = '';
-    document.getElementById('supplier-form-gln13').value = '';
-    document.getElementById('supplier-form-email').value = '';
-    document.getElementById('supplier-form-phone').value = '';
-}
-
-/**
- * Rend les suggestions d'autocomplete pour le champ fournisseur.
- * @param {Array<{id: number, name: string}>} results - Les résultats de la recherche.
- * @param {string} query - La requête de recherche.
- */
-function _renderSuggestions(results, query) {
-    const suggestions = document.getElementById('supplier-suggestions');
-    const createZone  = document.getElementById('supplier-create-zone');
-    const createName  = document.getElementById('supplier-create-name');
-    suggestions.innerHTML = '';
-
-    // Afficher les résultats ou l'option de création
-    if (results && results.length > 0) {
-        results.forEach(s => {
-            const li = document.createElement('li');
-            li.textContent = s.name;
-            li.dataset.id = s.id;
-            li.className = 'autocomplete-item';
-            suggestions.appendChild(li);
-        });
-        suggestions.classList.remove('hidden');
-        createZone.classList.add('hidden');
-    } else {
-        suggestions.classList.add('hidden');
-        createName.textContent = query;
-        createZone.classList.remove('hidden');
+    } catch (err) {
+        console.error('Erreur chargement formulaire article :', err);
     }
 }
 
 /**
- * Sélectionne un fournisseur et met à jour les champs correspondants dans la modale.
- * @param {number} id - L'ID du fournisseur.
- * @param {string} name - Le nom du fournisseur.
+ * Vide le container de la modale de création d'article.
  */
-function _selectSupplier(id, name) {
-    _selectedSupplierId = id;
-    document.getElementById('modal-supplier-id').value = id;
-    document.getElementById('modal-supplier-name').value = name;
-    document.getElementById('supplier-badge-text').textContent = name;
-    document.getElementById('supplier-selected-badge').classList.remove('hidden');
-    document.getElementById('modal-supplier-name').classList.add('hidden');
-    document.getElementById('supplier-suggestions').classList.add('hidden');
-    document.getElementById('supplier-create-zone').classList.add('hidden');
-}
-
-/**
- * Efface la sélection du fournisseur et réinitialise les champs correspondants.
- */
-function _clearSupplier() {
-    _selectedSupplierId = null;
-    document.getElementById('modal-supplier-id').value = '';
-    document.getElementById('modal-supplier-name').value = '';
-    document.getElementById('modal-supplier-name').classList.remove('hidden');
-    document.getElementById('supplier-selected-badge').classList.add('hidden');
-}
-
-/**
- * Ouvre la modale de création/modification de produit et initialise les champs.
- * @param {string} ean - Le code EAN du produit.
- */
-function _openModal(ean) {
-    const modal = document.getElementById('product-modal');
-    document.getElementById('modal-ean13').value = ean;
-    document.getElementById('modal-product-type').value = 'book';
-    document.getElementById('modal-name-input').value = '';
-    document.getElementById('modal-description-input').value = '';
-    document.getElementById('modal-price').value = '';
-    document.getElementById('modal-add-to-dilicom').checked = false;
-    document.getElementById('modal-author').value = '';
-    document.getElementById('modal-diffuser').value = '';
-    document.getElementById('modal-editor').value = '';
-    document.getElementById('modal-genre').value = '';
-    document.getElementById('modal-publication-year').value = '';
-    document.getElementById('modal-pages').value = '';
-    // Masquer toutes les listes de suggestions
-    ['author-suggestions', 'diffuser-suggestions', 'editor-suggestions', 'genre-suggestions'].forEach(id => {
-        document.getElementById(id)?.classList.add('hidden');
-    });
-    _clearSupplier();
-    _toggleBookFields();
-    modal.classList.remove('hidden');
-    modal.classList.add('is_open');
-    document.getElementById('modal-name-input').focus();
-}
-
-/**
- * Ferme la modale de création/modification de produit.
- */
-function _closeModal() {
-    const modal = document.getElementById('product-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('is_open');
-}
-
-/**
- * Fonction de soumission du formulaire de création de produit.
- * @returns {Promise<void>}
- */
-async function _submitProduct() {
-    const ean13       = document.getElementById('modal-ean13').value;
-    const productType = document.getElementById('modal-product-type').value;
-    const name        = document.getElementById('modal-name-input').value.trim() || null;
-    const description = document.getElementById('modal-description-input').value.trim() || null;
-    const price       = Number.parseFloat(document.getElementById('modal-price').value) || 0;
-    const author      = document.getElementById('modal-author').value.trim() || null;
-    const diffuser   = document.getElementById('modal-diffuser').value.trim() || null;
-    const editor     = document.getElementById('modal-editor').value.trim() || null;
-    const genre      = document.getElementById('modal-genre').value.trim() || null;
-    const pubYear    = document.getElementById('modal-publication-year').value.trim() || null;
-    const pages      = document.getElementById('modal-pages').value.trim() || null;
-    const supplierId  = Number(document.getElementById('modal-supplier-id').value);
-    const addToDilicom = document.getElementById('modal-add-to-dilicom').checked;
-
-    // Validation basique
-    if (!name) { alert('Le nom est obligatoire.'); return; }
-    if (!supplierId) { alert('Veuillez sélectionner ou créer un fournisseur.'); return; }
-
-    // Construire le payload pour l'API suivant le type de produit
-    const payload = {
-        ean13, product_type: productType, supplier_id: supplierId, name, description,
-        price
-    };
-    // Ajout des champs spécifiques si le produit est un livre
-    if (productType === 'book') {
-        payload.author = author;
-        payload.editor = editor;
-        payload.diffuser = diffuser;
-        payload.genre = genre;
-        payload.publication_year = pubYear;
-        payload.pages = pages;
-        payload.add_to_dilicom = addToDilicom;
+function _closeStockForm() {
+    const container = document.getElementById('object-modal-container');
+    if (container) {
+        container.innerHTML = '';
     }
-
-    // Appeler l'API pour créer le produit
-    const { ok, data } = await api.createProduct(payload);
-
-    // Gérer la réponse de l'API
-    if (!ok || !data) {
-        alert('Erreur lors de la création du produit.');
-        return;
-    }
-
-    // Retirer l'EAN de la liste des inconnus et mettre à jour l'affichage
-    unknownList = unknownList.filter(e => e !== ean13);
-    _closeModal();
-    _render();
 }

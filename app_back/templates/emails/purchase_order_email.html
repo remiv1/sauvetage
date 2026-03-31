@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Commande {{ commande.numero }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #222;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <p>Bonjour {{ fournisseur.nom }},</p>
+</div>
+
+<p>Veuillez trouver ci-joint la commande suivante :</p>
+
+<ul>
+    <li><strong>Numéro de commande :</strong> {{ commande.numero }}</li>
+    <li><strong>Date :</strong> {{ commande.date }}</li>
+    <li><strong>Librairie :</strong> {{ librairie.nom }}</li>
+</ul>
+
+<p>La commande complète est jointe en pièce-jointe au format PDF.</p>
+
+<p>Cordialement,</p>
+<p>{{ librairie.contact_nom }}<br>
+{{ librairie.contact_email }}</p>
+
+<div class="footer">
+    <p>Ce message a été généré automatiquement par votre système de gestion.</p>
+</div>
+
+</body>
+</html>

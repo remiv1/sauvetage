@@ -116,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (form) {
-        console.log('Form found');
         passwordInput.addEventListener('input', () => {
             validatePassword(passwordInput.value);
             checkPasswordMatch();
@@ -127,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         form.addEventListener('submit', (event) => {
-            console.log('Form submitted');
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
             const email = emailInput.value.trim();

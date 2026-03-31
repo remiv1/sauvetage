@@ -1,0 +1,247 @@
+<!-- template new_line.html -->
+{% set reservation = reservation|default(false) %}
+{# ── Modale de création de ligne de commande / réservation ────────────── #}
+<div class="modal show" id="order-line-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">{{ 'Nouvelle ligne de réservation' if reservation else 'Nouvelle ligne de commande' }}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+
+            <form id="order-line-form"
+                    method="post"
+                    hx-post="{{
+                    url_for('stock_htmx_reservations.new_reservation_line',
+                        order_id=form.order_id.data
+                    )
+                    if reservation and view_state == 'create' else
+                    url_for('stock_htmx_orders.new_order_line',
+                        order_id=form.order_id.data
+                    )
+                    if view_state == 'create' else
+                    url_for('stock_htmx_orders.edit_order_line',
+                        order_id=form.order_id.data,
+                        line_id=line.id,
+                        action='edit'
+                    )
+                    }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML">
+                <div class="modal-body">
+                    {{ form.hidden_tag() }}
+
+                    {# ── Champ Article ──────────────────────────────────────── #}
+                    <div class="form-group mb-3" id="article-wrapper">
+                        {{ form.order_id() }}
+                        {{ form.general_object_id(class="form-control", id="general_object_id") }}
+                        <label for="object-wrapper">Article</label>
+                        <input type="text"
+                               class="form-control"
+                               name="object-wrapper"
+                               id="object-wrapper"
+                               {% if line and line.general_object.name %}
+                               value="{{ line.general_object.name }}"
+                               {% endif %}
+                               placeholder="Saisissez l'ID ou le nom de l'article"
+                               required
+                               hx-get="{{ url_for('inventory_htmx.get_items_search') }}"
+                               hx-trigger="input changed delay:500ms"
+                               hx-target="#article-search-results"
+                               hx-swap="innerHTML"
+                               autocomplete="off"
+                        >
+                        
+                        <div id="article-search-results" class="dropdown-menu position-static mt-1">
+                            {# Les résultats de la recherche seront injectés ici #}
+                        </div>
+
+                        {% if form.general_object_id.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.general_object_id.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# ── Ligne de quantité et prix unitaire ──────────────────────── #}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                {{ form.quantity.label(class="form-label") }}
+                                {{ form.quantity(
+                                    class="form-control",
+                                    id="quantity",
+                                    placeholder="0",
+                                    required=True,
+                                    type="number",
+                                    step="0.01"
+                                ) }}
+                                {% if form.quantity.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.quantity.errors[0] }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                {{ form.unit_price.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.unit_price(
+                                        class="form-control" + (" bg-light" if reservation else ""),
+                                        id="unit_price",
+                                        placeholder="0,00",
+                                        required=not reservation,
+                                        type="number",
+                                        step="0.01",
+                                        readonly=reservation
+                                    ) }}
+                                    <span class="input-group-text">€</span>
+                                </div>
+                                {% if reservation %}
+                                    <div class="text-muted small mt-1">Sur la dernière valeur d'achat.</div>
+                                {% endif %}
+                                {% if form.unit_price.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.unit_price.errors[0] }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Taux de TVA ──────────────────────────────────────────── #}
+                    <div class="form-group mb-3">
+                        {{ form.vat_rate.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.vat_rate(
+                                class="form-control" + (" bg-light" if reservation else ""),
+                                id="vat_rate",
+                                placeholder="0",
+                                required=not reservation,
+                                type="number",
+                                step="0.1",
+                                readonly=reservation
+                            ) }}
+                            <span class="input-group-text">%</span>
+                        </div>
+                        {% if reservation %}
+                            <div class="text-muted small mt-1">Calculé depuis le taux de TVA de l'article.</div>
+                        {% endif %}
+                        {% if form.vat_rate.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.vat_rate.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# ── Résumé du calcul ──────────────────────────────────────── #}
+                    <div class="alert alert-info mt-4" id="line-summary">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <p class="mb-1"><small>Montant HT :</small></p>
+                                <p class="fs-5 fw-bold" id="line-ht">0,00 €</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><small>Montant TTC :</small></p>
+                                <p class="fs-5 fw-bold" id="line-ttc">0,00 €</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                            title="{{ 'Annuler la création de la ligne de réservation' if reservation else 'Annuler la création de la ligne de commande' }}"
+                            hx-get="{{ url_for('stock_htmx_reservations.cleared') if reservation else url_for('stock_htmx_orders.cleared') }}"
+                            hx-target="#new-line-modal"
+                            hx-swap="innerHTML"
+                    >
+                        Annuler
+                    </button>
+                    {{ form.submit(class="btn btn-primary", id="submit-line") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Script de calcul du montant ─────────────────────────────────── #}
+<script>
+(function() {
+    function initOrderLineModal() {
+        const quantityInput = document.getElementById('quantity');
+        const priceInput = document.getElementById('unit_price');
+        const vatInput = document.getElementById('vat_rate');
+        const lineHT = document.getElementById('line-ht');
+        const lineTTC = document.getElementById('line-ttc');
+
+        if (!quantityInput || !priceInput || !vatInput || !lineHT || !lineTTC) return;
+
+        function calculateTotal() {
+            const quantity = Number.parseFloat(quantityInput.value || 0);
+            const price = Number.parseFloat(priceInput.value || 0);
+            const vat = Number.parseFloat(vatInput.value || 0);
+
+            const ht = quantity * price;
+            const ttc = ht * (1 + vat / 100);
+
+            lineHT.textContent = ht.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' €';
+
+            lineTTC.textContent = ttc.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' €';
+        }
+
+        // Remove previous listeners (idempotent) then attach
+        try {
+            quantityInput.removeEventListener('input', calculateTotal);
+            quantityInput.removeEventListener('change', calculateTotal);
+            priceInput.removeEventListener('input', calculateTotal);
+            priceInput.removeEventListener('change', calculateTotal);
+            vatInput.removeEventListener('input', calculateTotal);
+            vatInput.removeEventListener('change', calculateTotal);
+        } catch (e) {
+            console.warn('Error removing previous event listeners (if any)', e);
+        }
+
+        quantityInput.addEventListener('input', calculateTotal);
+        quantityInput.addEventListener('change', calculateTotal);
+        priceInput.addEventListener('input', calculateTotal);
+        priceInput.addEventListener('change', calculateTotal);
+        vatInput.addEventListener('input', calculateTotal);
+        vatInput.addEventListener('change', calculateTotal);
+
+        // initial calculation
+        calculateTotal();
+    }
+
+    // init immediately (script runs when HTMX inserts the fragment)
+    initOrderLineModal();
+
+    // init after HTMX swaps content into the DOM
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        try {
+            var target = evt.detail && evt.detail.target;
+            if (target && typeof target.querySelector === 'function') {
+                if (target.id === 'new-line-modal' || target.querySelector('#order-line-modal')) {
+                    initOrderLineModal();
+                }
+            }
+        } catch (e) {
+            console.warn('Error initializing order line modal (if any)', e);
+        }
+    });
+
+    // fallback: after HTMX loads
+    document.body.addEventListener('htmx:afterOnLoad', function() {
+        initOrderLineModal();
+    });
+})();
+</script>

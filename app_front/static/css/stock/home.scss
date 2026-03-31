@@ -23,18 +23,8 @@
 // CARD COLOR VARIANTS
 // ============================================================================
 
-.card-council {
-    @include card-color-variant(variables.$primary-color);
-}
 
-.card-orders {
-    @include card-color-variant(variables.$primary-color);
-}
 
-.card-reservations {
-    @include card-color-variant(variables.$primary-color);
-}
-
-.card-search {
+.card-stock {
     @include card-color-variant(variables.$primary-color);
 }

@@ -1,0 +1,34 @@
+<!-- template select_supplier.html -->
+{# Fragment OOB retourné lors de la sélection d'un fournisseur.
+   Adapte les IDs DOM selon le contexte ("stock" ou "dilicom").
+   - Élément principal : remplace le champ caché cible (outerHTML).
+   - OOB 1 : met à jour le champ texte visible.
+   - OOB 2 : vide le conteneur de résultats pour fermer le dropdown. #}
+{% if context == "dilicom" %}
+<input type="hidden" id="dilicom-gln13" name="gln13" value="{{ gln13 }}">
+<input type="text" id="dilicom-supplier-name"
+       class="form-control"
+       placeholder="Rechercher un fournisseur…"
+       autocomplete="off"
+       hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln', context='dilicom') }}"
+       hx-trigger="keyup changed delay:300ms"
+       hx-target="#dilicom-supplier-results"
+       hx-swap="innerHTML"
+       name="supplier_name"
+       value="{{ supplier_name }}"
+       hx-swap-oob="true">
+<div id="dilicom-supplier-results" class="search-dropdown" hx-swap-oob="true"></div>
+{% else %}
+<input type="hidden" id="supplier_id" name="supplier_id" value="{{ supplier_id }}">
+<input type="text" id="supplier_name" name="supplier_name" class="form-control"
+       hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln',
+                  allow_create=('true' if allow_create else 'false')) }}"
+       hx-trigger="input changed delay:500ms"
+       hx-target="#search-results"
+       hx-swap="innerHTML"
+       placeholder="Rechercher un fournisseur…"
+       value="{{ supplier_name }}"
+       required
+       hx-swap-oob="true">
+<div id="search-results" class="dropdown-menu" hx-swap-oob="true"></div>
+{% endif %}

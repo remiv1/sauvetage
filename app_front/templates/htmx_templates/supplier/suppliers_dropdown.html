@@ -1,0 +1,35 @@
+{# Dropdown fournisseurs unifié.
+   Paramètres :
+     suppliers    – [{id, name, gln13}, …] ou None
+     query        – texte de recherche
+     allow_create – bool, afficher le bouton ➕ Créer si aucun résultat
+     context      – "stock" (défaut) ou "dilicom" #}
+{% if suppliers %}
+    <!-- template suppliers_dropdown.html -->
+    {% for s in suppliers %}
+    <div class="dropdown-item"
+         hx-get="{{ url_for('supplier_htmx.select_supplier', supplier_id=s.id,
+                    supplier_name=s.name, gln13=s.gln13,
+                    context=context|default('stock'),
+                    allow_create=('true' if allow_create else 'false')) }}"
+         hx-target="#{{ 'dilicom-gln13' if context == 'dilicom' else 'supplier_id' }}"
+         hx-swap="outerHTML">
+        {{ s.name }}
+        {% if s.gln13 %}<small class="text-muted"> — GLN : {{ s.gln13 }}</small>{% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <!-- template suppliers_dropdown.html - vide -->
+    <div class="dropdown-item text-muted">
+        Aucun fournisseur trouvé.
+    </div>
+    {% if allow_create %}
+    <div class="dropdown-item text-primary"
+         style="cursor: pointer;"
+         hx-get="{{ url_for('supplier_htmx.add_new_supplier', name=query) }}"
+         hx-target="#supplier-create-modal"
+         hx-swap="innerHTML">
+        ➕ Créer "{{ query }}"
+    </div>
+    {% endif %}
+{% endif %}

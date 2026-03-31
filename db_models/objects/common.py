@@ -4,10 +4,12 @@ from typing import Any, TypeVar, Type
 from sqlalchemy import select
 from sqlalchemy.sql import Select
 
-T = TypeVar('T', bound="QueryMixin")
+T = TypeVar("T", bound="QueryMixin")
+
 
 class QueryMixin:
     """Mixin pour ajouter une méthode de requête générique à un modèle SQLAlchemy."""
+
     @classmethod
     def by(cls: Type[T], **filters: Any) -> Select[Any]:
         """Récupère un enregistrement en fonction de filtres dynamiques.

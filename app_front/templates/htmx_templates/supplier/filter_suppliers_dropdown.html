@@ -1,0 +1,15 @@
+<!-- template filter_suppliers_dropdown.html -->
+{# Dropdown fournisseur pour les filtres de recherche (pas de hx-get, piloté par JS) #}
+{% if suppliers %}
+    {% for s in suppliers %}
+    <div class="dropdown-item"
+         data-supplier-id="{{ s.id }}"
+         data-supplier-name="{{ s.name }}">
+        {{ s.name }}
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="dropdown-item text-muted">
+        Aucun fournisseur trouvé.
+    </div>
+{% endif %}

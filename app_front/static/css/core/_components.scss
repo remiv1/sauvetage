@@ -16,6 +16,12 @@
     cursor: pointer;
     border: none;
 
+    svg {
+        width: 1em;
+        height: 1em;
+        flex-shrink: 0;
+    }
+
     &.btn-primary {
         background: variables.$primary-color;
         color: white;
@@ -29,4 +35,27 @@
 .bg-primary {
     background-color: variables.$primary-color;
     color: variables.$border-white;
+}
+
+.icone {
+    &-8 {
+        width: 8px;
+        height: 8px;
+    }
+    &-16 {
+        width: 16px;
+        height: 16px;
+    }
+    &-24 {
+        width: 24px;
+        height: 24px;
+    }
+    &-32 {
+        width: 32px;
+        height: 32px;
+    }
+    &-48 {
+        width: 48px;
+        height: 48px;
+    }
 }

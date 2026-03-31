@@ -269,25 +269,157 @@
 /* ── Modale ───────────────────────────────────────────────────────────────── */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    padding: variables.$space-md;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    width: 100vw;
-    min-height: 100vh;
-    overflow-y: auto;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     animation: slideUp 0.2s ease;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: variables.$radius-sm;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    width: 90%;
+    overflow: hidden;
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: variables.$space-md variables.$space-lg;
+        border-bottom: 1px solid variables.$gray-200;
+
+        h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: variables.$primary-color;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: variables.$gray-500;
+            line-height: 1;
+            padding: 0;
+            transition: color 0.2s;
+
+            &:hover {
+                color: variables.$gray-800;
+            }
+        }
+    }
+
+    .modal-body {
+        padding: variables.$space-lg;
+
+        .form-group {
+            margin-bottom: variables.$space-md;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: variables.$space-xs;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: variables.$gray-700;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: variables.$space-sm variables.$space-md;
+            border: 1px solid variables.$gray-300;
+            border-radius: variables.$radius-xs;
+            font-family: variables.$font-primary;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+
+            &:focus {
+                outline: none;
+                border-color: variables.$primary-color;
+                box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
+            }
+
+            &:disabled {
+                background: variables.$gray-100;
+                color: variables.$gray-600;
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: variables.$space-sm;
+        justify-content: flex-end;
+        padding-top: variables.$space-md;
+    }
+}
+
+.modal-object {
+    max-width: 750px;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
 
-    &.is_open {
-        background: rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+    .modal-body {
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .object-created-msg {
+        padding: variables.$space-lg;
+        background: rgba(variables.$color-success, 0.08);
+        border-left: 4px solid variables.$color-success;
+        border-radius: variables.$radius-xs;
+        margin-bottom: variables.$space-lg;
+
+        p {
+            margin: 0;
+            color: variables.$gray-800;
+        }
+    }
+
+    .object-fields-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: variables.$space-md;
+        margin-bottom: variables.$space-lg;
+
+        .form-group-wide {
+            grid-column: span 2;
+        }
+    }
+
+    .input-group {
+        display: flex;
+        flex-wrap: nowrap;
+
+        .form-control {
+            flex: 1;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .input-group-text {
+            display: flex;
+            align-items: center;
+            padding: variables.$space-sm variables.$space-md;
+            background: variables.$gray-100;
+            border: 1px solid variables.$gray-300;
+            border-left: none;
+            border-radius: 0 variables.$radius-xs variables.$radius-xs 0;
+            font-size: 0.9rem;
+            color: variables.$gray-600;
+            white-space: nowrap;
+        }
     }
 }
 
@@ -306,6 +438,117 @@
         color: variables.$primary-color;
         padding-bottom: variables.$space-sm;
         border-bottom: 2px solid variables.$gray-200;
+    }
+}
+
+/* ── Onglets complémentaires ──────────────────────────────────────────────── */
+.complement-tabs {
+    border: 1px solid variables.$gray-200;
+    border-radius: variables.$radius-xs;
+    overflow: visible;
+}
+
+.tab-nav {
+    display: flex;
+    border-bottom: 2px solid variables.$gray-200;
+    background: variables.$gray-100;
+    padding: 0;
+
+    .tab-btn {
+        flex: 1;
+        padding: variables.$space-sm variables.$space-md;
+        border: none;
+        background: transparent;
+        font-family: variables.$font-primary;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: variables.$gray-500;
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+
+        &:hover {
+            color: variables.$primary-color;
+        }
+
+        &.active {
+            color: variables.$primary-color;
+            border-bottom-color: variables.$primary-color;
+            background: #fff;
+        }
+    }
+}
+
+.tab-panels {
+    padding: variables.$space-md;
+}
+
+.tab-panel {
+    display: none;
+
+    &.active {
+        display: block;
+    }
+}
+
+.complement-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: variables.$space-md;
+}
+
+/* ── Listes dynamiques (mots-clés, métadonnées, médias) ──────────────────── */
+.dynamic-list {
+    display: flex;
+    flex-direction: column;
+    gap: variables.$space-sm;
+    margin-bottom: variables.$space-md;
+}
+
+.dynamic-list-item {
+    display: flex;
+    gap: variables.$space-sm;
+    align-items: center;
+
+    .form-control {
+        flex: 1;
+    }
+
+    .btn-remove-item {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    &.kv-pair .form-control:first-child {
+        flex: 0.4;
+    }
+}
+
+.media-item {
+    .form-control {
+        flex: 1;
+    }
+
+    .media-type-select {
+        max-width: 140px;
+    }
+
+    .media-fields {
+        display: flex;
+        gap: variables.$space-sm;
+        flex: 1;
+
+        .form-control {
+            flex: 1;
+        }
     }
 }
 

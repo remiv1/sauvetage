@@ -3,50 +3,16 @@
 /* ============================================================================ */
 /* Page d'accueil Stock — Cards de navigation (SCSS)                          */
 /* ============================================================================ */
-.card-council {
+.card-stock {
   border-color: #00086f;
 }
-.card-council .card-icon {
+.card-stock .card-icon {
   background-color: rgba(0, 8, 111, 0.1);
   color: #00086f;
 }
-.card-council:hover {
+.card-stock:hover {
   border-color: #00086f;
   background: linear-gradient(135deg, rgba(0, 8, 111, 0.05) 0%, rgba(0, 8, 111, 0) 100%);
 }
 
-.card-orders {
-  border-color: #00086f;
-}
-.card-orders .card-icon {
-  background-color: rgba(0, 8, 111, 0.1);
-  color: #00086f;
-}
-.card-orders:hover {
-  border-color: #00086f;
-  background: linear-gradient(135deg, rgba(0, 8, 111, 0.05) 0%, rgba(0, 8, 111, 0) 100%);
-}
-
-.card-reservations {
-  border-color: #00086f;
-}
-.card-reservations .card-icon {
-  background-color: rgba(0, 8, 111, 0.1);
-  color: #00086f;
-}
-.card-reservations:hover {
-  border-color: #00086f;
-  background: linear-gradient(135deg, rgba(0, 8, 111, 0.05) 0%, rgba(0, 8, 111, 0) 100%);
-}
-
-.card-search {
-  border-color: #00086f;
-}
-.card-search .card-icon {
-  background-color: rgba(0, 8, 111, 0.1);
-  color: #00086f;
-}
-.card-search:hover {
-  border-color: #00086f;
-  background: linear-gradient(135deg, rgba(0, 8, 111, 0.05) 0%, rgba(0, 8, 111, 0) 100%);
-}
+/*# sourceMappingURL=home.css.map */

@@ -1,0 +1,597 @@
+<!-- template object_complement.html -->
+{# Fragment HTMX — Complément par onglets pour le formulaire objet #}
+
+{% set disabled = form_state == 'view' %}
+
+<div class="complement-tabs">
+    {# ── Navigation onglets ──────────────────────────────────────────────── #}
+    <nav class="tab-nav">
+        {% if object_type == 'book' %}
+        <button type="button" class="tab-btn active" data-tab="tab-book">Livre</button>
+        {% endif %}
+        <button type="button" class="tab-btn {{ '' if object_type == 'book' else 'active' }}"
+                data-tab="tab-tags">Mots-clés</button>
+        <button type="button" class="tab-btn" data-tab="tab-metadata">Métadonnées</button>
+        <button type="button" class="tab-btn" data-tab="tab-media">Images</button>
+    </nav>
+
+    {# ── Contenu des onglets ─────────────────────────────────────────────── #}
+    <div class="tab-panels">
+
+        {# ── Onglet Livre ────────────────────────────────────────────────── #}
+        {% if object_type == 'book' %}
+        <div class="tab-panel active" id="tab-book">
+            <div class="complement-grid">
+                <div class="form-group">
+                    {{ form.book.author.label(class="form-label") }}
+                    <div class="autocomplete-wrapper">
+                        <input type="text" name="book-author" id="book-author"
+                               class="form-control ac-input" placeholder="Auteur…"
+                               data-ac-field="author"
+                               value="{{ form.book.author.data or '' }}"
+                               {% if disabled %}disabled{% endif %}
+                               {% if not disabled %}
+                               autocomplete="off"
+                               {% endif %}>
+                        {% if not disabled %}
+                        <div id="ac-author-results" class="search-dropdown"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-group">
+                    {{ form.book.editor.label(class="form-label") }}
+                    <div class="autocomplete-wrapper">
+                        <input type="text" name="book-editor" id="book-editor"
+                               class="form-control ac-input" placeholder="Éditeur…"
+                               data-ac-field="editor"
+                               value="{{ form.book.editor.data or '' }}"
+                               {% if disabled %}disabled{% endif %}
+                               {% if not disabled %}
+                               autocomplete="off"
+                               {% endif %}>
+                        {% if not disabled %}
+                        <div id="ac-editor-results" class="search-dropdown"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-group">
+                    {{ form.book.diffuser.label(class="form-label") }}
+                    <div class="autocomplete-wrapper">
+                        <input type="text" name="book-diffuser" id="book-diffuser"
+                               class="form-control ac-input" placeholder="Diffuseur…"
+                               data-ac-field="diffuser"
+                               value="{{ form.book.diffuser.data or '' }}"
+                               {% if disabled %}disabled{% endif %}
+                               {% if not disabled %}
+                               autocomplete="off"
+                               {% endif %}>
+                        {% if not disabled %}
+                        <div id="ac-diffuser-results" class="search-dropdown"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-group">
+                    {{ form.book.genre.label(class="form-label") }}
+                    <div class="autocomplete-wrapper">
+                        <input type="text" name="book-genre" id="book-genre"
+                               class="form-control ac-input" placeholder="Genre…"
+                               data-ac-field="genre"
+                               value="{{ form.book.genre.data or '' }}"
+                               {% if disabled %}disabled{% endif %}
+                               {% if not disabled %}
+                               autocomplete="off"
+                               {% endif %}>
+                        {% if not disabled %}
+                        <div id="ac-genre-results" class="search-dropdown"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-group">
+                    {{ form.book.publication_year.label(class="form-label") }}
+                    {{ form.book.publication_year(class="form-control", placeholder="Année…",
+                                                  disabled=disabled, autocomplete="off") }}
+                </div>
+                <div class="form-group">
+                    {{ form.book.pages.label(class="form-label") }}
+                    {{ form.book.pages(class="form-control", placeholder="Nb pages…",
+                                       disabled=disabled, autocomplete="off") }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Onglet Mots-clés ───────────────────────────────────────────── #}
+        <div class="tab-panel {{ 'active' if object_type != 'book' else '' }}" id="tab-tags">
+            <div id="tags-list" class="dynamic-list">
+                {% if form_state == 'view' and obj and obj.object_tags %}
+                    {% for ot in obj.object_tags %}
+                    <div class="dynamic-list-item">
+                        <input type="text" class="form-control"
+                               value="{{ ot.tag.name if ot.tag else '' }}" disabled>
+                    </div>
+                    {% endfor %}
+                {% elif form_state in ['edit', 'create'] and obj and obj.object_tags %}
+                    {% for ot in obj.object_tags %}
+                    <div class="dynamic-list-item">
+                        <input type="hidden" name="object_tags-{{ loop.index0 }}-id" value="{{ ot.id }}">
+                        <input type="hidden" name="object_tags-{{ loop.index0 }}-tag_id" value="{{ ot.tag_id }}">
+                        <input type="text" class="form-control"
+                               value="{{ ot.tag.name if ot.tag else '' }}" disabled style="flex:1">
+                        <button type="button"
+                                class="btn btn-sm btn-danger btn-remove-item"
+                                title="Supprimer">
+                            &times;
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            {% if not disabled %}
+            <button type="button" class="btn btn-sm btn-secondary btn-add-tag">
+                + Ajouter un mot-clé
+            </button>
+            {% endif %}
+        </div>
+
+        {# ── Onglet Métadonnées ──────────────────────────────────────────── #}
+        <div class="tab-panel" id="tab-metadata">
+            <div id="metadata-list" class="dynamic-list">
+                {% if form_state == 'view' and obj and obj.obj_metadatas %}
+                    {% set data = obj.obj_metadatas.semistructured_data %}
+                    {% for k, v in data.items() %}
+                        {% if v is string %}
+                        <div class="dynamic-list-item kv-pair">
+                            <input type="text" class="form-control" value="{{ k }}" disabled placeholder="Clé">
+                            <input type="text" class="form-control" value="{{ v }}" disabled placeholder="Valeur">
+                        </div>
+                        {% elif v is iterable %}
+                            {% for val in v %}
+                            <div class="dynamic-list-item kv-pair">
+                                <input type="text" class="form-control" value="{{ k }}" disabled placeholder="Clé">
+                                <input type="text" class="form-control" value="{{ val }}" disabled placeholder="Valeur">
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                {% elif form_state == 'edit' and obj and obj.obj_metadatas %}
+                    {% set idx = namespace(value=0) %}
+                    {% set data = obj.obj_metadatas.semistructured_data %}
+                    {% for k, v in data.items() %}
+                        {% if v is string %}
+                        <div class="dynamic-list-item kv-pair">
+                            <input type="hidden" value="{{ obj.obj_metadatas.id }}" name="obj_metadatas-items-{{ idx.value }}-id">
+                            <div class="autocomplete-wrapper" style="flex:1">
+                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-key"
+                                       class="form-control ac-input" data-ac-field="metadata_key"
+                                       value="{{ k }}" placeholder="Clé">
+                                <div class="search-dropdown"></div>
+                            </div>
+                            <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ v }}" placeholder="Valeur">
+                            <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
+                        </div>
+                        {% set idx.value = idx.value + 1 %}
+                        {% elif v is iterable %}
+                            {% for val in v %}
+                            <div class="dynamic-list-item kv-pair">
+                                <input type="hidden" value="{{ obj.obj_metadatas.id }}" name="obj_metadatas-items-{{ idx.value }}-id">
+                                <div class="autocomplete-wrapper" style="flex:1">
+                                    <input type="text" name="obj_metadatas-items-{{ idx.value }}-key"
+                                           class="form-control ac-input" data-ac-field="metadata_key"
+                                           value="{{ k }}" placeholder="Clé">
+                                    <div class="search-dropdown"></div>
+                                </div>
+                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ val }}" placeholder="Valeur">
+                                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
+                            </div>
+                            {% set idx.value = idx.value + 1 %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                {% elif form_state == 'create' %}
+                    <div class="dynamic-list-item kv-pair">
+                        <div class="autocomplete-wrapper" style="flex:1">
+                            <input type="text" name="obj_metadatas-items-0-key"
+                                   class="form-control ac-input" data-ac-field="metadata_key"
+                                   placeholder="Clé">
+                            <div class="search-dropdown"></div>
+                        </div>
+                        <input type="text" name="obj_metadatas-items-0-value"
+                               class="form-control" placeholder="Valeur">
+                        <button type="button" class="btn btn-sm btn-danger btn-remove-item"
+                                title="Supprimer">&times;</button>
+                    </div>
+                {% endif %}
+            </div>
+            {% if not disabled %}
+            <button type="button" class="btn btn-sm btn-secondary btn-add-metadata">
+                + Ajouter une métadonnée
+            </button>
+            {% endif %}
+        </div>
+
+        {# ── Onglet Images ───────────────────────────────────────────────── #}
+        <div class="tab-panel" id="tab-media">
+            <div id="media-list" class="dynamic-list">
+                {% if form_state == 'view' and obj and obj.media_files %}
+                    {% for mf in obj.media_files %}
+                    <div class="dynamic-list-item media-item">
+                        <span class="media-type-badge">{{ mf.file_type }}</span>
+                        {% if mf.file_type == 'lnk' %}
+                        <input type="text" class="form-control"
+                               value="{{ mf.file_link }}" disabled placeholder="URL">
+                        <input type="text" class="form-control"
+                               value="{{ mf.file_name }}" disabled placeholder="Nom">
+                        {% elif mf.file_type == 'img' %}
+                        <input type="text" class="form-control"
+                               value="{{ mf.file_name }}" disabled placeholder="Fichier">
+                        <input type="text" class="form-control"
+                               value="{{ mf.alt_text }}" disabled placeholder="Texte alt.">
+                        {% else %}
+                        <input type="text" class="form-control"
+                               value="{{ mf.file_name }}" disabled placeholder="Nom">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% elif form_state == 'create' %}
+                    <p class="text-muted empty-media-msg">Aucun fichier média pour le moment.</p>
+                {% elif form_state == 'edit' and obj and obj.media_files %}
+                    {% for mf in obj.media_files %}
+                    <div class="dynamic-list-item media-item">
+                        <select name="media_files-{{ loop.index0 }}-file_type"
+                                class="form-control media-type-select">
+                            <option value="">-- Type --</option>
+                            <option value="lnk" {{ 'selected' if mf.file_type == 'lnk' else '' }}>
+                                Lien
+                            </option>
+                            <option value="img" {{ 'selected' if mf.file_type == 'img' else '' }}>
+                                Image
+                            </option>
+                            <option value="oth" {{ 'selected' if mf.file_type == 'oth' else '' }}>
+                                Autre
+                            </option>
+                        </select>
+                        {% if mf.file_type == 'lnk' %}
+                        <div class="media-fields">
+                            <input type="hidden" value="{{ mf.id }}"
+                                   name="media_files-{{ loop.index0 }}-id">
+                            <input type="text" class="form-control"
+                                   name="media_files-{{ loop.index0 }}-file_link"
+                                   value="{{ mf.file_link }}" placeholder="URL du lien">
+                            <input type="text" class="form-control"
+                                   name="media_files-{{ loop.index0 }}-file_name"
+                                   value="{{ mf.file_name }}" placeholder="Nom du lien">
+                        </div>
+                        {% elif mf.file_type == 'img' %}
+                        <div class="media-fields">
+                            <input type="hidden" value="{{ mf.id }}"
+                                   name="media_files-{{ loop.index0 }}-id">
+                            <input type="file" name="media_files-{{ loop.index0 }}-file_data"
+                                   class="form-control" accept="image/*">
+                            <input type="text" class="form-control"
+                                   name="media_files-{{ loop.index0 }}-alt_text"
+                                   value="{{ mf.alt_text }}" placeholder="Texte alt.">
+                            <input type="text" class="form-control"
+                                   name="media_files-{{ loop.index0 }}-file_name"
+                                   value="{{ mf.file_name }}" placeholder="Nom du fichier">
+                        </div>
+                        {% else %}
+                        <div class="media-fields">
+                            <input type="hidden" value="{{ mf.id }}"
+                                   name="media_files-{{ loop.index0 }}-id">
+                            <input type="text" class="form-control"
+                                   name="media_files-{{ loop.index0 }}-file_name"
+                                   value="{{ mf.file_name }}" placeholder="Nom">
+                        </div>
+                        {% endif %}
+                        <button type="button"
+                                class="btn btn-sm btn-danger btn-remove-item"
+                                title="Supprimer">
+                            &times;
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            {% if not disabled %}
+            <button type="button" class="btn btn-sm btn-secondary btn-add-media">
+                + Ajouter un fichier
+            </button>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+{# ── Script onglets + listes dynamiques + autocomplete ────────────────────── #}
+<script>
+(function() {
+    const container = document.querySelector('.complement-tabs');
+    if (!container) return;
+
+    // ── Fonction globale de sélection autocomplete ──────────────────────
+    window.selectAutocomplete = function(el, value) {
+        var wrapper = el.closest('.autocomplete-wrapper');
+        if (!wrapper) return;
+        var input = wrapper.querySelector('input');
+        if (input) input.value = value;
+        var dropdown = wrapper.querySelector('.search-dropdown');
+        if (dropdown) dropdown.innerHTML = '';
+    };
+
+    // ── Tag : sélection d'un tag existant ────────────────────────────────
+    window.selectTag = function(el, tagId, tagName) {
+        var wrapper = el.closest('.autocomplete-wrapper');
+        if (!wrapper) return;
+        var item = wrapper.closest('.dynamic-list-item');
+        if (!item) return;
+        // Mettre à jour l'input caché tag_id (déjà créé avec le bon name WTForms)
+        var tagIdInput = item.querySelector('input[name$="-tag_id"]');
+        if (tagIdInput) tagIdInput.value = tagId;
+        // Remplacer l'autocomplete-wrapper par un champ texte statique
+        var staticInput = document.createElement('input');
+        staticInput.type = 'text';
+        staticInput.className = 'form-control';
+        staticInput.value = tagName;
+        staticInput.disabled = true;
+        staticInput.style.flex = '1';
+        wrapper.parentNode.replaceChild(staticInput, wrapper);
+    };
+
+    // ── Tag : afficher le mini-formulaire de création ────────────────────
+    window.toggleTagCreateForm = function(el) {
+        var dropdown = el.closest('.search-dropdown');
+        if (!dropdown) return;
+        var form = dropdown.querySelector('.tag-create-form');
+        if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    };
+
+    // ── Tag : créer un nouveau tag via HTMX ─────────────────────────────
+    window.createTag = function(btn) {
+        // Récupère le dropdown de recherche
+        var dropdown = btn.closest('.search-dropdown');
+        if (!dropdown) return;
+        // Récupère le wrapper d'autocomplete
+        var wrapper = dropdown.closest('.autocomplete-wrapper');
+        if (!wrapper) return;
+        // Récupère la liste de tags (dynamic-list)
+        var item = wrapper.closest('.dynamic-list-item');
+        if (!item) return;
+        // Récupère les inputs du formulaire de création
+        var nameInput = dropdown.querySelector('.tag-new-name');
+        var descInput = dropdown.querySelector('.tag-new-desc');
+        var name = nameInput ? nameInput.value.trim() : '';
+        var desc = descInput ? descInput.value.trim() : '';
+        if (!name) return;
+        // Appel HTMX via fetch pour créer le tag
+        var url = "{{ url_for('stock_htmx_search.create_tag_htmx') }}";
+        var body = new URLSearchParams({name: name, description: desc});
+        fetch(url, {method: 'POST', body: body, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(function(resp) { return resp.text(); })
+            .then(function(html) {
+                // Parser la réponse pour extraire l'id et le nom du nouveau tag
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                var tagIdInput = tmp.querySelector('input[name="tag_id"]');
+                var tagNameInput = tmp.querySelector('input[type="text"]');
+                if (tagIdInput && tagNameInput) {
+                    var newTagId = parseInt(tagIdInput.value);
+                    var newTagName = tagNameInput.value;
+                    // Mettre à jour l'input caché tag_id
+                    var hiddenTagId = item.querySelector('input[name$="-tag_id"]');
+                    if (hiddenTagId) hiddenTagId.value = newTagId;
+                    // Remplacer l'autocomplete-wrapper par un champ texte statique
+                    var wrapper = item.querySelector('.autocomplete-wrapper');
+                    if (wrapper) {
+                        var staticInput = document.createElement('input');
+                        staticInput.type = 'text';
+                        staticInput.className = 'form-control';
+                        staticInput.value = newTagName;
+                        staticInput.disabled = true;
+                        staticInput.style.flex = '1';
+                        wrapper.parentNode.replaceChild(staticInput, wrapper);
+                    }
+                }
+            });
+    };
+
+    // ── Tag : retirer un tag sélectionné ─────────────────────────────────
+    window.removeSelectedTag = function(btn) {
+        var item = btn.closest('.dynamic-list-item');
+        if (item) item.remove();
+    };
+
+    // ── Event listeners pour les boutons de sélection de tag ──────────────
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('tag-select-btn')) {
+            var tagId = e.target.dataset.tagId;
+            var tagName = e.target.dataset.tagName;
+            selectTag(e.target, parseInt(tagId), tagName);
+        }
+    });
+
+    // Fermer les dropdowns au clic en dehors
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            container.querySelectorAll('.search-dropdown').forEach(function(d) {
+                d.innerHTML = '';
+            });
+        }
+    });
+
+    // Navigation onglets
+    container.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            container.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+            container.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+            btn.classList.add('active');
+            var panel = document.getElementById(btn.dataset.tab);
+            if (panel) panel.classList.add('active');
+        });
+    });
+
+    {% if not disabled %}
+
+    // Récupérer l'URL de base pour les requêtes d'autocomplete (sans le segment du champ)
+    var sampleUrl = "{{ url_for('stock_htmx_search.object_autocomplete', field='author') }}";
+    var acBasePath = sampleUrl.replace('/author', '');  // Remove the field part
+
+    // Création d'un objet : setup de l'autocomplete sur les champs concernés
+    function setupAutocomplete(inputEl) {
+        if (!inputEl.classList.contains('ac-input')) return;
+        
+        var field = inputEl.dataset.acField;
+        if (!field) return;
+        
+        var wrapper = inputEl.closest('.autocomplete-wrapper');
+        var dropdown = wrapper ? wrapper.querySelector('.search-dropdown') : null;
+        if (!dropdown) return;
+        
+        var debounceTimer;
+        var lastQuery = '';
+        
+        inputEl.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            var query = this.value.trim();
+            
+            // Suppression des résultats si la requête est vide ou trop courte
+            if (query.length === 0) {
+                dropdown.innerHTML = '';
+                return;
+            }
+            
+            // Retire les requêtes en double pour la même saisie
+            if (query === lastQuery) return;
+            lastQuery = query;
+            
+            // Construire l'URL avec le paramètre de champ et de requête
+            var url = acBasePath + '/' + field + '?q=' + encodeURIComponent(query);
+            
+            debounceTimer = setTimeout(function() {
+                // Utilisation de fetch pour obtenir les résultats d'autocomplete
+                fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(resp) { return resp.text(); })
+                .then(function(html) {
+                    dropdown.innerHTML = html;
+                    // Traiter les attributs HTMX dans la réponse
+                    if (window.htmx) htmx.process(dropdown);
+                })
+                .catch(function(err) {
+                    console.error('Autocomplete error:', err);
+                    dropdown.innerHTML = '<div class="error">Erreur lors de la recherche</div>';
+                });
+            }, 400);
+        });
+    }
+
+    // Setup de l'autocomplete sur les champs déjà présents dans le formulaire
+    container.querySelectorAll('.ac-input').forEach(function(el) {
+        setupAutocomplete(el);
+    });
+
+    // URL de base pour l'autocomplete tag
+    var tagAcUrl = "{{ url_for('stock_htmx_search.object_autocomplete', field='tag') }}";
+
+    // Compteur pour les indices WTForms des tags (part du nombre de tags existants)
+    var tagIdx = {{ (obj.object_tags | length) if (obj and obj.object_tags) else 0 }};
+
+    // Ajout mot-clé (avec autocomplete)
+    var addTagBtn = container.querySelector('.btn-add-tag');
+    if (addTagBtn) {
+        addTagBtn.addEventListener('click', function() {
+            var list = document.getElementById('tags-list');
+            var div = document.createElement('div');
+            div.className = 'dynamic-list-item';
+            div.innerHTML = '<input type="hidden" name="object_tags-' + tagIdx + '-id" value="">'
+                          + '<input type="hidden" name="object_tags-' + tagIdx + '-tag_id" value="">'
+                          + '<div class="autocomplete-wrapper" style="flex:1">'
+                          + '<input type="text" '
+                          + 'class="form-control ac-tag-input ac-input" '
+                          + 'data-ac-field="tag" '
+                          + 'placeholder="Nom du mot-clé…" '
+                          + 'autocomplete="off">'
+                          + '<div class="search-dropdown"></div>'
+                          + '</div>'
+                          + '<button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>';
+            list.appendChild(div);
+            tagIdx++;
+            // Créer les autocomplete pour ce nouveau champ
+            var newInput = div.querySelector('.ac-input');
+            setupAutocomplete(newInput);
+        });
+    }
+
+    // Ajout métadonnée
+    var addMetaBtn = container.querySelector('.btn-add-metadata');
+    if (addMetaBtn) {
+        addMetaBtn.addEventListener('click', function() {
+            var list = document.getElementById('metadata-list');
+            var idx = list.querySelectorAll('.dynamic-list-item').length;
+            var div = document.createElement('div');
+            div.className = 'dynamic-list-item kv-pair';
+            div.innerHTML = '<div class="autocomplete-wrapper" style="flex:1">'
+                          + '<input type="text" name="obj_metadatas-items-' + idx + '-key" class="form-control ac-input" data-ac-field="metadata_key" placeholder="Clé">'
+                          + '<div class="search-dropdown"></div>'
+                          + '</div>'
+                          + '<input type="text" name="obj_metadatas-items-' + idx + '-value" class="form-control" placeholder="Valeur">'
+                          + '<button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>';
+            list.appendChild(div);
+            setupAutocomplete(div.querySelector('.ac-input'));
+        });
+    }
+
+    // Ajout fichier média (avec formulaire conditionnel selon le type)
+    var addMediaBtn = container.querySelector('.btn-add-media');
+    if (addMediaBtn) {
+        addMediaBtn.addEventListener('click', function() {
+            var list = document.getElementById('media-list');
+            // Supprimer le message « Aucun fichier » s'il existe
+            var emptyMsg = list.querySelector('.empty-media-msg');
+            if (emptyMsg) emptyMsg.remove();
+            var idx = list.querySelectorAll('.dynamic-list-item').length;
+            var div = document.createElement('div');
+            div.className = 'dynamic-list-item media-item';
+            div.innerHTML = '<select name="media_files-' + idx + '-file_type" class="form-control media-type-select">'
+                          + '<option value="">-- Type --</option>'
+                          + '<option value="lnk">Lien</option>'
+                          + '<option value="img">Image</option>'
+                          + '<option value="oth">Autre</option>'
+                          + '</select>'
+                          + '<div class="media-fields"></div>'
+                          + '<button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>';
+            list.appendChild(div);
+            // Écouteur pour afficher les champs selon le type
+            var sel = div.querySelector('.media-type-select');
+            sel.addEventListener('change', function() {
+                var fields = div.querySelector('.media-fields');
+                var i = idx;
+                if (this.value === 'lnk') {
+                    fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_link" class="form-control" placeholder="URL du lien">'
+                                     + '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom du lien">';
+                } else if (this.value === 'img') {
+                    fields.innerHTML = '<input type="file" name="media_files-' + i + '-file_data" class="form-control" accept="image/*">'
+                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Texte alternatif">'
+                                     + '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom de l\'image">';
+                } else if (this.value === 'oth') {
+                    fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom du fichier">'
+                                     + '<input type="file" name="media_files-' + i + '-file_data" class="form-control">'
+                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Description">';
+                } else {
+                    fields.innerHTML = '';
+                }
+            });
+        });
+    }
+
+    // Suppression d'un item dynamique
+    container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-remove-item')) {
+            e.target.closest('.dynamic-list-item').remove();
+        }
+    });
+    {% endif %}
+})();
+</script>

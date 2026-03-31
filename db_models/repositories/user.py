@@ -10,8 +10,9 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.users import Users, UsersPasswords
+from db_models.objects import Users, UsersPasswords
 from db_models.security.secur_sauv import PwdHasher
+
 
 class UsersRepository(BaseRepository):
     """
@@ -39,8 +40,10 @@ class UsersRepository(BaseRepository):
             Users | None: L'utilisateur correspondant au nom d'utilisateur,
                           ou None s'il n'existe pas.
         """
-        stmt = select(Users).where(Users.username == username).options(
-            selectinload(Users.passwords)
+        stmt = (
+            select(Users)
+            .where(Users.username == username)
+            .options(selectinload(Users.passwords))
         )
         user = self.session.execute(stmt).scalar_one_or_none()
         return user
@@ -96,7 +99,8 @@ class UsersRepository(BaseRepository):
         new_pwd = UsersPasswords(
             user_id=user.id,
             password_hash=self._hasher.hash(password),
-            from_date=now, to_date=None
+            from_date=now,
+            to_date=None,
         )
         user.passwords.append(new_pwd)
         self.session.commit()

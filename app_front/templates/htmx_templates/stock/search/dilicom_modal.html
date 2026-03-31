@@ -1,0 +1,142 @@
+<!-- template dilicom_modal.html -->
+{# Fragment HTMX — Modale Dilicom pour gérer le référencement d'un objet #}
+
+<div class="modal-overlay" id="dilicom-modal-overlay">
+    <div class="modal-box modal-dilicom">
+        <div class="modal-header">
+            <h3>Référencement Dilicom</h3>
+            <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            {# ── Informations article ────────────────────────────────────── #}
+            <div class="dilicom-info">
+                <div class="info-group">
+                    <span class="info-label">Article :</span>
+                    <span class="info-value">{{ obj.name }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">EAN13 :</span>
+                    <span class="info-value">{{ obj.ean13 or '—' }}</span>
+                </div>
+                {% if dilicom_ref %}
+                <div class="info-group">
+                    <span class="info-label">Statut actuel :</span>
+                    <span class="info-value">
+                        {% if dilicom_ref.create_ref and dilicom_ref.dilicom_synced %}
+                            <span class="dilicom-dot dot-green"></span> Actif
+                        {% elif dilicom_ref.create_ref and not dilicom_ref.dilicom_synced %}
+                            <span class="dilicom-dot dot-yellow"></span> En cours d'activation
+                        {% elif dilicom_ref.delete_ref and not dilicom_ref.dilicom_synced %}
+                            <span class="dilicom-dot dot-red"></span> En cours de suppression
+                        {% else %}
+                            <span class="dilicom-dot dot-grey"></span> Inactif
+                        {% endif %}
+                    </span>
+                </div>
+                {% else %}
+                <div class="info-group">
+                    <span class="info-label">Statut actuel :</span>
+                    <span class="info-value">
+                        <span class="dilicom-dot dot-grey"></span> Non référencé
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            {# ── Formulaire d'action ─────────────────────────────────────── #}
+            <div class="dilicom-actions-form">
+                {% if not dilicom_ref or (dilicom_ref.delete_ref and dilicom_ref.dilicom_synced) %}
+                {# Pas de référence ou supprimée → proposer l'ajout #}
+                <h4>Ajouter au référentiel Dilicom</h4>
+                <div class="form-group">
+                    <label class="form-label" for="dilicom-supplier-name">Fournisseur (GLN13)</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="dilicom-supplier-name"
+                               class="form-control"
+                               placeholder="Rechercher un fournisseur…"
+                               autocomplete="off"
+                               hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln', context='dilicom') }}"
+                               hx-trigger="keyup changed delay:300ms"
+                               hx-target="#dilicom-supplier-results"
+                               hx-swap="innerHTML"
+                               name="supplier_name">
+                        <input type="hidden" id="dilicom-gln13" name="gln13" value="">
+                        <div id="dilicom-supplier-results" class="search-dropdown"></div>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary btn-close-modal">Annuler</button>
+                    <button class="btn btn-primary"
+                            id="btn-dilicom-add"
+                            disabled
+                            hx-post="{{ url_for('stock_htmx_search.dilicom_add', object_id=obj.id) }}"
+                            hx-include="#dilicom-gln13"
+                            hx-target="#dilicom-modal-overlay"
+                            hx-swap="outerHTML"
+                            title="Ajouter au référentiel Dilicom">
+                        Ajouter chez Dilicom
+                    </button>
+                </div>
+
+                {% elif dilicom_ref.create_ref and dilicom_ref.dilicom_synced %}
+                {# Référence active → proposer la suppression #}
+                <h4>Supprimer du référentiel Dilicom</h4>
+                <p class="text-warning">
+                    Cette action planifiera la suppression de cet article du référentiel Dilicom.
+                    La suppression sera effective à la prochaine synchronisation.
+                </p>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary btn-close-modal">Annuler</button>
+                    <button class="btn btn-danger"
+                            id="btn-dilicom-delete"
+                            hx-post="{{ url_for('stock_htmx_search.dilicom_remove', object_id=obj.id) }}"
+                            hx-target="#dilicom-modal-overlay"
+                            hx-swap="outerHTML"
+                            title="Supprimer du référentiel Dilicom">
+                        Supprimer chez Dilicom
+                    </button>
+                </div>
+
+                {% elif dilicom_ref.create_ref and not dilicom_ref.dilicom_synced %}
+                {# En cours d'activation → info seulement #}
+                <p class="text-info">
+                    Cet article est en cours d'activation chez Dilicom.
+                    Veuillez attendre la prochaine synchronisation.
+                </p>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary btn-close-modal">Fermer</button>
+                </div>
+
+                {% elif dilicom_ref.delete_ref and not dilicom_ref.dilicom_synced %}
+                {# En cours de suppression → info seulement #}
+                <p class="text-info">
+                    Cet article est en cours de suppression chez Dilicom.
+                    Veuillez attendre la prochaine synchronisation.
+                </p>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary btn-close-modal">Fermer</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Active le bouton "Ajouter" dès qu'un GLN13 est renseigné.
+    // Note : #dilicom-gln13 est remplacé par outerHTML à chaque sélection,
+    // il faut donc re-requêter l'élément à chaque fois.
+    var addBtn = document.getElementById('btn-dilicom-add');
+    if (!addBtn) return;
+
+    function updateBtn() {
+        var el = document.getElementById('dilicom-gln13');
+        addBtn.disabled = !el || !el.value.trim();
+    }
+
+    document.body.addEventListener('htmx:afterSwap', updateBtn);
+    updateBtn();
+})();
+</script>

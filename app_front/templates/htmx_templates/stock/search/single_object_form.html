@@ -1,0 +1,228 @@
+<!-- template single_object_form.html -->
+{# Fragment HTMX — Formulaire de création / consultation d'un objet #}
+
+{% set disabled = form_state == 'view' %}
+
+<div class="modal-overlay" id="object-modal-overlay">
+    <div class="modal-box modal-object">
+        <div class="modal-header">
+            {% if form_state == 'create' %}
+                <h3>Ajouter un article</h3>
+            {% elif form_state in ['created', 'edit'] %}
+                <h3>Article créé</h3>
+            {% else %}
+                <h3>Détail de l'article</h3>
+            {% endif %}
+            <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
+        </div>
+        <div class="modal-body">
+            {# Partie qui s'affiche une fois l'objet créé #}
+            {% if form_state == 'created' %}
+                <div class="object-created-msg">
+                    <p>L'article a été créé avec succès (ID : {{ created_id }}).</p>
+                </div>
+                <div class="modal-buttons">
+                    {% if from_inventory %}
+                    <button type="button" class="btn btn-primary btn-close-modal">Fermer</button>
+                    {% else %}
+                    <a href="{{ url_for('stock.search') }}" class="btn btn-primary">Fermer</a>
+                    {% endif %}
+                </div>
+            {% elif form_state == 'updated' %}
+                <div class="object-created-msg">
+                    <p>L'article a été modifié avec succès (ID : {{ updated_id }}).</p>
+                </div>
+                <div class="modal-buttons">
+                    <a href="{{ url_for('stock.search') }}" class="btn btn-primary">
+                        Fermer
+                    </a>
+                </div>
+            {% else %}
+            <form id="object-form"
+                  {% if not disabled %}
+                    {% if form_state == 'create' %}
+                            hx-post="{{ url_for('stock_htmx_search.create_object') }}"
+                        {% elif form_state in ['edit', 'view'] and obj %}
+                            hx-post="{{ url_for('stock_htmx_search.edit_object', object_id=obj.id) }}"
+                        {% endif %}
+                    hx-target="#object-modal-container"
+                    hx-swap="innerHTML"
+                  {% endif %}
+                  method="post">
+                {{ form.hidden_tag() }}
+                {% if from_inventory %}
+                <input type="hidden" name="from_inventory" value="1">
+                {% endif %}
+
+                {# ── Champs de base ──────────────────────────────── #}
+                <div class="object-fields-grid">
+
+                    {# Fournisseur (auto-complétion) #}
+                    <div class="form-group form-group-wide">
+                        {{ form.general_object_id }}
+                        {{ form.supplier_name.label(class="form-label") }}
+                        <div class="autocomplete-wrapper">
+                            <input type="hidden" id="supplier_id"
+                                   name="supplier_id"
+                                   value="{{ form.supplier_id.data or '' }}">
+                            {% if obj %}
+                            <input type="hidden" id="object_id" name="object_id" value="{{ obj.id }}">
+                            {% endif %}
+                            <input type="text" id="supplier_name"
+                                   name="supplier_name"
+                                   class="form-control"
+                                   placeholder="Rechercher un fournisseur…"
+                                   autocomplete="off"
+                                   value="{{ form.supplier_name.data or '' }}"
+                                   {% if disabled %}disabled{% endif %}
+                                   {% if not disabled %}
+                                   hx-get="{{ url_for('supplier_htmx.get_suppliers', type_of_data='id_name_gln', allow_create='true') }}"
+                                   hx-trigger="input changed delay:500ms"
+                                   hx-target="#search-results"
+                                   hx-swap="innerHTML"
+                                   required
+                                   {% endif %}>
+                            {% if not disabled %}
+                            <div id="search-results" class="dropdown-menu"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# Type d'objet #}
+                    <div class="form-group">
+                        {{ form.general_object_type.label(class="form-label") }}
+                        <select name="general_object_type" id="general_object_type"
+                                class="form-control"
+                                {% if disabled %}disabled{% endif %}
+                                {% if not disabled %}
+                                hx-get="{{ url_for('stock_htmx_search.object_complement') }}"
+                                hx-target="#object-complement-container"
+                                hx-swap="innerHTML"
+                                hx-trigger="change"
+                                hx-include="[name='form_state'], [name='object_id']"
+                                {% endif %}>
+                            {% for val, label in form.general_object_type.choices %}
+                            <option value="{{ val }}" {{ 'selected' if form.general_object_type.data == val else '' }}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="form_state" value="{{ form_state }}">
+                    </div>
+
+                    {# EAN13 #}
+                    <div class="form-group">
+                        {{ form.ean_13.label(class="form-label") }}
+                        {{ form.ean_13(class="form-control", placeholder="Code EAN13…",
+                                       disabled=disabled) }}
+                    </div>
+
+                    {# Nom #}
+                    <div class="form-group form-group-wide">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control", placeholder="Nom de l'article…",
+                                     disabled=disabled) }}
+                    </div>
+
+                    {# Description #}
+                    <div class="form-group form-group-wide">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control",
+                                            placeholder="Description (optionnel)…",
+                                            disabled=disabled) }}
+                    </div>
+
+                    {# Prix de vente #}
+                    <div class="form-group">
+                        {{ form.price.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.price(class="form-control", placeholder="0.00",
+                                          disabled=disabled) }}
+                            <span class="input-group-text">€</span>
+                        </div>
+                    </div>
+
+                    {# Prix d'achat #}
+                    <div class="form-group">
+                        {{ form.purchase_price.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.purchase_price(class="form-control", placeholder="0.00",
+                                                   disabled=disabled, type="number", step="0.01") }}
+                            <span class="input-group-text">€</span>
+                        </div>
+                    </div>
+
+                    {# Taux de TVA #}
+                    <div class="form-group">
+                        {{ form.vat_rate_id.label(class="form-label") }}
+                        <select name="vat_rate_id" id="vat_rate_id" class="form-control"
+                                {% if disabled %}disabled{% endif %}>
+                            {% for val, label in (vat_rates or form.vat_rate_id.choices) %}
+                            <option value="{{ val }}"
+                                    {{ 'selected' if form.vat_rate_id.data == val else '' }}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                {# ── Conteneur du complément (onglets) ──────────── #}
+                <div id="object-complement-container"
+                     {% if form_state == 'create' %}
+                     hx-get="{{ url_for('stock_htmx_search.object_complement', form_state=form_state, general_object_type=form.general_object_type.data or 'book') }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML"
+                     {% elif form_state == 'edit' and obj %}
+                     hx-get="{{ url_for('stock_htmx_search.object_complement', object_id=obj.id, form_state=form_state, general_object_type=form.general_object_type.data or 'book') }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML"
+                     {% elif form_state == 'view' and obj %}
+                     hx-get="{{ url_for('stock_htmx_search.object_complement', object_id=obj.id, form_state=form_state, general_object_type=form.general_object_type.data or 'book') }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML"
+                     {% endif %}>
+                    <div class="loading-indicator">
+                        <p>Chargement des compléments…</p>
+                    </div>
+                </div>
+
+                {# ── Boutons d'action ────────────────────────────── #}
+                <div class="modal-buttons">
+                    {% if form_state == 'view' %}
+                        <button type="button" class="btn btn-secondary btn-close-modal">Retour</button>
+                    {% elif form_state in ['create', 'edit'] %}
+                        <button type="button" class="btn btn-secondary btn-close-modal">Annuler</button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    {% endif %}
+                </div>
+            </form>
+            {# Conteneur pour le formulaire de création fournisseur — hors du <form> pour éviter les nested forms #}
+            <div id="supplier-create-modal"></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not disabled %}
+<script>
+(function() {
+    // Écouter l'événement HTMX « supplier:created » pour remplir les champs fournisseur
+    document.body.addEventListener('supplier:created', function(evt) {
+        var data = evt.detail;
+        if (data && data.id) {
+            var hiddenField = document.getElementById('supplier_id');
+            var nameField = document.getElementById('supplier_name');
+            if (hiddenField) hiddenField.value = data.id;
+            if (nameField) nameField.value = data.name || '';
+        }
+        // Fermer le mini-formulaire de création
+        var modal = document.getElementById('supplier-create-modal');
+        if (modal) modal.innerHTML = '';
+    });
+})();
+</script>
+{% endif %}

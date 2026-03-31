@@ -6,12 +6,21 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.sql import Select, and_
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import (
-    Customers, CustomerParts, CustomerPros, CustomerAddresses, CustomerMails, CustomerPhones
+    Customers,
+    CustomerParts,
+    CustomerPros,
+    CustomerAddresses,
+    CustomerMails,
+    CustomerPhones,
 )
+
 
 class CustomersRepository(BaseRepository):
     """Repository pour les opérations sur les clients."""
-    def get_by_name_like(self, name: str, complete: bool = False) -> Optional[Sequence[Customers]]:
+
+    def get_by_name_like(
+        self, name: str, complete: bool = False
+    ) -> Optional[Sequence[Customers]]:
         """Récupère les clients dont le nom correspond à une recherche de type "like".
         Args:
             name (str): Le nom à rechercher (peut être partiel).
@@ -22,15 +31,15 @@ class CustomersRepository(BaseRepository):
         pattern = f"%{name}%"
         if complete:
             stmt = self._get_complete_query().where(
-                (Customers.part.has(CustomerParts.first_name.ilike(pattern))) |
-                (Customers.part.has(CustomerParts.last_name.ilike(pattern))) |
-                (Customers.pro.has(CustomerPros.company_name.ilike(pattern)))
+                (Customers.part.has(CustomerParts.first_name.ilike(pattern)))
+                | (Customers.part.has(CustomerParts.last_name.ilike(pattern)))
+                | (Customers.pro.has(CustomerPros.company_name.ilike(pattern)))
             )
         else:
             stmt = select(Customers).where(
-                (Customers.part.has(CustomerParts.first_name.ilike(pattern))) |
-                (Customers.part.has(CustomerParts.last_name.ilike(pattern))) |
-                (Customers.pro.has(CustomerPros.company_name.ilike(pattern)))
+                (Customers.part.has(CustomerParts.first_name.ilike(pattern)))
+                | (Customers.part.has(CustomerParts.last_name.ilike(pattern)))
+                | (Customers.pro.has(CustomerPros.company_name.ilike(pattern)))
             )
 
         result = self.session.execute(stmt).scalars().all()
@@ -87,15 +96,12 @@ class CustomersRepository(BaseRepository):
         Returns:
             List[Customers] | None: Le clt complet correspondant à l'ID ou None s'il n'existe pas.
         """
-        return (
-            select(Customers)
-            .options(
-                joinedload(Customers.part),
-                joinedload(Customers.pro),
-                selectinload(Customers.addresses),
-                selectinload(Customers.emails),
-                selectinload(Customers.phones)
-            )
+        return select(Customers).options(
+            joinedload(Customers.part),
+            joinedload(Customers.pro),
+            selectinload(Customers.addresses),
+            selectinload(Customers.emails),
+            selectinload(Customers.phones),
         )
 
     def update_info(self, customer_id: int, data: dict) -> Customers:
@@ -140,25 +146,29 @@ class CustomersRepository(BaseRepository):
         elif customer_data.get("customer_type") == "pro" and "pro" in customer_data:
             customer_data["pro"] = CustomerPros(**customer_data["pro"])
         else:
-            message = (
-                "Le type client doit être 'part' ou 'pro' et les données doivent être fournies."
-                )
+            message = "Le type client doit être 'part' ou 'pro' et les données doivent être fournies."
             raise ValueError(message)
         if "addresses" in customer_data:
             customer_data["addresses"] = [
                 CustomerAddresses(**addr) for addr in customer_data["addresses"]
-                ]
+            ]
         if "emails" in customer_data:
-            customer_data["emails"] = [CustomerMails(**mail) for mail in customer_data["emails"]]
+            customer_data["emails"] = [
+                CustomerMails(**mail) for mail in customer_data["emails"]
+            ]
         if "phones" in customer_data:
-            customer_data["phones"] = [CustomerPhones(**phone) for phone in customer_data["phones"]]
+            customer_data["phones"] = [
+                CustomerPhones(**phone) for phone in customer_data["phones"]
+            ]
         new_customer = Customers(**customer_data)
         self.session.add(new_customer)
         self.session.commit()
         return new_customer
 
+
 class CustomerAddressesRepository(BaseRepository):
     """Repository pour les opérations sur les adresses des clients."""
+
     def add_address(self, address_data: dict) -> CustomerAddresses:
         """Ajoute une nouvelle adresse à un client.
         Args:
@@ -170,8 +180,12 @@ class CustomerAddressesRepository(BaseRepository):
         """
         customer_id = address_data.get("customer_id", None)
         if not customer_id:
-            raise ValueError("L'ID du client doit être fourni dans les données de l'adresse.")
-        customer = self.session.query(Customers).filter(Customers.id == customer_id).first()
+            raise ValueError(
+                "L'ID du client doit être fourni dans les données de l'adresse."
+            )
+        customer = (
+            self.session.query(Customers).filter(Customers.id == customer_id).first()
+        )
         if not customer:
             raise ValueError(f"Client #{customer_id} introuvable.")
 
@@ -180,8 +194,9 @@ class CustomerAddressesRepository(BaseRepository):
         self.session.commit()
         return new_address
 
-    def update_address(self, customer_id: int,
-                       address_id: int, address_data: dict) -> CustomerAddresses:
+    def update_address(
+        self, customer_id: int, address_id: int, address_data: dict
+    ) -> CustomerAddresses:
         """Met à jour une adresse d'un client.
         Args:
             customer_id (int): L'ID du client auquel appartient l'adresse.
@@ -192,13 +207,18 @@ class CustomerAddressesRepository(BaseRepository):
         Raises:
             ValueError: Si l'adresse n'existe pas.
         """
-        address = self.session.query(CustomerAddresses).filter(
-            and_(
-                CustomerAddresses.id == address_id,
-                CustomerAddresses.customer_id == customer_id,
-                CustomerAddresses.is_active == True  # pylint: disable=singleton-comparison
+        address = (
+            self.session.query(CustomerAddresses)
+            .filter(
+                and_(
+                    CustomerAddresses.id == address_id,
+                    CustomerAddresses.customer_id == customer_id,
+                    CustomerAddresses.is_active
+                    == True,  # pylint: disable=singleton-comparison
                 )
-            ).first()
+            )
+            .first()
+        )
         if not address:
             raise ValueError(f"Adresse #{address_id} introuvable.")
 
@@ -217,17 +237,26 @@ class CustomerAddressesRepository(BaseRepository):
         Raises:
             ValueError: Si l'adresse n'existe pas.
         """
-        address = self.session.query(CustomerAddresses).filter(
-            and_(CustomerAddresses.id == address_id, CustomerAddresses.is_active == True)  # pylint: disable=singleton-comparison
-            ).first()
+        address = (
+            self.session.query(CustomerAddresses)
+            .filter(
+                and_(
+                    CustomerAddresses.id == address_id,
+                    CustomerAddresses.is_active == True,
+                )  # pylint: disable=singleton-comparison
+            )
+            .first()
+        )
         if not address:
             raise ValueError(f"Adresse #{address_id} introuvable.")
 
         address.is_active = False
         self.session.commit()
 
+
 class CustomerMailsRepository(BaseRepository):
     """Repository pour les opérations sur les e-mails des clients."""
+
     def add_email(self, email_data: dict) -> CustomerMails:
         """Ajoute une nouvelle adresse e-mail à un client.
         Args:
@@ -239,7 +268,9 @@ class CustomerMailsRepository(BaseRepository):
         """
         customer_id = email_data.get("customer_id", None)
         if not customer_id:
-            raise ValueError("L'ID du client doit être fourni dans les données de l'e-mail.")
+            raise ValueError(
+                "L'ID du client doit être fourni dans les données de l'e-mail."
+            )
         customer = self.session.get(Customers, customer_id)
         if not customer:
             raise ValueError(f"Client #{customer_id} introuvable.")
@@ -249,7 +280,9 @@ class CustomerMailsRepository(BaseRepository):
         self.session.commit()
         return new_email
 
-    def update_email(self, customer_id: int, email_id: int, email_data: dict) -> CustomerMails:
+    def update_email(
+        self, customer_id: int, email_id: int, email_data: dict
+    ) -> CustomerMails:
         """Met à jour une adresse e-mail d'un client.
         Args:
             customer_id (int): L'ID du client auquel appartient l'e-mail.
@@ -260,13 +293,18 @@ class CustomerMailsRepository(BaseRepository):
         Raises:
             ValueError: Si l'e-mail n'existe pas.
         """
-        email = self.session.query(CustomerMails).filter(
-            and_(
-                CustomerMails.id == email_id,
-                CustomerMails.is_active == True,  # pylint: disable=singleton-comparison
-                CustomerMails.customer_id == customer_id
+        email = (
+            self.session.query(CustomerMails)
+            .filter(
+                and_(
+                    CustomerMails.id == email_id,
+                    CustomerMails.is_active
+                    == True,  # pylint: disable=singleton-comparison
+                    CustomerMails.customer_id == customer_id,
                 )
-            ).first()
+            )
+            .first()
+        )
         if not email:
             raise ValueError(f"E-mail #{email_id} introuvable.")
 
@@ -285,17 +323,25 @@ class CustomerMailsRepository(BaseRepository):
         Raises:
             ValueError: Si l'e-mail n'existe pas.
         """
-        email = self.session.query(CustomerMails).filter(
-            and_(CustomerMails.id == email_id, CustomerMails.is_active == True) # pylint: disable=singleton-comparison
-            ).first()
+        email = (
+            self.session.query(CustomerMails)
+            .filter(
+                and_(
+                    CustomerMails.id == email_id, CustomerMails.is_active == True
+                )  # pylint: disable=singleton-comparison
+            )
+            .first()
+        )
         if not email:
             raise ValueError(f"E-mail #{email_id} introuvable.")
 
         email.is_active = False
         self.session.commit()
 
+
 class CustomerPhonesRepository(BaseRepository):
     """Repository pour les opérations sur les téléphones des clients."""
+
     def add_phone(self, phone_data: dict) -> CustomerPhones:
         """Ajoute un nouveau numéro de téléphone à un client.
         Args:
@@ -307,7 +353,9 @@ class CustomerPhonesRepository(BaseRepository):
         """
         customer_id = phone_data.get("customer_id", None)
         if not customer_id:
-            raise ValueError("L'ID du client doit être fourni dans les données du téléphone.")
+            raise ValueError(
+                "L'ID du client doit être fourni dans les données du téléphone."
+            )
         customer = self.session.get(Customers, customer_id)
         if not customer:
             raise ValueError(f"Client #{customer_id} introuvable.")
@@ -317,7 +365,9 @@ class CustomerPhonesRepository(BaseRepository):
         self.session.commit()
         return new_phone
 
-    def update_phone(self, customer_id: int, phone_id: int, phone_data: dict) -> CustomerPhones:
+    def update_phone(
+        self, customer_id: int, phone_id: int, phone_data: dict
+    ) -> CustomerPhones:
         """Met à jour un numéro de téléphone d'un client.
         Args:
             customer_id (int): L'ID du client auquel appartient le téléphone.
@@ -328,13 +378,18 @@ class CustomerPhonesRepository(BaseRepository):
         Raises:
             ValueError: Si le téléphone n'existe pas.
         """
-        phone = self.session.query(CustomerPhones).filter(
-            and_(
-                CustomerPhones.id == phone_id,
-                CustomerPhones.customer_id == customer_id,
-                CustomerPhones.is_active == True,  # pylint: disable=singleton-comparison
+        phone = (
+            self.session.query(CustomerPhones)
+            .filter(
+                and_(
+                    CustomerPhones.id == phone_id,
+                    CustomerPhones.customer_id == customer_id,
+                    CustomerPhones.is_active
+                    == True,  # pylint: disable=singleton-comparison
                 )
-            ).first()
+            )
+            .first()
+        )
         if not phone:
             raise ValueError(f"Téléphone #{phone_id} introuvable.")
 
@@ -353,9 +408,15 @@ class CustomerPhonesRepository(BaseRepository):
         Raises:
             ValueError: Si le téléphone n'existe pas.
         """
-        phone = self.session.query(CustomerPhones).filter(
-            and_(CustomerPhones.id == phone_id, CustomerPhones.is_active == True) # pylint: disable=singleton-comparison
-            ).first()
+        phone = (
+            self.session.query(CustomerPhones)
+            .filter(
+                and_(
+                    CustomerPhones.id == phone_id, CustomerPhones.is_active == True
+                )  # pylint: disable=singleton-comparison
+            )
+            .first()
+        )
         if not phone:
             raise ValueError(f"Téléphone #{phone_id} introuvable.")
 

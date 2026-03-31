@@ -1,0 +1,28 @@
+{# Fragment : ligne de conciliation pour un article #}
+<tr id="council-row-{{ item.movement_id }}"
+    data-movement-id="{{ item.movement_id }}"
+    data-object-id="{{ item.general_object_id }}">
+    <td>{{ item.name }}</td>
+    <td class="identifiant">{{ item.ean13 }}</td>
+    <td class="cell-price">
+        <form id="form-{{ item.movement_id }}">
+            <input type="number"
+                   name="price"
+                   class="form-control form-control-sm price-input"
+                   min="0" step="0.01"
+                   placeholder="0.00"
+                   aria-label="Prix de revient" />
+        </form>
+    </td>
+    <td class="text-center actions-cell">
+        <button type="button"
+                class="btn btn-primary btn-sm btn-validate"
+                hx-post="{{ url_for('stock_htmx_council.validate_price', movement_id=item.movement_id) }}"
+                hx-include="#form-{{ item.movement_id }}"
+                hx-target="#council-row-{{ item.movement_id }}"
+                hx-swap="outerHTML">
+            {% include "svg/checkmark.html" %}
+            Valider
+        </button>
+    </td>
+</tr>

@@ -1,0 +1,21 @@
+<!-- template object_fill_fragment.html -->
+{# Retour du fragment à wrapper #}
+
+<input type="hidden"
+       id="general_object_id"
+       name="general_object_id"
+       value="{{ object_id }}"
+       hx-swap-oob="true">
+
+<input type="text"
+       id="object-wrapper"
+       name="object-wrapper"
+       class="form-control"
+       autocomplete="off"
+       placeholder="Saisissez l'ID ou le nom de l'article"
+       value="{{ object_name }}"
+       hx-get="{{ url_for('inventory_htmx.get_items_search') }}"
+       hx-trigger="input changed delay:500ms"
+       hx-target="#article-search-results"
+       hx-swap="innerHTML"
+       hx-swap-oob="true">

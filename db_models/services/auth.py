@@ -1,15 +1,18 @@
 """Service d'authentification et de gestion des sessions."""
 
 from flask import session
-from db_models.objects.users import Users
+from db_models.objects import Users
 from db_models.repositories.user import UsersRepository
+
 
 class AuthService:
     """
     Service d'authentification et de sécurité des comptes.
     """
 
-    def __init__(self, user_repo: UsersRepository, *, lockout_threshold: int = 3) -> None:
+    def __init__(
+        self, user_repo: UsersRepository, *, lockout_threshold: int = 3
+    ) -> None:
         self.user_repo = user_repo
         self.session = user_repo.session
         self.lockout_threshold = lockout_threshold

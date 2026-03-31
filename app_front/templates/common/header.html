@@ -1,7 +1,7 @@
     <div class="banner active bg-primary">
         <div class="header-container">
             <h1 class="main-title handscript y-center">
-                Editions du Sauvetage
+                Editions Sauvetage
             </h1>
             <div class="bars">
                 {% if flags.navbar and flags.navbar == true %}
@@ -24,11 +24,7 @@
                 {% if flags.userbar and flags.userbar == true %}
                 <div class="userbar">
                     <div class="userbar__avatar" id="userbar-avatar" aria-haspopup="true" aria-expanded="false">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="8.5" r="4.5" fill="#fff"/>
-                          <ellipse cx="12" cy="17" rx="7" ry="5" fill="#fff"/>
-                          <circle cx="12" cy="8.5" r="4.5" fill="#b3d0ff" fill-opacity=".7"/>
-                        </svg>
+                        {% include "svg/avatar.html" %}
                     </div>
                     <div class="userbar__dropdown" id="userbar-dropdown" role="menu" aria-labelledby="userbar-avatar">
                         <div class="userbar__item"><a href="{{ url_for('user.modify', username=session['username'] | urlencode) }}">Mon compte</a></div>

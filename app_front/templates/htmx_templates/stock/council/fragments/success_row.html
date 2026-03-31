@@ -1,0 +1,9 @@
+{# Fragment : ligne validée avec succès #}
+<tr class="council-row-success">
+    <td colspan="4">
+        <div class="council-success">
+            {% include "svg/check-circle.html" %}
+            Prix mis à jour : {{ "%.2f"|format(price|float) }} €
+        </div>
+    </td>
+</tr>

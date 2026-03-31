@@ -1,0 +1,83 @@
+erDiagram
+    CUSTOMERS {
+        int id PK
+        string wpwc_id
+        string henrri_id
+    }
+    CUSTOMER_PARTS {
+        int id PK
+        int customer_id FK
+    }
+    CUSTOMER_ADDRESSES {
+        int id PK
+        int customer_id FK
+    }
+    CUSTOMER_MAILS {
+        int id PK
+        int customer_id FK
+    }
+    CUSTOMER_PHONES {
+        int id PK
+        int customer_id FK
+    }
+    CUSTOMERS ||--o{ CUSTOMER_PARTS : has
+    CUSTOMERS ||--o{ CUSTOMER_ADDRESSES : has
+    CUSTOMERS ||--o{ CUSTOMER_MAILS : has
+    CUSTOMERS ||--o{ CUSTOMER_PHONES : has
+    CUSTOMERS ||--o{ ORDERS : places
+
+    ORDERS {
+        int id PK
+        string reference
+        int customer_id FK
+    }
+    ORDERS ||--o{ ORDER_LINES : contains
+
+    ORDER_LINES {
+        int id PK
+        int order_id FK
+        int general_object_id FK
+    }
+    ORDER_LINES }o--|| GENERAL_OBJECTS : references
+
+    GENERAL_OBJECTS {
+        int id PK
+        int supplier_id FK
+        string ean13
+        string name
+    }
+    GENERAL_OBJECTS ||--o{ BOOKS : has
+    GENERAL_OBJECTS ||--o{ OTHER_OBJECTS : has
+    GENERAL_OBJECTS ||--o{ MEDIA_FILES : has
+    GENERAL_OBJECTS ||--o{ OBJ_METADATAS : has
+    GENERAL_OBJECTS ||--o{ INVENTORY_MOVEMENTS : has
+
+    SUPPLIERS {
+        int id PK
+        string gln13
+    }
+    SUPPLIERS ||--o{ GENERAL_OBJECTS : supplies
+    SUPPLIERS ||--o{ ORDER_IN : provides
+
+    ORDER_IN {
+        int id PK
+        int supplier_id FK
+    }
+    ORDER_IN ||--o{ ORDER_IN_LINES : contains
+
+    ORDER_IN_LINES {
+        int id PK
+        int order_in_id FK
+        int general_object_id FK
+    }
+
+    INVENTORY_MOVEMENTS {
+        int id PK
+        int general_object_id FK
+    }
+
+    USERS {
+        int id PK
+        string username
+    }
+    USERS ||--o{ USERS_PASSWORDS : has

@@ -1,8 +1,12 @@
 """Utilitaires pour le module client --> Téléphones uniquement."""
 
 from typing import Dict, Any, List
-from db_models.repositories.customers import CustomersRepository, CustomerPhonesRepository
-from app_front.config.db_conf import get_main_session
+from db_models.repositories.customers import (
+    CustomersRepository,
+    CustomerPhonesRepository,
+)
+from app_front.config import db_conf
+
 
 def get_phones(customer_id: int) -> List[Dict[str, Any]]:
     """Récupère la liste des téléphones d'un client.
@@ -11,11 +15,12 @@ def get_phones(customer_id: int) -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: Liste des téléphones du client sous forme de dictionnaires.
     """
-    repo = CustomersRepository(get_main_session())
+    repo = CustomersRepository(db_conf.get_main_session())
     customer = repo.get_by_id(customer_id, complete=True)
     if not customer:
         return []
     return [phone.to_dict() for phone in customer.phones]
+
 
 def add_phone(customer_id: int, phone_data: Dict[str, Any]) -> Dict[str, Any] | None:
     """Ajoute un téléphone à un client.
@@ -25,7 +30,7 @@ def add_phone(customer_id: int, phone_data: Dict[str, Any]) -> Dict[str, Any] | 
     Returns:
         Dict[str, Any] | None: Les données du téléphone ajouté ou None si échec.
     """
-    repo = CustomerPhonesRepository(get_main_session())
+    repo = CustomerPhonesRepository(db_conf.get_main_session())
     phone_data["customer_id"] = customer_id
     phone = repo.add_phone(phone_data)
     if not phone:
@@ -33,8 +38,10 @@ def add_phone(customer_id: int, phone_data: Dict[str, Any]) -> Dict[str, Any] | 
 
     return phone.to_dict()
 
-def update_phone(customer_id: int, phone_id: int,
-                 phone_data: Dict[str, Any]) -> Dict[str, Any] | None:
+
+def update_phone(
+    customer_id: int, phone_id: int, phone_data: Dict[str, Any]
+) -> Dict[str, Any] | None:
     """Met à jour un téléphone d'un client.
     Args:
         customer_id (int): L'ID du client auquel appartient le téléphone.
@@ -43,7 +50,7 @@ def update_phone(customer_id: int, phone_id: int,
     Returns:
         Dict[str, Any] | None: Les données du téléphone mis à jour ou None si introuvable.
     """
-    repo = CustomerPhonesRepository(get_main_session())
+    repo = CustomerPhonesRepository(db_conf.get_main_session())
     try:
         phone = repo.update_phone(customer_id, phone_id, phone_data)
         return phone.to_dict()
@@ -52,6 +59,7 @@ def update_phone(customer_id: int, phone_id: int,
     except (KeyError, TypeError, AttributeError) as e:
         raise ValueError("Données de téléphone invalides.") from e
 
+
 def delete_phone(phone_id: int) -> bool:
     """Supprime un téléphone d'un client en le marquant comme inactive.
     Args:
@@ -59,7 +67,7 @@ def delete_phone(phone_id: int) -> bool:
     Returns:
         bool: True si la suppression a réussi, False sinon.
     """
-    repo = CustomerPhonesRepository(get_main_session())
+    repo = CustomerPhonesRepository(db_conf.get_main_session())
     try:
         repo.delete_phone(phone_id)
         return True

@@ -1,0 +1,11 @@
+<!-- template autocomplete_dropdown.html -->
+{# Fragment HTMX — Dropdown autocomplete pour champs livre / tags #}
+{% if results %}
+    {% for value in results %}
+    <button class="dropdown-item" type="button" onclick="selectAutocomplete(this, '{{ value|e }}')">
+        {{ value }}
+    </button>
+    {% endfor %}
+{% else %}
+    <div class="dropdown-item text-muted" disabled>Aucun résultat</div>
+{% endif %}

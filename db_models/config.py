@@ -3,6 +3,7 @@
 from os import getenv
 from dotenv import load_dotenv
 
+
 class DBConfig:
     """Classe de configuration pour les modèles de base de données."""
 
@@ -22,8 +23,10 @@ class DBConfig:
 
     def __repr__(self) -> str:
         """Représentation de l'objet DBConfig."""
-        return (f"<DBConfig(host={self.host}, port={self.port}, user={self.user}, "
-                f"database={self.database})>")
+        return (
+            f"<DBConfig(host={self.host}, port={self.port}, user={self.user}, "
+            f"database={self.database})>"
+        )
 
     def get_connection_string(self) -> str:
         """Retourne la chaîne de connexion à la base de données."""

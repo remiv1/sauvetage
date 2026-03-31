@@ -3,12 +3,14 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects.invoices import Invoice
+from db_models.objects import Invoice
+
 
 class InvoiceRepository(BaseRepository):
     """
     Dépôt des données pour la gestion des factures.
     """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.model = Invoice
@@ -30,10 +32,16 @@ class InvoiceRepository(BaseRepository):
             return invoice
         except SQLAlchemyError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la création de la facture : {str(e)}") from e
+            raise ValueError(
+                f"Erreur lors de la création de la facture : {str(e)}"
+            ) from e
 
-    def update(self, update_data: Dict[str, Any], invoice_id: Optional[int] = None,
-               invoice: Optional[Invoice] = None) -> Invoice:
+    def update(
+        self,
+        update_data: Dict[str, Any],
+        invoice_id: Optional[int] = None,
+        invoice: Optional[Invoice] = None,
+    ) -> Invoice:
         """
         Mise à jour d'une facture existante.
         """
@@ -57,4 +65,6 @@ class InvoiceRepository(BaseRepository):
             return invoice
         except SQLAlchemyError as e:
             self.session.rollback()
-            raise ValueError(f"Erreur lors de la mise à jour de la facture : {str(e)}") from e
+            raise ValueError(
+                f"Erreur lors de la mise à jour de la facture : {str(e)}"
+            ) from e

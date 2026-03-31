@@ -1,4 +1,5 @@
 """env.py"""
+
 import sys
 import os
 from logging.config import fileConfig
@@ -7,15 +8,15 @@ from sqlalchemy import pool
 from alembic import context
 
 # Ajout du chemin du projet au sys.path
-sys.path.insert(0, '/app')
+sys.path.insert(0, "/app")
 
 # Import main base model après avoir chargé les variables
-from db_models import SecureBase    # pylint: disable=wrong-import-position
-from db_models.objects.users import *   # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models import SecureBase  # pylint: disable=wrong-import-position
+from db_models.objects.users import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-config = context.config # pylint: disable=no-member
+config = context.config  # pylint: disable=no-member
 
 # Construire l'URL SQLAlchemy avec les variables d'environnement
 database_url = (
@@ -62,8 +63,8 @@ def run_migrations_offline() -> None:
         version_table_schema="migr_users",
     )
 
-    with context.begin_transaction():   # pylint: disable=no-member
-        context.run_migrations()    # pylint: disable=no-member
+    with context.begin_transaction():  # pylint: disable=no-member
+        context.run_migrations()  # pylint: disable=no-member
 
 
 def run_migrations_online() -> None:
@@ -84,14 +85,14 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             version_table_schema="migr_users",
-            version_table="alembic_version"
+            version_table="alembic_version",
         )
 
-        with context.begin_transaction():   # pylint: disable=no-member
-            context.run_migrations()    # pylint: disable=no-member
+        with context.begin_transaction():  # pylint: disable=no-member
+            context.run_migrations()  # pylint: disable=no-member
 
 
-if context.is_offline_mode():   # pylint: disable=no-member
+if context.is_offline_mode():  # pylint: disable=no-member
     run_migrations_offline()
 else:
     run_migrations_online()

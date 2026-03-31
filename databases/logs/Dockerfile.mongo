@@ -1,4 +1,4 @@
-FROM docker.io/library/mongo:8.2-noble
+FROM docker.io/library/mongo:7.0.16
 
 # Installer des outils supplémentaires
 RUN apt-get update && apt-get install -y bash gettext

@@ -136,6 +136,10 @@ gantt
     Recette :a7, after a6, 7d
 ```
 
+## Tests
+
+- Documentation et instructions de test : [tests/README.md](tests/README.md)
+
 ## Contributeurs
 
 >_Rémi Verschuur | Audit-io : Lead Manager & Développeur Fullstack_

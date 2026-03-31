@@ -4,7 +4,8 @@ from flask import Blueprint, render_template_string
 
 bp_order = Blueprint("order", __name__, url_prefix="/order")
 
-@bp_order.route("/")
+
+@bp_order.get("/")
 def index():
     """Page d'accueil du module commandes"""
     return render_template_string("""

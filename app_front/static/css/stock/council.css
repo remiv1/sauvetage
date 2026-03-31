@@ -1,0 +1,236 @@
+@charset "UTF-8";
+@import url("https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap");
+/* ============================================================================ */
+/* Conciliation — Page des articles à prix zéro                               */
+/* ============================================================================ */
+.council-container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+/* ── En-tête ─────────────────────────────────────────────────────────────── */
+.council-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.council-header h2 {
+  color: #00086f;
+  margin: 0;
+}
+
+.council-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.header-top .btn-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  background: #fff;
+  color: #606060;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.header-top .btn-back:hover {
+  color: #00086f;
+  border-color: #00086f;
+  background: rgba(0, 8, 111, 0.06);
+}
+.header-top .btn-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  font-family: "Asap", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn svg {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+.btn:hover {
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background: #00086f;
+  color: #fff;
+}
+.btn-primary:hover {
+  background: rgb(0, 4.3243243243, 60);
+}
+
+.btn-secondary {
+  background: #e0e0e0;
+  color: #202020;
+}
+.btn-secondary:hover {
+  background: #c0c0c0;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.65em;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.badge-warning {
+  background: #fbe0aa;
+  color: #8a4d00;
+}
+
+/* ── Tableau ─────────────────────────────────────────────────────────────── */
+.council-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+.council-table th,
+.council-table td {
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+.council-table th {
+  background: #00086f;
+  color: white;
+  text-align: left;
+  font-weight: 500;
+}
+.council-table tbody tr {
+  transition: background 0.15s;
+}
+.council-table tbody tr:nth-child(even) {
+  background: #f5f5f5;
+}
+.council-table tbody tr:hover {
+  background: rgba(0, 8, 111, 0.06);
+}
+.council-table .text-center {
+  text-align: center;
+}
+.council-table .identifiant {
+  font-weight: 600;
+  font-family: monospace;
+}
+
+/* ── Cellule prix ────────────────────────────────────────────────────────── */
+.cell-price {
+  width: 160px;
+}
+.cell-price .price-input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #c0c0c0;
+  border-radius: 5px;
+  font-family: "Asap", sans-serif;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.cell-price .price-input:focus {
+  outline: none;
+  border-color: #00086f;
+  box-shadow: 0 0 0 2px rgba(0, 8, 111, 0.12);
+}
+
+/* ── Cellule action ──────────────────────────────────────────────────────── */
+.actions-cell {
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ── Validation réussie ──────────────────────────────────────────────────── */
+.council-row-success td {
+  background: rgba(0, 77, 18, 0.08);
+}
+
+.council-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #004d12;
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+}
+.council-success svg {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+/* ── Erreur inline ───────────────────────────────────────────────────────── */
+.council-error {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #8a000f;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+.council-error svg {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+/* ── État vide ───────────────────────────────────────────────────────────── */
+.no-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 1rem;
+  color: #808080;
+  text-align: center;
+}
+.no-items svg {
+  opacity: 0.4;
+  width: 64px;
+  height: 64px;
+}
+.no-items p {
+  font-size: 1.1rem;
+}

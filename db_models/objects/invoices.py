@@ -7,6 +7,7 @@ from sqlalchemy import String, Integer, DateTime, Numeric, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
+
 class Invoice(WorkingBase, QueryMixin):
     """Modèle de données pour une facture."""
 
@@ -15,43 +16,57 @@ class Invoice(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
-    total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False,
-                                                 comment="Montant total de la facture")
-    vat_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False,
-                                               comment="Montant de la TVA de la facture")
+    total_amount: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False, comment="Montant total de la facture"
+    )
+    vat_amount: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False, comment="Montant de la TVA de la facture"
+    )
 
     # Metadonnées audit
-    create_source: Mapped[str] = mapped_column(String(50), nullable=False,
-                                               comment="Source de la facture")
-    created_at: Mapped[datetime] = mapped_column(DateTime,
-                                                 default=lambda: datetime.now(timezone.utc),
-                                                 nullable=False,
-                                                 comment="Date de création de la facture")
-    update_source: Mapped[str] = mapped_column(String(50), nullable=True,
-                                               comment="Source de la dernière mise à jour")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True,
-                                                 default=lambda: datetime.now(timezone.utc),
-                                                 onupdate=lambda: datetime.now(timezone.utc),
-                                                 comment="Date dernière mise à jour de la facture")
-    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True,
-                                                            comment="Dernière synchronisation")
+    create_source: Mapped[str] = mapped_column(
+        String(50), nullable=False, comment="Source de la facture"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="Date de création de la facture",
+    )
+    update_source: Mapped[str] = mapped_column(
+        String(50), nullable=True, comment="Source de la dernière mise à jour"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        comment="Date dernière mise à jour de la facture",
+    )
+    last_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, comment="Dernière synchronisation"
+    )
 
     # Relations
     order_lines = relationship("OrderLine", back_populates="invoice")
 
     def __repr__(self) -> str:
-        return f"<Invoice(id={self.id}, reference={self.reference}, " \
-               + f"total_amount={self.total_amount})>"
+        return (
+            f"<Invoice(id={self.id}, reference={self.reference}, "
+            + f"total_amount={self.total_amount})>"
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet Invoice en dictionnaire."""
         return {
             "id": self.id,
             "reference": self.reference,
-            "order_lines": [ol.to_dict() for ol in self.order_lines] if self.order_lines else None,
+            "order_lines": (
+                [ol.to_dict() for ol in self.order_lines] if self.order_lines else None
+            ),
             "total_amount": float(self.total_amount),
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     @classmethod
@@ -59,7 +74,9 @@ class Invoice(WorkingBase, QueryMixin):
         """Crée un objet Invoice à partir d'un dictionnaire."""
         return cls(**data)
 
+
 @event.listens_for(Invoice, "before_delete")
-def _prevent_invoice_delete(_mapper: Any, _connection: Any,    # type: ignore
-                            _target: "Invoice") -> None:
+def _prevent_invoice_delete(
+    _mapper: Any, _connection: Any, _target: "Invoice"  # type: ignore
+) -> None:
     raise ValueError("Une suppression de facture est interdite.")
