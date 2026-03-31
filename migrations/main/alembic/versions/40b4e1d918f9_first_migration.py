@@ -1,32 +1,8 @@
 """first_migration
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
-Revision ID: b60b5de6b88d
-Revises: 
-Create Date: 2026-03-31 16:40:18.024733
-========
 Revision ID: 40b4e1d918f9
 Revises: 
 Create Date: 2026-03-07 14:27:31.768052
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
-<<<<<<< HEAD
-=======
-Revision ID: 40b4e1d918f9
-Revises: 
-Create Date: 2026-03-07 14:27:31.768052
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
-=======
-========
-Revision ID: 40b4e1d918f9
-Revises: 
-Create Date: 2026-03-07 14:27:31.768052
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
 
 """
 from typing import Sequence, Union
@@ -36,25 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
-revision: str = 'b60b5de6b88d'
-========
 revision: str = '40b4e1d918f9'
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
-<<<<<<< HEAD
-=======
-revision: str = '40b4e1d918f9'
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
-=======
-========
-revision: str = '40b4e1d918f9'
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -126,17 +84,6 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=False, comment='Date de dernière MàJ du tag'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name'),
-    schema='app_schema'
-    )
-    op.create_table('vat_rates',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='Identifiant unique du taux de TVA'),
-    sa.Column('code', sa.Integer(), nullable=False, comment='Code TVA (0=super-réduit, 1=réduit, 2=intermédiaire, 3=normal)'),
-    sa.Column('rate', sa.Numeric(precision=5, scale=2), nullable=False, comment='Taux de TVA en pourcentage (ex: 5.50)'),
-    sa.Column('label', sa.String(), nullable=False, comment='Libellé du taux (ex: Taux réduit)'),
-    sa.Column('date_start', sa.DateTime(), nullable=False, comment='Date de début de validité du taux'),
-    sa.Column('date_end', sa.DateTime(), nullable=True, comment='Date de fin de validité (NULL = taux actuellement en vigueur)'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('code', 'date_start', name='uq_vat_rates_code_date_start'),
     schema='app_schema'
     )
     op.create_table('customer_addresses',
@@ -225,6 +172,19 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
     )
+    op.create_table('dilicom_referential',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('isbn', sa.String(), nullable=False, comment="ISBN de l'objet"),
+    sa.Column('gln13', sa.String(), nullable=False, comment='GLN13 du fournisseur'),
+    sa.Column('create_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être créé"),
+    sa.Column('delete_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être supprimé"),
+    sa.Column('is_active', sa.Boolean(), nullable=False, comment='Indique si la référence est active'),
+    sa.Column('created_at', sa.String(), nullable=False, comment='Date de création de la référence'),
+    sa.Column('updated_at', sa.String(), nullable=False, comment='Date de dernière MàJ de la référence'),
+    sa.ForeignKeyConstraint(['gln13'], ['app_schema.suppliers.gln13'], ),
+    sa.PrimaryKeyConstraint('id'),
+    schema='app_schema'
+    )
     op.create_table('general_objects',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment="Identifiant unique de l'objet"),
     sa.Column('supplier_id', sa.Integer(), nullable=False, comment="Identifiant du fournisseur de l'objet"),
@@ -233,43 +193,20 @@ def upgrade() -> None:
     sa.Column('name', sa.String(), nullable=False, comment="Nom de l'objet"),
     sa.Column('description', sa.String(), nullable=False, comment="Description de l'objet"),
     sa.Column('price', sa.Numeric(precision=10, scale=2), nullable=False, comment="Prix de l'objet"),
-    sa.Column('purchase_price', sa.Numeric(precision=10, scale=2), nullable=True, comment="Prix d'achat de l'objet"),
-    sa.Column('vat_rate_id', sa.Integer(), nullable=True, comment="Code TVA associé à l'objet (référence la table vat_rates)"),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment="Date de création de l'objet"),
     sa.Column('updated_at', sa.DateTime(), nullable=False, comment="Date de dernière mise à jour de l'objet"),
     sa.Column('last_inventory_timestamp', sa.DateTime(), nullable=False, comment='Dernier inventaire'),
     sa.Column('is_active', sa.Boolean(), nullable=False, comment="Indique si l'objet est actif pour la vente"),
     sa.ForeignKeyConstraint(['supplier_id'], ['app_schema.suppliers.id'], ),
-    sa.ForeignKeyConstraint(['vat_rate_id'], ['app_schema.vat_rates.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('ean13'),
     schema='app_schema'
     )
     op.create_table('order_in',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('order_ref', sa.String(), nullable=False, comment='Numéro de commande'),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
-    sa.Column('external_ref', sa.String(), nullable=True, comment='Ref externe'),
-========
     sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
-<<<<<<< HEAD
-=======
-    sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
-=======
-========
-    sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
->>>>>>> 6c4050b (feat(stock): add order creation form and related styles)
     sa.Column('supplier_id', sa.Integer(), nullable=False, comment='ID du fournisseur de la commande'),
     sa.Column('value', sa.Numeric(precision=10, scale=2), nullable=False, comment='Valeur totale de la commande'),
-    sa.Column('order_state', sa.String(), nullable=False, comment='État de la commande'),
     sa.ForeignKeyConstraint(['supplier_id'], ['app_schema.suppliers.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
@@ -283,31 +220,17 @@ def upgrade() -> None:
     sa.Column('genre', sa.String(), nullable=False, comment='Genre du livre'),
     sa.Column('publication_year', sa.Integer(), nullable=False, comment='Année de publication du livre'),
     sa.Column('pages', sa.Integer(), nullable=False, comment='Nombre de pages du livre'),
+    sa.Column('add_to_dilicom', sa.Boolean(), nullable=False, comment='Si doit être ajouté à la base Dilicom'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création du livre'),
     sa.Column('updated_at', sa.DateTime(), nullable=False, comment='Date de dernière mise à jour du livre'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
     )
-    op.create_table('dilicom_referential',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('ean13', sa.String(), nullable=False, comment="EAN13 de l'objet"),
-    sa.Column('gln13', sa.String(), nullable=False, comment='GLN13 du fournisseur'),
-    sa.Column('create_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être créé"),
-    sa.Column('delete_ref', sa.Boolean(), nullable=False, comment="Indique si l'objet doit être supprimé"),
-    sa.Column('is_active', sa.Boolean(), nullable=False, comment='Indique si la référence est active'),
-    sa.Column('dilicom_synced', sa.Boolean(), nullable=False, comment='Synchronisé avec Dilicom ou non'),
-    sa.Column('created_at', sa.String(), nullable=False, comment='Date de création de la référence'),
-    sa.Column('updated_at', sa.String(), nullable=False, comment='Date de dernière MàJ de la référence'),
-    sa.ForeignKeyConstraint(['ean13'], ['app_schema.general_objects.ean13'], ),
-    sa.ForeignKeyConstraint(['gln13'], ['app_schema.suppliers.gln13'], ),
-    sa.PrimaryKeyConstraint('id'),
-    schema='app_schema'
-    )
     op.create_table('inventory_movements',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('general_object_id', sa.Integer(), nullable=False, comment="ID de l'objet"),
-    sa.Column('movement_type', sa.String(), nullable=False, comment='Type de mouvement (in/out/reserved/inventory/pending)'),
+    sa.Column('movement_type', sa.String(), nullable=False, comment='Type de mouvement (in/out/reserved/inventory)'),
     sa.Column('quantity', sa.Integer(), nullable=False, comment='Quantité du mouvement'),
     sa.Column('movement_timestamp', sa.DateTime(), nullable=False, comment='Date et heure du mouvement'),
     sa.Column('price_at_movement', sa.Float(), nullable=False, comment="Prix d'objet au moment du mouvement"),
@@ -323,7 +246,7 @@ def upgrade() -> None:
     sa.Column('general_object_id', sa.Integer(), nullable=False, comment='Identifiant de la métadonnée associée'),
     sa.Column('file_name', sa.String(), nullable=False, comment='Nom du fichier média'),
     sa.Column('file_type', sa.String(), nullable=False, comment='Type du fichier média (ex: image/jpeg)'),
-    sa.Column('alt_text', sa.String(), nullable=True, comment='Texte alternatif pour le fichier média'),
+    sa.Column('alt_text', sa.String(), nullable=False, comment='Texte alternatif pour le fichier média'),
     sa.Column('file_data', sa.LargeBinary(), nullable=True, comment='Données brutes du fichier média'),
     sa.Column('file_link', sa.String(), nullable=True, comment='Lien vers le fichier média ext.'),
     sa.Column('uploaded_at', sa.DateTime(), nullable=False, comment='Date de téléchargement du fichier média'),
@@ -386,11 +309,9 @@ def upgrade() -> None:
     sa.Column('order_in_id', sa.Integer(), nullable=False, comment="ID de la commande d'entrée"),
     sa.Column('general_object_id', sa.Integer(), nullable=False, comment="ID de l'objet"),
     sa.Column('inventory_movement_id', sa.Integer(), nullable=True, comment='ID du mouvement de stock associé'),
-    sa.Column('qty_ordered', sa.Integer(), nullable=False, comment='Quantité commandée'),
-    sa.Column('qty_received', sa.Integer(), nullable=False, comment='Quantité reçue'),
-    sa.Column('unit_price', sa.Numeric(precision=10, scale=2, decimal_return_scale=True), nullable=False, comment="Prix unitaire en centimes d'euro"),
-    sa.Column('vat_rate', sa.Numeric(precision=10, scale=3, decimal_return_scale=True), nullable=False, comment='Taux de TVA en pourcentage'),
-    sa.Column('line_state', sa.String(), nullable=False, comment='État de la ligne de commande'),
+    sa.Column('quantity', sa.Integer(), nullable=False, comment='Quantité commandée'),
+    sa.Column('unit_price', sa.Numeric(precision=10, scale=2), nullable=False, comment="Prix unitaire en centimes d'euro"),
+    sa.Column('vat_rate', sa.Numeric(precision=10, scale=3), nullable=False, comment='Taux de TVA en pourcentage'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),
     sa.ForeignKeyConstraint(['inventory_movement_id'], ['app_schema.inventory_movements.id'], ),
     sa.ForeignKeyConstraint(['order_in_id'], ['app_schema.order_in.id'], ),
@@ -431,17 +352,16 @@ def downgrade() -> None:
     op.drop_table('obj_metadatas', schema='app_schema')
     op.drop_table('media_files', schema='app_schema')
     op.drop_table('inventory_movements', schema='app_schema')
-    op.drop_table('dilicom_referential', schema='app_schema')
     op.drop_table('books', schema='app_schema')
     op.drop_table('order_in', schema='app_schema')
     op.drop_table('general_objects', schema='app_schema')
+    op.drop_table('dilicom_referential', schema='app_schema')
     op.drop_table('customer_sync_logs', schema='app_schema')
     op.drop_table('customer_pros', schema='app_schema')
     op.drop_table('customer_phones', schema='app_schema')
     op.drop_table('customer_parts', schema='app_schema')
     op.drop_table('customer_mails', schema='app_schema')
     op.drop_table('customer_addresses', schema='app_schema')
-    op.drop_table('vat_rates', schema='app_schema')
     op.drop_table('tags', schema='app_schema')
     op.drop_table('suppliers', schema='app_schema')
     op.drop_table('shipments', schema='app_schema')

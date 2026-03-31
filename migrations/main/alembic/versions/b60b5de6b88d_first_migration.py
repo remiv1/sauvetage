@@ -1,20 +1,8 @@
 """first_migration
 
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
 Revision ID: b60b5de6b88d
 Revises: 
 Create Date: 2026-03-31 16:40:18.024733
-========
-Revision ID: 40b4e1d918f9
-Revises: 
-Create Date: 2026-03-07 14:27:31.768052
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
-========
-Revision ID: 40b4e1d918f9
-Revises: 
-Create Date: 2026-03-07 14:27:31.768052
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
 
 """
 from typing import Sequence, Union
@@ -24,15 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
 revision: str = 'b60b5de6b88d'
-========
-revision: str = '40b4e1d918f9'
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
-========
-revision: str = '40b4e1d918f9'
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -226,15 +206,7 @@ def upgrade() -> None:
     op.create_table('order_in',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('order_ref', sa.String(), nullable=False, comment='Numéro de commande'),
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
-<<<<<<<< HEAD:migrations/main/alembic/versions/b60b5de6b88d_first_migration.py
     sa.Column('external_ref', sa.String(), nullable=True, comment='Ref externe'),
-========
-    sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
-========
-    sa.Column('external_ref', sa.Integer(), nullable=True, comment='Ref externe'),
->>>>>>>> 6c4050b (feat(stock): add order creation form and related styles):migrations/main/alembic/versions/40b4e1d918f9_first_migration.py
     sa.Column('supplier_id', sa.Integer(), nullable=False, comment='ID du fournisseur de la commande'),
     sa.Column('value', sa.Numeric(precision=10, scale=2), nullable=False, comment='Valeur totale de la commande'),
     sa.Column('order_state', sa.String(), nullable=False, comment='État de la commande'),

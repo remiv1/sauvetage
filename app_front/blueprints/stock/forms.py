@@ -28,6 +28,7 @@ class OrderInCreateForm(FlaskForm):
     submit = SubmitField("Créer la commande")
 
 
+
 class OrderInLineForm(FlaskForm):
     """Formulaire de ligne de commande fournisseur (étape 2)."""
 
