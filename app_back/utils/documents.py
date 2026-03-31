@@ -1,6 +1,6 @@
 """Module utilitaire pour la gestion des documents (génération de PDF, etc.)."""
 
-from flask import render_template
+from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 from . import TEMPLATES_DIR
 
@@ -12,8 +12,9 @@ def create_document_buffer(template_name: str, data: dict) -> bytes:
         data: Un dictionnaire de données à passer au template pour le rendu.
     """
     # 1. Charger le template (HTML, Jinja2, etc.)
-    template_path = TEMPLATES_DIR / template_name
-    html = render_template(str(template_path), **data)
+    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+    template = env.get_template(template_name)
+    html = template.render(**data)
 
     # 2. Convertir en PDF (ou autre format)
     pdf_bytes = render_html_to_pdf(html)
