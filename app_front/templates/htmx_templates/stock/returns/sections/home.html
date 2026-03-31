@@ -57,12 +57,12 @@
                     {% include "svg/eye.html" %}
                 </a>
                 <button class="action-icon action-cancel"
-                        hx-post="{{ url_for('stock_htmx_returns.cancel_order', order_id=order.id) }}"
+                        hx-post="{{ url_for('stock_htmx_return.cancel_order', order_id=r.id) }}"
                         hx-target="#orders-management"
                         hx-swap="innerHTML"
                         title="Annuler la commande"
-                        data-order-id="{{ order.id }}"
-                        data-order-ref="{{ order.order_ref }}">
+                        data-order-id="{{ r.id }}"
+                        data-order-ref="{{ r.return_ref }}">
                     {% include "svg/del.html" %}
                 </button>
             </td>
