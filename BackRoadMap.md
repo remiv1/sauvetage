@@ -61,6 +61,93 @@
 - **Améliorations back :** ajout de `app_back/db_connection` et de nouvelles routes API (`app_back/v1/user.py`), corrections de bugs (recherche du premier utilisateur) et refactor des repositories (`db_models/repositories/user.py`).
 - **Observabilité & logs :** création/ajout de logs de migration et fichiers de logs front/back pour faciliter les diagnostics.
 
-**Dernière mise à jour** : 21 février 2026
+---
+
+## 🆕 Évolutions depuis le 21/02/2026
+
+> 93 commits · 373 fichiers modifiés · +30 501 / -3 927 lignes
+
+### 🏠 Tableau de bord
+
+- **Dashboard dynamique** avec onglets (`fetch` API) pour données financières, commandes en cours et état du stock en temps réel.
+- **Endpoints back-end** dédiés (`/dashboard/data/...`) pour alimenter les widgets.
+- **Masquage conditionnel** de la carte Admin sur la page d'accueil selon les permissions de session.
+
+### 👥 Gestion des clients
+
+- **Modèles complets** : `Customers`, `CustomerAddresses`, `CustomerMails`, `CustomerPhones` avec toutes les relations SQLAlchemy.
+- **Blueprint `customer`** avec routes CRUD, formulaires WTForms et templates associés.
+- **Repository `CustomersRepository`** avec méthodes de recherche et gestion des adresses/contacts.
+- **Tests unitaires** : `tests/db_objects/test_customers.py` et `tests/front/test_customer.py`.
+
+### 📦 Gestion des stocks & inventaire
+
+- **Workflow d'inventaire complet** : préparation, validation et commit des mouvements de stock avec gestion des types (`IN`, `OUT`, `ADJUST`).
+- **Prix de revient au mouvement** : capture du `price_at_movement` à chaque mouvement d'inventaire.
+- **Correction N+1 queries** dans `inventory.py` via requêtes `IN` groupées.
+- **Autocomplétion** sur les champs auteur, diffuseur, éditeur, genre dans le formulaire de création d'objet (HTMX + back-end).
+- **Gestion des articles à prix zéro** avec interface de correction depuis l'inventaire.
+- **Fragments HTMX** pour la gestion des objets et l'autocomplétion (`blueprints/inventory/routes_htmx.py`).
+- **Blueprint `inventory`** avec routes, formulaires, utils et templates HTMX dédiés.
+- **Tests** : `tests/db_objects/test_inventory.py` et `tests/front/test_inventory.py` (+ e2e).
+
+### 🛒 Gestion des commandes fournisseurs
+
+- **Modèle `OrderIn` / `OrderInLine`** avec statuts (`draft`, `sended`, `received`, `cancelled`).
+- **`OrderRepository`** : création, édition, annulation, confirmation, réception partielle avec split de lignes.
+- **Workflow complet commandes** : création → confirmation → réception (qty_received / qty_cancelled) → clôture.
+- **Blueprint `stock`** découpé en routes spécialisées : `routes_htmx_orders.py`, `routes_htmx_reservations.py`, `routes_htmx_return.py`, `routes_htmx_search.py`, `routes_htmx_council.py`.
+- **Gestion des réservations** : workflow dédié avec statuts et retours de réservation.
+- **Gestion des retours fournisseur** : saisie des retours avec mouvement d'inventaire inverse automatique.
+- **Formulaire de création de commande** avec recherche dynamique fournisseur (HTMX).
+- **Vue conseil** (`council`) : tableau de synthèse du stock avec indicateurs.
+- **Taux de TVA** : modèle `VatRate`, migration, sélect dynamique dans les formulaires de ligne de commande, calcul du prix moyen pondéré.
+
+### 🏭 Gestion des fournisseurs
+
+- **Blueprint `supplier`** avec routes CRUD, routes HTMX de recherche, formulaires et utils.
+- **Modèle `Suppliers`** avec champ GLN13 et migration dédiée.
+
+### 🔗 Intégration Dilicom
+
+- **Module `app_back/v1/dilicom/`** : routes API pour la gestion des commandes Dilicom (`orders.py`).
+- **`DilicomReferencialRepository`** : création/suppression de références dans le référentiel Dilicom.
+- **Schémas Pydantic** `dilicom.py` pour la validation des données échangées.
+- **Planification de tâches** (`to_create` / `to_delete`) avec statuts de synchronisation.
+
+### 📧 Emails & Documents
+
+- **Module `app_back/utils/mails.py`** : envoi d'e-mails transactionnels via SMTP (bons de commande, notifications).
+- **Module `app_back/utils/documents.py`** : génération de PDF (bons de commande) via template Jinja2.
+- **Templates e-mail** (`templates/emails/purchase_order_email.html`) et **PDF** (`templates/pdf/purchase_order.html`).
+- **Route API** `app_back/v1/mails.py` et `app_back/v1/documents.py` exposant les endpoints d'envoi et de génération.
+- **Schémas Pydantic** `mails.py`, `documents.py` pour la validation des requêtes.
+
+### 🗄️ Modèles de données & migrations
+
+- **Modèle `VatRate`** avec gestion des périodes de validité (`date_start`, `date_end`).
+- **Modèle `Tags`** et `ObjectTags` pour le tagging des articles.
+- **Modèle `ObjMetadatas`** avec champ JSONB semi-structuré pour métadonnées flexibles.
+- **Modèles `Books`, `OtherObjects`, `Media`** pour les sous-types d'articles.
+- **Migration `main`** : tables `customers`, `invoices`, `shipments`, `suppliers`, `tags`, `vat_rates`, `general_objects`, `orders_in`, `orders_in_lines`, `inventory_movements`.
+- **Migration `users`** : tables `users`, `users_passwords`, `users_permissions`.
+- **Refactorisation des repositories** : `ObjectsRepository`, `OtherObjectsRepository`, `TagsRepository`, `StockRepository` avec méthodes paginées et filtres avancés.
+
+### 🧪 Tests
+
+- **Suite de tests front** (`tests/front/`) : couverture des blueprints `admin`, `customer`, `dashboard`, `inventory`, `order`, `stock`, `supplier`, `user`.
+- **Suite de tests DB objects** (`tests/db_objects/`) : `test_customers`, `test_inventory`, `test_objects`, `test_orders`, `test_users`.
+- **Scripts de tests** : `run_tests_front.sh`, `run_tests_db_objects.sh` avec rapports HTML.
+- **Refactorisation des fixtures** pour utiliser `client_all` (permissions complètes) dans les tests de routes.
+- **Rapport qualitatif** ajouté (`REPORT_QUALITATIVE.md`).
+
+### 🔧 Infrastructure & Performance
+
+- **Singleton SQLAlchemy** : `create_engine` déplacé en module-level dans `app_front/config/db_conf.py` et `app_back/db_connection/config.py` pour éviter la saturation des connexions PostgreSQL (`pool_size=5, max_overflow=10`).
+- **Correction `pull.rebase=false`** dans `.git/config` pour éviter les boucles de conflits lors des synchronisations.
+- **Submodule `sales`** rattaché au dépôt `remiv1/sauvetage_sales` pour la gestion des ventes.
+- **Désactivation CSRF** sur les formulaires imbriqués (sous-formulaires WTForms).
+
+**Dernière mise à jour** : 31 mars 2026
 
 > _Note : Cette roadmap est un document vivant et sera mise à jour régulièrement en fonction de l'avancement du projet et des priorités changeantes._
