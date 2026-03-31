@@ -11,11 +11,11 @@ router = APIRouter(
 )
 
 
-@router.get("/create",
-            responses={
-                200: {"description": "Mail créé avec succès."},
-                500: {"description": "Erreur lors de la création du mail."}
-            })
+@router.post("/create",
+             responses={
+                 200: {"description": "Mail créé avec succès."},
+                 500: {"description": "Erreur lors de la création du mail."}
+             })
 def create_mail(payload: MailSchema):
     """
     Création d'un nouvel e-mail basé sur un template + données dynamiques.
