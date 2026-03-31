@@ -50,18 +50,22 @@
         if (submit) submit.disabled = !(supplier && supplier.value && supplier.value.trim());
     };
 
-    // délégation : capture tous les input/change dans le formulaire
-    document.addEventListener('input', e => {
-        const f = e.target.closest('#new-order-form');
-        if (f) toggle(f);
-    }, true);
+    const formElement = document.getElementById('new-order-form');
+    if (!formElement) {
+        return;
+    }
+
+    // délégation : capture tous les input/change dans le formulaire, limitée au conteneur
+    formElement.addEventListener(
+        'input',
+        e => {
+            const f = e.target.closest('#new-order-form');
+            if (f) toggle(f);
+        },
+        true
+    );
 
     // initialisation si déjà présent
-    toggle(document.getElementById('new-order-form'));
-
-    // ré-initialiser après un swap HTMX
-    document.addEventListener('htmx:afterSwap', () => {
-        toggle(document.getElementById('new-order-form'));
-    });
+    toggle(formElement);
 })();
 </script>
