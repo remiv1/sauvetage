@@ -46,12 +46,12 @@ class VatRate(WorkingBase, QueryMixin):
         comment="Libellé du taux (ex: Taux réduit)",
     )
     date_start: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
         comment="Date de début de validité du taux",
     )
     date_end: Mapped[Optional[datetime]] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True,
         comment="Date de fin de validité (NULL = taux actuellement en vigueur)",
     )
