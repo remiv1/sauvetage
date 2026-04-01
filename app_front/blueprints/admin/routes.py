@@ -1,6 +1,7 @@
 """Blueprint pour les fonctionnalités d'administration"""
 
-from flask import Blueprint, redirect, url_for, flash
+from datetime import datetime, timezone
+from flask import Blueprint, redirect, url_for, flash, session
 from app_front.blueprints.admin.forms import FirstUserForm
 from app_front.utils.pages import render_page
 from app_front.blueprints.user.utils import create_user, check_no_users
@@ -12,8 +13,29 @@ bp_admin = Blueprint("admin", __name__, url_prefix="/admin")
 @bp_admin.get("/")
 @permission_required([ADMIN, SUPER_ADMIN], _and=False)
 def index():
-    """Route pour la page d'administration"""
-    return render_page("admin_index")
+    """Page d'accueil de l'administration — cards de navigation"""
+    return render_page("admin_index", session=session)
+
+
+@bp_admin.get("/vat")
+@permission_required([ADMIN, SUPER_ADMIN], _and=False)
+def vat():
+    """Page de gestion des taux de TVA"""
+    return render_page("admin_vat")
+
+
+@bp_admin.get("/users")
+@permission_required(SUPER_ADMIN)
+def users():
+    """Page de gestion des utilisateurs"""
+    return render_page("admin_users")
+
+
+@bp_admin.get("/logs")
+@permission_required([ADMIN, SUPER_ADMIN], _and=False)
+def logs():
+    """Page du journal des opérations"""
+    return render_page("admin_logs", now_year=datetime.now(timezone.utc).year)
 
 
 @bp_admin.route("/first-user", methods=["GET", "POST"])

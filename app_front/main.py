@@ -53,10 +53,21 @@ def before_request():
 @app.after_request
 def after_request(response):
     """Fonction exécutée après chaque requête"""
+    path = request.path
+    # Ignorer les fichiers statiques et les fragments HTMX
+    if path.startswith("/static/") or "/htmx/" in path:
+        return response
+    method = request.method
+    if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
+        return response
     sauv_logger.log(
         level=LOG_LEVEL,
-        message=f"Requête {request.method} {request.path} - Status: {response.status_code}",
-        action="request_log",
+        message=path,
+        action=method,
+        log_type="logs",
+        user_id=session.get("username"),
+        status_code=response.status_code,
+        ip_address=request.remote_addr,
     )
     return response
 

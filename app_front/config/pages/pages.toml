@@ -19,6 +19,10 @@ stock_order = "stock/order.toml"
 stock_reservations = "stock/reservations.toml"
 stock_council = "stock/council.toml"
 supplier = "supplier.toml"
+admin_index = "admin.toml"
+admin_vat = "admin/vat.toml"
+admin_users = "admin/users.toml"
+admin_logs = "admin/logs.toml"
 
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée

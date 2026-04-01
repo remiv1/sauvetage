@@ -27,6 +27,9 @@ from app_front.blueprints import (
     bp_supplier_htmx,
     bp_supplier_htmx_list,
     bp_admin,
+    bp_admin_vat,
+    bp_admin_users,
+    bp_admin_logs,
     bp_user,
 )
 from logs.logger import get_logger
@@ -56,6 +59,9 @@ BLUEPRINTS: List[Blueprint] = [
     bp_supplier_htmx,
     bp_supplier_htmx_list,
     bp_admin,
+    bp_admin_vat,
+    bp_admin_users,
+    bp_admin_logs,
     bp_user,
 ]
 sauv_logger = get_logger()

@@ -1,9 +1,9 @@
 """Module de routage pour les utilisateurs (users) de l'application Sauvetage."""
 
 from urllib.parse import unquote
-from typing import Any, Dict, Annotated
-from fastapi import APIRouter, Request, Depends
-from sqlalchemy import select
+from typing import Any, Dict, Annotated, Optional
+from fastapi import APIRouter, Request, Depends, Query
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from app_back.db_connection import config
 from db_models.objects import Users, UsersPasswords
@@ -163,3 +163,97 @@ async def modify_user(username: str, request: Request):
         "email": user.email,
         "permissions": user.permissions,
     }
+
+
+@router.get("/list")
+def list_users(
+    username: Optional[str] = Query(default=None),
+    email: Optional[str] = Query(default=None),
+    permissions: Optional[str] = Query(default=None),
+    is_active: Optional[bool] = Query(default=None),
+    is_locked: Optional[bool] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+):
+    """Liste paginée des utilisateurs avec filtres."""
+    session = config.get_secure_session()
+    try:
+        stmt = select(Users)
+        if username:
+            stmt = stmt.where(Users.username.ilike(f"%{username}%"))
+        if email:
+            stmt = stmt.where(Users.email.ilike(f"%{email}%"))
+        if permissions:
+            stmt = stmt.where(Users.permissions.contains(permissions))
+        if is_active is not None:
+            stmt = stmt.where(Users.is_active == is_active)
+        if is_locked is not None:
+            stmt = stmt.where(Users.is_locked == is_locked)
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = session.execute(count_stmt).scalar_one()
+
+        offset = (page - 1) * per_page
+        stmt = stmt.order_by(Users.username).offset(offset).limit(per_page)
+        users = session.execute(stmt).scalars().all()
+
+        items = [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "permissions": u.permissions,
+                "is_active": u.is_active,
+                "is_locked": u.is_locked,
+                "nb_failed_logins": u.nb_failed_logins,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ]
+        return {"items": items, "total": total, "page": page, "per_page": per_page}
+    finally:
+        session.close()
+
+
+@router.post("/toggle-lock/{username}")
+def toggle_lock(username: str):
+    """Bascule le statut de verrouillage d'un utilisateur et réinitialise les tentatives."""
+    username = unquote(username)
+    session = config.get_secure_session()
+    try:
+        user_obj = UsersRepository(session)
+        user = user_obj.get_by_username(username)
+        if not user:
+            return {"valid": False, "error": f"Utilisateur non trouvé : {username}"}
+        user.is_locked = not user.is_locked
+        if not user.is_locked:
+            user.nb_failed_logins = 0
+        session.commit()
+        return {
+            "valid": True,
+            "username": user.username,
+            "is_locked": user.is_locked,
+        }
+    finally:
+        session.close()
+
+
+@router.post("/toggle-active/{username}")
+def toggle_active(username: str):
+    """Bascule le statut actif/inactif d'un utilisateur."""
+    username = unquote(username)
+    session = config.get_secure_session()
+    try:
+        user_obj = UsersRepository(session)
+        user = user_obj.get_by_username(username)
+        if not user:
+            return {"valid": False, "error": f"Utilisateur non trouvé : {username}"}
+        user.is_active = not user.is_active
+        session.commit()
+        return {
+            "valid": True,
+            "username": user.username,
+            "is_active": user.is_active,
+        }
+    finally:
+        session.close()

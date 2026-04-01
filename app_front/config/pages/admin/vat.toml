@@ -1,0 +1,32 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page administration — Taux de TVA                       ---
+# ------------------------------------------------------------------------------
+[params]
+tab = "Admin — TVA"
+styles = [
+    "css/main.css",
+    "css/admin/admin.css"
+]
+scripts = ["js/main.js"]
+
+[meta]
+title = "Administration — TVA | Intranet"
+description = "Gestion des taux de TVA"
+keywords = "administration, TVA, taux"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+
+[meta.accessibility]
+lang = "fr"
+direction = "ltr"
+aria_role = "main"
+
+[layout]
+main_layout = "admin/vat.html"
+extend_layout = "index.html"
+
+[flags]
+navbar = true
+searchbar = false
+htmx = true
+userbar = true

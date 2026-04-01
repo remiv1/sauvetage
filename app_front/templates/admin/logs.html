@@ -1,0 +1,116 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('admin.index') }}" class="btn btn-back" title="Retour à l'administration">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Journal des opérations</h2>
+        </div>
+    </div>
+
+    {# Sélecteur d'année + type #}
+    <div class="logs-toolbar">
+        <form id="logs-year-form"
+              hx-get="{{ url_for('admin_logs.logs_stats') }}"
+              hx-target="#logs-stats-wrapper"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              hx-include="#logs-year-form">
+            <div class="filter-group filter-inline">
+                <label class="filter-label" for="logs-year">Année</label>
+                <input type="number" id="logs-year" name="year"
+                       class="filter-control filter-control-sm"
+                       value="{{ now_year }}" min="2020" max="2099">
+                <button type="submit" class="btn btn-primary btn-sm">Actualiser</button>
+            </div>
+        </form>
+    </div>
+
+    {# Stats globales #}
+    <div id="logs-stats-wrapper"
+         hx-get="{{ url_for('admin_logs.logs_stats') }}?year={{ now_year }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="loading-indicator"><p>Chargement des statistiques…</p></div>
+    </div>
+
+    {# Tableau détail — filtres + résultats #}
+    <details class="search-accordion" id="logs-table-section">
+        <summary class="accordion-toggle">
+            {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+            Détail des opérations
+        </summary>
+        <form id="logs-table-filters"
+              hx-get="{{ url_for('admin_logs.logs_table') }}"
+              hx-target="#logs-table-wrapper"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              hx-include="#logs-table-filters">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-log-type">Type</label>
+                    <select id="filter-log-type" name="log_type" class="filter-control">
+                        <option value="logs">Logs système</option>
+                        <option value="users">Utilisateurs</option>
+                        <option value="clients">Clients</option>
+                        <option value="métiers">Métiers</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-log-level">Niveau</label>
+                    <select id="filter-log-level" name="level" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-log-method">Méthode</label>
+                    <select id="filter-log-method" name="method" class="filter-control">
+                        <option value="">Toutes</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-log-status">Statut HTTP</label>
+                    <select id="filter-log-status" name="status" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="2xx">2xx — Succès</option>
+                        <option value="3xx">3xx — Redirection</option>
+                        <option value="4xx">4xx — Erreur client</option>
+                        <option value="5xx">5xx — Erreur serveur</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-log-user">Utilisateur</label>
+                    <input type="text" id="filter-log-user" name="user_id"
+                           class="filter-control" placeholder="Identifiant…" autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-log-year-table">Année</label>
+                    <input type="number" id="filter-log-year-table" name="year"
+                           class="filter-control filter-control-sm"
+                           value="{{ now_year }}" min="2020" max="2099">
+                </div>
+            </div>
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                </button>
+            </div>
+        </form>
+
+        <div id="logs-table-wrapper"></div>
+    </details>
+</div>
+{% endblock %}

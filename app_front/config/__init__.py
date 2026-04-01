@@ -14,6 +14,9 @@ USERS: Dict[str, str] = {
     "change_password": f"{API_URL}/users/change-password",
     "search": f"{API_URL}/users/search",
     "modify": f"{API_URL}/users/modify",
+    "list": f"{API_URL}/users/list",
+    "toggle_lock": f"{API_URL}/users/toggle-lock",
+    "toggle_active": f"{API_URL}/users/toggle-active",
 }
 INVENTORY: Dict[str, str] = {
     "parse": f"{API_URL}/inventory/parse",

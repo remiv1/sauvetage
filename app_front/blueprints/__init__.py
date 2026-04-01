@@ -1,6 +1,9 @@
 """Package des blueprints de l'application Flask."""
 
 from .admin.routes import bp_admin  # type: ignore
+from .admin.routes_htmx_vat import bp_admin_vat  # type: ignore
+from .admin.routes_htmx_users import bp_admin_users  # type: ignore
+from .admin.routes_htmx_logs import bp_admin_logs  # type: ignore
 from .customer.routes import bp_customer  # type: ignore
 from .customer.routes_data import bp_customer_data  # type: ignore
 from .dashboard.routes import bp_dashboard  # type: ignore

@@ -1,0 +1,33 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page d'administration                                    ---
+# ------------------------------------------------------------------------------
+[params]
+tab = "Administration"
+styles = [
+    "css/main.css",
+    "css/home/home.css",
+    "css/admin/admin.css"
+]
+scripts = ["js/main.js"]
+
+[meta]
+title = "Administration | Intranet"
+description = "Page d'administration de l'intranet Sauvetage"
+keywords = "administration, gestion, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+
+[meta.accessibility]
+lang = "fr"
+direction = "ltr"
+aria_role = "main"
+
+[layout]
+main_layout = "admin/index.html"
+extend_layout = "index.html"
+
+[flags]
+navbar = true
+searchbar = false
+htmx = false
+userbar = true

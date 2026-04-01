@@ -1,0 +1,32 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page administration — Utilisateurs                      ---
+# ------------------------------------------------------------------------------
+[params]
+tab = "Admin — Utilisateurs"
+styles = [
+    "css/main.css",
+    "css/admin/admin.css"
+]
+scripts = ["js/main.js"]
+
+[meta]
+title = "Administration — Utilisateurs | Intranet"
+description = "Gestion des utilisateurs"
+keywords = "administration, utilisateurs, permissions"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+
+[meta.accessibility]
+lang = "fr"
+direction = "ltr"
+aria_role = "main"
+
+[layout]
+main_layout = "admin/users.html"
+extend_layout = "index.html"
+
+[flags]
+navbar = true
+searchbar = false
+htmx = true
+userbar = true

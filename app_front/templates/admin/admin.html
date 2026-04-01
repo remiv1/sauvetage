@@ -1,0 +1,296 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="admin-container">
+
+    {# ── En-tête ─────────────────────────────────────────────────────────── #}
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back" title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Administration</h2>
+        </div>
+    </div>
+
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    {# BLOC 1 — Taux de TVA (admin '1' ou super-admin '9')                   #}
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    {% set perms = session.get('permissions', '') %}
+    {% if '1' in perms or '9' in perms %}
+    <section class="admin-section" id="section-vat">
+        <div class="section-header">
+            <h3 class="section-title">
+                {% with class="icone-20" %}{% include "svg/tag.html" %}{% endwith %}
+                Taux de TVA
+            </h3>
+        </div>
+
+        {# Filtres #}
+        <details class="search-accordion">
+            <summary class="accordion-toggle">
+                {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+                Filtres
+            </summary>
+            <form id="vat-search-filters"
+                  hx-get="{{ url_for('admin_vat.vat_table') }}"
+                  hx-target="#vat-table-wrapper"
+                  hx-swap="innerHTML"
+                  hx-trigger="submit"
+                  hx-include="#vat-search-filters">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-vat-code">Code TVA</label>
+                        <select id="filter-vat-code" name="code" class="filter-control">
+                            <option value="">Tous</option>
+                            <option value="0">0 — Super-réduit (2,1%)</option>
+                            <option value="1">1 — Réduit (5,5%)</option>
+                            <option value="2">2 — Intermédiaire (10%)</option>
+                            <option value="3">3 — Normal (20%)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-vat-active">Statut</label>
+                        <select id="filter-vat-active" name="active_only" class="filter-control">
+                            <option value="">Tous</option>
+                            <option value="true">En vigueur</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filters-actions">
+                    <button type="submit" class="btn btn-primary">
+                        {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('vat-search-filters').reset(); htmx.trigger('#vat-table-wrapper', 'refreshVatTable');">Réinitialiser</button>
+                </div>
+            </form>
+        </details>
+
+        {# Action : ajouter #}
+        <div class="section-actions">
+            <button class="btn btn-primary"
+                    hx-get="{{ url_for('admin_vat.vat_create_form') }}"
+                    hx-target="#vat-modal-container"
+                    hx-swap="innerHTML">
+                {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Ajouter un taux
+            </button>
+        </div>
+
+        {# Tableau #}
+        <div id="vat-table-wrapper"
+             hx-get="{{ url_for('admin_vat.vat_table') }}"
+             hx-trigger="load, vat:created from:body, vat:updated from:body, vat:closed from:body, refreshVatTable"
+             hx-swap="innerHTML">
+            <div class="loading-indicator"><p>Chargement…</p></div>
+        </div>
+
+        <div id="vat-modal-container"></div>
+    </section>
+    {% endif %}
+
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    {# BLOC 2 — Gestion des utilisateurs (super-admin '9' uniquement)         #}
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    {% if '9' in perms %}
+    <section class="admin-section" id="section-users">
+        <div class="section-header">
+            <h3 class="section-title">
+                {% with class="icone-20" %}{% include "svg/user.html" %}{% endwith %}
+                Gestion des utilisateurs
+            </h3>
+        </div>
+
+        {# Filtres #}
+        <details class="search-accordion">
+            <summary class="accordion-toggle">
+                {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+                Filtres
+            </summary>
+            <form id="users-search-filters"
+                  hx-get="{{ url_for('admin_users.users_table') }}"
+                  hx-target="#users-table-wrapper"
+                  hx-swap="innerHTML"
+                  hx-trigger="submit"
+                  hx-include="#users-search-filters">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-u-username">Identifiant</label>
+                        <input type="text" id="filter-u-username" name="username"
+                               class="filter-control" placeholder="Rechercher…" autocomplete="off">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-u-email">Email</label>
+                        <input type="text" id="filter-u-email" name="email"
+                               class="filter-control" placeholder="Email…" autocomplete="off">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-u-permissions">Permission</label>
+                        <select id="filter-u-permissions" name="permissions" class="filter-control">
+                            <option value="">Toutes</option>
+                            <option value="1">Admin</option>
+                            <option value="2">Comptable</option>
+                            <option value="3">Commercial</option>
+                            <option value="4">Logistique</option>
+                            <option value="5">Support</option>
+                            <option value="6">Informatique</option>
+                            <option value="7">RH</option>
+                            <option value="8">Direction</option>
+                            <option value="9">Super Admin</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-u-active">Actif</label>
+                        <select id="filter-u-active" name="is_active" class="filter-control">
+                            <option value="">Tous</option>
+                            <option value="true" selected>Actif</option>
+                            <option value="false">Inactif</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-u-locked">Verrouillé</label>
+                        <select id="filter-u-locked" name="is_locked" class="filter-control">
+                            <option value="">Tous</option>
+                            <option value="false" selected>Non verrouillé</option>
+                            <option value="true">Verrouillé</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filters-actions">
+                    <button type="submit" class="btn btn-primary">
+                        {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="btn-reset-users-filters">Réinitialiser</button>
+                </div>
+            </form>
+        </details>
+
+        {# Action : créer #}
+        <div class="section-actions">
+            <button class="btn btn-primary"
+                    hx-get="{{ url_for('admin_users.users_create_form') }}"
+                    hx-target="#users-modal-container"
+                    hx-swap="innerHTML">
+                {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer un utilisateur
+            </button>
+        </div>
+
+        {# Tableau #}
+        <div id="users-table-wrapper"
+             hx-get="{{ url_for('admin_users.users_table') }}"
+             hx-trigger="load, user:created from:body, user:updated from:body, refreshUsersTable"
+             hx-swap="innerHTML">
+            <div class="loading-indicator"><p>Chargement…</p></div>
+        </div>
+
+        <div id="users-modal-container"></div>
+    </section>
+    {% endif %}
+
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    {# BLOC 3 — Dashboard des opérations (admin '1' ou super-admin '9')      #}
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    {% if '1' in perms or '9' in perms %}
+    <section class="admin-section" id="section-logs">
+        <div class="section-header">
+            <h3 class="section-title">
+                {% with class="icone-20" %}{% include "svg/chart.html" %}{% endwith %}
+                Dashboard des opérations
+            </h3>
+        </div>
+
+        {# Sélecteur d'année #}
+        <div class="logs-year-selector">
+            <form id="logs-year-form"
+                  hx-get="{{ url_for('admin_logs.logs_stats') }}"
+                  hx-target="#logs-stats-wrapper"
+                  hx-swap="innerHTML"
+                  hx-trigger="submit"
+                  hx-include="#logs-year-form">
+                <div class="filter-group filter-inline">
+                    <label class="filter-label" for="logs-year">Année</label>
+                    <input type="number" id="logs-year" name="year"
+                           class="filter-control filter-control-sm"
+                           value="{{ now_year }}" min="2020" max="2099">
+                    <button type="submit" class="btn btn-primary btn-sm">Actualiser</button>
+                </div>
+            </form>
+        </div>
+
+        {# Stats globales #}
+        <div id="logs-stats-wrapper"
+             hx-get="{{ url_for('admin_logs.logs_stats') }}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="loading-indicator"><p>Chargement des statistiques…</p></div>
+        </div>
+
+        {# Filtres tableau logs #}
+        <details class="search-accordion" id="logs-table-section">
+            <summary class="accordion-toggle">
+                {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+                Détail des opérations
+            </summary>
+            <form id="logs-table-filters"
+                  hx-get="{{ url_for('admin_logs.logs_table') }}"
+                  hx-target="#logs-table-wrapper"
+                  hx-swap="innerHTML"
+                  hx-trigger="submit"
+                  hx-include="#logs-table-filters">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-log-type">Type</label>
+                        <select id="filter-log-type" name="log_type" class="filter-control">
+                            <option value="users">Utilisateurs</option>
+                            <option value="logs">Logs système</option>
+                            <option value="clients">Clients</option>
+                            <option value="métiers">Métiers</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-log-level">Niveau</label>
+                        <select id="filter-log-level" name="level" class="filter-control">
+                            <option value="">Tous</option>
+                            <option value="DEBUG">DEBUG</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="filter-log-user">Utilisateur (ID)</label>
+                        <input type="text" id="filter-log-user" name="user_id"
+                               class="filter-control" placeholder="ID utilisateur…" autocomplete="off">
+                    </div>
+                </div>
+                <div class="filters-actions">
+                    <button type="submit" class="btn btn-primary">
+                        {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                    </button>
+                </div>
+            </form>
+
+            <div id="logs-table-wrapper"
+                 hx-get="{{ url_for('admin_logs.logs_table') }}"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+                <div class="loading-indicator"><p>Chargement du journal…</p></div>
+            </div>
+        </details>
+    </section>
+    {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var resetUsersBtn = document.getElementById('btn-reset-users-filters');
+    if (resetUsersBtn) {
+        resetUsersBtn.addEventListener('click', function () {
+            document.getElementById('users-search-filters').reset();
+            htmx.trigger(document.getElementById('users-table-wrapper'), 'refreshUsersTable');
+        });
+    }
+});
+</script>
+{% endblock %}
