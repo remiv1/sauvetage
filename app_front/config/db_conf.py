@@ -1,5 +1,6 @@
 """Configuration de la base de données pour l'application Flask Sauvetage"""
 
+from typing import Optional
 from os import getenv
 from flask import current_app
 from sqlalchemy import create_engine
@@ -26,7 +27,7 @@ _engine_main = create_engine(
 )
 _SessionMain = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=_engine_main))
 
-_mongo_client: MongoClient = None  # type: ignore
+_mongo_client: Optional[MongoClient] = None  # type: ignore
 
 
 def get_main_session():
@@ -47,4 +48,3 @@ def get_mongo_db():
         return _mongo_client[MONGO_DB_NAME]
     except ConnectionFailure:
         return None
-

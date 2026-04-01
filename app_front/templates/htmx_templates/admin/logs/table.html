@@ -74,14 +74,14 @@
     <div class="pagination">
         {% if page > 1 %}
         <button class="btn btn-sm btn-secondary"
-                hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&level={{ selected_level }}&method={{ selected_method }}&status={{ selected_status }}&page={{ page - 1 }}"
+                hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&level={{ selected_level }}&method={{ selected_method }}&status={{ selected_status }}&user_id={{ user_id }}&year={{ year }}&page={{ page - 1 }}"
                 hx-target="#logs-table-wrapper"
                 hx-swap="innerHTML">← Précédent</button>
         {% endif %}
         <span class="pagination-info text-muted">{{ page }} / {{ total_pages }}</span>
         {% if page < total_pages %}
         <button class="btn btn-sm btn-secondary"
-                hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&level={{ selected_level }}&method={{ selected_method }}&status={{ selected_status }}&page={{ page + 1 }}"
+                hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&level={{ selected_level }}&method={{ selected_method }}&status={{ selected_status }}&user_id={{ user_id }}&year={{ year }}&page={{ page + 1 }}"
                 hx-target="#logs-table-wrapper"
                 hx-swap="innerHTML">Suivant →</button>
         {% endif %}

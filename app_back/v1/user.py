@@ -2,12 +2,22 @@
 
 from urllib.parse import unquote
 from typing import Any, Dict, Annotated, Optional
-from fastapi import APIRouter, Request, Depends, Query
-from sqlalchemy import select, func, or_
+from fastapi import APIRouter, Request, Depends, Query, HTTPException
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from app_back.db_connection import config
 from db_models.objects import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
+
+
+def verify_admin_access() -> bool:
+    """
+    Vérification d'accès administrateur pour les endpoints sensibles.
+    À améliorer avec un vrai système d'authentification (JWT, OAuth, etc.)
+    """
+    # Pour l'instant, cette vérification est minimale puisque l'authentification
+    # est gérée côté Flask. Cette fonction peut être améliorée avec un système de token.
+    return True
 
 router = APIRouter(
     prefix="/users",
@@ -167,13 +177,14 @@ async def modify_user(username: str, request: Request):
 
 @router.get("/list")
 def list_users(
-    username: Optional[str] = Query(default=None),
-    email: Optional[str] = Query(default=None),
-    permissions: Optional[str] = Query(default=None),
-    is_active: Optional[bool] = Query(default=None),
-    is_locked: Optional[bool] = Query(default=None),
-    page: int = Query(default=1, ge=1),
-    per_page: int = Query(default=20, ge=1, le=100),
+    _admin: Annotated[bool, Depends(verify_admin_access)],
+    username: Annotated[Optional[str], Query(default=None)] = None,
+    email: Annotated[Optional[str], Query(default=None)] = None,
+    permissions: Annotated[Optional[str], Query(default=None)] = None,
+    is_active: Annotated[Optional[bool], Query(default=None)] = None,
+    is_locked: Annotated[Optional[bool], Query(default=None)] = None,
+    page: Annotated[int, Query(default=1, ge=1)] = 1,
+    per_page: Annotated[int, Query(default=20, ge=1, le=100)] = 20,
 ):
     """Liste paginée des utilisateurs avec filtres."""
     session = config.get_secure_session()
@@ -190,7 +201,7 @@ def list_users(
         if is_locked is not None:
             stmt = stmt.where(Users.is_locked == is_locked)
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_stmt = select(func.count()).select_from(stmt.subquery())  # pylint: disable=not-callable
         total = session.execute(count_stmt).scalar_one()
 
         offset = (page - 1) * per_page
@@ -215,8 +226,12 @@ def list_users(
         session.close()
 
 
-@router.post("/toggle-lock/{username}")
-def toggle_lock(username: str):
+@router.post("/toggle-lock/{username}",
+             response_model=Dict[str, Any],
+             responses={
+                 404: {"description": "Utilisateur non trouvé"}
+             })
+def toggle_lock(username: str, _admin=Annotated[bool, Depends(verify_admin_access)]):
     """Bascule le statut de verrouillage d'un utilisateur et réinitialise les tentatives."""
     username = unquote(username)
     session = config.get_secure_session()
@@ -224,7 +239,7 @@ def toggle_lock(username: str):
         user_obj = UsersRepository(session)
         user = user_obj.get_by_username(username)
         if not user:
-            return {"valid": False, "error": f"Utilisateur non trouvé : {username}"}
+            raise HTTPException(status_code=404, detail=f"Utilisateur non trouvé : {username}")
         user.is_locked = not user.is_locked
         if not user.is_locked:
             user.nb_failed_logins = 0
@@ -238,8 +253,10 @@ def toggle_lock(username: str):
         session.close()
 
 
-@router.post("/toggle-active/{username}")
-def toggle_active(username: str):
+@router.post("/toggle-active/{username}",
+             response_model=Dict[str, Any],
+             responses={404: {"description": "Utilisateur non trouvé"}})
+def toggle_active(username: str, _admin=Annotated[bool, Depends(verify_admin_access)]):
     """Bascule le statut actif/inactif d'un utilisateur."""
     username = unquote(username)
     session = config.get_secure_session()
@@ -247,7 +264,7 @@ def toggle_active(username: str):
         user_obj = UsersRepository(session)
         user = user_obj.get_by_username(username)
         if not user:
-            return {"valid": False, "error": f"Utilisateur non trouvé : {username}"}
+            raise HTTPException(status_code=404, detail=f"Utilisateur non trouvé : {username}")
         user.is_active = not user.is_active
         session.commit()
         return {

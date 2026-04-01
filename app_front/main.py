@@ -1,7 +1,10 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
+from typing import Any
 from datetime import datetime, timezone
+from jinja2 import TemplateError
 from flask import Flask, jsonify, session, request, redirect, url_for, make_response
+from flask.typing import ResponseReturnValue
 from app_front.utils.pages import render_page
 from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
@@ -110,25 +113,83 @@ def ready():
     )
 
 
+@app.errorhandler(400)
+@app.errorhandler(401)
+@app.errorhandler(403)
 @app.errorhandler(404)
-def not_found(_error: Exception):
-    """Gestion des erreurs 404 avec code HTTP explicite"""
+@app.errorhandler(405)
+def error_handler(_error: Any) -> ResponseReturnValue:   # pylint: disable=unused-argument
+    """Gestion centralisée des erreurs HTTP.
+
+    Pour les erreurs 4xx : log + rendu d'une page utilisateur agréable.
+    Sinon : retourne un payload JSON de secours.
+    """
+    code = getattr(_error, "code", None)
+    if not isinstance(code, int):
+        code = 400
+
+    sauv_logger.log(
+        level=LOG_LEVEL,
+        message=request.path,
+        action=request.method,
+        log_type="logs",
+        user_id=session.get("username"),
+        status_code=code,
+        ip_address=request.remote_addr,
+    )
+    message = getattr(_error, "description", None) or str(_error)
+    try:
+        html = render_page("error/4xx", code=code, message=message)
+        return html, int(code)
+    except TemplateError:
+        # fallback JSON si le template échoue
+        pass    # pylint: disable=unnecessary-pass
+
     payload = {
         "status": "error",
-        "code": 404,
-        "message": "Resource not found",
+        "code": code,
+        "message": message,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    return make_response(jsonify(payload), 404)
+    return make_response(jsonify(payload), int(code))
 
 
 @app.errorhandler(500)
-def internal_error(_error: Exception):
-    """Gestion des erreurs 500 avec code HTTP explicite"""
+@app.errorhandler(502)
+@app.errorhandler(503)
+@app.errorhandler(504)
+def internal_error(_error: Any) -> ResponseReturnValue:
+    """Gestion des erreurs 500 avec rendu HTML convivial ou JSON pour les requêtes XHR/HTMX."""
+    sauv_logger.log(
+        level=LOG_LEVEL,
+        message=f"Internal server error: {request.path}",
+        action=request.method,
+        log_type="logs",
+        user_id=session.get("username"),
+        status_code=500,
+        ip_address=request.remote_addr,
+    )
+
+    # message lisible pour le template / JSON
+    message = getattr(_error, "description", None) or str(_error) or "Internal server error"
+
+    # Détecter les requêtes XHR / HTMX / Accept JSON
+    is_htmx = request.headers.get("HX-Request") == "true"
+    is_xhr = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    accepts_json = "application/json" in request.headers.get("Accept", "")
+
+    if not (is_htmx or is_xhr or accepts_json):
+        try:
+            html = render_page("error/5xx", code=500, message=message)
+            return html, 500
+        except TemplateError:
+            # si rendu échoue pour des erreurs de template, fallback en JSON
+            pass    # pylint: disable=unnecessary-pass
+
     payload = {
         "status": "error",
         "code": 500,
-        "message": "Internal server error",
+        "message": message,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return make_response(jsonify(payload), 500)

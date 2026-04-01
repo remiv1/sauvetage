@@ -451,6 +451,25 @@ form input[type=submit]:hover {
   height: 100%;
 }
 
+.img-contain {
+  object-fit: contain;
+  object-position: center;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.bg-contain {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+.error-illustration {
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
 /* _reset.scss */
 /* Reset des marges, paddings et bordures */
 * {
@@ -489,6 +508,9 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+  /* Ne jamais découper les images : les afficher entièrement */
+  object-fit: contain;
+  object-position: center;
 }
 
 /* Réinitialisation des champs de formulaire */

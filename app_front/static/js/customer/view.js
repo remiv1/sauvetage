@@ -6,7 +6,7 @@
 import { setupAddresses } from './addresses.js';
 import { setupEmails } from './emails.js';
 import { setupPhones } from './phones.js';
-import { postJson, patchJson, showNotification, serializeForm } from './functions.js';
+import { postJson, patchJson, showNotification, serializeForm, updateFormCell } from './functions.js';
 
 /**
  * Mapping des civilités pour l'affichage.
@@ -105,16 +105,14 @@ function setupInfoEdit() {
         const data = serializeForm(editForm);
 
         // Validation côté client
-        if (globalThis.CUSTOMER_TYPE === 'part') {
-            if (!data.first_name?.trim() || !data.last_name?.trim()) {
+        if (
+            (globalThis.CUSTOMER_TYPE === 'part')
+            && (!data.first_name?.trim() || !data.last_name?.trim())) {
                 showNotification('Le prénom et le nom sont obligatoires.', 'danger');
                 return;
-            }
-        } else if (globalThis.CUSTOMER_TYPE === 'pro') {
-            if (!data.company_name?.trim()) {
-                showNotification('La raison sociale est obligatoire.', 'danger');
-                return;
-            }
+        } else if (globalThis.CUSTOMER_TYPE === 'pro' && !data.company_name?.trim()) {
+            showNotification('La raison sociale est obligatoire.', 'danger');
+            return;
         }
 
         const result = await patchJson(
@@ -129,21 +127,21 @@ function setupInfoEdit() {
             if (result.data.customer_type === 'part' && result.data.part) {
                 const p = result.data.part;
                 const selCivil = editForm.querySelector('[name="civil_title"]');
-                if (selCivil) selCivil.value = p.civil_title || 'm';
+                updateFormCell(selCivil, p.civil_title, 'm');
                 const inpFirst = editForm.querySelector('[name="first_name"]');
-                if (inpFirst) inpFirst.value = p.first_name || '';
+                updateFormCell(inpFirst, p.first_name, '');
                 const inpLast = editForm.querySelector('[name="last_name"]');
-                if (inpLast) inpLast.value = p.last_name || '';
+                updateFormCell(inpLast, p.last_name, '');
                 const inpDob = editForm.querySelector('[name="date_of_birth"]');
-                if (inpDob) inpDob.value = p.date_of_birth ? p.date_of_birth.substring(0, 10) : '';
+                updateFormCell(inpDob, p.date_of_birth ? p.date_of_birth.substring(0, 10) : '', '');
             } else if (result.data.customer_type === 'pro' && result.data.pro) {
                 const pr = result.data.pro;
                 const inpComp = editForm.querySelector('[name="company_name"]');
-                if (inpComp) inpComp.value = pr.company_name || '';
+                updateFormCell(inpComp, pr.company_name, '');
                 const inpSiret = editForm.querySelector('[name="siret_number"]');
-                if (inpSiret) inpSiret.value = pr.siret_number || '';
+                updateFormCell(inpSiret, pr.siret_number, '');
                 const inpVat = editForm.querySelector('[name="vat_number"]');
-                if (inpVat) inpVat.value = pr.vat_number || '';
+                updateFormCell(inpVat, pr.vat_number, '');
             }
 
             infoEdit.classList.add('hidden');

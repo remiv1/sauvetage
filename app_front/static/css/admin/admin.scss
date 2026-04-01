@@ -140,6 +140,11 @@ details[open] > .accordion-toggle {
     align-items: center;
     flex-wrap: wrap;
     gap: v.$space-sm;
+    
+    /* empêcher les enfants (input, boutons, labels) de s'étirer en largeur */
+    > * {
+      flex: 0 0 auto;
+    }
   }
 }
 

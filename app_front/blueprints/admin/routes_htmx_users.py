@@ -1,7 +1,7 @@
 """Routes HTMX pour la gestion des utilisateurs (admin — super-admin uniquement)."""
 
 import json
-from flask import Blueprint, render_template, request, make_response, flash
+from flask import Blueprint, render_template, request, make_response
 from app_front.utils.decorators import permission_required, SUPER_ADMIN
 from app_front.blueprints.admin.forms import UserCreateAdminForm, UserEditPermissionsForm
 from app_front.blueprints.admin.utils import (
@@ -18,6 +18,7 @@ USERS_CREATE_MODAL = "htmx_templates/admin/users/create_modal.html"
 USERS_EDIT_MODAL = "htmx_templates/admin/users/edit_modal.html"
 USERS_TOGGLE_MODAL = "htmx_templates/admin/users/toggle_modal.html"
 USER_NOT_FOUND = "<p>Utilisateur introuvable.</p>"
+USER_UPDATED_TRIGGER = {"user:updated": True}
 
 # Mapping lisible des permissions
 PERMISSION_LABELS = {
@@ -42,8 +43,16 @@ def users_table():
     permissions = request.args.get("permissions", "").strip() or None
     is_active_str = request.args.get("is_active", "").strip()
     is_locked_str = request.args.get("is_locked", "").strip()
-    is_active = True if is_active_str == "true" else (False if is_active_str == "false" else None)
-    is_locked = True if is_locked_str == "true" else (False if is_locked_str == "false" else None)
+    is_active = None
+    if is_active_str == "true":
+        is_active = True
+    elif is_active_str == "false":
+        is_active = False
+    is_locked = None
+    if is_locked_str == "true":
+        is_locked = True
+    elif is_locked_str == "false":
+        is_locked = False
     page_str = request.args.get("page", "1").strip()
     page = max(1, int(page_str)) if page_str.isdigit() else 1
 
@@ -56,7 +65,7 @@ def users_table():
             is_locked=is_locked,
             page=page,
         )
-    except Exception:
+    except (ValueError, TypeError):
         result = {"items": [], "total": 0, "page": 1, "per_page": 20}
 
     return render_template(USERS_TABLE, **result, permission_labels=PERMISSION_LABELS)
@@ -79,12 +88,12 @@ def users_create():
         permissions_str = "".join(sorted(form.permissions.data or []))
         try:
             create_user(
-                username=form.username.data,
-                email=form.email.data,
-                password=form.password.data,
+                username=form.username.data,    # type: ignore
+                email=form.email.data,          # type: ignore
+                password=form.password.data,    # type: ignore
                 permissions=permissions_str,
             )
-        except Exception as exc:
+        except (ValueError, TypeError) as exc:
             form.username.errors = list(form.username.errors) + [str(exc)]
             return render_template(USERS_CREATE_MODAL, form=form), 422
         response = make_response("", 200)
@@ -97,10 +106,10 @@ def users_create():
 @permission_required(SUPER_ADMIN)
 def users_edit_form(username: str):
     """Modale d'édition des permissions d'un utilisateur."""
-    from app_front.blueprints.user.utils import user_search
+    from app_front.blueprints.user.utils import user_search     # pylint: disable=import-outside-toplevel
     try:
         user_data = user_search(username)
-    except Exception:
+    except (ValueError, TypeError):
         return USER_NOT_FOUND, 404
     if not user_data.get("valid"):
         return USER_NOT_FOUND, 404
@@ -109,7 +118,12 @@ def users_edit_form(username: str):
     form.email.data = user_data.get("email", "")
     current_perms = list(user_data.get("permissions", "") or "")
     form.permissions.data = current_perms
-    return render_template(USERS_EDIT_MODAL, form=form, user=user_data, permission_labels=PERMISSION_LABELS)
+    return render_template(
+        USERS_EDIT_MODAL,
+        form=form,
+        user=user_data,
+        permission_labels=PERMISSION_LABELS
+        )
 
 
 @bp_admin_users.post("/edit/<username>")
@@ -122,16 +136,26 @@ def users_edit_submit(username: str):
         try:
             modify_user(
                 username=username,
-                email=form.email.data,
+                email=form.email.data,          # type: ignore
                 permissions=permissions_str,
             )
-        except Exception as exc:
+        except (ValueError, TypeError) as exc:
             form.email.errors = list(form.email.errors) + [str(exc)]
-            return render_template(USERS_EDIT_MODAL, form=form, user={"username": username}, permission_labels=PERMISSION_LABELS), 422
+            return render_template(
+                USERS_EDIT_MODAL,
+                form=form,
+                user={"username": username},
+                permission_labels=PERMISSION_LABELS
+                ), 422
         response = make_response("", 200)
-        response.headers["HX-Trigger"] = json.dumps({"user:updated": True})
+        response.headers["HX-Trigger"] = json.dumps(USER_UPDATED_TRIGGER)
         return response
-    return render_template(USERS_EDIT_MODAL, form=form, user={"username": username}, permission_labels=PERMISSION_LABELS), 422
+    return render_template(
+        USERS_EDIT_MODAL,
+        form=form,
+        user={"username": username},
+        permission_labels=PERMISSION_LABELS
+        ),422
 
 
 @bp_admin_users.get("/toggle-modal/<username>/<action>")
@@ -149,10 +173,10 @@ def users_toggle_lock(username: str):
     """Bascule le verrou d'un utilisateur."""
     try:
         toggle_user_lock(username)
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         return str(exc), 500
     response = make_response("", 200)
-    response.headers["HX-Trigger"] = json.dumps({"user:updated": True})
+    response.headers["HX-Trigger"] = json.dumps(USER_UPDATED_TRIGGER)
     return response
 
 
@@ -162,8 +186,8 @@ def users_toggle_active(username: str):
     """Bascule le statut actif d'un utilisateur."""
     try:
         toggle_user_active(username)
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         return str(exc), 500
     response = make_response("", 200)
-    response.headers["HX-Trigger"] = json.dumps({"user:updated": True})
+    response.headers["HX-Trigger"] = json.dumps(USER_UPDATED_TRIGGER)
     return response

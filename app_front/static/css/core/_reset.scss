@@ -37,6 +37,9 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+  /* Ne jamais découper les images : les afficher entièrement */
+  object-fit: contain;
+  object-position: center;
 }
 
 /* Réinitialisation des champs de formulaire */

@@ -1,7 +1,8 @@
 """Routes HTMX pour la gestion des taux de TVA (admin)."""
 
+from datetime import datetime
 import json
-from flask import Blueprint, render_template, request, make_response, session
+from flask import Blueprint, render_template, request, make_response
 from app_front.utils.decorators import permission_required, ADMIN, SUPER_ADMIN
 from app_front.blueprints.admin.forms import VatRateForm
 from app_front.blueprints.admin.utils import (
@@ -52,7 +53,7 @@ def vat_create():
     if form.validate_on_submit():
         data = {
             "code": form.code.data,
-            "rate": float(form.rate.data),
+            "rate": float(form.rate.data),  # type: ignore
             "label": form.label.data,
             "date_start": form.date_start.data,
             "date_end": form.date_end.data,
@@ -80,13 +81,11 @@ def vat_edit_form(vat_id: int):
     form.rate.data = rate["rate"]
     form.label.data = rate["label"]
     if rate["date_start"]:
-        from datetime import datetime
         try:
             form.date_start.data = datetime.fromisoformat(rate["date_start"])
         except ValueError:
             pass
     if rate["date_end"]:
-        from datetime import datetime
         try:
             form.date_end.data = datetime.fromisoformat(rate["date_end"])
         except ValueError:
@@ -105,7 +104,7 @@ def vat_edit_submit(vat_id: int):
     if form.validate_on_submit():
         data = {
             "code": form.code.data,
-            "rate": float(form.rate.data),
+            "rate": float(form.rate.data),  # type: ignore
             "label": form.label.data,
             "date_start": form.date_start.data,
             "date_end": form.date_end.data,

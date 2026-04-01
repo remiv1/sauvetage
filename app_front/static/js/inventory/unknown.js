@@ -100,7 +100,7 @@ async function _loadStockForm(ean) {
         const html = await resp.text();
         container.innerHTML = html;
         // Activer HTMX sur les nouveaux éléments chargés dynamiquement
-        if (window.htmx) {
+        if (globalThis.htmx) {
             htmx.process(container);
         }
     } catch (err) {

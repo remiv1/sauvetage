@@ -19,6 +19,18 @@ export async function fetchJson(url) {
 }
 
 /**
+ * Met à jour la valeur d'une cellule de formulaire.
+ * @param {HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement} cell - La cellule à mettre à jour.
+ * @param {string} value - La valeur à définir.
+ * @param {string} [defaultValue=''] - La valeur par défaut si la valeur est vide.
+ */
+export function updateFormCell(cell, value, defaultValue = '') {
+    if (cell) {
+        cell.value = value || defaultValue;
+    }
+}
+
+/**
  * Effectue une requête POST JSON et retourne la réponse.
  * @param {string} url - L'URL cible.
  * @param {object} body - Le corps de la requête.

@@ -57,4 +57,6 @@ def logs_table():
         selected_level=level or "",
         selected_method=method or "",
         selected_status=status or "",
+        user_id=user_id or "",
+        year=year or "",
     )

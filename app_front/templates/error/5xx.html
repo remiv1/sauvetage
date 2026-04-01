@@ -1,0 +1,15 @@
+{% extends "index.html" %}
+
+{% block content %}
+  <section class="error-5xx" style="display:flex;align-items:center;justify-content:center;min-height:60vh;padding:2rem;">
+    <div style="text-align:center;max-width:720px;">
+      <img src="{{ url_for('static', filename='img/5xx.png') }}" alt="Illustration erreur serveur" class="img-contain error-illustration"/>
+      <h1 style="font-size:1.75rem;margin-top:1rem;color:#111827;">Erreur serveur — {{ code or 500 }}</h1>
+      <p style="color:#6b7280;margin-top:0.5rem;">{{ message or 'Une erreur interne est survenue. Nos équipes ont été prévenues.' }}</p>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;justify-content:center;">
+        <a href="{{ url_for('home') }}" class="btn btn-primary" style="padding:0.6rem 1rem;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none;">Retour à l'accueil</a>
+        <a href="mailto:ops@example.com" class="btn btn-secondary" style="padding:0.6rem 1rem;border-radius:6px;text-decoration:none;color:#374151">Contacter le support</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}

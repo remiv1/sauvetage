@@ -128,6 +128,10 @@ details[open] > .accordion-toggle {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  /* empêcher les enfants (input, boutons, labels) de s'étirer en largeur */
+}
+.filter-group.filter-inline > * {
+  flex: 0 0 auto;
 }
 
 .filter-label {

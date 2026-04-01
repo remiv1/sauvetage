@@ -1,3 +1,12 @@
-<div>
-    
-</div>
+<footer class="site-footer" role="contentinfo">
+	<div class="container">
+		<small>© <span id="footer-year"></span> Sauvetage — Outil de production</small>
+	</div>
+</footer>
+
+<script>
+	(function(){
+		const el = document.getElementById('footer-year');
+		if (el) el.textContent = new Date().getFullYear();
+	})();
+</script>

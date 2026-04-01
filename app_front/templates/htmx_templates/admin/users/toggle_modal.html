@@ -1,7 +1,7 @@
 {# Modale de confirmation toggle lock / active #}
-<div class="modal-overlay"
-     onclick="if(event.target===this)this.remove()"
-     onkeydown="if(event.key==='Escape')this.remove()">
+<button class="modal-overlay" tabindex="0"
+        onclick="if(event.target===this)this.remove()"
+        onkeydown="if(event.key==='Escape')this.remove()">
     <div class="modal-box modal-confirm">
         <div class="modal-header">
             <h3>
@@ -43,4 +43,4 @@
             </div>
         </div>
     </div>
-</div>
+</button>

@@ -1,6 +1,6 @@
 """Utilitaires pour l'administration : TVA (SQLAlchemy direct) et utilisateurs (API)."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from urllib.parse import quote
 from datetime import datetime, timezone
 
@@ -28,7 +28,7 @@ def get_vat_rates_paginated(
         if active_only:
             stmt = stmt.where(VatRate.date_end.is_(None))
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_stmt = select(func.count()).select_from(stmt.subquery())  # pylint: disable=not-callable
         total = session.execute(count_stmt).scalar_one()
 
         offset = (page - 1) * per_page
@@ -76,12 +76,20 @@ def create_vat_rate(data: Dict[str, Any]) -> Dict[str, Any]:
     """Crée un nouveau taux de TVA."""
     session = db_conf.get_main_session()
     try:
+        # Convertir les datetimes locaux en timezone-aware (UTC)
+        date_start = data["date_start"]
+        if hasattr(date_start, 'replace') and date_start.tzinfo is None:
+            date_start = date_start.replace(tzinfo=timezone.utc)
+        date_end = data.get("date_end")
+        if date_end and hasattr(date_end, 'replace') and date_end.tzinfo is None:
+            date_end = date_end.replace(tzinfo=timezone.utc)
+
         rate = VatRate(
             code=int(data["code"]),
             rate=float(data["rate"]),
             label=str(data["label"]),
-            date_start=data["date_start"],
-            date_end=data.get("date_end"),
+            date_start=date_start,
+            date_end=date_end,
         )
         session.add(rate)
         session.commit()
@@ -100,11 +108,19 @@ def update_vat_rate(vat_id: int, data: Dict[str, Any]) -> bool:
         rate = session.get(VatRate, vat_id)
         if rate is None:
             return False
+        # Convertir les datetimes locaux en timezone-aware (UTC)
+        date_start = data["date_start"]
+        if hasattr(date_start, 'replace') and date_start.tzinfo is None:
+            date_start = date_start.replace(tzinfo=timezone.utc)
+        date_end = data.get("date_end")
+        if date_end and hasattr(date_end, 'replace') and date_end.tzinfo is None:
+            date_end = date_end.replace(tzinfo=timezone.utc)
+
         rate.code = int(data["code"])
         rate.rate = float(data["rate"])
         rate.label = str(data["label"])
-        rate.date_start = data["date_start"]
-        rate.date_end = data.get("date_end")
+        rate.date_start = date_start
+        rate.date_end = date_end
         session.commit()
         return True
     except Exception as exc:
@@ -181,12 +197,12 @@ def toggle_user_active(username: str) -> Dict[str, Any]:
 
 def get_logs_stats(year: Optional[int] = None) -> Dict[str, Any]:
     """Retourne des statistiques sur les logs de l'année courante (ou celle spécifiée)."""
-    from app_front.config.db_conf import get_mongo_db
+    from app_front.config.db_conf import get_mongo_db   # pylint: disable=import-outside-toplevel
+    target_year = str(year) if year else datetime.now().strftime("%Y")
     db = get_mongo_db()
     if db is None:
-        return {"error": "MongoDB non disponible"}
-
-    target_year = str(year) if year else datetime.now().strftime("%Y")
+        # Retourner une structure cohérente avec celle attendue par le template
+        return {"year": target_year, "stats": {}, "error": "MongoDB non disponible"}
 
     stats: Dict[str, Any] = {}
     for log_type in ["users", "logs", "clients", "métiers"]:
@@ -199,7 +215,7 @@ def get_logs_stats(year: Optional[int] = None) -> Dict[str, Any]:
             result = list(db[collection_name].aggregate(pipeline))
             stats[log_type] = {r["_id"]: r["count"] for r in result}
             stats[f"{log_type}_total"] = sum(r["count"] for r in result)
-        except Exception:
+        except (KeyError, TypeError, ValueError):
             stats[log_type] = {}
             stats[f"{log_type}_total"] = 0
 
@@ -218,7 +234,7 @@ def get_logs_recent(
     year: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Retourne les logs récents paginés depuis MongoDB."""
-    from app_front.config.db_conf import get_mongo_db
+    from app_front.config.db_conf import get_mongo_db   # pylint: disable=import-outside-toplevel
     db = get_mongo_db()
     if db is None:
         return {"items": [], "total": 0, "page": page, "per_page": per_page}
@@ -257,5 +273,5 @@ def get_logs_recent(
                 doc["timestamp"] = doc["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
             items.append(doc)
         return {"items": items, "total": total, "page": page, "per_page": per_page}
-    except Exception:
+    except (KeyError, TypeError, ValueError):
         return {"items": [], "total": 0, "page": page, "per_page": per_page}

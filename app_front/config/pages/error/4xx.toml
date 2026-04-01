@@ -1,0 +1,26 @@
+[params]
+tab = "Accueil"
+styles = ["css/main.css"]
+scripts = ["js/main.js"]
+
+[meta]
+title = "Accueil | Erreur Terminal"
+description = "La page demandée est introuvable ou la requête est incorrecte."
+keywords = "erreur, gestion, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+
+[meta.accessibility]
+lang = "fr"
+direction = "ltr"
+aria_role = "main"
+
+[layout]
+main_layout = "error/4xx.html"
+extend_layout = "index.html"
+
+[flags]
+navbar = true
+searchbar = false
+htmx = false
+userbar = true

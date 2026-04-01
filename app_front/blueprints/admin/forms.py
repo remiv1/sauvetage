@@ -67,7 +67,7 @@ class VatRateForm(FlaskForm):
 
     code = IntegerField(
         "Code TVA",
-        validators=[DataRequired(), NumberRange(min=0, max=50)],
+        validators=[DataRequired(), NumberRange(min=0, max=40)],
     )
     rate = DecimalField(
         "Taux (%)",
