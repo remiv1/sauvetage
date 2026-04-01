@@ -1,0 +1,68 @@
+{# Modale de consultation d'un fournisseur #}
+<button type="button"
+        class="modal-overlay"
+        aria-label="Fermer la fenêtre"
+        onclick="if(event.target===this)this.remove()"
+        onKeyDown="if(event.key==='Escape'||event.key==='Enter')this.remove()">
+    <div class="modal-box modal-supplier">
+        <div class="modal-header">
+            <h3>Détail du fournisseur</h3>
+            <button class="btn-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="supplier-info">
+                <div class="info-group">
+                    <span class="info-label">Nom</span>
+                    <span class="info-value">{{ supplier.name }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Code GLN</span>
+                    <span class="info-value">{{ supplier.gln13 or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ supplier.contact_email or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Téléphone</span>
+                    <span class="info-value">{{ supplier.contact_phone or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Statut</span>
+                    <span class="info-value">
+                        {% if supplier.is_active %}
+                            <span class="badge badge-active">Actif</span>
+                        {% else %}
+                            <span class="badge badge-inactive">Inactif</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Créé le</span>
+                    <span class="info-value">
+                        {%- if supplier.created_at %}
+                            {%- set parts = supplier.created_at.split('-') %}
+                            {{ parts[2][:2] }}/{{ parts[1] }}/{{ parts[0] }}
+                        {%- else %}
+                            —
+                        {%- endif %}
+                    </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Modifié le</span>
+                    <span class="info-value">
+                        {%- if supplier.updated_at %}
+                            {%- set parts = supplier.updated_at.split('-') %}
+                            {{ parts[2][:2] }}/{{ parts[1] }}/{{ parts[0] }}
+                        {%- else %}
+                            —
+                        {%- endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Fermer</button>
+            </div>
+        </div>
+    </div>
+</button>

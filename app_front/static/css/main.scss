@@ -232,3 +232,35 @@
         display: none !important;
     }
 }
+
+.h2-header {
+    margin-bottom: variables.$space-lg;
+    display: inline;
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 1px solid variables.$gray-200;
+        border-radius: variables.$radius-xs;
+        background: #fff;
+        color: variables.$gray-600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            color: variables.$primary-color;
+            border-color: variables.$primary-color;
+            background: rgba(variables.$primary-color, 0.06);
+        }
+    }
+
+    h2 {
+        color: variables.$primary-color;
+        margin: 0;
+        display: inline;
+    }
+}

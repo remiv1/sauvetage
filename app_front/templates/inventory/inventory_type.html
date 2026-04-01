@@ -2,7 +2,15 @@
 {# Étape 1 — Choix du type d'inventaire                               #}
 {# ================================================================== #}
 <section id="step-choice" class="inventory-step">
-    <h2 class="inventory-title">Choisissez le type d'inventaire</h2>
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back"
+               title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Gestion des inventaires</h2>
+        </div>
+    </div>
     <div class="inventory-cards">
         <div class="inventory-card" data-type="complete">
             <div class="inventory-card__icon">

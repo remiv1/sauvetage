@@ -11,8 +11,15 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-
-    <h2 class="customer-container__title">Clients</h2>
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back"
+               title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2 class="customer-container__title">Gestion des clients</h2>
+        </div>
+    </div>
 
     {# ── Trois cartes de choix ─────────────────────────────────────────────── #}
     <div class="customer-cards-row">

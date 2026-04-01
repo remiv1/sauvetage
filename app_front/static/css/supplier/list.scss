@@ -1,0 +1,531 @@
+@use '../core/variables' as v;
+@use '../core/mixins' as m;
+@use 'sass:color';
+
+/* ============================================================================ */
+/* Fournisseurs — Page de gestion                                              */
+/* ============================================================================ */
+
+.supplier-container {
+  max-width: 1200px;
+  margin: v.$space-lg auto;
+  padding: 0 v.$space-lg;
+}
+
+/* ── En-tête ─────────────────────────────────────────────────────────────── */
+.supplier-header {
+  margin-bottom: v.$space-lg;
+
+  h2 {
+    color: v.$primary-color;
+    margin: 0;
+  }
+}
+
+/* ── Accordéon de filtres ────────────────────────────────────────────────── */
+.search-accordion {
+  margin-bottom: v.$space-lg;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-sm;
+  overflow: hidden;
+}
+
+.accordion-toggle {
+  display: flex;
+  align-items: center;
+  gap: v.$space-sm;
+  padding: v.$space-md v.$space-lg;
+  background: v.$gray-100;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: v.$primary-color;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+details[open] > .accordion-toggle {
+  border-bottom: 1px solid v.$gray-200;
+}
+
+#supplier-search-filters {
+  padding: v.$space-lg;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: v.$space-md;
+  margin-bottom: v.$space-lg;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-xs;
+}
+
+.filter-label {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: v.$gray-700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.filter-control {
+  @include m.input-base;
+}
+
+.filters-actions {
+  display: flex;
+  gap: v.$space-sm;
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: v.$space-xs;
+  padding: v.$space-sm v.$space-md;
+  border: none;
+  border-radius: v.$radius-xs;
+  font-family: v.$font-primary;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, opacity 0.2s;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.btn-primary {
+  background: v.$primary-color;
+  color: #fff;
+
+  &:hover {
+    background: color.adjust(v.$primary-color, $lightness: -10%);
+  }
+}
+
+.btn-secondary {
+  background: v.$gray-200;
+  color: v.$text-dark;
+
+  &:hover {
+    background: v.$gray-300;
+  }
+}
+
+.btn-danger {
+  background: v.$color-danger;
+  color: #fff;
+
+  &:hover {
+    background: color.adjust(v.$color-danger, $lightness: -10%);
+  }
+}
+
+.btn-sm {
+  font-size: 0.82rem;
+  padding: v.$space-xs (v.$space-sm * 0.5);
+}
+
+/* ── Résumé et chargement ────────────────────────────────────────────────── */
+.table-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: v.$space-sm 0;
+  font-size: 0.88rem;
+  color: v.$gray-600;
+  border-bottom: 1px solid v.$gray-200;
+  margin-bottom: v.$space-sm;
+}
+
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  padding: 4rem;
+  color: v.$gray-500;
+}
+
+/* ── Bouton ajouter fournisseur ──────────────────────────────────────────── */
+.supplier-actions {
+  display: flex;
+  gap: v.$space-md;
+  margin-bottom: v.$space-lg;
+  align-items: center;
+}
+
+/* ── Tableau fournisseurs ────────────────────────────────────────────────── */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.supplier-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-xs;
+  overflow: hidden;
+
+  th,
+  td {
+    padding: v.$space-sm v.$space-md;
+    font-size: 0.88rem;
+  }
+
+  th {
+    background: v.$primary-color;
+    color: white;
+    text-align: left;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  td {
+    border-top: 1px solid v.$gray-200;
+  }
+
+  tbody {
+    tr {
+      transition: background 0.15s;
+
+      &:nth-child(even) {
+        background: v.$gray-100;
+      }
+
+      &:hover {
+        background: color.adjust(v.$gray-200, $lightness: -3%);
+      }
+    }
+  }
+
+  .text-center {
+    text-align: center;
+  }
+
+  .cell-name {
+    font-weight: 500;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cell-gln {
+    font-family: monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+  }
+}
+
+/* ── Badges statut ───────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-active {
+  background: color.adjust(v.$color-success, $lightness: 35%);
+  color: v.$success-color;
+}
+
+.badge-inactive {
+  background: v.$gray-200;
+  color: v.$gray-600;
+}
+
+/* ── Points de contact (email / téléphone) ───────────────────────────────── */
+.contact-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.dot-green {
+  background: v.$color-success;
+  box-shadow: 0 0 0 2px rgba(v.$color-success, 0.25);
+}
+
+.dot-red {
+  background: v.$color-danger;
+  box-shadow: 0 0 0 2px rgba(v.$color-danger, 0.25);
+}
+
+/* ── Icônes d'action ─────────────────────────────────────────────────────── */
+.actions-cell {
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+
+  .action-icon + .action-icon {
+    margin-left: v.$space-xs;
+  }
+}
+
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: v.$radius-xs;
+  border: 1px solid v.$gray-200;
+  background: #fff;
+  color: v.$gray-600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    color: v.$primary-color;
+    border-color: v.$primary-color;
+    background: color.adjust(v.$primary-color, $lightness: 45%);
+  }
+
+  &.action-toggle:hover {
+    color: v.$color-warning;
+    border-color: v.$color-warning;
+    background: color.adjust(v.$color-warning, $lightness: 40%);
+  }
+}
+
+/* ── État vide ───────────────────────────────────────────────────────────── */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: v.$space-md;
+  padding: 4rem v.$space-md;
+  color: v.$gray-500;
+  text-align: center;
+
+  svg {
+    opacity: 0.4;
+    width: 48px;
+    height: 48px;
+  }
+
+  p {
+    font-size: 1.05rem;
+  }
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: v.$space-sm;
+  padding: v.$space-lg 0;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.page-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 v.$space-xs;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-xs;
+  background: #fff;
+  color: v.$gray-700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: v.$font-primary;
+
+  &:hover {
+    background: color.adjust(v.$primary-color, $lightness: 45%);
+    border-color: v.$primary-color;
+    color: v.$primary-color;
+  }
+
+  &.current {
+    background: v.$primary-color;
+    color: #fff;
+    border-color: v.$primary-color;
+    cursor: default;
+  }
+}
+
+.page-ellipsis {
+  padding: 0 v.$space-xs;
+  color: v.$gray-400;
+}
+
+/* ── Modale fournisseur ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: v.$radius-sm;
+  box-shadow: v.$shadow-hard;
+  width: 90%;
+  overflow: hidden;
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: v.$space-md v.$space-lg;
+    border-bottom: 1px solid v.$gray-200;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: v.$primary-color;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: v.$gray-500;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.2s;
+
+      &:hover {
+        color: v.$text-dark;
+      }
+    }
+  }
+
+  .modal-body {
+    padding: v.$space-lg;
+  }
+}
+
+.modal-supplier {
+  max-width: 540px;
+}
+
+.modal-confirm {
+  .text-warning {
+    color: v.$color-warning;
+    font-size: 0.95rem;
+    margin-bottom: v.$space-sm;
+  }
+
+  .text-info {
+    color: v.$color-info;
+    font-size: 0.95rem;
+    margin-bottom: v.$space-sm;
+  }
+
+  .text-muted {
+    color: v.$gray-500;
+    font-size: 0.88rem;
+  }
+}
+
+/* ── Informations fournisseur (modale vue) ───────────────────────────────── */
+.supplier-info {
+  margin-bottom: 1.5rem;
+  padding: v.$space-md;
+  background: v.$gray-100;
+  border-radius: v.$radius-xs;
+  border-left: 4px solid v.$primary-color;
+
+  .info-group {
+    display: flex;
+    gap: v.$space-sm;
+    align-items: center;
+    margin-bottom: v.$space-xs;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .info-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: v.$gray-500;
+    min-width: 100px;
+  }
+
+  .info-value {
+    font-size: 0.92rem;
+    color: v.$text-dark;
+  }
+}
+
+/* ── Formulaires dans modale ─────────────────────────────────────────────── */
+.modal-box {
+  .form-group {
+    margin-bottom: v.$space-md;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: v.$space-xs;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: v.$gray-700;
+  }
+
+  .form-control {
+    @include m.input-base;
+  }
+}
+
+.form-error {
+  color: v.$color-danger;
+  font-size: 0.82rem;
+  margin: v.$space-xs 0 0;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: v.$space-sm;
+  justify-content: flex-end;
+  padding-top: v.$space-md;
+}

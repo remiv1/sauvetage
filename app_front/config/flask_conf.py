@@ -25,6 +25,7 @@ from app_front.blueprints import (
     bp_stock_htmx_search,
     bp_supplier,
     bp_supplier_htmx,
+    bp_supplier_htmx_list,
     bp_admin,
     bp_user,
 )
@@ -53,6 +54,7 @@ BLUEPRINTS: List[Blueprint] = [
     bp_stock_htmx_search,
     bp_supplier,
     bp_supplier_htmx,
+    bp_supplier_htmx_list,
     bp_admin,
     bp_user,
 ]

@@ -1,0 +1,32 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de gestion des fournisseurs                         ---
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Fournisseurs"
+styles = [
+    "css/main.css",
+    "css/supplier/list.css"
+]
+scripts = ["js/main.js"]
+# Clées
+[meta]
+title = "Fournisseurs | Intranet"
+description = "Page de gestion des fournisseurs de l'intranet Sauvetage"
+keywords = "fournisseurs, gestion, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="main"
+# Pages spécifiques
+[layout]
+main_layout = "supplier/list.html"
+extend_layout = "index.html"
+# Flags pour afficher ou non les éléments sur les commons
+[flags]
+navbar = true
+searchbar = false
+htmx = true
+userbar = true

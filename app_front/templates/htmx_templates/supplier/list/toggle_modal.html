@@ -1,0 +1,40 @@
+{# Modale de confirmation d'activation / désactivation d'un fournisseur #}
+<button type="button"
+        class="modal-overlay"
+        aria-label="Fermer le modal"
+        onclick="if(event.target===this)this.remove()"
+        onKeyDown="if(event.key==='Escape'||event.key==='Enter')this.remove()">
+    <div class="modal-box modal-supplier modal-confirm">
+        <div class="modal-header">
+            <h3>{{ 'Désactiver' if supplier.is_active else 'Activer' }} le fournisseur</h3>
+            <button class="btn-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+            {% if supplier.is_active %}
+                <p class="text-warning">
+                    Êtes-vous sûr de vouloir désactiver le fournisseur
+                    <strong>{{ supplier.name }}</strong> ?
+                </p>
+                <p class="text-muted">
+                    Le fournisseur ne sera plus visible dans les sélections de commandes et d'inventaire.
+                </p>
+            {% else %}
+                <p class="text-info">
+                    Êtes-vous sûr de vouloir réactiver le fournisseur
+                    <strong>{{ supplier.name }}</strong> ?
+                </p>
+            {% endif %}
+
+            <div class="modal-buttons">
+                <button type="button" class="btn btn-secondary"
+                        onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+                <button class="btn {{ 'btn-danger' if supplier.is_active else 'btn-primary' }}"
+                        hx-post="{{ url_for('supplier_htmx_list.supplier_toggle_submit', supplier_id=supplier.id) }}"
+                        hx-target="#supplier-modal-container"
+                        hx-swap="innerHTML">
+                    {{ 'Désactiver' if supplier.is_active else 'Activer' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</button>
