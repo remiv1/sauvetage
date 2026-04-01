@@ -18,6 +18,7 @@ stock_search = "stock/search.toml"
 stock_order = "stock/order.toml"
 stock_reservations = "stock/reservations.toml"
 stock_council = "stock/council.toml"
+supplier = "supplier.toml"
 
 # ------------------------------------------------------------------------------
 # --- Configuration par défaut si la page n'est pas trouvée

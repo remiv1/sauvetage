@@ -1,0 +1,134 @@
+{# Fragment HTMX — Tableau des fournisseurs paginé #}
+
+{% set total_pages = (total / per_page) | round(0, 'ceil') | int %}
+{% set total_pages = total_pages if total_pages > 0 else 1 %}
+
+{# ── Résumé ─────────────────────────────────────────────────────────────── #}
+<div class="table-summary">
+    <span>{{ total }} fournisseur{{ 's' if total > 1 else '' }} trouvé{{ 's' if total > 1 else '' }}</span>
+    <span class="page-info">Page {{ page }} / {{ total_pages }}</span>
+</div>
+
+{# ── Tableau ────────────────────────────────────────────────────────────── #}
+{% if items %}
+<div class="table-responsive">
+    <table class="supplier-table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Code GLN</th>
+                <th class="text-center">Email</th>
+                <th class="text-center">Téléphone</th>
+                <th class="text-center">Statut</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="cell-name">{{ item.name }}</td>
+                <td class="cell-gln">{{ item.gln13 or '—' }}</td>
+                <td class="text-center">
+                    {% if item.contact_email %}
+                        <span class="contact-dot dot-green" title="Email renseigné"></span>
+                    {% else %}
+                        <span class="contact-dot dot-red" title="Email manquant"></span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if item.contact_phone %}
+                        <span class="contact-dot dot-green" title="Téléphone renseigné"></span>
+                    {% else %}
+                        <span class="contact-dot dot-red" title="Téléphone manquant"></span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if item.is_active %}
+                        <span class="badge badge-active">Actif</span>
+                    {% else %}
+                        <span class="badge badge-inactive">Inactif</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-cell">
+                        {# Bouton Voir #}
+                        <button class="action-icon action-view"
+                                title="Voir le détail"
+                                hx-get="{{ url_for('supplier_htmx_list.supplier_view', supplier_id=item.id) }}"
+                                hx-target="#supplier-modal-container"
+                                hx-swap="innerHTML">
+                            {% include "svg/eye.html" %}
+                        </button>
+                        {# Bouton Modifier #}
+                        <button class="action-icon action-edit"
+                                title="Modifier le fournisseur"
+                                hx-get="{{ url_for('supplier_htmx_list.supplier_edit_form', supplier_id=item.id) }}"
+                                hx-target="#supplier-modal-container"
+                                hx-swap="innerHTML">
+                            {% include "svg/edit.html" %}
+                        </button>
+                        {# Bouton Activer / Désactiver #}
+                        <button class="action-icon action-toggle"
+                                title="{{ 'Désactiver' if item.is_active else 'Activer' }} le fournisseur"
+                                hx-get="{{ url_for('supplier_htmx_list.supplier_toggle_modal', supplier_id=item.id) }}"
+                                hx-target="#supplier-modal-container"
+                                hx-swap="innerHTML">
+                            {% include "svg/toggle-io.html" %}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ── Pagination ─────────────────────────────────────────────────────────── #}
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('supplier_htmx_list.supplier_table', page=page - 1) }}"
+            hx-target="#supplier-table-wrapper"
+            hx-swap="innerHTML"
+            hx-include="#supplier-search-filters">
+        &laquo; Précédent
+    </button>
+    {% endif %}
+
+    <span class="page-numbers">
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <span class="page-num current">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+                <button class="page-num"
+                        hx-get="{{ url_for('supplier_htmx_list.supplier_table', page=p) }}"
+                        hx-target="#supplier-table-wrapper"
+                        hx-swap="innerHTML"
+                        hx-include="#supplier-search-filters">
+                    {{ p }}
+                </button>
+            {% elif p == 4 or p == total_pages - 3 %}
+                <span class="page-ellipsis">…</span>
+            {% endif %}
+        {% endfor %}
+    </span>
+
+    {% if page < total_pages %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('supplier_htmx_list.supplier_table', page=page + 1) }}"
+            hx-target="#supplier-table-wrapper"
+            hx-swap="innerHTML"
+            hx-include="#supplier-search-filters">
+        Suivant &raquo;
+    </button>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="no-results">
+    {% include "svg/box.html" %}
+    <p>Aucun fournisseur trouvé.</p>
+</div>
+{% endif %}

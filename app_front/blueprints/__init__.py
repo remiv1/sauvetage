@@ -18,4 +18,5 @@ from .stock.routes_htmx_return import bp_stock_htmx_return  # type: ignore
 from .stock.routes_htmx_search import bp_stock_htmx_search  # type: ignore
 from .supplier.routes import bp_supplier  # type: ignore
 from .supplier.routes_htmx import bp_supplier_htmx  # type: ignore
+from .supplier.routes_htmx_list import bp_supplier_htmx_list  # type: ignore
 from .user.routes import bp_user  # type: ignore

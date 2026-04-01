@@ -2,9 +2,16 @@
 
 {% block content %}
 <div class="home-container">
-    <div class="home-header">
-        <h2>Gestion des stocks</h2>
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back"
+               title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Gestion des stocks</h2>
+        </div>
     </div>
+
 
     <div class="cards-grid">
         <!-- Conciliation — affichée uniquement s'il y a des articles à prix zéro -->

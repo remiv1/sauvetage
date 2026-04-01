@@ -1,0 +1,107 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="supplier-container">
+
+    {# ── En-tête ────────────────────────────────────────────────────────────── #}
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back"
+               title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Gestion des fournisseurs</h2>
+        </div>
+    </div>
+
+    {# ── Accordéon de recherche ─────────────────────────────────────────────── #}
+    <details class="search-accordion">
+        <summary class="accordion-toggle" title="Afficher/Masquer les filtres de recherche">
+            {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+            Filtres de recherche
+        </summary>
+
+        <form id="supplier-search-filters"
+              hx-get="{{ url_for('supplier_htmx_list.supplier_table') }}"
+              hx-target="#supplier-table-wrapper"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              hx-include="#supplier-search-filters">
+
+            <div class="filters-grid">
+                {# Nom #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-name">Nom</label>
+                    <input type="text" id="filter-name" name="name"
+                           class="filter-control" placeholder="Nom du fournisseur…"
+                           autocomplete="off">
+                </div>
+
+                {# GLN13 #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-gln13">Code GLN</label>
+                    <input type="text" id="filter-gln13" name="gln13"
+                           class="filter-control" placeholder="Code GLN…"
+                           autocomplete="off">
+                </div>
+
+                {# Statut actif #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-active">Statut</label>
+                    <select id="filter-active" name="is_active" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="true" selected>Actif</option>
+                        <option value="false">Inactif</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-reset-filters">
+                    Réinitialiser
+                </button>
+            </div>
+        </form>
+    </details>
+
+    {# ── Bouton ajouter fournisseur ─────────────────────────────────────── #}
+    <div class="supplier-actions">
+        <button class="btn btn-primary"
+                hx-get="{{ url_for('supplier_htmx_list.supplier_create_form') }}"
+                hx-target="#supplier-modal-container"
+                hx-swap="innerHTML">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Ajouter un fournisseur
+        </button>
+    </div>
+
+    {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}
+    <div id="supplier-table-wrapper"
+         hx-get="{{ url_for('supplier_htmx_list.supplier_table') }}"
+         hx-trigger="load, refreshSupplierTable from:body"
+         hx-swap="innerHTML">
+        <div class="loading-indicator">
+            <p>Chargement des fournisseurs…</p>
+        </div>
+    </div>
+
+    {# ── Conteneur modale ───────────────────────────────────────────────── #}
+    <div id="supplier-modal-container"></div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var resetBtn = document.getElementById('btn-reset-filters');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            var form = document.getElementById('supplier-search-filters');
+            form.reset();
+            htmx.trigger(form, 'submit');
+        });
+    }
+});
+</script>
+{% endblock %}
