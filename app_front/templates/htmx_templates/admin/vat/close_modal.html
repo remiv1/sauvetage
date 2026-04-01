@@ -1,0 +1,26 @@
+{# Modale de confirmation de clôture d'un taux de TVA #}
+<div class="modal-overlay"
+     onclick="if(event.target===this)this.remove()"
+     onkeydown="if(event.key==='Escape')this.remove()">
+    <div class="modal-box modal-confirm">
+        <div class="modal-header">
+            <h3>Clôturer le taux de TVA</h3>
+            <button class="btn-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Voulez-vous clôturer le taux <strong>{{ vat.label }} ({{ "%.2f"|format(vat.rate) }} %)</strong> ?</p>
+            <p class="text-muted">La date de fin sera définie à maintenant. Cette action est réversible via modification.</p>
+            <div class="modal-buttons">
+                <button type="button" class="btn btn-secondary"
+                        onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+                <button class="btn btn-danger"
+                        hx-post="{{ url_for('admin_vat.vat_close', vat_id=vat.id) }}"
+                        hx-target="closest .modal-overlay"
+                        hx-swap="outerHTML"
+                        hx-on::after-request="this.closest('.modal-overlay') && this.closest('.modal-overlay').remove()">
+                    Clôturer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

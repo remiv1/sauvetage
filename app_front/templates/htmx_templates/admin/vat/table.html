@@ -1,0 +1,87 @@
+{# Fragment HTMX — Tableau des taux de TVA paginé #}
+
+{% set total_pages = (total / per_page) | round(0, 'ceil') | int %}
+{% set total_pages = total_pages if total_pages > 0 else 1 %}
+
+<div class="table-summary">
+    <span>{{ total }} taux trouvé{{ 's' if total > 1 else '' }}</span>
+    <span class="page-info">Page {{ page }} / {{ total_pages }}</span>
+</div>
+
+{% if items %}
+<div class="table-responsive">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Libellé</th>
+                <th class="text-center">Taux (%)</th>
+                <th class="text-center">Début</th>
+                <th class="text-center">Fin</th>
+                <th class="text-center">Statut</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="cell-code"><span class="badge badge-code">{{ item.code }}</span></td>
+                <td>{{ item.label }}</td>
+                <td class="text-center">{{ "%.2f"|format(item.rate) }} %</td>
+                <td class="text-center">{{ item.date_start }}</td>
+                <td class="text-center">{{ item.date_end or '—' }}</td>
+                <td class="text-center">
+                    {% if item.is_active %}
+                        <span class="badge badge-active">En vigueur</span>
+                    {% else %}
+                        <span class="badge badge-inactive">Clôturé</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-cell">
+                        <button class="action-icon action-edit" title="Modifier"
+                                hx-get="{{ url_for('admin_vat.vat_edit_form', vat_id=item.id) }}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            {% include "svg/edit.html" %}
+                        </button>
+                        {% if item.is_active %}
+                        <button class="action-icon action-toggle" title="Clôturer"
+                                hx-get="{{ url_for('admin_vat.vat_close_form', vat_id=item.id) }}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            {% include "svg/toggle-io.html" %}
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Pagination #}
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('admin_vat.vat_table') }}?page={{ page - 1 }}"
+            hx-target="#vat-table-wrapper" hx-swap="innerHTML"
+            hx-include="#vat-search-filters">← Précédent</button>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('admin_vat.vat_table') }}?page={{ page + 1 }}"
+            hx-target="#vat-table-wrapper" hx-swap="innerHTML"
+            hx-include="#vat-search-filters">Suivant →</button>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>Aucun taux de TVA trouvé.</p>
+</div>
+{% endif %}

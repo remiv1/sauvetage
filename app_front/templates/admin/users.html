@@ -1,0 +1,99 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('admin.index') }}" class="btn btn-back" title="Retour à l'administration">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Gestion des utilisateurs</h2>
+        </div>
+    </div>
+
+    {# Filtres #}
+    <details class="search-accordion">
+        <summary class="accordion-toggle">
+            {% with class="icone-24" %}{% include "svg/filter.html" %}{% endwith %}
+            Filtres
+        </summary>
+        <form id="users-search-filters"
+              hx-get="{{ url_for('admin_users.users_table') }}"
+              hx-target="#users-table-wrapper"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              hx-include="#users-search-filters">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-u-username">Identifiant</label>
+                    <input type="text" id="filter-u-username" name="username"
+                           class="filter-control" placeholder="Rechercher…" autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-u-email">Email</label>
+                    <input type="text" id="filter-u-email" name="email"
+                           class="filter-control" placeholder="Email…" autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-u-permissions">Permission</label>
+                    <select id="filter-u-permissions" name="permissions" class="filter-control">
+                        <option value="">Toutes</option>
+                        <option value="1">Admin</option>
+                        <option value="2">Comptable</option>
+                        <option value="3">Commercial</option>
+                        <option value="4">Logistique</option>
+                        <option value="5">Support</option>
+                        <option value="6">Informatique</option>
+                        <option value="7">RH</option>
+                        <option value="8">Direction</option>
+                        <option value="9">Super Admin</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-u-active">Actif</label>
+                    <select id="filter-u-active" name="is_active" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="true" selected>Actif</option>
+                        <option value="false">Inactif</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-u-locked">Verrouillé</label>
+                    <select id="filter-u-locked" name="is_locked" class="filter-control">
+                        <option value="">Tous</option>
+                        <option value="false" selected>Non verrouillé</option>
+                        <option value="true">Verrouillé</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                </button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('users-search-filters').reset(); htmx.trigger('#users-table-wrapper', 'refreshUsersTable');">
+                    Réinitialiser
+                </button>
+            </div>
+        </form>
+    </details>
+
+    {# Actions #}
+    <div class="section-actions">
+        <button class="btn btn-primary"
+                hx-get="{{ url_for('admin_users.users_create_form') }}"
+                hx-target="body"
+                hx-swap="beforeend">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer un utilisateur
+        </button>
+    </div>
+
+    {# Tableau #}
+    <div id="users-table-wrapper"
+         hx-get="{{ url_for('admin_users.users_table') }}"
+         hx-trigger="load, user:created from:body, user:updated from:body, refreshUsersTable"
+         hx-swap="innerHTML">
+        <div class="loading-indicator"><p>Chargement…</p></div>
+    </div>
+</div>
+{% endblock %}

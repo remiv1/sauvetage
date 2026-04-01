@@ -1,0 +1,32 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page administration — Logs / Dashboard                  ---
+# ------------------------------------------------------------------------------
+[params]
+tab = "Admin — Logs"
+styles = [
+    "css/main.css",
+    "css/admin/admin.css"
+]
+scripts = ["js/main.js"]
+
+[meta]
+title = "Administration — Logs | Intranet"
+description = "Dashboard des opérations et journal des logs"
+keywords = "administration, logs, dashboard, opérations"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+
+[meta.accessibility]
+lang = "fr"
+direction = "ltr"
+aria_role = "main"
+
+[layout]
+main_layout = "admin/logs.html"
+extend_layout = "index.html"
+
+[flags]
+navbar = true
+searchbar = false
+htmx = true
+userbar = true

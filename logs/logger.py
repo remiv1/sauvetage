@@ -76,6 +76,7 @@ class MongoDBLogger:
         resource_id: Optional[str] = None,
         obj_metadata: Optional[Dict[str, Any]] = None,
         ip_address: Optional[str] = None,
+        status_code: Optional[int] = None,
     ) -> str:
         """Enregistrer un log dans MongoDB"""
 
@@ -95,6 +96,7 @@ class MongoDBLogger:
             "action": action,
             "resource_type": resource_type,
             "resource_id": resource_id,
+            "status_code": status_code,
             "obj_metadata": obj_metadata or {},
             "ip_address": ip_address,
         }

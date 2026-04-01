@@ -1,0 +1,48 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back" title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Administration</h2>
+        </div>
+    </div>
+
+    <div class="cards-grid">
+        {% set perms = session.get('permissions', '') %}
+
+        {% if '1' in perms or '9' in perms %}
+        <a href="{{ url_for('admin.vat') }}" class="card card-admin">
+            <div class="card-icon">
+                {% include "svg/tag.html" %}
+            </div>
+            <h2>Taux de TVA</h2>
+            <p>Gestion des taux et des codes TVA</p>
+        </a>
+        {% endif %}
+
+        {% if '9' in perms %}
+        <a href="{{ url_for('admin.users') }}" class="card card-admin">
+            <div class="card-icon">
+                {% include "svg/user.html" %}
+            </div>
+            <h2>Utilisateurs</h2>
+            <p>Comptes, permissions, accès</p>
+        </a>
+        {% endif %}
+
+        {% if '1' in perms or '9' in perms %}
+        <a href="{{ url_for('admin.logs') }}" class="card card-admin">
+            <div class="card-icon">
+                {% include "svg/chart.html" %}
+            </div>
+            <h2>Journal des opérations</h2>
+            <p>Logs et statistiques d'activité</p>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{# ── Statistiques logs — fragment HTMX ─────────────────────────── #}
+<div class="logs-stats-grid">
+    {% set level_colors = {
+        'DEBUG':    'info',
+        'INFO':     'success',
+        'WARNING':  'warning',
+        'ERROR':    'danger',
+        'CRITICAL': 'danger'
+    } %}
+
+    {% for log_type in log_types %}
+    {% set type_data = stats.get(log_type, {}) %}
+    {% set total = stats.get(log_type ~ '_total', 0) %}
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-title">{{ log_type | capitalize }}</span>
+            <span class="stat-badge stat-badge-total">{{ total }}</span>
+        </div>
+        <div class="stat-card-body">
+            {% for level, count in type_data.items() %}
+            {% if count > 0 %}
+            <span class="stat-level-badge stat-level-{{ level_colors.get(level, 'info') }}">
+                {{ level }} : {{ count }}
+            </span>
+            {% endif %}
+            {% else %}
+            <span class="text-muted">Aucune donnée</span>
+            {% endfor %}
+        </div>
+        <div class="stat-card-footer">
+            <button class="btn btn-link btn-sm"
+                    hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&year={{ year }}"
+                    hx-target="#logs-table-wrapper"
+                    hx-swap="innerHTML"
+                    onclick="document.getElementById('logs-table-section').setAttribute('open','')">
+                Voir le détail →
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>

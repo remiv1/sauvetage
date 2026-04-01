@@ -1,0 +1,96 @@
+{# ── Tableau détail des logs — fragment HTMX ─────────────────────────── #}
+{% set level_classes = {
+    'DEBUG':    'badge-info',
+    'INFO':     'badge-success',
+    'WARNING':  'badge-warning',
+    'ERROR':    'badge-danger',
+    'CRITICAL': 'badge-danger'
+} %}
+
+{% macro status_badge(code) %}
+{% if code %}
+{% set code_int = code | int %}
+{% if code_int < 300 %}
+<span class="log-status-badge log-status-2xx">{{ code }}</span>
+{% elif code_int < 400 %}
+<span class="log-status-badge log-status-3xx">{{ code }}</span>
+{% elif code_int < 500 %}
+<span class="log-status-badge log-status-4xx">{{ code }}</span>
+{% else %}
+<span class="log-status-badge log-status-5xx">{{ code }}</span>
+{% endif %}
+{% else %}—{% endif %}
+{% endmacro %}
+
+<div class="admin-table-wrapper">
+    <div class="log-table-meta text-muted">
+        <small>{{ total }} entrée{{ 's' if total != 1 else '' }} — page {{ page }} / {{ ((total - 1) // per_page + 1) if total > 0 else 1 }}</small>
+    </div>
+
+    {% if items %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Date / Heure</th>
+                <th>Niveau</th>
+                <th>Méthode</th>
+                <th>Route</th>
+                <th>Statut</th>
+                <th>Utilisateur</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in items %}
+            <tr>
+                <td class="log-td-date">
+                    <span class="badge-code">
+                        {{ entry.get('timestamp', '') | string | truncate(19, True, '') }}
+                    </span>
+                </td>
+                <td>
+                    <span class="log-level-badge {{ level_classes.get(entry.get('level', ''), 'badge-info') }}">
+                        {{ entry.get('level', '—') }}
+                    </span>
+                </td>
+                <td>
+                    {% set m = entry.get('action', '') %}
+                    {% if m %}
+                    <span class="log-method-badge log-method-{{ m | lower }}">{{ m }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td class="log-td-message" title="{{ entry.get('message', '') }}">
+                    {{ entry.get('message', '') | truncate(60) }}
+                </td>
+                <td>{{ status_badge(entry.get('status_code')) }}</td>
+                <td>{{ entry.get('user_id', '—') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {# Pagination #}
+    {% set total_pages = ((total - 1) // per_page + 1) if total > 0 else 1 %}
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <button class="btn btn-sm btn-secondary"
+                hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&level={{ selected_level }}&method={{ selected_method }}&status={{ selected_status }}&page={{ page - 1 }}"
+                hx-target="#logs-table-wrapper"
+                hx-swap="innerHTML">← Précédent</button>
+        {% endif %}
+        <span class="pagination-info text-muted">{{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}
+        <button class="btn btn-sm btn-secondary"
+                hx-get="{{ url_for('admin_logs.logs_table') }}?log_type={{ log_type }}&level={{ selected_level }}&method={{ selected_method }}&status={{ selected_status }}&page={{ page + 1 }}"
+                hx-target="#logs-table-wrapper"
+                hx-swap="innerHTML">Suivant →</button>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <p>Aucun enregistrement trouvé pour ces critères.</p>
+    </div>
+    {% endif %}
+</div>

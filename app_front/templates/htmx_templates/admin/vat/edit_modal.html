@@ -1,0 +1,56 @@
+{# Modale d'édition d'un taux de TVA #}
+<div id="modal-vat-edit-{{ vat.id }}" class="modal-overlay"
+     onclick="if(event.target===this)this.remove()"
+     onkeydown="if(event.key==='Escape')this.remove()">
+    <div class="modal-box modal-md">
+        <div class="modal-header">
+            <h3>Modifier le taux de TVA — {{ vat.label }}</h3>
+            <button class="btn-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form hx-post="{{ url_for('admin_vat.vat_edit_submit', vat_id=vat.id) }}"
+                  hx-target="closest .modal-overlay"
+                  hx-swap="outerHTML">
+                {{ form.hidden_tag() }}
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Code TVA *</label>
+                        {{ form.code(class="form-control") }}
+                        {% for e in form.code.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taux (%) *</label>
+                        {{ form.rate(class="form-control", step="0.01") }}
+                        {% for e in form.rate.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Libellé *</label>
+                    {{ form.label(class="form-control") }}
+                    {% for e in form.label.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Date de début *</label>
+                        {{ form.date_start(class="form-control") }}
+                        {% for e in form.date_start.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de fin <small>(vide = en vigueur)</small></label>
+                        {{ form.date_end(class="form-control") }}
+                        {% for e in form.date_end.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary"
+                            onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

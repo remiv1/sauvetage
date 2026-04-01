@@ -1,0 +1,111 @@
+{# Fragment HTMX — Tableau des utilisateurs paginé #}
+
+{% set total_pages = (total / per_page) | round(0, 'ceil') | int %}
+{% set total_pages = total_pages if total_pages > 0 else 1 %}
+
+<div class="table-summary">
+    <span>{{ total }} utilisateur{{ 's' if total > 1 else '' }} trouvé{{ 's' if total > 1 else '' }}</span>
+    <span class="page-info">Page {{ page }} / {{ total_pages }}</span>
+</div>
+
+{% if items %}
+<div class="table-responsive">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Identifiant</th>
+                <th>Email</th>
+                <th>Permissions</th>
+                <th class="text-center">Actif</th>
+                <th class="text-center">Verrouillé</th>
+                <th class="text-center">Échecs</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="cell-name">{{ item.username }}</td>
+                <td>{{ item.email }}</td>
+                <td>
+                    <div class="permissions-badges">
+                        {% for char in (item.permissions or '') %}
+                            {% if char in permission_labels %}
+                            <span class="badge badge-perm" title="{{ permission_labels[char] }}">{{ permission_labels[char] }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </td>
+                <td class="text-center">
+                    {% if item.is_active %}
+                        <span class="badge badge-active">Actif</span>
+                    {% else %}
+                        <span class="badge badge-inactive">Inactif</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if item.is_locked %}
+                        <span class="badge badge-locked">Verrouillé</span>
+                    {% else %}
+                        <span class="badge badge-ok">Libre</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <span class="{{ 'text-danger' if item.nb_failed_logins > 0 else '' }}">
+                        {{ item.nb_failed_logins }}
+                    </span>
+                </td>
+                <td>
+                    <div class="actions-cell">
+                        <button class="action-icon action-edit" title="Modifier les permissions"
+                                hx-get="{{ url_for('admin_users.users_edit_form', username=item.username) }}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            {% include "svg/edit.html" %}
+                        </button>
+                        <button class="action-icon action-toggle"
+                                title="{{ 'Déverrouiller' if item.is_locked else 'Verrouiller' }}"
+                                hx-get="{{ url_for('admin_users.users_toggle_modal', username=item.username, action='lock') }}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            {% include "svg/toggle-io.html" %}
+                        </button>
+                        <button class="action-icon {{ 'action-deactivate' if item.is_active else 'action-activate' }}"
+                                title="{{ 'Désactiver' if item.is_active else 'Activer' }}"
+                                hx-get="{{ url_for('admin_users.users_toggle_modal', username=item.username, action='active') }}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            {% include "svg/eye.html" %}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Pagination #}
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('admin_users.users_table') }}?page={{ page - 1 }}"
+            hx-target="#users-table-wrapper" hx-swap="innerHTML"
+            hx-include="#users-search-filters">← Précédent</button>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('admin_users.users_table') }}?page={{ page + 1 }}"
+            hx-target="#users-table-wrapper" hx-swap="innerHTML"
+            hx-include="#users-search-filters">Suivant →</button>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>Aucun utilisateur trouvé.</p>
+</div>
+{% endif %}
