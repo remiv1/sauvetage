@@ -190,6 +190,9 @@ def edit_order_in_line_db(
             unit_price=order.pu,
             vat_rate=order.vat_rate,
             )
+        # Si on est en édition, s'assurer que l'ID de la ligne est renseigné
+        if action == "edit":
+            line.id = line_id
         line_id = stock_repo.edit_order_in_line_db(
             new_line=line, action=action, reservation=reservation
         )

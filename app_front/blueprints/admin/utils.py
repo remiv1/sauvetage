@@ -140,6 +140,9 @@ def close_vat_rate(vat_id: int) -> bool:
         rate.date_end = datetime.now(timezone.utc)
         session.commit()
         return True
+    except Exception as exc:
+        session.rollback()
+        raise ValueError(str(exc)) from exc
     finally:
         session.close()
 

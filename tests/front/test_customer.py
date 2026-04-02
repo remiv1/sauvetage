@@ -5,7 +5,7 @@ import pytest   # pylint: disable=unused-import
 
 HOME_PAGE = "<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n"
 REDIRECTION = "<!doctype html>\n<html lang=en>\n<title>Redirecting...</"
-FORBIDEN = "<!doctype html>\n<html lang=en>\n<title>403 Forbidden"
+FORBIDEN = "<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">"
 
 # +------------------------------------------------------------------------------------------------+
 # |                                    Tests pour les routes classiques                            |

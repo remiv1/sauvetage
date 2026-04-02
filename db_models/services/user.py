@@ -70,7 +70,11 @@ class UserService:
             Users: L'utilisateur désactivé.
         """
         user.is_active = False
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return user
 
     def activate_user(self, user: Users) -> Users:
@@ -82,7 +86,11 @@ class UserService:
             Users: L'utilisateur activé.
         """
         user.is_active = True
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return user
 
     def update_permissions(self, user: Users, permissions: str) -> Users:
@@ -97,7 +105,11 @@ class UserService:
             Users: L'utilisateur avec les permissions mises à jour.
         """
         user.permissions = permissions
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return user
 
     def get_by_username(self, username: str) -> Users | None:

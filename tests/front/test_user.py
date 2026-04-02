@@ -9,7 +9,7 @@ from tests.fixtures.f_users import TEST_PASSWORD  # pylint: disable=unused-impor
 
 REDIRECTION = "<!doctype html>\n<html lang=en>\n<title>Redirecting...</"
 HOME_PAGE = "<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n"
-FORBIDEN = "<!doctype html>\n<html lang=en>\n<title>403 Forbidden"
+FORBIDEN = HOME_PAGE
 
 
 def test_login(client, make_user, fastapi_test_client, patch_requests_to_fastapi):    # pylint: disable=unused-argument

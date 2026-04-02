@@ -5,6 +5,7 @@ from typing import Any, Dict, Annotated, Optional
 from fastapi import APIRouter, Request, Depends, Query, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from app_back.db_connection import config
 from db_models.objects import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
@@ -114,7 +115,7 @@ async def create_user(request: Request):
         session.add(new_password)
         session.commit()
     # Rollback en cas d'erreur (ex: violation de contrainte) et retour d'une erreur claire
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError, SQLAlchemyError) as e:
         session.rollback()
         return {
             "valid": False,
@@ -178,13 +179,13 @@ async def modify_user(username: str, request: Request):
 @router.get("/list")
 def list_users(
     _admin: Annotated[bool, Depends(verify_admin_access)],
-    username: Annotated[Optional[str], Query(default=None)] = None,
-    email: Annotated[Optional[str], Query(default=None)] = None,
-    permissions: Annotated[Optional[str], Query(default=None)] = None,
-    is_active: Annotated[Optional[bool], Query(default=None)] = None,
-    is_locked: Annotated[Optional[bool], Query(default=None)] = None,
-    page: Annotated[int, Query(default=1, ge=1)] = 1,
-    per_page: Annotated[int, Query(default=20, ge=1, le=100)] = 20,
+    username: Annotated[Optional[str], Query()] = None,
+    email: Annotated[Optional[str], Query()] = None,
+    permissions: Annotated[Optional[str], Query()] = None,
+    is_active: Annotated[Optional[bool], Query()] = None,
+    is_locked: Annotated[Optional[bool], Query()] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
     """Liste paginée des utilisateurs avec filtres."""
     session = config.get_secure_session()
@@ -229,7 +230,8 @@ def list_users(
 @router.post("/toggle-lock/{username}",
              response_model=Dict[str, Any],
              responses={
-                 404: {"description": "Utilisateur non trouvé"}
+                 404: {"description": "Utilisateur non trouvé"},
+                 400: {"description": "Erreur lors de la modification du verrouillage"},
              })
 def toggle_lock(username: str, _admin=Annotated[bool, Depends(verify_admin_access)]):
     """Bascule le statut de verrouillage d'un utilisateur et réinitialise les tentatives."""
@@ -249,13 +251,20 @@ def toggle_lock(username: str, _admin=Annotated[bool, Depends(verify_admin_acces
             "username": user.username,
             "is_locked": user.is_locked,
         }
+    except (ValueError, TypeError, SQLAlchemyError) as e:
+        message = f"Erreur lors de la modification du verrouillage : {str(e)}"
+        session.rollback()
+        raise HTTPException(status_code=400, detail=message) from e
     finally:
         session.close()
 
 
 @router.post("/toggle-active/{username}",
              response_model=Dict[str, Any],
-             responses={404: {"description": "Utilisateur non trouvé"}})
+             responses={
+                 404: {"description": "Utilisateur non trouvé"},
+                 400: {"description": "Erreur lors de la modification du statut actif"},
+             })
 def toggle_active(username: str, _admin=Annotated[bool, Depends(verify_admin_access)]):
     """Bascule le statut actif/inactif d'un utilisateur."""
     username = unquote(username)
@@ -272,5 +281,9 @@ def toggle_active(username: str, _admin=Annotated[bool, Depends(verify_admin_acc
             "username": user.username,
             "is_active": user.is_active,
         }
+    except (ValueError, TypeError, SQLAlchemyError) as e:
+        message = f"Erreur lors de la modification du statut actif : {str(e)}"
+        session.rollback()
+        raise HTTPException(status_code=400, detail=message) from e
     finally:
         session.close()

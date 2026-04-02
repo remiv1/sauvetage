@@ -63,13 +63,21 @@ class AuthService:
     def lock_user(self, user: Users) -> None:
         """Verrouille un utilisateur."""
         user.is_locked = True
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
     def unlock_user(self, user: Users) -> None:
         """Deverrouille un utilisateur et reinitialise les echecs."""
         user.is_locked = False
         user.nb_failed_logins = 0
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
     def reset_failed_logins(self, user: Users) -> bool:
         """Reinitialise les tentatives ratees."""
@@ -79,4 +87,8 @@ class AuthService:
         if user.nb_failed_logins >= self.lockout_threshold - 1:
             user.is_locked = True
         user.nb_failed_logins += 1
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc

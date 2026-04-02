@@ -1,8 +1,8 @@
-"""first_migration
+"""init_migration
 
-Revision ID: b60b5de6b88d
+Revision ID: 697e382eb98b
 Revises: 
-Create Date: 2026-03-31 16:40:18.024733
+Create Date: 2026-04-02 14:28:35.765324
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b60b5de6b88d'
+revision: str = '697e382eb98b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -91,8 +91,8 @@ def upgrade() -> None:
     sa.Column('code', sa.Integer(), nullable=False, comment='Code TVA (0=super-réduit, 1=réduit, 2=intermédiaire, 3=normal)'),
     sa.Column('rate', sa.Numeric(precision=5, scale=2), nullable=False, comment='Taux de TVA en pourcentage (ex: 5.50)'),
     sa.Column('label', sa.String(), nullable=False, comment='Libellé du taux (ex: Taux réduit)'),
-    sa.Column('date_start', sa.DateTime(), nullable=False, comment='Date de début de validité du taux'),
-    sa.Column('date_end', sa.DateTime(), nullable=True, comment='Date de fin de validité (NULL = taux actuellement en vigueur)'),
+    sa.Column('date_start', sa.DateTime(timezone=True), nullable=False, comment='Date de début de validité du taux'),
+    sa.Column('date_end', sa.DateTime(timezone=True), nullable=True, comment='Date de fin de validité (NULL = taux actuellement en vigueur)'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('code', 'date_start', name='uq_vat_rates_code_date_start'),
     schema='app_schema'
