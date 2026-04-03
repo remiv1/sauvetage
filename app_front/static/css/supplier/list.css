@@ -382,6 +382,21 @@ details[open] > .accordion-toggle {
   backdrop-filter: blur(4px);
 }
 
+/* ── Modale <dialog> ─────────────────────────────────────────────────────── */
+dialog.modal-overlay {
+  border: none;
+  padding: 0;
+  max-width: 100vw;
+  max-height: 100vh;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+dialog.modal-overlay::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
 .modal-box {
   background: #fff;
   border-radius: 10px;
