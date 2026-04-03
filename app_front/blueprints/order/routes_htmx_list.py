@@ -49,11 +49,13 @@ def order_table():
 
 @bp_order_htmx_list.get("/view/<int:order_id>")
 def order_view(order_id: int):
-    """Retourne la modale de consultation d'une commande (HTMX)."""
+    """Page complète de consultation d'une commande."""
     order = get_order_by_id(order_id)
     if order is None:
         return ORDER_NOT_FOUND, 404
-    return render_template(ORDER_VIEW_MODAL, order=order)
+    # Redirection vers la page complète (pas une modale)
+    from app_front.utils.pages import render_page
+    return render_page("order_view", order=order)
 
 
 @bp_order_htmx_list.get("/cancel/<int:order_id>")

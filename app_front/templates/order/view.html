@@ -1,0 +1,360 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="order-create-container">
+
+    {# ── En-tête ────────────────────────────────────────────────────────────── #}
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('order.index') }}" class="btn btn-back"
+               title="Retour aux commandes">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Commande {{ order.reference }}</h2>
+        </div>
+    </div>
+
+    {# ── Infos commande ─────────────────────────────────────────────────── #}
+    <div class="order-info-section">
+        <div class="info-group">
+            <span class="info-label">Référence</span>
+            <span class="info-value">{{ order.reference }}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Client</span>
+            <span class="info-value">{{ order.customer_name }}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Statut</span>
+            <span class="info-value">
+                <span class="badge {{ order.status_badge }}">{{ order.status_label }}</span>
+            </span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Créée le</span>
+            <span class="info-value">{{ order.created_at }}</span>
+        </div>
+        {% if order.invoice_address %}
+        <div class="info-group">
+            <span class="info-label">Adresse facturation</span>
+            <span class="info-value">
+                {{ order.invoice_address.address_line1 }}
+                {% if order.invoice_address.address_line2 %}, {{ order.invoice_address.address_line2 }}{% endif %}
+                — {{ order.invoice_address.postal_code }} {{ order.invoice_address.city }}
+            </span>
+        </div>
+        {% endif %}
+        {% if order.delivery_address %}
+        <div class="info-group">
+            <span class="info-label">Adresse livraison</span>
+            <span class="info-value">
+                {{ order.delivery_address.address_line1 }}
+                {% if order.delivery_address.address_line2 %}, {{ order.delivery_address.address_line2 }}{% endif %}
+                — {{ order.delivery_address.postal_code }} {{ order.delivery_address.city }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Boutons d'action ────────────────────────────────────────────────── #}
+    <div class="order-action-buttons">
+        {% if order.status == 'draft' %}
+        <a href="{{ url_for('order_htmx_create.edit_order', order_id=order.id) }}"
+           class="btn btn-primary">
+            Modifier la commande
+        </a>
+        {% endif %}
+        {% if order.has_uninvoiced_lines %}
+        <button class="btn btn-primary" id="btn-open-invoice-modal">
+            Créer une facture
+        </button>
+        {% endif %}
+        {% if order.has_unshipped_invoiced_lines %}
+        <button class="btn btn-primary" id="btn-open-ship-modal">
+            Créer un envoi
+        </button>
+        {% endif %}
+    </div>
+
+    {# ── Lignes de commande ─────────────────────────────────────────────── #}
+    <h3>Lignes de commande</h3>
+    {% if order.lines %}
+    <table class="order-lines-table">
+        <thead>
+            <tr>
+                <th>Article</th>
+                <th>Qté</th>
+                <th>PU HT</th>
+                <th>Remise</th>
+                <th>TVA</th>
+                <th>Total HT</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set ns = namespace(total_ht=0) %}
+            {% for line in order.lines %}
+            <tr>
+                <td>{{ line.article_name }}</td>
+                <td>{{ line.quantity }}</td>
+                <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+                <td>{{ "%.2f"|format(line.discount) }} %</td>
+                <td>{{ "%.1f"|format(line.vat_rate) }} %</td>
+                <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
+                <td><span class="badge">{{ line.status_label }}</span></td>
+                {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5" style="text-align: right; font-weight: 600;">Total HT</td>
+                <td style="font-weight: 600;">{{ "%.2f"|format(ns.total_ht) }} €</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <p style="color: #808080;">Aucune ligne de commande.</p>
+    {% endif %}
+
+    {# ── Factures rattachées ────────────────────────────────────────────── #}
+    <h3 style="margin-top: 2rem;">Factures</h3>
+    {% if order.invoices %}
+    <table class="order-lines-table">
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Total HT</th>
+                <th>TVA</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in order.invoices %}
+            <tr>
+                <td>{{ inv.reference }}</td>
+                <td>{{ "%.2f"|format(inv.total_amount) }} €</td>
+                <td>{{ "%.2f"|format(inv.vat_amount) }} €</td>
+                <td>{{ inv.created_at[:10] if inv.created_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #808080;">Aucune facture.</p>
+    {% endif %}
+
+    {# ── Envois rattachés ───────────────────────────────────────────────── #}
+    <h3 style="margin-top: 2rem;">Envois</h3>
+    {% if order.shipments %}
+    <table class="order-lines-table">
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Transporteur</th>
+                <th>N° suivi</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ship in order.shipments %}
+            <tr>
+                <td>{{ ship.reference }}</td>
+                <td>{{ ship.carrier }}</td>
+                <td>{{ ship.tracking_number or '—' }}</td>
+                <td>{{ ship.created_at[:10] if ship.created_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #808080;">Aucun envoi.</p>
+    {% endif %}
+
+    {# ── Modale Facturation ─────────────────────────────────────────────── #}
+    {% if order.has_uninvoiced_lines %}
+    <dialog class="modal-overlay" id="invoice-dialog" aria-label="Créer une facture">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Créer une facture</h3>
+                <button class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="invoice-form"
+                      hx-post="{{ url_for('order_htmx_create.invoice_order_route', order_id=order.id) }}"
+                      hx-swap="none">
+                    <p style="margin-bottom: 1rem; color: #666;">Sélectionnez les lignes à facturer et indiquez les quantités.</p>
+                    <table class="order-lines-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center">
+                                    <input type="checkbox" id="invoice-select-all"
+                                           onchange="toggleInvoiceCheckboxes(this)">
+                                </th>
+                                <th>Article</th>
+                                <th>Qté dispo</th>
+                                <th>Qté à facturer</th>
+                                <th>PU HT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in order.lines %}
+                            {% if line.status == 'draft' %}
+                            <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" name="line_ids" value="{{ line.id }}"
+                                           onchange="toggleInvoiceRow(this)">
+                                </td>
+                                <td>{{ line.article_name }}</td>
+                                <td>{{ line.quantity }}</td>
+                                <td>
+                                    <input type="number" name="quantities"
+                                           min="1" max="{{ line.quantity }}" value="{{ line.quantity }}"
+                                           class="qty-input" disabled>
+                                </td>
+                                <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-cancel-close">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Facturer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </dialog>
+    {% endif %}
+
+    {# ── Modale Expédition ──────────────────────────────────────────────── #}
+    {% if order.has_unshipped_invoiced_lines %}
+    <dialog class="modal-overlay" id="ship-dialog" aria-label="Créer un envoi">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Créer un envoi</h3>
+                <button class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="ship-form"
+                      hx-post="{{ url_for('order_htmx_create.ship_order_route', order_id=order.id) }}"
+                      hx-swap="none">
+                    <div class="modal-form-grid" style="margin-bottom: 1rem;">
+                        <div class="line-form-group">
+                            <label for="carrier">Transporteur</label>
+                            <input type="text" id="carrier" name="carrier" required
+                                   placeholder="ex: Colissimo, Chronopost…">
+                        </div>
+                        <div class="line-form-group">
+                            <label for="tracking_number">N° de suivi</label>
+                            <input type="text" id="tracking_number" name="tracking_number"
+                                   placeholder="Optionnel">
+                        </div>
+                    </div>
+                    <p style="margin-bottom: 1rem; color: #666;">Sélectionnez les lignes à expédier et indiquez les quantités.</p>
+                    <table class="order-lines-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center">
+                                    <input type="checkbox" id="ship-select-all"
+                                           onchange="toggleShipCheckboxes(this)">
+                                </th>
+                                <th>Article</th>
+                                <th>Qté dispo</th>
+                                <th>Qté à expédier</th>
+                                <th>PU HT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in order.lines %}
+                            {% if line.status == 'invoiced' %}
+                            <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" name="line_ids" value="{{ line.id }}"
+                                           onchange="toggleShipRow(this)">
+                                </td>
+                                <td>{{ line.article_name }}</td>
+                                <td>{{ line.quantity }}</td>
+                                <td>
+                                    <input type="number" name="quantities"
+                                           min="1" max="{{ line.quantity }}" value="{{ line.quantity }}"
+                                           class="qty-input" disabled>
+                                </td>
+                                <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-cancel-close">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Expédier</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </dialog>
+    {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modale facturation
+    var invoiceDialog = document.getElementById('invoice-dialog');
+    var openInvoiceBtn = document.getElementById('btn-open-invoice-modal');
+    if (invoiceDialog && openInvoiceBtn) {
+        openInvoiceBtn.addEventListener('click', function() { invoiceDialog.showModal(); });
+        invoiceDialog.addEventListener('click', function(e) {
+            if (e.target === invoiceDialog) invoiceDialog.close();
+        });
+        invoiceDialog.addEventListener('cancel', function() { invoiceDialog.close(); });
+        invoiceDialog.querySelectorAll('.btn-close, .btn-cancel-close').forEach(function(btn) {
+            btn.addEventListener('click', function() { invoiceDialog.close(); });
+        });
+    }
+
+    // Modale expédition
+    var shipDialog = document.getElementById('ship-dialog');
+    var openShipBtn = document.getElementById('btn-open-ship-modal');
+    if (shipDialog && openShipBtn) {
+        openShipBtn.addEventListener('click', function() { shipDialog.showModal(); });
+        shipDialog.addEventListener('click', function(e) {
+            if (e.target === shipDialog) shipDialog.close();
+        });
+        shipDialog.addEventListener('cancel', function() { shipDialog.close(); });
+        shipDialog.querySelectorAll('.btn-close, .btn-cancel-close').forEach(function(btn) {
+            btn.addEventListener('click', function() { shipDialog.close(); });
+        });
+    }
+});
+
+// Toggle checkbox → enable/disable qty input
+function toggleInvoiceRow(cb) {
+    var qtyInput = cb.closest('tr').querySelector('.qty-input');
+    console.log("toggleInvoiceRow", cb.checked, qtyInput);
+    qtyInput.disabled = !cb.checked;
+    if (!cb.checked) qtyInput.value = qtyInput.max;
+}
+function toggleShipRow(cb) {
+    var qtyInput = cb.closest('tr').querySelector('.qty-input');
+    console.log("toggleShipRow", cb.checked, qtyInput);
+    qtyInput.disabled = !cb.checked;
+    if (!cb.checked) qtyInput.value = qtyInput.max;
+}
+function toggleInvoiceCheckboxes(selectAll) {
+    document.querySelectorAll('#invoice-form input[name=line_ids]').forEach(function(cb) {
+        cb.checked = selectAll.checked;
+        toggleInvoiceRow(cb);
+    });
+}
+function toggleShipCheckboxes(selectAll) {
+    document.querySelectorAll('#ship-form input[name=line_ids]').forEach(function(cb) {
+        cb.checked = selectAll.checked;
+        toggleShipRow(cb);
+    });
+}
+</script>
+{% endblock %}
