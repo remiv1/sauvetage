@@ -16,8 +16,8 @@ from .customers import (
 from .orders import Order, OrderLine
 from .stocks import OrderIn, OrderInLine, DilicomReferencial
 from .inventory import InventoryMovements
-from .invoices import Invoice
-from .shipments import Shipment
+from .invoices import Invoice, InvoiceLine
+from .shipments import Shipment, ShipmentLine
 from .users import Users, UsersPasswords
 from .objects import (
     GeneralObjects,

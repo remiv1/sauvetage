@@ -1,14 +1,12 @@
-"""Blueprint pour les fonctionnalités des commandes"""
+"""Blueprint pour les fonctionnalités des commandes clients"""
 
-from flask import Blueprint, render_template_string
+from flask import Blueprint
+from app_front.utils.pages import render_page
 
 bp_order = Blueprint("order", __name__, url_prefix="/order")
 
 
 @bp_order.get("/")
 def index():
-    """Page d'accueil du module commandes"""
-    return render_template_string("""
-    <h1>Commandes</h1>
-    <p>Module en développement</p>
-    """)
+    """Page de gestion des commandes avec liste paginée et filtres."""
+    return render_page("order_index")

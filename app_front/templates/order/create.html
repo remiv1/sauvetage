@@ -1,0 +1,94 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="order-create-container">
+
+    {# ── En-tête ────────────────────────────────────────────────────────────── #}
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('order.index') }}" class="btn btn-back"
+               title="Retour aux commandes">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Nouvelle commande</h2>
+        </div>
+    </div>
+
+    {# ── Étape 1 : Sélection du client ──────────────────────────────────── #}
+    <h3>1. Sélectionner un client</h3>
+
+    <div class="customer-search-wrapper">
+        <input type="text"
+               id="customer-search"
+               class="customer-search-input"
+               placeholder="Rechercher un client par nom…"
+               autocomplete="off"
+               hx-get="{{ url_for('order_htmx_create.search_customers') }}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#customer-dropdown"
+               hx-swap="innerHTML"
+               name="q">
+        <div id="customer-dropdown" class="customer-dropdown"></div>
+    </div>
+
+    {# ── Client sélectionné ─────────────────────────────────────────────── #}
+    <div id="selected-customer-info"></div>
+
+    <form id="order-create-form"
+          hx-post="{{ url_for('order_htmx_create.create_submit') }}"
+          hx-swap="none"
+          style="display: none;">
+        {{ create_form.hidden_tag() }}
+        <input type="hidden" id="customer_id" name="customer_id" value="">
+        <button type="submit" class="btn btn-primary">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer la commande
+        </button>
+    </form>
+
+    {# ── Bouton création rapide client ──────────────────────────────────── #}
+    <div style="margin-top: 1rem;">
+        <button class="btn btn-secondary"
+                hx-get="{{ url_for('order_htmx_create.quick_customer_form') }}"
+                hx-target="#order-modal-container"
+                hx-swap="innerHTML">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer un client rapidement
+        </button>
+    </div>
+
+    {# ── Conteneur modale ───────────────────────────────────────────────── #}
+    <div id="order-modal-container"></div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sélection d'un client dans le dropdown
+    document.getElementById('customer-dropdown').addEventListener('click', function(e) {
+        var item = e.target.closest('[data-customer-id]');
+        if (!item) return;
+
+        var customerId = item.dataset.customerId;
+        var customerName = item.dataset.customerName;
+
+        document.getElementById('customer_id').value = customerId;
+        document.getElementById('customer-dropdown').innerHTML = '';
+        document.getElementById('customer-search').value = customerName;
+
+        var info = document.getElementById('selected-customer-info');
+        info.innerHTML = '<div class="selected-customer">' +
+            '<span class="customer-name">' + customerName + '</span>' +
+            '</div>';
+
+        document.getElementById('order-create-form').style.display = 'block';
+    });
+
+    // Écouter la création rapide de client
+    document.body.addEventListener('selectCustomer', function(e) {
+        if (e.detail && e.detail.id) {
+            document.getElementById('customer_id').value = e.detail.id;
+            document.getElementById('order-create-form').style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

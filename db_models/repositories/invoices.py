@@ -1,6 +1,8 @@
 """Module de dépôt pour la gestion des factures."""
 
 from typing import Any, Dict, Optional
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Invoice
@@ -68,3 +70,33 @@ class InvoiceRepository(BaseRepository):
             raise ValueError(
                 f"Erreur lors de la mise à jour de la facture : {str(e)}"
             ) from e
+
+    def get_by_id(self, invoice_id: int) -> Optional[Invoice]:
+        """Récupère une facture par son identifiant avec ses lignes de commande.
+        Args:
+            invoice_id: L'identifiant de la facture.
+        Returns:
+            Invoice ou None.
+        """
+        stmt = (
+            select(Invoice)
+            .where(Invoice.id == invoice_id)
+            .options(selectinload(Invoice.order_lines))
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def sync_to_henrri(self, invoice: Invoice) -> Dict[str, Any]:
+        """Stub pour la synchronisation future avec l'API Henrri.
+
+        TODO: Implémenter après le 15 avril — appel API Henrri pour
+        créer/mettre à jour la facture dans le système comptable.
+
+        Args:
+            invoice: La facture à synchroniser.
+        Returns:
+            Dict avec le statut de la synchronisation.
+        """
+        raise NotImplementedError(
+            "Synchronisation Henrri non encore implémentée. "
+            "Prévu pour après le 15 avril."
+        )

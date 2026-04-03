@@ -1,0 +1,136 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="order-container">
+
+    {# ── En-tête ────────────────────────────────────────────────────────────── #}
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('home') }}" class="btn btn-back"
+               title="Retour à l'accueil">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Gestion des commandes</h2>
+        </div>
+    </div>
+
+    {# ── Accordéon de recherche ─────────────────────────────────────────────── #}
+    <details class="search-accordion">
+        <summary class="accordion-toggle" title="Afficher/Masquer les filtres de recherche">
+            {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %}
+            Filtres de recherche
+        </summary>
+
+        <form id="order-search-filters"
+              hx-get="{{ url_for('order_htmx_list.order_table') }}"
+              hx-target="#order-table-wrapper"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              hx-include="#order-search-filters">
+
+            <div class="filters-grid">
+                {# Référence #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-reference">Référence</label>
+                    <input type="text" id="filter-reference" name="reference"
+                           class="filter-control" placeholder="CMD-2501-00001…"
+                           autocomplete="off">
+                </div>
+
+                {# Client #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-customer">Client</label>
+                    <input type="text" id="filter-customer" name="customer_name"
+                           class="filter-control" placeholder="Nom du client…"
+                           autocomplete="off">
+                </div>
+
+                {# Statut (multi-sélection) #}
+                <div class="filter-group filter-status-group">
+                    <div class="filter-label">Statut</div>
+                    <div class="status-checkboxes">
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="draft"> Brouillon
+                        </label>
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="partial_invoiced"> Part. facturée
+                        </label>
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="invoiced"> Facturée
+                        </label>
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="partial_shipped"> Part. expédiée
+                        </label>
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="shipped"> Expédiée
+                        </label>
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="canceled"> Annulée
+                        </label>
+                        <label class="status-checkbox">
+                            <input type="checkbox" name="status" value="returned"> Retournée
+                        </label>
+                    </div>
+                </div>
+
+                {# Date début #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-date-from">Du</label>
+                    <input type="date" id="filter-date-from" name="date_from"
+                           class="filter-control">
+                </div>
+
+                {# Date fin #}
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-date-to">Au</label>
+                    <input type="date" id="filter-date-to" name="date_to"
+                           class="filter-control">
+                </div>
+            </div>
+
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% with class="icone-24" %}{% include "svg/search.html" %}{% endwith %} Rechercher
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-reset-filters">
+                    Réinitialiser
+                </button>
+            </div>
+        </form>
+    </details>
+
+    {# ── Bouton nouvelle commande ───────────────────────────────────────── #}
+    <div class="order-actions">
+        <a href="{{ url_for('order_htmx_create.create_page') }}" class="btn btn-primary">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Nouvelle commande
+        </a>
+    </div>
+
+    {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}
+    <div id="order-table-wrapper"
+         hx-get="{{ url_for('order_htmx_list.order_table') }}"
+         hx-trigger="load, refreshOrderTable from:body"
+         hx-swap="innerHTML">
+        <div class="loading-indicator">
+            <p>Chargement des commandes…</p>
+        </div>
+    </div>
+
+    {# ── Conteneur modale ───────────────────────────────────────────────── #}
+    <div id="order-modal-container"></div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var resetBtn = document.getElementById('btn-reset-filters');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            var form = document.getElementById('order-search-filters');
+            form.reset();
+            htmx.trigger(form, 'submit');
+        });
+    }
+});
+</script>
+{% endblock %}

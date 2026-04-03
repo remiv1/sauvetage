@@ -153,4 +153,8 @@ def ensure_vat(session):
             )
             session.add(new_rate)
             print(f"[migrations] Ajout du taux de TVA manquant : {new_rate}")
-    session.commit()
+    try:
+        session.commit()
+    except db_config.SQLAlchemyError as e:
+        session.rollback()
+        print(f"[migrations] Erreur lors de l'ajout des taux de TVA : {e}")

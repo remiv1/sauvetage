@@ -1,0 +1,73 @@
+{# Fragment HTMX — Tableau des lignes de commande #}
+
+{% if order.lines %}
+{% set show_select = order.has_uninvoiced_lines or order.has_unshipped_invoiced_lines %}
+<table class="order-lines-table">
+    <thead>
+        <tr>
+            {% if show_select %}
+            <th class="text-center">
+                <input type="checkbox" id="select-all-lines"
+                       onchange="document.querySelectorAll('#order-lines-wrapper input[name=line_ids]').forEach(cb => cb.checked = this.checked)">
+            </th>
+            {% endif %}
+            <th>Article</th>
+            <th>Qté</th>
+            <th>PU HT</th>
+            <th>Remise</th>
+            <th>TVA</th>
+            <th>Total HT</th>
+            <th>Statut</th>
+            {% if order.status == 'draft' %}
+            <th class="text-center">Actions</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% set ns = namespace(total_ht=0) %}
+        {% for line in order.lines %}
+        <tr>
+            {% if show_select %}
+            <td class="text-center">
+                {% if line.status in ('draft', 'invoiced') %}
+                <input type="checkbox" name="line_ids" value="{{ line.id }}">
+                {% endif %}
+            </td>
+            {% endif %}
+            <td>{{ line.article_name }}</td>
+            <td>{{ line.quantity }}</td>
+            <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+            <td>{{ "%.2f"|format(line.discount) }} %</td>
+            <td>{{ "%.1f"|format(line.vat_rate) }} %</td>
+            <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
+            <td><span class="badge">{{ line.status_label }}</span></td>
+            {% if order.status == 'draft' %}
+            <td class="text-center">
+                {% if line.status == 'draft' %}
+                <button class="action-icon action-cancel"
+                        title="Supprimer la ligne"
+                        hx-delete="{{ url_for('order_htmx_create.delete_line', order_id=order.id, line_id=line.id) }}"
+                        hx-swap="none"
+                        hx-confirm="Supprimer cette ligne ?">
+                    {% include "svg/close.html" %}
+                </button>
+                {% endif %}
+            </td>
+            {% endif %}
+            {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            {% if show_select %}<td></td>{% endif %}
+            <td colspan="5" style="text-align: right; font-weight: 600;">Total HT</td>
+            <td style="font-weight: 600;">{{ "%.2f"|format(ns.total_ht) }} €</td>
+            <td></td>
+            {% if order.status == 'draft' %}<td></td>{% endif %}
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<p style="color: #808080;">Aucune ligne de commande.</p>
+{% endif %}

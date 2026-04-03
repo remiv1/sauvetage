@@ -1,0 +1,18 @@
+{# Dropdown de sélection d'article pour l'ajout de ligne #}
+{% if articles %}
+    {% for a in articles %}
+    <div class="dropdown-item"
+         data-article-id="{{ a.id }}"
+         data-article-name="{{ a.name }}"
+         data-article-price="{{ a.price }}"
+         data-article-vat="">
+        {{ a.name }}
+        {% if a.ean13 %}<small class="text-muted"> — EAN : {{ a.ean13 }}</small>{% endif %}
+        <small class="text-muted"> — {{ "%.2f"|format(a.price) }} €</small>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="dropdown-item text-muted">
+        Aucun article trouvé pour "{{ query }}".
+    </div>
+{% endif %}

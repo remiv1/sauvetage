@@ -3,6 +3,7 @@
 from os import getenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.exc import SQLAlchemyError  # pylint: disable=unused-import
 
 SECURE_DATABASE_URL = getenv(
     "DATABASE_SECURE_URL", "postgresql://app:pwd@db-secure:5432/sauvetage_secure"

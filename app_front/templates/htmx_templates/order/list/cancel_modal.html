@@ -1,0 +1,41 @@
+{# Modale de confirmation d'annulation d'une commande #}
+<dialog class="modal-overlay" aria-label="Annuler la commande">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Annuler la commande</h3>
+            <button class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Voulez-vous vraiment annuler la commande <strong>{{ order.reference }}</strong>
+               pour le client <strong>{{ order.customer_name }}</strong> ?</p>
+            <p style="color: #808080; font-size: 0.85rem;">
+                Cette action est irréversible. Les lignes non facturées seront annulées.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-cancel-close">Non, garder</button>
+            <button class="btn btn-danger"
+                    hx-post="{{ url_for('order_htmx_list.order_cancel_submit', order_id=order.id) }}"
+                    hx-swap="none"
+                    hx-on::after-request="if(event.detail.successful) this.closest('dialog').close()">
+                Oui, annuler
+            </button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+(function() {
+    var d = document.currentScript.previousElementSibling;
+    d.showModal();
+    d.addEventListener('click', function(e) {
+        if (e.target === d) d.close();
+    });
+    d.addEventListener('cancel', function() { d.remove(); });
+    d.addEventListener('close', function() { d.remove(); });
+    var closeButtons = d.querySelectorAll('.btn-close, .btn-cancel-close');
+    closeButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() { d.close(); });
+    });
+})();
+</script>

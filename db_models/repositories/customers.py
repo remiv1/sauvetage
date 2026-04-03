@@ -149,7 +149,7 @@ class CustomersRepository(BaseRepository):
         elif customer_data.get("customer_type") == "pro" and "pro" in customer_data:
             customer_data["pro"] = CustomerPros(**customer_data["pro"])
         else:
-            message = "Le type client doit être 'part' ou 'pro' et les données doivent être fournies."
+            message = "Le type client doit être 'part' ou 'pro' et les données fournies."
             raise ValueError(message)
         if "addresses" in customer_data:
             customer_data["addresses"] = [

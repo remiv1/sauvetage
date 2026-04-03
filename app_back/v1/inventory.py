@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from typing import Dict, List
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
 from app_back.v1.schems.inventory import (
     ParseRequest,
     ParseResponse,
@@ -467,6 +468,9 @@ def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> No
                     }
                 )
             session.commit()
+        except SQLAlchemyError as exc:
+            session.rollback()
+            raise RuntimeError(f"Erreur lors de l'application des mouvements : {exc}") from exc
         except Exception as exc:
             session.rollback()
             raise RuntimeError(f"Erreur lors du commit : {exc}") from exc
