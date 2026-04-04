@@ -10,6 +10,7 @@ from app_front.blueprints.order.utils import (
     search_customers_for_dropdown,
     invoice_order,
     ship_order,
+    get_objects_by_name,
 )
 from app_front.blueprints.customer.utils.users import create_from_dict
 from app_front.utils.pages import render_page
@@ -25,7 +26,7 @@ QUICK_CUSTOMER_MODAL = "htmx_templates/order/create/quick_customer_modal.html"
 ORDER_LINES_TABLE = "htmx_templates/order/create/lines_table.html"
 ARTICLE_DROPDOWN = "htmx_templates/order/create/article_dropdown.html"
 _EDIT_ORDER_ROUTE = "order_htmx_create.edit_order"
-_VIEW_ORDER_ROUTE = "order_htmx_list.order_view"
+_VIEW_ORDER_ROUTE = "order.order_view"
 
 
 # ── Page de création ─────────────────────────────────────────────────────
@@ -240,23 +241,13 @@ def quick_customer_submit():
 @bp_order_htmx_create.get("/articles")
 def search_articles():
     """Recherche d'articles pour le dropdown (HTMX)."""
-    from app_front.config import db_conf
-    from sqlalchemy import select
-    from db_models.objects import GeneralObjects
-
     query = request.args.get("q", "").strip()
     if len(query) < 2:
         return ""
-
-    session = db_conf.get_main_session()
     try:
-        stmt = (
-            select(GeneralObjects)
-            .where(GeneralObjects.name.ilike(f"%{query}%"))
-            .order_by(GeneralObjects.name)
-            .limit(10)
-        )
-        results = session.execute(stmt).scalars().all()
+        results = get_objects_by_name(query)
+        if results is None:
+            results = []
         articles = []
         for a in results:
             articles.append({
@@ -267,5 +258,5 @@ def search_articles():
                 "vat_rate_id": a.vat_rate_id,
             })
         return render_template(ARTICLE_DROPDOWN, articles=articles, query=query)
-    finally:
-        session.close()
+    except ValueError as exc:
+        return f"<p class='error'>Erreur : {exc}</p>", 422

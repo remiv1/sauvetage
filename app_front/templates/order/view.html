@@ -108,18 +108,18 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="5" style="text-align: right; font-weight: 600;">Total HT</td>
-                <td style="font-weight: 600;">{{ "%.2f"|format(ns.total_ht) }} €</td>
+                <td colspan="5" class="text-right weight-600">Total HT</td>
+                <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
                 <td></td>
             </tr>
         </tfoot>
     </table>
     {% else %}
-    <p style="color: #808080;">Aucune ligne de commande.</p>
+    <p class="subtile-text-500">Aucune ligne de commande.</p>
     {% endif %}
 
     {# ── Factures rattachées ────────────────────────────────────────────── #}
-    <h3 style="margin-top: 2rem;">Factures</h3>
+    <h3 class="mt-3">Factures</h3>
     {% if order.invoices %}
     <table class="order-lines-table">
         <thead>
@@ -142,11 +142,11 @@
         </tbody>
     </table>
     {% else %}
-    <p style="color: #808080;">Aucune facture.</p>
+    <p class="subtile-text-500">Aucune facture.</p>
     {% endif %}
 
     {# ── Envois rattachés ───────────────────────────────────────────────── #}
-    <h3 style="margin-top: 2rem;">Envois</h3>
+    <h3 class="mt-3">Envois</h3>
     {% if order.shipments %}
     <table class="order-lines-table">
         <thead>
@@ -169,7 +169,7 @@
         </tbody>
     </table>
     {% else %}
-    <p style="color: #808080;">Aucun envoi.</p>
+    <p class="subtile-text-500">Aucun envoi.</p>
     {% endif %}
 
     {# ── Modale Facturation ─────────────────────────────────────────────── #}
@@ -184,7 +184,7 @@
                 <form id="invoice-form"
                       hx-post="{{ url_for('order_htmx_create.invoice_order_route', order_id=order.id) }}"
                       hx-swap="none">
-                    <p style="margin-bottom: 1rem; color: #666;">Sélectionnez les lignes à facturer et indiquez les quantités.</p>
+                    <p class="mb-2 subtile-text-600">Sélectionnez les lignes à facturer et indiquez les quantités.</p>
                     <table class="order-lines-table">
                         <thead>
                             <tr>
@@ -241,7 +241,7 @@
                 <form id="ship-form"
                       hx-post="{{ url_for('order_htmx_create.ship_order_route', order_id=order.id) }}"
                       hx-swap="none">
-                    <div class="modal-form-grid" style="margin-bottom: 1rem;">
+                    <div class="modal-form-grid mb-2">
                         <div class="line-form-group">
                             <label for="carrier">Transporteur</label>
                             <input type="text" id="carrier" name="carrier" required
@@ -253,7 +253,7 @@
                                    placeholder="Optionnel">
                         </div>
                     </div>
-                    <p style="margin-bottom: 1rem; color: #666;">Sélectionnez les lignes à expédier et indiquez les quantités.</p>
+                    <p class="mt-2 subtile-text-600">Sélectionnez les lignes à expédier et indiquez les quantités.</p>
                     <table class="order-lines-table">
                         <thead>
                             <tr>

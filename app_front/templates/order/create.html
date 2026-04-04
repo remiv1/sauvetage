@@ -39,7 +39,7 @@
           hx-swap="none"
           style="display: none;">
         {{ create_form.hidden_tag() }}
-        <input type="hidden" id="customer_id" name="customer_id" value="">
+        {{ create_form.customer_id(id="customer_id") }}
         <button type="submit" class="btn btn-primary">
             {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer la commande
         </button>

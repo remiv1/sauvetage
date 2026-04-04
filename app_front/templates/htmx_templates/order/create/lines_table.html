@@ -46,13 +46,13 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="5" style="text-align: right; font-weight: 600;">Total HT</td>
-            <td style="font-weight: 600;">{{ "%.2f"|format(ns.total_ht) }} €</td>
+            <td colspan="5" class="weight-600 text-right">Total HT</td>
+            <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
             <td></td>
             {% if order.status == 'draft' %}<td></td>{% endif %}
         </tr>
     </tfoot>
 </table>
 {% else %}
-<p style="color: #808080;">Aucune ligne de commande.</p>
+<p class="subtile-text-500">Aucune ligne de commande.</p>
 {% endif %}

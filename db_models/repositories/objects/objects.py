@@ -88,6 +88,7 @@ class ObjectsRepository(BaseRepository):
         stmt = (
             self._get_global_select()
             .where(self.model.name.ilike(f"%{name.lower()}%"))
+            .order_by(self.model.name)
             .limit(10)
         )
         return self.session.execute(stmt).unique().scalars().all()

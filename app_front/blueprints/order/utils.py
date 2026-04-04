@@ -1,14 +1,16 @@
 """Utilitaires pour les commandes, utilisés par les routes et tests."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 from sqlalchemy.exc import SQLAlchemyError
 from app_front.config import db_conf
-from db_models.objects import Order
+from db_models.objects import Order, OrderLine
+from db_models.objects import InventoryMovements
 from db_models.repositories.orders import OrdersRepository
 from db_models.repositories.customers import CustomersRepository
 from db_models.repositories.invoices import InvoiceRepository
 from db_models.repositories.shipments import ShipmentsRepository
+from db_models.repositories.objects.objects import ObjectsRepository, GeneralObjects
 
 
 # ── Libellés statuts ──────────────────────────────────────────────────────
@@ -68,9 +70,25 @@ def _order_to_list_dict(order: Order) -> Dict[str, Any]:
     }
 
 
+def _may_be_invoiced(line: Optional[OrderLine], item: Dict[str, Any]) -> OrderLine:
+    """
+    Retourne la ligne si elle existe et est en statut "draft", sinon lève une exception.
+    args:
+    - line: la ligne de commande à vérifier
+    - item: dict avec les données de la ligne à facturer,
+            doit contenir "order_line_id" et "quantity"
+    """
+    if line is None:
+        raise ValueError(f"Ligne {item['order_line_id']} introuvable.")
+    if line.status != "draft":
+        raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
+    if item["quantity"] > line.quantity or item["quantity"] < 1:
+        raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+    return line
+
 # ── Recherche paginée ────────────────────────────────────────────────────
 
-def search_orders_paginated(
+def search_orders_paginated(    # pylint: disable=too-many-arguments
     *,
     reference: str | None = None,
     customer_name: str | None = None,
@@ -192,13 +210,13 @@ def create_order(customer_id: int) -> Dict[str, Any]:
     session = db_conf.get_main_session()
     try:
         repo = OrdersRepository(session)
-        order = repo.create_order(customer_id=customer_id, create_source="web")
+        order = repo.create_order(customer_id=customer_id, create_source="backoffice")
         return {"id": order.id, "reference": order.reference}
     finally:
         session.close()
 
 
-def add_order_line(
+def add_order_line(     # pylint: disable=too-many-arguments
     order_id: int,
     *,
     general_object_id: int,
@@ -225,10 +243,9 @@ def add_order_line(
             unit_price=unit_price,
             discount=discount,
             vat_rate=vat_rate,
-            create_source="web",
+            create_source="backoffice",
         )
         # Créer un mouvement de réservation dans inventory_movements
-        from db_models.objects import InventoryMovements
         movement = InventoryMovements(
             general_object_id=general_object_id,
             movement_type="reserved",
@@ -257,7 +274,6 @@ def remove_order_line(order_id: int, line_id: int) -> bool:
         if line is None:
             raise ValueError("Ligne introuvable")
         # Annuler le mouvement de réservation
-        from db_models.objects import InventoryMovements
         movement = InventoryMovements(
             general_object_id=line.general_object_id,
             movement_type="reserved",
@@ -288,7 +304,7 @@ def cancel_order(order_id: int) -> Dict[str, Any]:
             raise ValueError(_ORDER_NOT_FOUND)
         if order.status in ("canceled", "returned"):
             raise ValueError("Commande déjà annulée ou retournée")
-        order = repo.update_order_status(order, "canceled", update_source="web")
+        order = repo.update_order_status(order, "canceled", update_source="backoffice")
         return _order_to_list_dict(order)
     finally:
         session.close()
@@ -317,13 +333,7 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Dict[str, 
         lines_by_id = {l.id: l for l in (order.order_lines or [])}
         enriched_items = []
         for item in line_items:
-            line = lines_by_id.get(item["order_line_id"])
-            if line is None:
-                raise ValueError(f"Ligne {item['order_line_id']} introuvable.")
-            if line.status != "draft":
-                raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
-            if item["quantity"] > line.quantity or item["quantity"] < 1:
-                raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+            line = _may_be_invoiced(lines_by_id.get(item["order_line_id"]), item)
             enriched_items.append({
                 "order_line_id": line.id,
                 "quantity": item["quantity"],
@@ -337,7 +347,7 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Dict[str, 
         invoice = inv_repo.create_invoice(
             order_id=order_id,
             line_items=enriched_items,
-            create_source="web",
+            create_source="backoffice",
         )
 
         # Mettre à jour le statut des lignes de commande
@@ -404,7 +414,7 @@ def ship_order(
             carrier=carrier,
             tracking_number=tracking_number,
             line_items=line_items,
-            create_source="web",
+            create_source="backoffice",
         )
 
         # Mettre à jour le statut des lignes
@@ -441,7 +451,7 @@ def _recalculate_order_status(order: Order, repo: OrdersRepository) -> None:
     else:
         new_status = order.status
     if new_status != order.status:
-        repo.update_order_status(order, new_status, update_source="web")
+        repo.update_order_status(order, new_status, update_source="backoffice")
 
 
 # ── Recherche clients (pour dropdown) ────────────────────────────────────
@@ -466,6 +476,25 @@ def search_customers_for_dropdown(query: str) -> List[Dict[str, Any]]:
                 "customer_type": c.customer_type,
                 "location": c.addresses[0].city if c.addresses else "—",
             })
+        return results
+    finally:
+        session.close()
+
+
+# ── Recherche objets (pour autocomplete) ─────────────────────────────────
+
+def get_objects_by_name(name: str) -> Optional[Sequence[GeneralObjects]]:
+    """Récupère un objet général par son nom pour l'autocomplete.
+
+    Returns:
+        Liste de dicts avec id et name, ou None.
+    """
+    session = db_conf.get_main_session()
+    try:
+        repo = ObjectsRepository(session)
+        results = repo.get_by_name(name)
+        if results is None:
+            return None
         return results
     finally:
         session.close()

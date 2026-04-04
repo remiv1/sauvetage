@@ -1,5 +1,6 @@
 """Module contenant les formulaires liés à la gestion des commandes."""
 
+from decimal import Decimal
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DecimalField, SelectField, SubmitField, HiddenField
 from wtforms.validators import DataRequired, NumberRange
@@ -26,7 +27,7 @@ class OrderLineForm(FlaskForm):
         "TVA (%)", validators=[DataRequired(), NumberRange(min=0, max=100)], places=1
     )
     discount = DecimalField(
-        "Remise (%)", validators=[NumberRange(min=0, max=100)], places=2, default=0
+        "Remise (%)", validators=[NumberRange(min=0, max=100)], places=2, default=Decimal("0.0")
     )
     submit = SubmitField("Ajouter la ligne")
 

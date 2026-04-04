@@ -47,34 +47,19 @@ def order_table():
     return render_template(ORDER_TABLE, **result)
 
 
-@bp_order_htmx_list.get("/view/<int:order_id>")
-def order_view(order_id: int):
-    """Page complète de consultation d'une commande."""
-    order = get_order_by_id(order_id)
-    if order is None:
-        return ORDER_NOT_FOUND, 404
-    # Redirection vers la page complète (pas une modale)
-    from app_front.utils.pages import render_page
-    return render_page("order_view", order=order)
-
-
-@bp_order_htmx_list.get("/cancel/<int:order_id>")
+@bp_order_htmx_list.route("/cancel/<int:order_id>", methods=["GET", "POST"])
 def order_cancel_modal(order_id: int):
     """Retourne la modale de confirmation d'annulation (HTMX)."""
+    if request.method == "POST":
+        try:
+            cancel_order(order_id)
+        except ValueError:
+            return "<p>Erreur lors de l'annulation de la commande.</p>", 422
+
+        response = make_response("", 200)
+        response.headers["HX-Trigger"] = "refreshOrderTable"
+        return response
     order = get_order_by_id(order_id)
     if order is None:
         return ORDER_NOT_FOUND, 404
     return render_template(ORDER_CANCEL_MODAL, order=order)
-
-
-@bp_order_htmx_list.post("/cancel/<int:order_id>")
-def order_cancel_submit(order_id: int):
-    """Annule une commande (HTMX)."""
-    try:
-        cancel_order(order_id)
-    except ValueError:
-        return "<p>Erreur lors de l'annulation de la commande.</p>", 422
-
-    response = make_response("", 200)
-    response.headers["HX-Trigger"] = "refreshOrderTable"
-    return response

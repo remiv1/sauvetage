@@ -7,6 +7,8 @@ from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
+_ALL_DELETE_ORPHAN = "all, delete-orphan"
+
 
 class Order(WorkingBase, QueryMixin):
     """Modèle de données pour une commande."""
@@ -72,13 +74,13 @@ class Order(WorkingBase, QueryMixin):
         "CustomerAddresses", foreign_keys=[delivery_address_id]
     )
     order_lines = relationship(
-        "OrderLine", back_populates="order", cascade="all, delete-orphan"
+        "OrderLine", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
     invoices = relationship(
-        "Invoice", back_populates="order", cascade="all, delete-orphan"
+        "Invoice", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
     shipments = relationship(
-        "Shipment", back_populates="order", cascade="all, delete-orphan"
+        "Shipment", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
 
     def __repr__(self) -> str:

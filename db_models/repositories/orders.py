@@ -182,7 +182,7 @@ class OrdersRepository(BaseRepository):
                 f"Erreur lors de la création de la commande : {e.orig}"
             ) from e
 
-    def add_line(
+    def add_line(   # pylint: disable=too-many-arguments
         self,
         order: Order,
         *,

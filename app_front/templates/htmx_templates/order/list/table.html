@@ -38,7 +38,7 @@
                         {# Bouton Voir #}
                         <a class="action-icon action-view"
                            title="Voir le détail"
-                           href="{{ url_for('order_htmx_list.order_view', order_id=item.id) }}">
+                           href="{{ url_for('order.order_view', order_id=item.id) }}">
                             {% include "svg/eye.html" %}
                         </a>
                         {# Bouton Modifier (redirection page édition) #}
