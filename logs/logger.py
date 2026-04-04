@@ -188,8 +188,8 @@ class MongoDBLogger:
 
         try:
             return list(
-                self.db[collection_name]
-                .find(query)  # type: ignore
+                self.db[collection_name]  # type: ignore
+                .find(query)
                 .sort("timestamp", -1)
                 .limit(limit)
             )  # type: ignore
