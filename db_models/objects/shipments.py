@@ -106,6 +106,12 @@ class ShipmentLine(WorkingBase, QueryMixin):
     shipment = relationship("Shipment", back_populates="lines")
     order_line = relationship("OrderLine", back_populates="shipment_lines")
 
+    def __repr__(self) -> str:
+        return (
+            f"<ShipmentLine(id={self.id}, shipment_id={self.shipment_id}, "
+            + f"order_line_id={self.order_line_id}, quantity={self.quantity})>"
+        )
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet ShipmentLine en dictionnaire."""
         return {

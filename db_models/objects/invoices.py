@@ -21,6 +21,9 @@ class Invoice(WorkingBase, QueryMixin):
         nullable=False,
         comment="Commande parente",
     )
+    ext_id: Mapped[str] = mapped_column(
+        String(50), nullable=True, comment="ID externe de la facture (Henrri)"
+    )
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
     total_amount: Mapped[float] = mapped_column(
         Numeric(10, 2), nullable=False, comment="Montant total de la facture"
@@ -71,6 +74,7 @@ class Invoice(WorkingBase, QueryMixin):
             "id": self.id,
             "order_id": self.order_id,
             "reference": self.reference,
+            "ext_id": self.ext_id,
             "total_amount": float(self.total_amount),
             "vat_amount": float(self.vat_amount),
             "lines": [ln.to_dict() for ln in self.lines] if self.lines else [],
@@ -104,6 +108,12 @@ class InvoiceLine(WorkingBase, QueryMixin):
     # Relations
     invoice = relationship("Invoice", back_populates="lines")
     order_line = relationship("OrderLine", back_populates="invoice_lines")
+
+    def __repr__(self) -> str:
+        return (
+            f"<InvoiceLine(id={self.id}, invoice_id={self.invoice_id}, "
+            + f"order_line_id={self.order_line_id}, quantity={self.quantity})>"
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet InvoiceLine en dictionnaire."""

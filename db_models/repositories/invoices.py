@@ -2,9 +2,9 @@
 
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.exc import IntegrityError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Invoice, InvoiceLine
 
