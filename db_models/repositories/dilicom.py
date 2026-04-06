@@ -1,11 +1,16 @@
 """Repository pour les opérations liées à Dilicom."""
 
+from datetime import datetime
+from dataclasses import dataclass
 from typing import List
+from pathlib import Path
 import paramiko
 from db_models.config import load_dilicom_config, DilicomConfig
+from db_models.services.decorators import retry_sftp
 from logs.logger import get_logger
 
 logger = get_logger()
+
 
 class DilicomRepository:
     """
@@ -21,6 +26,7 @@ class DilicomRepository:
         self.transport = None  # Transport SSH pour la connexion SFTP
         self.sftp = None  # Client SFTP
 
+
     def __str__(self):
         return f"""
         <DilicomRepository(\n
@@ -30,8 +36,15 @@ class DilicomRepository:
             - password={'****' if self.config.password else None})>
         """
 
+
     def __repr__(self):
         return self.__str__()
+
+
+    def print_config(self) -> None:
+        """Affiche la configuration de Dilicom utilisée par le repository."""
+        print(self.config)
+
 
     def connect(self) -> None:
         """Établit une connexion au serveur SFTP de Dilicom."""
@@ -104,6 +117,7 @@ class DilicomRepository:
                                     })
             raise DilicomConnectionError(message) from e
 
+
     def close(self) -> None:
         """Ferme la connexion au serveur SFTP de Dilicom."""
         if self.sftp:
@@ -141,46 +155,234 @@ class DilicomRepository:
         self.sftp = None
         self.client = None
         self.transport = None
+
+    @retry_sftp
     def upload(self, local_path: str, remote_path: str) -> None:
-        """Télécharge un fichier vers le serveur SFTP de Dilicom.
+        """
+        Télécharge un fichier vers le serveur SFTP de Dilicom.
+
         Args:
             local_path (str): Le chemin local du fichier à télécharger.
             remote_path (str): Le chemin distant où le fichier doit être téléchargé.
         """
-        # Implémentation pour télécharger un fichier vers le serveur SFTP de Dilicom
-        pass
+        if not self.sftp:
+            message = DilicomConnectionError().stdr_message()
+            logger.log_error(message=message,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                             })
+            raise DilicomConnectionError(message)
+        try:
+            self.sftp.put(local_path, remote_path)
+        except FileNotFoundError as e:
+            message = f"Le fichier local '{local_path}' n'existe pas pour le téléversement."
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "local_path": local_path,
+                             })
+            raise DilicomSFTPError(message) from e
+        except Exception as e:
+            message = f"Erreur lors du téléchargement du fichier '{local_path}' vers " \
+                      f"'{remote_path}' sur le serveur SFTP de Dilicom: {e}"
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "local_path": local_path,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomSFTPError(message) from e
 
-    def download(self, remote_path: str, local_path: str) -> None:
-        """Télécharge un fichier depuis le serveur SFTP de Dilicom.
+    @retry_sftp
+    def download(self, remote_path: str | Path, local_path: str, archive: bool = False) -> None:
+        """
+        Télécharge un fichier depuis le serveur SFTP de Dilicom.
+
         Args:
-            remote_path (str): Le chemin distant du fichier à télécharger.
+            remote_path (str | Path): Le chemin distant du fichier à télécharger.
             local_path (str): Le chemin local où le fichier doit être téléchargé.
         """
-        # Implémentation pour télécharger un fichier depuis le serveur SFTP de Dilicom
-        pass
+        if not self.sftp:
+            message = DilicomConnectionError().stdr_message()
+            logger.log_error(message=message,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                             })
+            raise DilicomConnectionError(message)
+        try:
+            if archive:
+                remote_path = Path('./ARC') / remote_path \
+                                if not str(remote_path).startswith('./') \
+                                else remote_path
+            else:
+                remote_path = Path('./O') / remote_path \
+                                if not str(remote_path).startswith('./') \
+                                else remote_path
+            self.sftp.get(str(remote_path), local_path)
+        except FileNotFoundError as e:
+            message = f"Le fichier distant '{remote_path}' n'existe pas pour le téléchargement."
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomSFTPError(message) from e
+        except Exception as e:
+            message = f"Erreur lors du téléchargement du fichier '{remote_path}' vers " \
+                      f"'{local_path}' depuis le serveur SFTP de Dilicom: {e}"
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                                 "local_path": local_path,
+                             })
+            raise DilicomSFTPError(message) from e
 
-    def list_files(self, remote_path: str) -> List[str]:
+
+    def list_files(self, remote_path: str = '.',
+                   complete: bool = False) -> List[str] | List["RemoteFile"]:
         """Liste les fichiers présents dans un répertoire du serveur SFTP de Dilicom.
         Args:
             remote_path (str): Le chemin distant du répertoire à lister.
+            complete (bool): Si True, retourne les attributs complets des fichiers
+                                (nom, chemin, taille, date de modification).
+                             Si False, retourne uniquement les noms de fichiers.
         Returns:
-            List[str]: Une liste des noms de fichiers présents dans le répertoire.
+            List[str] | List[RemoteFile]:
+                - Une liste des noms de fichiers présents dans le répertoire ou
+                - Une liste d'objets RemoteFile si complete est True.
         """
         # Implémentation pour lister les fichiers présents dans un dossier du serveur SFTP
-        pass
+        if not self.sftp:
+            message = DilicomConnectionError().stdr_message()
+            logger.log_error(message=message,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomConnectionError(message)
+        try:
+            if complete:
+                remotefiles = []
+                for attr in self.sftp.listdir_attr(remote_path):
+                    filename = attr.filename
+                    filepath = f"{remote_path}/{filename}"
+                    size = attr.st_size
+                    int_modified_time = attr.st_mtime
+                    if int_modified_time:
+                        modified_time = datetime.fromtimestamp(int_modified_time)
+                    else:
+                        modified_time = None
+                    remotefiles.append(RemoteFile(filename=filename,
+                                                 filepath=filepath,
+                                                 size=size,
+                                                 modified_time=modified_time))
+                return remotefiles
+            return self.sftp.listdir(remote_path)
+        except FileNotFoundError as e:
+            message = f"Le répertoire distant '{remote_path}' n'existe pas sur le serveur SFTP."
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomSFTPError(message) from e
+        except Exception as e:
+            message = f"Erreur lors du listage dans le répertoire '{remote_path}' " \
+                        + f"sur le serveur SFTP: {e}"
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomSFTPError(message) from e
+
 
     def delete(self, remote_path: str) -> None:
-        """Supprime un fichier du serveur SFTP de Dilicom.
+        """
+        Supprime un fichier du serveur SFTP de Dilicom.
+
         Args:
             remote_path (str): Le chemin distant du fichier à supprimer.
         """
         # Implémentation pour supprimer un fichier du serveur SFTP de Dilicom
-        pass
+        if not self.sftp:
+            message = DilicomConnectionError().stdr_message()
+            logger.log_error(message=message,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,                                 "remote_path": remote_path,
+                             })
+            raise DilicomConnectionError(message)
+        try:
+            self.sftp.remove(remote_path)
+        except FileNotFoundError as e:
+            message = f"Le fichier distant '{remote_path}' n'existe pas pour la suppression."
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomSFTPError(message) from e
+        except Exception as e:
+            message = f"Erreur lors de la suppression du fichier '{remote_path}' " \
+                      f"sur le serveur SFTP de Dilicom: {e}"
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
+                             })
+            raise DilicomSFTPError(message) from e
+
 
     def __enter__(self):
         """Permet d'utiliser le repository dans un contexte de gestion de ressources."""
         self.connect()
         return self
+
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Ferme automatiquement la connexion lorsque le contexte est quitté."""
@@ -188,13 +390,55 @@ class DilicomRepository:
 
 
 class DilicomConnectionError(Exception):
-    """Exception levée en cas d'erreur de connexion au serveur SFTP de Dilicom."""
-    pass    # pylint: disable=unnecessary-pass
+    """
+    Exception levée en cas d'erreur de connexion au serveur SFTP de Dilicom.
+    """
+    def stdr_message(self):
+        """
+        Message d'erreur standard pour les problèmes de connexion au serveur SFTP de Dilicom.
+        """
+        return "Connexion SFTP non établie. Connectez-vous avant de télécharger un fichier."
+
 
 class DilicomAuthenticationError(Exception):
-    """Exception levée en cas d'erreur d'authentification au serveur SFTP de Dilicom."""
-    pass    # pylint: disable=unnecessary-pass
+    """
+    Exception levée en cas d'erreur d'authentification au serveur SFTP de Dilicom.
+    """
+    def stdr_message(self):
+        """
+        Message d'erreur standard pour les problèmes d'authentification au serveur SFTP de Dilicom.
+        """
+        return "Erreur d'authentification au serveur SFTP de Dilicom."
+
 
 class DilicomSFTPError(Exception):
-    """Exception levée en cas d'erreur lors des opérations SFTP avec le serveur de Dilicom."""
-    pass    # pylint: disable=unnecessary-pass
+    """
+    Exception levée en cas d'erreur lors des opérations SFTP avec le serveur de Dilicom.
+    """
+    def stdr_message(self):
+        """
+        Message d'erreur standard pour les problèmes lors des opérations SFTP avec le serveur.
+        """
+        return "Erreur lors des opérations SFTP avec le serveur de Dilicom."
+
+
+@dataclass
+class RemoteFile:
+    """
+    Classe représentant un fichier distant sur le serveur SFTP de Dilicom.
+    
+    Attributes:
+         filename (str): Le nom du fichier.
+         filepath (str): Le chemin complet du fichier sur le serveur SFTP.
+         size (int | None): La taille du fichier en octets, ou None si non disponible.
+         modified_time (datetime | None): La date et l'heure de la dernière modification du fichier,
+                                          ou None si non disponible.
+    """
+    filename: str
+    filepath: str
+    size: int | None
+    modified_time: datetime | None
+
+    def __str__(self):
+        return f"RemoteFile(filename='{self.filename}', filepath='{self.filepath}', " \
+               f"size={self.size}, modified_time={self.modified_time})"
