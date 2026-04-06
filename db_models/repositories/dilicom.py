@@ -85,34 +85,37 @@ class DilicomRepository:
                                     })
         except paramiko.AuthenticationException as e:
             message = f"✗ Erreur d'authentification au serveur SFTP de Dilicom: {e}"
-            logger.log_client_event(client_id="background",
-                                    event=message,
-                                    obj_metadata={
-                                        "host": self.config.host,
-                                        "port": self.config.port,
-                                        "username": self.config.username,
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
                                         "error": str(e),
                                     })
             raise DilicomAuthenticationError(message) from e
         except paramiko.SSHException as e:
             message = f"✗ Erreur SSH lors de la connexion au serveur SFTP de Dilicom: {e}"
-            logger.log_client_event(client_id="background",
-                                    event=message,
-                                    obj_metadata={
-                                        "host": self.config.host,
-                                        "port": self.config.port,
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
                                         "username": self.config.username,
                                         "error": str(e),
                                     })
             raise DilicomConnectionError(message) from e
         except Exception as e:
             message = f"✗ Erreur inattendue lors de la connexion au serveur SFTP de Dilicom: {e}"
-            logger.log_client_event(client_id="background",
-                                    event=message,
-                                    obj_metadata={
-                                        "host": self.config.host,
-                                        "port": self.config.port,
-                                        "username": self.config.username,
+            logger.log_error(message=message,
+                             exception=e,
+                             user_id="background",
+                             obj_metadata={
+                                 "host": self.config.host,
+                                 "port": self.config.port,
+                                 "username": self.config.username,
                                         "error": str(e),
                                     })
             raise DilicomConnectionError(message) from e
@@ -123,6 +126,13 @@ class DilicomRepository:
         if self.sftp:
             try:
                 self.sftp.close()
+                logger.log_client_event(client_id="background",
+                                        event="✓ Client SFTP de Dilicom fermé avec succès",
+                                        obj_metadata={
+                                            "host": self.config.host,
+                                            "port": self.config.port,
+                                            "username": self.config.username,
+                                        })
             except Exception as e:
                 message = f"Erreur lors de la fermeture du client SFTP de Dilicom: {e}"
                 logger.log_error(message=message,
@@ -139,6 +149,13 @@ class DilicomRepository:
         if self.client:
             try:
                 self.client.close()
+                logger.log_client_event(client_id="background",
+                                        event="✓ Client SSH de Dilicom fermé avec succès",
+                                        obj_metadata={
+                                            "host": self.config.host,
+                                            "port": self.config.port,
+                                            "username": self.config.username,
+                                        })
             except Exception as e:
                 message = f"Erreur lors de la fermeture du client SSH de Dilicom: {e}"
                 logger.log_error(message=message,
@@ -177,6 +194,16 @@ class DilicomRepository:
             raise DilicomConnectionError(message)
         try:
             self.sftp.put(local_path, remote_path)
+            logger.log_client_event(client_id="background",
+                                    event=f"✓ Fichier '{local_path}' téléchargé vers " \
+                                          + f"'{remote_path}' sur le serveur SFTP de Dilicom",
+                                    obj_metadata={
+                                        "host": self.config.host,
+                                        "port": self.config.port,
+                                        "username": self.config.username,
+                                        "local_path": local_path,
+                                        "remote_path": remote_path,
+                                    })
         except FileNotFoundError as e:
             message = f"Le fichier local '{local_path}' n'existe pas pour le téléversement."
             logger.log_error(message=message,
@@ -202,6 +229,57 @@ class DilicomRepository:
                                  "local_path": local_path,
                                  "remote_path": remote_path,
                              })
+            raise DilicomSFTPError(message) from e
+
+
+    @retry_sftp
+    def upload_from_memory(self, content: str | bytes, remote_path: str) -> None:
+        """
+        Télécharge un contenu depuis la mémoire vers le serveur SFTP de Dilicom.
+
+        Args:
+            content (str | bytes): Le contenu à télécharger.
+            remote_path (str): Le chemin distant où le contenu doit être téléchargé.
+        """
+        if not self.sftp:
+            message = DilicomConnectionError().stdr_message()
+            logger.log_error(
+                message=message,
+                user_id="background",
+                obj_metadata={
+                    "host": self.config.host,
+                    "port": self.config.port,
+                    "username": self.config.username,
+                })
+            raise DilicomConnectionError(message)
+        try:
+            with self.sftp.file(remote_path, 'w') as remote_file:
+                if isinstance(content, str):
+                    content = content.encode('utf-8')
+                remote_file.write(content)
+            logger.log_dilicom_event(
+                event=f"✓ Contenu téléchargé vers '{remote_path}' sur le serveur SFTP de Dilicom",
+                obj_metadata={
+                    "host": self.config.host,
+                    "port": self.config.port,
+                    "username": self.config.username,
+                    "remote_path": remote_path,
+                    "content_size": len(content),
+                })
+        except Exception as e:
+            message = f"Erreur lors du téléchargement de contenu vers '{remote_path}' " \
+                      f"sur le serveur SFTP de Dilicom: {e}"
+            logger.log_error(
+                message=message,
+                exception=e,
+                user_id="background",
+                obj_metadata={
+                    "host": self.config.host,
+                    "port": self.config.port,
+                    "username": self.config.username,
+                    "remote_path": remote_path,
+                    "content_size": len(content),
+                })
             raise DilicomSFTPError(message) from e
 
     @retry_sftp
@@ -233,6 +311,25 @@ class DilicomRepository:
                                 if not str(remote_path).startswith('./') \
                                 else remote_path
             self.sftp.get(str(remote_path), local_path)
+            with open(local_path, 'rb') as f:
+                content = f.read()
+            if content:
+                content = content[:100] + (b'...' + content[100:] if len(content) > 100 else b'')
+            else:
+                content = b''
+            logger.log_dilicom_event(
+                event=f"✓ Fichier '{remote_path}' téléchargé vers " \
+                      + f"'{local_path}' depuis le serveur SFTP de Dilicom",
+                obj_metadata={
+                    "host": self.config.host,
+                    "port": self.config.port,
+                    "username": self.config.username,
+                    "remote_path": str(remote_path),
+                    "local_path": local_path,
+                    "content_size": len(content),
+                    "archive": archive,
+                    "content_preview": content,
+                })
         except FileNotFoundError as e:
             message = f"Le fichier distant '{remote_path}' n'existe pas pour le téléchargement."
             logger.log_error(message=message,
@@ -346,7 +443,8 @@ class DilicomRepository:
                              obj_metadata={
                                  "host": self.config.host,
                                  "port": self.config.port,
-                                 "username": self.config.username,                                 "remote_path": remote_path,
+                                 "username": self.config.username,
+                                 "remote_path": remote_path,
                              })
             raise DilicomConnectionError(message)
         try:

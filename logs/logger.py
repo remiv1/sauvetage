@@ -14,9 +14,19 @@ from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, PyMon
 
 
 class MongoDBLogger:
-    """Gestionnaire de logs MongoDB"""
+    """
+    Gestionnaire de logs MongoDB.
+    
+    Args:
+    - host (str): Adresse du serveur MongoDB
+    - port (int): Port de connexion à MongoDB
+    - username (str): Nom d'utilisateur pour l'authentification MongoDB
+    - password (str): Mot de passe pour l'authentification MongoDB
+    - database (str): Nom de la base de données MongoDB pour les logs
+    - timeout (int): Délai de connexion en millisecondes
+    """
 
-    def __init__(
+    def __init__(   # pylint: disable=too-many-arguments
         self,
         *,
         host: str = os.getenv("MONGO_HOST", "localhost"),
@@ -64,7 +74,7 @@ class MongoDBLogger:
         """Obtenir le nom de la collection pour l'année courante"""
         return datetime.now().strftime("%Y")
 
-    def log(
+    def log(    # pylint: disable=too-many-arguments
         self,
         *,
         level: str,
@@ -78,7 +88,26 @@ class MongoDBLogger:
         ip_address: Optional[str] = None,
         status_code: Optional[int] = None,
     ) -> str:
-        """Enregistrer un log dans MongoDB"""
+        """
+        Enregistrer un log dans MongoDB
+        Utiliser plutôt les méthodes spécialisées comme :
+        - log_user_action
+        - log_client_event
+        - log_error
+        - log_dilicom_event
+
+        Args:
+            level (str): Niveau de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            message (str): Message de log
+            log_type (str): Type de log (users, logs, clients, métiers)
+            user_id (Optional[str]): ID de l'utilisateur associé au log
+            action (Optional[str]): Action effectuée (ex: "login", "upload_file", etc.)
+            resource_type (Optional[str]): Type de ressource (ex: "file", "endpoint", etc.)
+            resource_id (Optional[str]): ID de la ressource concernée
+            obj_metadata (Optional[Dict[str, Any]]): Métadonnées supplémentaires liées au log
+            ip_address (Optional[str]): Adresse IP de l'utilisateur
+            status_code (Optional[int]): Code de statut HTTP associé à l'action (si applicable)
+        """
 
         if level not in self.levels:
             raise ValueError(f"Niveau de log invalide: {level}")
@@ -109,7 +138,7 @@ class MongoDBLogger:
             logging.error("Erreur lors de l'enregistrement du log: %s", e)
             raise
 
-    def log_user_action(
+    def log_user_action(    # pylint: disable=too-many-arguments
         self,
         *,
         user_id: str,
@@ -119,7 +148,19 @@ class MongoDBLogger:
         obj_metadata: Optional[Dict[str, Any]] = None,
         ip_address: Optional[str] = None,
     ) -> str:
-        """Enregistrer une action utilisateur"""
+        """
+        Enregistrer une action utilisateur.
+        
+        Args:
+            user_id (str): ID de l'utilisateur
+            action (str): Action effectuée par l'utilisateur
+            resource_type (Optional[str]): Type de ressource concernée
+            resource_id (Optional[str]): ID de la ressource concernée
+            obj_metadata (Optional[Dict[str, Any]]): Métadonnées supplémentaires liées à l'action
+            ip_address (Optional[str]): Adresse IP de l'utilisateur
+        Returns:
+            str: ID du log enregistré
+        """
         return self.log(
             level=self.levels[1],
             message=f"Utilisateur {user_id} a effectué: {action}",
@@ -166,6 +207,30 @@ class MongoDBLogger:
             message=message,
             log_type=self.log_types[1],
             user_id=user_id,
+            obj_metadata=obj_metadata,
+        )
+
+    def log_dilicom_event(
+        self,
+        *,
+        event: str,
+        obj_metadata: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Enregistrer un événement métier lié à Dilicom
+        
+        Args:
+            event (str): Description de l'événement métier Dilicom
+            obj_metadata (Optional[Dict[str, Any]]): Métadonnées supplémentaires liées à
+                                                     l'événement (ex: type d'opération, durée, etc.)
+        Returns:
+            str: ID du log enregistré
+        """
+        return self.log(
+            level=self.levels[1],
+            message=f"Événement métier Dilicom: {event}",
+            log_type=self.log_types[3],
+            resource_type="dilicom_event",
             obj_metadata=obj_metadata,
         )
 
