@@ -32,7 +32,9 @@ def send_dilicom_order():
 
 
 @router.get("/send-referentials")
-async def send_dilicom_referentials(_=Annotated[Depends(access_control(restrict_ip=True))]):
+async def send_dilicom_referentials(
+    _access: Annotated[bool, Depends(access_control(restrict_ip=True))]
+    ):
     """Route pour envoyer les référentiels à Dilicom.
 
     Cette route déclenche l'envoi des référentiels à Dilicom en utilisant `DilicomService`.
@@ -44,7 +46,9 @@ async def send_dilicom_referentials(_=Annotated[Depends(access_control(restrict_
 
 
 @router.get("/fetch-returns")
-async def fetch_dilicom_returns(_=Annotated[Depends(access_control(restrict_ip=True))]):
+async def fetch_dilicom_returns(
+    _access: Annotated[bool, Depends(access_control(restrict_ip=True))]
+    ):
     """Route pour récupérer les retours de Dilicom.
 
     Cette route déclenche la récupération des retours de Dilicom en utilisant `DilicomService`.

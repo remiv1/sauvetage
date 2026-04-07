@@ -1,8 +1,10 @@
 """Module utilitaire pour la gestion des documents (génération de PDF, etc.)."""
 
+from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
-from . import TEMPLATES_DIR
+
+TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 def create_document_buffer(template_name: str, data: dict) -> bytes:
     """

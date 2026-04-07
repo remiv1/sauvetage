@@ -76,101 +76,118 @@
         {% endif %}
     </div>
 
-    {# ── Lignes de commande ─────────────────────────────────────────────── #}
-    <h3>Lignes de commande</h3>
-    {% if order.lines %}
-    <table class="order-lines-table">
-        <thead>
-            <tr>
-                <th>Article</th>
-                <th>Qté</th>
-                <th>PU HT</th>
-                <th>Remise</th>
-                <th>TVA</th>
-                <th>Total HT</th>
-                <th>Statut</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% set ns = namespace(total_ht=0) %}
-            {% for line in order.lines %}
-            <tr>
-                <td>{{ line.article_name }}</td>
-                <td>{{ line.quantity }}</td>
-                <td>{{ "%.2f"|format(line.unit_price) }} €</td>
-                <td>{{ "%.2f"|format(line.discount) }} %</td>
-                <td>{{ "%.1f"|format(line.vat_rate) }} %</td>
-                <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
-                <td><span class="badge">{{ line.status_label }}</span></td>
-                {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="5" class="text-right weight-600">Total HT</td>
-                <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
-                <td></td>
-            </tr>
-        </tfoot>
-    </table>
-    {% else %}
-    <p class="subtile-text-500">Aucune ligne de commande.</p>
-    {% endif %}
+    <div class="order-tabs">
+        <div class="order-tabs-list" role="tablist" aria-label="Sections de la commande">
+            <button id="tab-btn-lines" class="order-tab active" data-target="tab-lines" role="tab" aria-selected="true" aria-controls="tab-lines" tabindex="0">
+                Lignes de commande
+            </button>
+            <button id="tab-btn-invoices" class="order-tab" data-target="tab-invoices" role="tab" aria-selected="false" aria-controls="tab-invoices" tabindex="-1">
+                Factures
+            </button>
+            <button id="tab-btn-shipments" class="order-tab" data-target="tab-shipments" role="tab" aria-selected="false" aria-controls="tab-shipments" tabindex="-1">
+                Envois
+            </button>
+        </div>
+    </div>
 
-    {# ── Factures rattachées ────────────────────────────────────────────── #}
-    <h3 class="mt-3">Factures</h3>
-    {% if order.invoices %}
-    <table class="order-lines-table">
-        <thead>
-            <tr>
-                <th>Référence</th>
-                <th>Total HT</th>
-                <th>TVA</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for inv in order.invoices %}
-            <tr>
-                <td>{{ inv.reference }}</td>
-                <td>{{ "%.2f"|format(inv.total_amount) }} €</td>
-                <td>{{ "%.2f"|format(inv.vat_amount) }} €</td>
-                <td>{{ inv.created_at[:10] if inv.created_at else '—' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="subtile-text-500">Aucune facture.</p>
-    {% endif %}
+    <div id="tab-lines" class="order-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-lines" aria-hidden="false">
+        <h3>Lignes de commande</h3>
+        {% if order.lines %}
+        <table class="order-lines-table">
+            <thead>
+                <tr>
+                    <th>Article</th>
+                    <th>Qté</th>
+                    <th>PU HT</th>
+                    <th>Remise</th>
+                    <th>TVA</th>
+                    <th>Total HT</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set ns = namespace(total_ht=0) %}
+                {% for line in order.lines %}
+                <tr>
+                    <td>{{ line.article_name }}</td>
+                    <td>{{ line.quantity }}</td>
+                    <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+                    <td>{{ "%.2f"|format(line.discount) }} %</td>
+                    <td>{{ "%.1f"|format(line.vat_rate) }} %</td>
+                    <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
+                    <td><span class="badge">{{ line.status_label }}</span></td>
+                    {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-right weight-600">Total HT</td>
+                    <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <p class="subtile-text-500">Aucune ligne de commande.</p>
+        {% endif %}
+    </div>
 
-    {# ── Envois rattachés ───────────────────────────────────────────────── #}
-    <h3 class="mt-3">Envois</h3>
-    {% if order.shipments %}
-    <table class="order-lines-table">
-        <thead>
-            <tr>
-                <th>Référence</th>
-                <th>Transporteur</th>
-                <th>N° suivi</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ship in order.shipments %}
-            <tr>
-                <td>{{ ship.reference }}</td>
-                <td>{{ ship.carrier }}</td>
-                <td>{{ ship.tracking_number or '—' }}</td>
-                <td>{{ ship.created_at[:10] if ship.created_at else '—' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="subtile-text-500">Aucun envoi.</p>
-    {% endif %}
+    <div id="tab-invoices" class="order-tab-panel" role="tabpanel" aria-labelledby="tab-btn-invoices" aria-hidden="true">
+        <h3 class="mt-3">Factures</h3>
+        {% if order.invoices %}
+        <table class="order-lines-table">
+            <thead>
+                <tr>
+                    <th>Référence</th>
+                    <th>Total HT</th>
+                    <th>TVA</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in order.invoices %}
+                <tr>
+                    <td>{{ inv.reference }}</td>
+                    <td>{{ "%.2f"|format(inv.total_amount) }} €</td>
+                    <td>{{ "%.2f"|format(inv.vat_amount) }} €</td>
+                    <td>{{ inv.created_at[:10] if inv.created_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="subtile-text-500">Aucune facture.</p>
+        {% endif %}
+    </div>
+
+    <div id="tab-shipments" class="order-tab-panel" role="tabpanel" aria-labelledby="tab-btn-shipments" aria-hidden="true">
+        <h3 class="mt-3">Envois</h3>
+        {% if order.shipments %}
+        <table class="order-lines-table">
+            <thead>
+                <tr>
+                    <th>Référence</th>
+                    <th>Transporteur</th>
+                    <th>N° suivi</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ship in order.shipments %}
+                <tr>
+                    <td>{{ ship.reference }}</td>
+                    <td>{{ ship.carrier }}</td>
+                    <td>{{ ship.tracking_number or '—' }}</td>
+                    <td>{{ ship.created_at[:10] if ship.created_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="subtile-text-500">Aucun envoi.</p>
+        {% endif %}
+    </div>
 
     {# ── Modale Facturation ─────────────────────────────────────────────── #}
     {% if order.has_uninvoiced_lines %}
@@ -314,6 +331,58 @@ document.addEventListener('DOMContentLoaded', function() {
         invoiceDialog.querySelectorAll('.btn-close, .btn-cancel-close').forEach(function(btn) {
             btn.addEventListener('click', function() { invoiceDialog.close(); });
         });
+    }
+    // Tabs accessibles pour la vue commande (activation automatique à la navigation)
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.order-tab'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('.order-tab-panel'));
+    if (tabs.length) {
+        // Initialisation des attributs ARIA
+        tabs.forEach(function(tab) {
+            var targetId = tab.dataset.target;
+            var panel = document.getElementById(targetId);
+            if (!tab.id) tab.id = 'order-tab-' + targetId.replace(/^tab-/, '');
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', targetId);
+            if (panel) panel.setAttribute('aria-labelledby', tab.id);
+            if (tab.classList.contains('active')) {
+                tab.setAttribute('aria-selected', 'true');
+                tab.setAttribute('tabindex', '0');
+                if (panel) panel.setAttribute('aria-hidden', 'false');
+            } else {
+                tab.setAttribute('aria-selected', 'false');
+                tab.setAttribute('tabindex', '-1');
+                if (panel) panel.setAttribute('aria-hidden', 'true');
+            }
+            // Click: activer l'onglet
+            tab.addEventListener('click', function() { activateTab(tab, true); });
+            // Clavier: flèches + Home/End
+            tab.addEventListener('keydown', function(e) {
+                var idx = tabs.indexOf(tab);
+                var newIndex = null;
+                switch (e.key) {
+                    case 'ArrowLeft': newIndex = (idx - 1 + tabs.length) % tabs.length; break;
+                    case 'ArrowRight': newIndex = (idx + 1) % tabs.length; break;
+                    case 'Home': newIndex = 0; break;
+                    case 'End': newIndex = tabs.length - 1; break;
+                    case 'Enter':
+                    case ' ':
+                        e.preventDefault(); activateTab(tab, true); return;
+                    default: return;
+                }
+                e.preventDefault();
+                var newTab = tabs[newIndex];
+                if (newTab) activateTab(newTab, true);
+            });
+        });
+
+        function activateTab(tab, setFocus) {
+            tabs.forEach(function(t) { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); t.setAttribute('tabindex', '-1'); });
+            panels.forEach(function(p) { p.classList.remove('active'); p.setAttribute('aria-hidden', 'true'); });
+            tab.classList.add('active'); tab.setAttribute('aria-selected', 'true'); tab.setAttribute('tabindex', '0');
+            var target = document.getElementById(tab.dataset.target);
+            if (target) { target.classList.add('active'); target.setAttribute('aria-hidden', 'false'); }
+            if (setFocus !== false) tab.focus();
+        }
     }
 
     // Modale expédition

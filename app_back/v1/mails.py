@@ -2,7 +2,7 @@
 
 import base64
 from fastapi import APIRouter, HTTPException
-from app_back.utils import send_mail
+from app_back.utils.mails import send_mail
 from app_back.v1.schems.mails import MailSchema
 
 router = APIRouter(

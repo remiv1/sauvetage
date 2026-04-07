@@ -33,6 +33,8 @@
             </div>
             {% if form.supplier_name.errors %}
                 <div class="text-danger small">{{ form.supplier_name.errors[0] }}</div>
+            {% elif form.supplier_id.errors %}
+                <div class="text-danger small">{{ form.supplier_id.errors[0] }}</div>
             {% endif %}
         </div>
 
@@ -43,29 +45,40 @@
 </div>
 <script>
 (() => {
-    const toggle = form => {
-        if (!form) return;
-        const supplier = form.querySelector('#supplier_id');
-        const submit = form.querySelector('input[type="submit"], button[type="submit"]');
-        if (submit) submit.disabled = !(supplier && supplier.value && supplier.value.trim());
+    const toggle = () => {
+        const formElement = document.getElementById('new-order-form');
+        if (!formElement) return;
+        
+        const supplier = formElement.querySelector('#supplier_id');
+        const submit = formElement.querySelector('[type="submit"]');
+        
+        if (submit && supplier) {
+            const hasSupplier = supplier.value && supplier.value.trim();
+            const shouldEnable = !!hasSupplier;
+            
+            if (submit.disabled !== !shouldEnable) {
+                submit.disabled = !shouldEnable;
+            }
+        }
     };
 
+    // Initialiser quand le formulaire est prêt
     const formElement = document.getElementById('new-order-form');
-    if (!formElement) {
-        return;
+    if (formElement) {
+        // Initialisation immédiate
+        toggle();
+        
+        // Écouter les changements directs
+        formElement.addEventListener('input', toggle, true);
+        formElement.addEventListener('change', toggle, true);
+        
+        // Écouter les mutations HTMX
+        formElement.addEventListener('htmx:afterSettle', toggle);
+        formElement.addEventListener('htmx:afterSwap', toggle);
     }
-
-    // délégation : capture tous les input/change dans le formulaire, limitée au conteneur
-    formElement.addEventListener(
-        'input',
-        e => {
-            const f = e.target.closest('#new-order-form');
-            if (f) toggle(f);
-        },
-        true
-    );
-
-    // initialisation si déjà présent
-    toggle(formElement);
+    
+    // Écouter aussi au niveau du document pour capturer les changements OOB
+    document.addEventListener('htmx:afterSettle', toggle);
+    document.addEventListener('htmx:afterSwap', toggle);
 })();
 </script>

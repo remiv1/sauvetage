@@ -4,6 +4,8 @@ Ce module inclut:
 - La classe `DilicomService` qui encapsule les opérations SFTP avec le serveur de Dilicom.
 """
 
+from datetime import datetime, timezone
+from os import getenv
 from typing import Sequence
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -18,6 +20,7 @@ class DilicomService:
     def __init__(self, session: Session):
         self.session = session
         self.repository = DilicomRepository()
+        self.abonned: str = getenv("DILICOM_ID", "")
 
     def send_updates(self):
         """
@@ -26,10 +29,12 @@ class DilicomService:
         génère le fichier de mise à jour, et le transfère via SFTP.
         """
         txt_content: str | bool = self._build_refel_content(to_file=False)
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
+        filename = f"{self.abonned}_MVT-REF_{timestamp}.txt"
         if isinstance(txt_content, bool):
             raise ValueError("Erreur lors de la création du fichier de mise à jour.")
         with self.repository as repo:
-            repo.upload_from_memory(txt_content, "refel.txt")
+            repo.upload_from_memory(txt_content, filename)
 
     def fetch_returns(self):
         """
@@ -71,7 +76,7 @@ class DilicomService:
         stmt = select(DilicomReferencial).where(DilicomReferencial.dilicom_synced == False) # pylint: disable=C0121
         try:
             unsynced_refs = self.session.execute(stmt).scalars().all()
-            txt_content = "\n".join(ref.to_pipe() for ref in unsynced_refs)
+            txt_content = "BEGIN|MAJREF|\n" + "\n".join(ref.to_pipe() for ref in unsynced_refs)
             if to_file:
                 with open("refel.txt", "w", encoding="utf-8") as f:
                     f.write(txt_content)

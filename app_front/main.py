@@ -57,8 +57,8 @@ def before_request():
 def after_request(response):
     """Fonction exécutée après chaque requête"""
     path = request.path
-    # Ignorer les fichiers statiques et les fragments HTMX
-    if path.startswith("/static/") or "/htmx/" in path:
+    # Ignorer les fichiers statiques
+    if path.startswith("/static/"):
         return response
     method = request.method
     if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):

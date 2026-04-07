@@ -57,9 +57,6 @@ def new_reservation_section():
         reservation_id = create_order_in_db(form, reservation=True)
         order = get_order_by_id(reservation_id)
         return render_template(SECTION_VIEW, view_state="new", order=order, **CTX)
-    if request.method == "POST":
-        msg = "Formulaire invalide : " + str(form.errors)
-        raise ValueError(msg)
     return render_template(SECTION_NEW, form=form, **CTX)
 
 
