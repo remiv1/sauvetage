@@ -8,8 +8,8 @@ from db_models.objects import Order, OrderLine
 from db_models.objects import InventoryMovements
 from db_models.repositories.orders import OrdersRepository
 from db_models.repositories.customers import CustomersRepository
-from db_models.repositories.invoices import InvoiceRepository
-from db_models.repositories.shipments import ShipmentsRepository
+from db_models.repositories.invoices import InvoiceRepository, Invoice, InvoiceLine
+from db_models.repositories.shipments import ShipmentsRepository, ShipmentLine
 from db_models.repositories.objects.objects import ObjectsRepository, GeneralObjects
 
 
@@ -310,14 +310,14 @@ def cancel_order(order_id: int) -> Dict[str, Any]:
         session.close()
 
 
-def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Dict[str, Any]:
+def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
     """Crée une facture pour les lignes sélectionnées avec les quantités spécifiées.
 
     Args:
         order_id: ID de la commande.
         line_items: Liste de dicts {order_line_id: int, quantity: int}.
     Returns:
-        Dict de la facture créée.
+        Invoice créée (objet SQLAlchemy).
     """
     if not line_items:
         raise ValueError("Aucune ligne sélectionnée pour la facturation.")
@@ -330,40 +330,52 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Dict[str, 
             raise ValueError(_ORDER_NOT_FOUND)
 
         # Valider les lignes et enrichir avec les prix
-        lines_by_id = {l.id: l for l in (order.order_lines or [])}
-        enriched_items = []
-        for item in line_items:
-            line = _may_be_invoiced(lines_by_id.get(item["order_line_id"]), item)
-            enriched_items.append({
-                "order_line_id": line.id,
-                "quantity": item["quantity"],
-                "unit_price": float(line.unit_price),
-                "discount": float(line.discount),
-                "vat_rate": float(line.vat_rate),
-            })
+        line_objects: List[OrderLine] = [
+            l for l in (order.order_lines or []) \
+                if l.id in {item["order_line_id"] for item in line_items}]
+        invoice_lines = []
+        for line in line_objects:
+            if line.status != "draft":
+                raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
+            qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
+            if qty > line.quantity or qty < 1:
+                raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+            invoice_lines.append(
+                InvoiceLine(
+                    order_line_id=line.id,
+                    reference=line.general_object.ean13,
+                    description=line.general_object.name,
+                    quantity=qty,
+                    unit_price=float(line.unit_price),
+                    discount=float(line.discount),
+                    vat_rate=float(line.vat_rate),
+                )
+            )
 
         # Créer la facture
         inv_repo = InvoiceRepository(session)
         invoice = inv_repo.create_invoice(
             order_id=order_id,
-            line_items=enriched_items,
+            line_items=invoice_lines,
             create_source="backoffice",
         )
 
         # Mettre à jour le statut des lignes de commande
-        for item in line_items:
-            line = lines_by_id[item["order_line_id"]]
-            if item["quantity"] == line.quantity:
+        for line in line_objects:
+            qty_invoiced = next(
+                item["quantity"] for item in line_items if item["order_line_id"] == line.id
+                )
+            if line.quantity == qty_invoiced:
                 line.status = "invoiced"
             else:
                 # Facturation partielle : couper la ligne
-                order_repo.cut_line_for_invoice(line, item["quantity"])
+                order_repo.cut_line_for_invoice(line, qty_invoiced)
                 line.status = "invoiced"
         session.commit()
 
         # Recalculer le statut de la commande
         _recalculate_order_status(order, order_repo)
-        return invoice.to_dict()
+        return invoice
     except SQLAlchemyError as e:
         session.rollback()
         raise ValueError(f"Erreur lors de la facturation : {str(e)}") from e
@@ -397,15 +409,23 @@ def ship_order(
         if order is None:
             raise ValueError(_ORDER_NOT_FOUND)
 
-        lines_by_id = {l.id: l for l in (order.order_lines or [])}
-        for item in line_items:
-            line = lines_by_id.get(item["order_line_id"])
-            if line is None:
-                raise ValueError(f"Ligne {item['order_line_id']} introuvable.")
+        line_objects: List[OrderLine] = [
+            l for l in (order.order_lines or []) \
+                if l.id in {item["order_line_id"] for item in line_items}]
+
+        shipment_lines: List[ShipmentLine] = []
+        for line in line_objects:
             if line.status != "invoiced":
                 raise ValueError(f"La ligne {line.id} n'est pas facturée.")
-            if item["quantity"] > line.quantity or item["quantity"] < 1:
+            qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
+            if qty > line.quantity or qty < 1:
                 raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+            shipment_lines.append(
+                ShipmentLine(
+                    order_line_id=line.id,
+                    quantity=qty,
+                )
+            )
 
         # Créer l'expédition
         ship_repo = ShipmentsRepository(session)
@@ -413,17 +433,18 @@ def ship_order(
             order_id=order_id,
             carrier=carrier,
             tracking_number=tracking_number,
-            line_items=line_items,
+            line_items=shipment_lines,
             create_source="backoffice",
         )
 
         # Mettre à jour le statut des lignes
-        for item in line_items:
-            line = lines_by_id[item["order_line_id"]]
-            if item["quantity"] == line.quantity:
+        for line in line_objects:
+            qty_shipped = next(
+                item["quantity"] for item in line_items if item["order_line_id"] == line.id
+                )
+            if qty_shipped == line.quantity:
                 line.status = "shipped"
-            # Note: pour une expédition partielle on pourrait couper la ligne,
-            # mais on garde simple pour l'instant
+            # Note: Tout ce qui est facturé est expédié, le cutting est fait lors de la facturation.
         session.commit()
 
         # Recalculer le statut de la commande

@@ -101,8 +101,24 @@ class InvoiceLine(WorkingBase, QueryMixin):
     order_line_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("app_schema.order_lines.id"), nullable=False
     )
+    reference: Mapped[str] = mapped_column(
+        String(14), nullable=False, comment="Référence de la ligne de facture"
+    )
+    description: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Description de la ligne de facture"
+    )
     quantity: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="Quantité facturée"
+    )
+    unit_price: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False, comment="Prix unitaire de la ligne de facture"
+    )
+    discount: Mapped[float] = mapped_column(
+        Numeric(5, 2), nullable=False,
+        default=0.0, comment="Remise appliquée à la ligne de facture"
+    )
+    vat_rate: Mapped[float] = mapped_column(
+        Numeric(5, 2), nullable=False, comment="Taux de TVA appliqué à la ligne de facture"
     )
 
     # Relations

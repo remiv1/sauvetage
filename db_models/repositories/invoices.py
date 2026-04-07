@@ -13,7 +13,16 @@ class InvoiceRepository(BaseRepository):
     """Dépôt des données pour la gestion des factures."""
 
     def generate_reference(self) -> str:
-        """Génère une référence unique au format FAC-YYMM-00001."""
+        """
+        Génère une référence unique au format FAC-YYMM-00001.
+
+        Une fois la facturation avec Henrri implémentée, ce sera la référence externe fournie par
+        Henrri qui sera utilisée en lieu et place de cette référence générée.
+        
+        Cette référence est purement interne et ne devra pas être exposée à l'extérieur.
+        Returns:
+            str: Référence unique pour la facture.
+        """
         now = datetime.now(timezone.utc)
         yymm = now.strftime("%y%m")
         pattern = f"FAC-{yymm}-%"
@@ -34,25 +43,25 @@ class InvoiceRepository(BaseRepository):
         self,
         *,
         order_id: int,
-        line_items: list[Dict[str, Any]],
+        line_items: list[InvoiceLine],
         create_source: str = "web",
     ) -> Invoice:
         """Crée une facture avec ses lignes.
         Args:
             order_id: ID de la commande parente.
-            line_items: Liste de dicts {order_line_id, quantity, unit_price, discount, vat_rate}.
+            line_items: Liste de InvoiceLine.
             create_source: Source de création.
         Returns:
             Invoice créée.
         """
         total_ht = 0.0
         total_vat = 0.0
-        for item in line_items:
-            price = float(item["unit_price"]) * item["quantity"]
-            disc = price * float(item.get("discount", 0)) / 100
+        for line in line_items:
+            price = float(line.unit_price) * line.quantity
+            disc = price * float(line.discount) / 100
             ht = price - disc
             total_ht += ht
-            total_vat += ht * float(item["vat_rate"]) / 100
+            total_vat += ht * float(line.vat_rate) / 100
 
         invoice = Invoice(
             order_id=order_id,
@@ -65,13 +74,9 @@ class InvoiceRepository(BaseRepository):
             self.session.add(invoice)
             self.session.flush()  # get invoice.id
 
-            for item in line_items:
-                inv_line = InvoiceLine(
-                    invoice_id=invoice.id,
-                    order_line_id=item["order_line_id"],
-                    quantity=item["quantity"],
-                )
-                self.session.add(inv_line)
+            for line in line_items:
+                line.invoice_id = invoice.id
+                self.session.add(line)
 
             self.session.commit()
             return invoice

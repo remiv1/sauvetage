@@ -42,7 +42,7 @@ class OrdersRepository(BaseRepository):
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
-    def search_paginated(
+    def search_paginated(   # pylint: disable=too-many-arguments, too-many-locals
         self,
         *,
         reference: str | None = None,

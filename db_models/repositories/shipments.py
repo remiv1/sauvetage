@@ -1,7 +1,7 @@
 """Module pour la gestion des expéditions."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
@@ -13,7 +13,12 @@ class ShipmentsRepository(BaseRepository):
     """Repository pour les opérations sur les expéditions."""
 
     def generate_reference(self) -> str:
-        """Génère une référence unique au format ENV-YYMM-00001."""
+        """
+        Génère une référence unique au format ENV-YYMM-00001.
+        La référence est basée sur la date de création et un compteur incrémental.
+        Returns:
+            str: La référence générée.
+        """
         now = datetime.now(timezone.utc)
         yymm = now.strftime("%y%m")
         pattern = f"ENV-{yymm}-%"
@@ -31,7 +36,13 @@ class ShipmentsRepository(BaseRepository):
         return f"ENV-{yymm}-{next_num:05d}"
 
     def get_by_id(self, shipment_id: int) -> "Shipment | None":
-        """Récupère une expédition par son identifiant."""
+        """
+        Récupère une expédition par son identifiant.
+        Args:
+            shipment_id: L'identifiant de l'expédition à récupérer.
+        Returns:
+            Shipment | None: L'expédition correspondant à l'identifiant, ou None s'il n'existe pas.
+        """
         stmt = (
             select(Shipment)
             .where(Shipment.id == shipment_id)
@@ -40,7 +51,13 @@ class ShipmentsRepository(BaseRepository):
         return self.session.execute(stmt).scalar_one_or_none()
 
     def get_by_order_id(self, order_id: int) -> list[Shipment]:
-        """Récupère toutes les expéditions d'une commande."""
+        """
+        Récupère toutes les expéditions d'une commande.
+        Args:
+            order_id: L'identifiant de la commande.
+        Returns:
+            list[Shipment]: Liste des expéditions correspondant à la commande.
+        """
         stmt = (
             select(Shipment)
             .where(Shipment.order_id == order_id)
@@ -49,13 +66,13 @@ class ShipmentsRepository(BaseRepository):
         )
         return list(self.session.execute(stmt).scalars().all())
 
-    def create_shipment(
+    def create_shipment(    # pylint: disable=too-many-arguments
         self,
         *,
         order_id: int,
         carrier: str,
         tracking_number: str | None,
-        line_items: list[Dict[str, Any]],
+        line_items: List[ShipmentLine],
         create_source: str = "web",
     ) -> "Shipment":
         """Crée une expédition avec ses lignes.
@@ -63,7 +80,7 @@ class ShipmentsRepository(BaseRepository):
             order_id: ID de la commande parente.
             carrier: Transporteur.
             tracking_number: Numéro de suivi.
-            line_items: Liste de dicts {order_line_id, quantity}.
+            line_items: Liste de ShipmentLine.
             create_source: Source de création.
         Returns:
             Shipment créée.
@@ -79,13 +96,9 @@ class ShipmentsRepository(BaseRepository):
             self.session.add(shipment)
             self.session.flush()
 
-            for item in line_items:
-                ship_line = ShipmentLine(
-                    shipment_id=shipment.id,
-                    order_line_id=item["order_line_id"],
-                    quantity=item["quantity"],
-                )
-                self.session.add(ship_line)
+            for line in line_items:
+                line.shipment_id = shipment.id
+                self.session.add(line)
 
             self.session.commit()
             return shipment
