@@ -38,9 +38,16 @@
                         {# Bouton Voir #}
                         <a class="action-icon action-view"
                            title="Voir le détail"
-                           href="{{ url_for('order.order_view', order_id=item.id) }}">
+                                    href="{{ url_for('order.order_view', order_id=item.id, modal='view') }}">
                             {% include "svg/eye.html" %}
                         </a>
+                                {% if item.status != 'draft' %}
+                                <a class="action-icon"
+                                    title="Télécharger le bon de commande"
+                                    href="{{ url_for('order.order_download_slip', order_id=item.id) }}">
+                                     {% include "svg/download.html" %}
+                                </a>
+                                {% endif %}
                         {# Bouton Modifier (redirection page édition) #}
                         {% if item.status == 'draft' %}
                         <a href="{{ url_for('order_htmx_create.edit_order', order_id=item.id) }}"

@@ -9,4 +9,17 @@
     <!-- Le formulaire d'ajout rapide de fournisseur sera injecté ici -->
 </div>
 
+{% if open_order_id %}
+<script>
+(() => {
+    const url = new URL(`/stock/htmx/orders/view/{{ open_order_id }}`, globalThis.location.origin);
+    const modal = new URLSearchParams(globalThis.location.search).get('modal') || '{{ modal or "" }}';
+    if (modal) {
+        url.searchParams.set('modal', modal);
+    }
+    htmx.ajax('GET', url.toString(), { target: '#orders-management', swap: 'innerHTML' });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

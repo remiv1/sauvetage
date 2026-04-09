@@ -298,3 +298,13 @@
     <div id="confirm-order-modal"></div>
     {% endif %}
 </div>
+    <div id="order-modale"></div>
+
+    {% if reservation and view_state == 'view' and modal == 'validate' and order.order_state == 'sended' %}
+    <div
+        hx-get="{{ url_for('stock_htmx_reservations.return_reservation_route', order_id=order.id) }}"
+        hx-trigger="load"
+        hx-target="#order-modale"
+        hx-swap="innerHTML">
+    </div>
+    {% endif %}

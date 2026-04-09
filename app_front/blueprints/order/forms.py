@@ -10,6 +10,9 @@ class OrderCreateForm(FlaskForm):
     """Formulaire de création d'une commande (sélection du client)."""
 
     customer_id = HiddenField("Client", validators=[DataRequired()])
+    delivery_address_id = HiddenField(
+        "Adresse de livraison", validators=[DataRequired()]
+    )
     submit = SubmitField("Créer la commande")
 
 

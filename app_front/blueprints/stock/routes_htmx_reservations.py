@@ -71,7 +71,8 @@ def edit_reservation(order_id: int):
 def view_reservation(order_id: int):
     """Retourne la vue détaillée d'une réservation (HTMX)."""
     order = get_order_by_id(order_id)
-    return render_template(SECTION_VIEW, order=order, view_state="view", **CTX)
+    modal = request.args.get("modal", "")
+    return render_template(SECTION_VIEW, order=order, view_state="view", modal=modal, **CTX)
 
 
 @bp_stock_htmx_reservations.route("/<int:order_id>/line/create", methods=["GET", "POST"])

@@ -7,6 +7,8 @@ from app_front.blueprints.order.utils import (
     add_order_line,
     remove_order_line,
     get_order_by_id,
+    get_customer_order_addresses,
+    update_order_delivery_address,
     search_customers_for_dropdown,
     invoice_order,
     ship_order,
@@ -25,6 +27,7 @@ CUSTOMER_DROPDOWN = "htmx_templates/order/create/customer_dropdown.html"
 QUICK_CUSTOMER_MODAL = "htmx_templates/order/create/quick_customer_modal.html"
 ORDER_LINES_TABLE = "htmx_templates/order/create/lines_table.html"
 ARTICLE_DROPDOWN = "htmx_templates/order/create/article_dropdown.html"
+ADDRESS_SELECTOR = "htmx_templates/order/create/address_selector.html"
 _EDIT_ORDER_ROUTE = "order_htmx_create.edit_order"
 _VIEW_ORDER_ROUTE = "order.order_view"
 
@@ -45,7 +48,8 @@ def create_submit():
     form = OrderCreateForm()
     if form.validate_on_submit():
         customer_id = int(form.customer_id.data)  # type: ignore[arg-type]
-        result = create_order(customer_id)
+        delivery_address_id = int(form.delivery_address_id.data)  # type: ignore[arg-type]
+        result = create_order(customer_id, delivery_address_id)
         order_id = result.get("id")
         if order_id is None:
             return "<p>Erreur lors de la création de la commande.</p>", 500
@@ -54,7 +58,18 @@ def create_submit():
             _EDIT_ORDER_ROUTE, order_id=order_id
         )
         return response
-    return "<p>Veuillez sélectionner un client.</p>", 422
+    return "<p>Veuillez sélectionner un client et une adresse de livraison.</p>", 422
+
+
+@bp_order_htmx_create.get("/customer-addresses/<int:customer_id>")
+def customer_addresses(customer_id: int):
+    """Retourne les adresses utilisables pour créer une commande client."""
+    try:
+        addresses = get_customer_order_addresses(customer_id)
+    except ValueError as exc:
+        return f"<p class='error'>{exc}</p>", 422
+
+    return render_template(ADDRESS_SELECTOR, addresses=addresses)
 
 
 # ── Édition d'une commande (ajout de lignes) ─────────────────────────────
@@ -67,6 +82,27 @@ def edit_order(order_id: int):
         return "<p>Commande introuvable.</p>", 404
     line_form = OrderLineForm()
     return render_page("order_edit", order=order, line_form=line_form)
+
+
+@bp_order_htmx_create.post("/edit/<int:order_id>/delivery-address")
+def update_delivery_address(order_id: int):
+    """Met à jour l'adresse de livraison tant que la commande est en brouillon."""
+    delivery_address_id = request.form.get("delivery_address_id", type=int)
+    if not delivery_address_id:
+        return "<p class='error'>Adresse de livraison manquante.</p>", 422
+
+    try:
+        update_order_delivery_address(order_id, delivery_address_id)
+        refreshed_order = get_order_by_id(order_id)
+        if refreshed_order is None:
+            return "<p class='error'>Commande introuvable.</p>", 404
+    except ValueError as exc:
+        return f"<p class='error'>{exc}</p>", 422
+
+    return render_template(
+        "htmx_templates/order/create/delivery_address_info.html",
+        order=refreshed_order,
+    )
 
 
 # ── Gestion des lignes (HTMX) ───────────────────────────────────────────

@@ -23,9 +23,5 @@ COPY migrations/users/ users/
 # Rendre l'entrypoint exécutable
 RUN chmod +x app_back/bootstrap.py
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/').read()" || exit 1
-
 # Entrypoint
 ENTRYPOINT ["python", "app_back/bootstrap.py"]

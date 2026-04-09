@@ -78,7 +78,8 @@ def view_order(order_id: int):
     """Retourne la vue détaillée d'une commande fournisseur (HTMX)."""
     # Récupérer les détails de la commande à partir de l'ID
     order = get_order_by_id(order_id)
-    return render_template(EDIT_TABLE, order=order, view_state="view")
+    modal = request.args.get("modal", "")
+    return render_template(EDIT_TABLE, order=order, view_state="view", modal=modal)
 
 
 @bp_stock_htmx_orders.route("/cancel/<int:order_id>", methods=["GET", "POST"])

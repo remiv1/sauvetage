@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence
 from sqlalchemy.exc import SQLAlchemyError
 from app_front.config import db_conf
-from db_models.objects import Order, OrderLine
+from db_models.objects import Order, OrderLine, CustomerAddresses
 from db_models.objects import InventoryMovements
 from db_models.repositories.orders import OrdersRepository
 from db_models.repositories.customers import CustomersRepository
@@ -36,6 +36,7 @@ STATUS_BADGE_CLASS: Dict[str, str] = {
 }
 
 _ORDER_NOT_FOUND = "Commande introuvable"
+_CUSTOMER_NOT_FOUND = "Client introuvable"
 
 
 def _customer_display_name(customer) -> str:
@@ -45,6 +46,40 @@ def _customer_display_name(customer) -> str:
     if customer.customer_type == "pro" and customer.pro:
         return customer.pro.company_name
     return f"Client #{customer.id}"
+
+
+def _sorted_active_addresses(customer) -> list[CustomerAddresses]:
+    """Retourne les adresses actives d'un client triées par identifiant."""
+    addresses = [a for a in (customer.addresses or []) if a.is_active]
+    return sorted(addresses, key=lambda address: address.id)
+
+
+def _find_default_billing_address(customer) -> CustomerAddresses | None:
+    """Retourne la première adresse de facturation active du client."""
+    return next(
+        (address for address in _sorted_active_addresses(customer) if address.is_billing),
+        None,
+    )
+
+
+def _find_shipping_addresses(customer) -> list[CustomerAddresses]:
+    """Retourne les adresses de livraison actives du client."""
+    return [
+        address
+        for address in _sorted_active_addresses(customer)
+        if address.is_shipping
+    ]
+
+
+def _shipping_options_for_customer(customer) -> list[dict[str, Any]]:
+    """Construit les options de select pour les adresses de livraison du client."""
+    return [
+        {
+            "id": address.id,
+            "label": _format_address_option_label(address.to_dict()),
+        }
+        for address in _find_shipping_addresses(customer)
+    ]
 
 
 def _order_to_list_dict(order: Order) -> Dict[str, Any]:
@@ -158,6 +193,12 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
         data["delivery_address"] = (
             order.delivery_address.to_dict() if order.delivery_address else None
         )
+        data["invoice_address_id"] = order.invoice_address_id
+        data["delivery_address_id"] = order.delivery_address_id
+
+        data["shipping_addresses"] = (
+            _shipping_options_for_customer(order.customer) if order.customer else []
+        )
 
         # Lignes de commande (exclure les annulées pour le tableau principal)
         data["lines"] = []
@@ -201,17 +242,96 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
 
 # ── Création ─────────────────────────────────────────────────────────────
 
-def create_order(customer_id: int) -> Dict[str, Any]:
-    """Crée un brouillon de commande pour un client.
+def create_order(customer_id: int, delivery_address_id: int) -> Dict[str, Any]:
+    """Crée une commande avec facturation automatique et livraison choisie."""
+    session = db_conf.get_main_session()
+    try:
+        customer_repo = CustomersRepository(session)
+        customer = customer_repo.get_by_id(customer_id, complete=True)
+        if customer is None:
+            raise ValueError(_CUSTOMER_NOT_FOUND)
 
-    Returns:
-        Dict de la commande créée.
-    """
+        billing_address = _find_default_billing_address(customer)
+        if billing_address is None:
+            raise ValueError("Aucune adresse de facturation active disponible pour ce client.")
+
+        shipping_addresses = _find_shipping_addresses(customer)
+        selected_shipping = next(
+            (address for address in shipping_addresses if address.id == delivery_address_id),
+            None,
+        )
+        if selected_shipping is None:
+            raise ValueError("Adresse de livraison invalide pour ce client.")
+
+        repo = OrdersRepository(session)
+        order = repo.create_order(
+            customer_id=customer_id,
+            invoice_address_id=billing_address.id,
+            delivery_address_id=selected_shipping.id,
+            create_source="backoffice",
+        )
+        return {"id": order.id, "reference": order.reference}
+    finally:
+        session.close()
+
+
+def _format_address_option_label(address: Dict[str, Any]) -> str:
+    """Formatte une adresse en libellé lisible pour un select HTML."""
+    address_name = address.get("address_name") or "Adresse"
+    address_line1 = address.get("address_line1") or ""
+    city = address.get("city") or ""
+    postal_code = address.get("postal_code") or ""
+    return f"{address_name} - {address_line1} - {postal_code} {city}".strip()
+
+
+def get_customer_order_addresses(customer_id: int) -> Dict[str, Any]:
+    """Retourne les adresses de commande disponibles pour un client."""
+    session = db_conf.get_main_session()
+    try:
+        customer_repo = CustomersRepository(session)
+        customer = customer_repo.get_by_id(customer_id, complete=True)
+        if customer is None:
+            raise ValueError(_CUSTOMER_NOT_FOUND)
+
+        billing_address = _find_default_billing_address(customer)
+        shipping_addresses = _find_shipping_addresses(customer)
+
+        return {
+            "billing": billing_address.to_dict() if billing_address else None,
+            "shipping": [
+                {
+                    "id": address.id,
+                    "label": _format_address_option_label(address.to_dict()),
+                }
+                for address in shipping_addresses
+            ],
+        }
+    finally:
+        session.close()
+
+
+def update_order_delivery_address(order_id: int, delivery_address_id: int) -> Dict[str, Any]:
+    """Met à jour l'adresse de livraison si la commande est en brouillon."""
     session = db_conf.get_main_session()
     try:
         repo = OrdersRepository(session)
-        order = repo.create_order(customer_id=customer_id, create_source="backoffice")
-        return {"id": order.id, "reference": order.reference}
+        order = repo.get_by_id(order_id)
+        if order is None:
+            raise ValueError(_ORDER_NOT_FOUND)
+        if order.status != "draft":
+            raise ValueError(
+                "L'adresse de livraison n'est modifiable que pour une commande en brouillon."
+            )
+
+        updated_order = repo.update_delivery_address(
+            order,
+            delivery_address_id=delivery_address_id,
+            update_source="backoffice",
+        )
+        return {
+            "id": updated_order.id,
+            "delivery_address_id": updated_order.delivery_address_id,
+        }
     finally:
         session.close()
 

@@ -579,6 +579,76 @@ dialog.modal-overlay {
     font-weight: 500;
     color: v.$gray-800;
   }
+
+  .info-value--sm {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: v.$gray-800;
+  }
+}
+
+/* ── Rangée méta commande (infos + adresses côte à côte) ─────────────────── */
+.order-meta-row {
+  display: flex;
+  gap: v.$space-md;
+  margin-bottom: v.$space-lg;
+  align-items: flex-start;
+  flex-wrap: wrap;
+
+  .order-info-section {
+    flex: 2 1 300px;
+    margin-bottom: 0;
+  }
+}
+
+/* ── Section adresse de livraison ────────────────────────────────────────── */
+.order-address-section {
+  flex: 1 1 220px;
+  padding: v.$space-lg;
+  background: v.$gray-100;
+  border-radius: v.$radius-sm;
+  border-left: 4px solid v.$primary-color;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-sm;
+
+  .info-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: v.$gray-500;
+  }
+
+  .info-value--sm {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: v.$gray-800;
+  }
+
+  .info-value--muted {
+    color: v.$gray-400;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: v.$space-xs;
+  }
+
+  .address-select-compact {
+    width: 100%;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.85rem;
+    border: 1px solid v.$gray-300;
+    border-radius: v.$radius-xs;
+  }
+
+  .btn-address-update {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    align-self: flex-start;
+  }
 }
 
 /* ── Boutons d'action commande ───────────────────────────────────────────── */
@@ -587,6 +657,25 @@ dialog.modal-overlay {
   gap: v.$space-sm;
   margin-bottom: v.$space-lg;
   align-items: center;
+}
+
+.order-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: v.$space-md;
+}
+
+.btn.btn-validate-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: v.$color-success;
+  color: #fff;
+
+  &:hover {
+    background: color.adjust(v.$color-success, $lightness: -7%);
+    text-decoration: none;
+  }
 }
 
 /* ── Formulaire modal ajout d'article ────────────────────────────────────── */

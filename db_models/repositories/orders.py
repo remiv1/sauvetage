@@ -11,7 +11,14 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.sql import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects import Order, OrderLine, Customers, CustomerParts, CustomerPros
+from db_models.objects import (
+    Order,
+    OrderLine,
+    Customers,
+    CustomerParts,
+    CustomerPros,
+    CustomerAddresses,
+)
 
 
 class OrdersRepository(BaseRepository):
@@ -158,7 +165,14 @@ class OrdersRepository(BaseRepository):
 
         return f"{prefix}-{yymm}-{next_num:05d}"
 
-    def create_order(self, *, customer_id: int, create_source: str = "web") -> Order:
+    def create_order(
+        self,
+        *,
+        customer_id: int,
+        invoice_address_id: int | None = None,
+        delivery_address_id: int | None = None,
+        create_source: str = "web",
+    ) -> Order:
         """Crée un brouillon de commande pour un client.
         Args:
             customer_id: Identifiant du client.
@@ -169,6 +183,8 @@ class OrdersRepository(BaseRepository):
         order = Order(
             reference=self.generate_reference("CMD"),
             customer_id=customer_id,
+            invoice_address_id=invoice_address_id,
+            delivery_address_id=delivery_address_id,
             status="draft",
             create_source=create_source,
         )
@@ -180,6 +196,36 @@ class OrdersRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(
                 f"Erreur lors de la création de la commande : {e.orig}"
+            ) from e
+
+    def update_delivery_address(
+        self,
+        order: Order,
+        *,
+        delivery_address_id: int,
+        update_source: str = "web",
+    ) -> Order:
+        """Met à jour l'adresse de livraison d'une commande."""
+        address = self.session.execute(
+            select(CustomerAddresses).where(
+                CustomerAddresses.id == delivery_address_id,
+                CustomerAddresses.customer_id == order.customer_id,
+                CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
+                CustomerAddresses.is_shipping == True,  # pylint: disable=singleton-comparison
+            )
+        ).scalar_one_or_none()
+        if address is None:
+            raise ValueError("Adresse de livraison invalide pour ce client.")
+
+        order.delivery_address_id = delivery_address_id
+        order.update_source = update_source
+        try:
+            self.session.commit()
+            return order
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            raise ValueError(
+                f"Erreur lors de la mise à jour de l'adresse de livraison : {str(e)}"
             ) from e
 
     def add_line(   # pylint: disable=too-many-arguments

@@ -81,12 +81,20 @@
             <td class="text-center actions-cell">
                 {% if reservation %}
                 <a hx-get="{{ url_for('stock_htmx_reservations.view_reservation', order_id=order.id) }}"
+                    hx-vals='{"modal": "view"}'
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
                     class="action-icon"
                     title="Voir la réservation">
                     {% include "svg/eye.html" %}
                 </a>
+                {% if order.order_state != "draft" %}
+                <a class="action-icon"
+                   title="Télécharger le bon de réservation"
+                   href="{{ url_for('stock.reservation_download_slip', order_id=order.id) }}">
+                    {% include "svg/download.html" %}
+                </a>
+                {% endif %}
                 {% if order.order_state == "draft" %}
                 <a hx-get="{{ url_for('stock_htmx_reservations.edit_reservation', order_id=order.id) }}"
                     hx-target="#orders-management"
@@ -118,12 +126,20 @@
                 {% endif %}
                 {% else %}
                 <a hx-get="{{ url_for('stock_htmx_orders.view_order', order_id=order.id) }}"
+                    hx-vals='{"modal": "view"}'
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
                     class="action-icon"
                     title="Voir la commande">
                     {% include "svg/eye.html" %}
                 </a>
+                {% if order.order_state != "draft" %}
+                <a class="action-icon"
+                   title="Télécharger le bon de commande fournisseur"
+                   href="{{ url_for('stock.order_download_slip', order_id=order.id) }}">
+                    {% include "svg/download.html" %}
+                </a>
+                {% endif %}
                 {% if order.order_state == "draft" %}
                 <a hx-get="{{ url_for('stock_htmx_orders.edit_order', order_id=order.id) }}"
                     hx-target="#orders-management"

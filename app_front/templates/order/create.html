@@ -40,6 +40,10 @@
           style="display: none;">
         {{ create_form.hidden_tag() }}
         {{ create_form.customer_id(id="customer_id") }}
+        {{ create_form.delivery_address_id(id="delivery_address_id") }}
+
+        <div id="order-addresses-container" class="mt-2"></div>
+
         <button type="submit" class="btn btn-primary">
             {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer la commande
         </button>
@@ -71,6 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var customerName = item.dataset.customerName;
 
         document.getElementById('customer_id').value = customerId;
+        document.getElementById('delivery_address_id').value = '';
         document.getElementById('customer-dropdown').innerHTML = '';
         document.getElementById('customer-search').value = customerName;
 
@@ -79,13 +84,30 @@ document.addEventListener('DOMContentLoaded', function() {
             '<span class="customer-name">' + customerName + '</span>' +
             '</div>';
 
+        htmx.ajax('GET', '{{ url_for('order_htmx_create.customer_addresses', customer_id=0) }}'.replace('/0', '/' + customerId), {
+            target: '#order-addresses-container',
+            swap: 'innerHTML'
+        });
+
         document.getElementById('order-create-form').style.display = 'block';
+    });
+
+    document.body.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'delivery-address-select') {
+            document.getElementById('delivery_address_id').value = e.target.value || '';
+        }
     });
 
     // Écouter la création rapide de client
     document.body.addEventListener('selectCustomer', function(e) {
         if (e.detail && e.detail.id) {
-            document.getElementById('customer_id').value = e.detail.id;
+            var customerId = e.detail.id;
+            document.getElementById('customer_id').value = customerId;
+            document.getElementById('delivery_address_id').value = '';
+            htmx.ajax('GET', '{{ url_for('order_htmx_create.customer_addresses', customer_id=0) }}'.replace('/0', '/' + customerId), {
+                target: '#order-addresses-container',
+                swap: 'innerHTML'
+            });
             document.getElementById('order-create-form').style.display = 'block';
         }
     });

@@ -14,22 +14,35 @@
         </div>
     </div>
 
-    {# ── Infos commande ─────────────────────────────────────────────────── #}
-    <div class="order-info-section">
-        <div class="info-group">
-            <span class="info-label">Référence</span>
-            <span class="info-value">{{ order.reference }}</span>
+    {# ── Infos commande + Adresses ───────────────────────────────────────── #}
+    <div class="order-meta-row">
+        <div class="order-info-section">
+            <div class="info-group">
+                <span class="info-label">Référence</span>
+                <span class="info-value">{{ order.reference }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Client</span>
+                <span class="info-value">{{ order.customer_name }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Statut</span>
+                <span class="info-value">
+                    <span class="badge {{ order.status_badge }}">{{ order.status_label }}</span>
+                </span>
+            </div>
+            {% if order.invoice_address %}
+            <div class="info-group">
+                <span class="info-label">Facturation</span>
+                <span class="info-value info-value--sm">
+                    {{ order.invoice_address.address_name or 'Adresse' }} —
+                    {{ order.invoice_address.address_line1 }},
+                    {{ order.invoice_address.postal_code }} {{ order.invoice_address.city }}
+                </span>
+            </div>
+            {% endif %}
         </div>
-        <div class="info-group">
-            <span class="info-label">Client</span>
-            <span class="info-value">{{ order.customer_name }}</span>
-        </div>
-        <div class="info-group">
-            <span class="info-label">Statut</span>
-            <span class="info-value">
-                <span class="badge {{ order.status_badge }}">{{ order.status_label }}</span>
-            </span>
-        </div>
+        {% include "htmx_templates/order/create/delivery_address_info.html" %}
     </div>
 
     {# ── Boutons d'action ────────────────────────────────────────────────── #}
@@ -119,6 +132,14 @@
             <p>Chargement des lignes…</p>
         </div>
     </div>
+
+    {% if order.status == 'draft' %}
+    <div class="order-footer-actions">
+        <a href="{{ url_for('order.order_view', order_id=order.id) }}" class="btn btn-validate-order">
+            {% with height=24 %}{% include "svg/check-circle.html" %}{% endwith %} Valider la commande
+        </a>
+    </div>
+    {% endif %}
 
     {# ── Conteneur modale ───────────────────────────────────────────────── #}
     <div id="order-modal-container"></div>

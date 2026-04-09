@@ -15,7 +15,7 @@
         <div class="modal-footer">
             <button class="btn btn-secondary btn-cancel-close">Non, garder</button>
             <button class="btn btn-danger"
-                    hx-post="{{ url_for('order_htmx_list.order_cancel_submit', order_id=order.id) }}"
+                    hx-post="{{ url_for('order_htmx_list.order_cancel_modal', order_id=order.id) }}"
                     hx-swap="none"
                     hx-on::after-request="if(event.detail.successful) this.closest('dialog').close()">
                 Oui, annuler

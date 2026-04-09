@@ -589,6 +589,68 @@ dialog.modal-overlay::backdrop {
   font-weight: 500;
   color: #202020;
 }
+.order-info-section .info-value--sm {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #202020;
+}
+
+/* ── Rangée méta commande (infos + adresses côte à côte) ─────────────────── */
+.order-meta-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.order-meta-row .order-info-section {
+  flex: 2 1 300px;
+  margin-bottom: 0;
+}
+
+/* ── Section adresse de livraison ────────────────────────────────────────── */
+.order-address-section {
+  flex: 1 1 220px;
+  padding: 2rem;
+  background: #f5f5f5;
+  border-radius: 10px;
+  border-left: 4px solid #00086f;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.order-address-section .info-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #808080;
+}
+.order-address-section .info-value--sm {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #202020;
+}
+.order-address-section .info-value--muted {
+  color: #a0a0a0;
+}
+.order-address-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.order-address-section .address-select-compact {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.85rem;
+  border: 1px solid #c0c0c0;
+  border-radius: 5px;
+}
+.order-address-section .btn-address-update {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  align-self: flex-start;
+}
 
 /* ── Boutons d'action commande ───────────────────────────────────────────── */
 .order-action-buttons {
@@ -596,6 +658,24 @@ dialog.modal-overlay::backdrop {
   gap: 0.5rem;
   margin-bottom: 2rem;
   align-items: center;
+}
+
+.order-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.btn.btn-validate-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #006d19;
+  color: #fff;
+}
+.btn.btn-validate-order:hover {
+  background: rgb(0, 73.3, 16.8119266055);
+  text-decoration: none;
 }
 
 /* ── Formulaire modal ajout d'article ────────────────────────────────────── */
@@ -695,6 +775,21 @@ dialog.modal-overlay::backdrop {
   font-weight: 600;
   background: rgb(255, 195.0357142857, 105.5);
   color: rgb(80, 47.9120879121, 0);
+}
+
+/* ── Quantité input (modales facture / envoi) ────────────────────────────── */
+.qty-input {
+  width: 60px;
+  padding: 0.25rem;
+  text-align: center;
+  border: 1px solid #c0c0c0;
+  border-radius: 5px;
+  font-size: 0.85rem;
+}
+.qty-input:disabled {
+  background: #f5f5f5;
+  color: #a0a0a0;
+  cursor: not-allowed;
 }
 
 /* ── Err msg ─────────────────────────────────────────────────────────────── */

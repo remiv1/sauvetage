@@ -1,0 +1,33 @@
+{# Sélecteur adresses à la création de commande #}
+
+{% if addresses.billing %}
+<div class="line-form-group" style="margin-bottom: 0.75rem;">
+    <p class="info-label" style="margin: 0;">Adresse de facturation</p>
+    <p class="subtile-text-600" style="margin: 0.3rem 0 0;">
+        {{ addresses.billing.address_name or 'Adresse' }}
+        - {{ addresses.billing.address_line1 }}
+        {% if addresses.billing.address_line2 %} - {{ addresses.billing.address_line2 }}{% endif %}
+        - {{ addresses.billing.postal_code }} {{ addresses.billing.city }}
+    </p>
+</div>
+{% else %}
+<p class="error" style="margin: 0.25rem 0 0.75rem;">
+    Aucune adresse de facturation active pour ce client.
+</p>
+{% endif %}
+
+<div class="line-form-group" style="margin-bottom: 1rem;">
+    <label for="delivery-address-select">Adresse de livraison</label>
+    {% if addresses.shipping %}
+    <select id="delivery-address-select" required>
+        <option value="">-- Sélectionner une adresse de livraison --</option>
+        {% for address in addresses.shipping %}
+        <option value="{{ address.id }}">{{ address.label }}</option>
+        {% endfor %}
+    </select>
+    {% else %}
+    <p class="error" style="margin: 0.3rem 0 0;">
+        Aucune adresse de livraison active pour ce client.
+    </p>
+    {% endif %}
+</div>
