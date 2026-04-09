@@ -1,0 +1,26 @@
+[Unit]
+Description=Application Métier Librairie (Podman Compose)
+After=network-online.target podman.service
+Wants=network-online.target podman.service
+Conflicts=shutdown.target reboot.target
+Before=shutdown.target reboot.target
+
+[Service]
+Type=simple
+# On se place dans le dossier où se trouve le docker-compose.yml
+WorkingDirectory=/var/www/projects/sauvetage
+# Lancement propre
+ExecStart=/usr/bin/podman-compose up
+# ExecStart=/home/<ton_nom_utilisateur>/.local/bin/podman-compose up
+# Arrêt propre : systemd envoie un signal, mais on force un 'down' propre
+ExecStop=/usr/bin/podman-compose down
+# ExecStop=/home/<ton_nom_utilisateur>/.local/bin/podman-compose down
+KillMode=mixed
+SendSIGKILL=no
+# Gestion de l'environnement
+# Environment="PATH=/usr/bin:/usr/local/bin:/home/<ton_nom_utilisateur>/.local/bin"
+# Redémarrage auto si l'app crash toute seule
+Restart=always
+
+[Install]
+WantedBy=default.target
