@@ -5,6 +5,7 @@ import time
 import threading
 import subprocess
 import socket
+import signal
 from app_back.scheduler.dilicom_scheduler import start_dilicom_scheduler
 
 
@@ -98,8 +99,24 @@ def start_gunicorn():
     check=True)
 
 
+def sigterm_handler(signum, frame):
+    """
+    Gestionnaire de signal pour SIGTERM. Ce gestionnaire est appelé lorsque le processus reçoit
+    un signal de terminaison (SIGTERM). Il affiche un message de log indiquant que le signal
+    a été reçu et que le processus va se terminer proprement.
+    param :
+        - signum: Le numéro du signal reçu (ex: signal.SIGTERM).
+        - frame: Le contexte d'exécution actuel (non utilisé dans ce gestionnaire).
+    return :
+        - None. Le processus se termine après l'exécution de ce gestionnaire.
+    """
+    print("[BOOTSTRAP] Signal SIGTERM reçu, arrêt du backend Sauvetage")
+    exit(0)
+
+
 if __name__ == "__main__":
     print("[BOOTSTRAP] Initialisation du backend Sauvetage")
+    signal.signal(signal.SIGTERM, sigterm_handler)
 
     build_env()
     wait_for("db-main", 5432)
