@@ -219,6 +219,17 @@ echo ""
 
 BACKEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
 BACKEND_DEBUG=$(prompt_value "  → Mode DEBUG (true/false)" "false")
+SECURITY_TOKEN=$(generate_password)
+
+echo -e "${BLUE}[5bis/6] Configuration mailer SMTP${NC}"
+
+SMTP_SERVER=$(prompt_value "  → Serveur SMTP" "smtp.example.com")
+SMTP_PORT=$(prompt_value "  → Port SMTP" "587")
+SMTP_USERNAME=$(prompt_value "  → Nom d'utilisateur SMTP" "example_user")
+SMTP_PASSWORD=$(prompt_value "  → Mot de passe SMTP" "your_smtp_password_here")
+MAIL_DEFAULT_SENDER=$(prompt_value "  → Expéditeur par défaut des mails" "First Name & Last Name | Company Name <your_email@example.com>")
+SMTP_USE_TLS=$(prompt_yesno "  → Utiliser TLS pour SMTP?" "y")
+SMTP_USE_SSL=$(prompt_yesno "  → Utiliser SSL pour SMTP?" "n")
 
 echo ""
 
@@ -227,6 +238,19 @@ cat > "app_back/.env.fast" << EOF
 # Application
 LOG_LEVEL="${BACKEND_LOG_LEVEL}"
 DEBUG="${BACKEND_DEBUG}"
+
+# Communication FastAPI - Flask
+SECURITY_TOKEN="${SECURITY_TOKEN}"
+
+# SMTP Configuration
+SMTP_SERVER="${SMTP_SERVER}"
+SMTP_PORT="${SMTP_PORT}"
+SMTP_USERNAME="${SMTP_USERNAME}"
+SMTP_PASSWORD="${SMTP_PASSWORD}"
+MAIL_DEFAULT_SENDER="${MAIL_DEFAULT_SENDER}"
+SMTP_USE_TLS="${SMTP_USE_TLS}"
+SMTP_USE_SSL="${SMTP_USE_SSL}"
+
 EOF
 chmod 600 "app_back/.env.fast"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
@@ -251,6 +275,8 @@ INVOICER_SECRET=$(prompt_value "  → Secret de votre factureur" "your_secret_he
 
 DILICOM_ID=$(prompt_value "  → ID de Dilicom" "your_dilicom_id_here")
 DILICOM_SECRET=$(prompt_value "  → Secret de Dilicom" "your_dilicom_secret_here")
+DILICOM_HOST=$(prompt_value "  → Host de Dilicom" "ftpack.centprod.com")
+DILICOM_PORT=$(prompt_value "  → Port de Dilicom" "10022")
 
 EBUSINESS_ID=$(prompt_value "  → ID du site de e-commerce" "your_id_here")
 EBUSINESS_SECRET=$(prompt_value "  → Secret du site de e-commerce" "your_secret_here")
@@ -271,6 +297,8 @@ INVOICER_SECRET=${INVOICER_SECRET}
 # Gestion des identifiants Dilicom API
 DILICOM_ID=${DILICOM_ID}
 DILICOM_SECRET=${DILICOM_SECRET}
+DILICOM_HOST=${DILICOM_HOST}
+DILICOM_PORT=${DILICOM_PORT}
 
 # Gestion des identifiants E-business API (site de e-commerce)
 EBUSINESS_ID=${EBUSINESS_ID}
@@ -278,6 +306,7 @@ EBUSINESS_SECRET=${EBUSINESS_SECRET}
 
 # Gestion Flask
 FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+SECURITY_TOKEN=${SECURITY_TOKEN}
 
 # Adresse de l'API FastAPI
 API_URL=http://app-back:8000/api/v1
