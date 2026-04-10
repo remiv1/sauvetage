@@ -87,6 +87,7 @@ cython_debug/
 
 # Certificates
 */pki/*
+*/ssl/
 
 # Databases
 *.sqlite
