@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bon reservation {{ order.reference }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 12mm;
+        }
+
+        body {
+            font-family: "DejaVu Sans", sans-serif;
+            color: #111;
+            background: #fff;
+            font-size: 10pt;
+        }
+
+        .top {
+            display: table;
+            width: 100%;
+            margin-bottom: 8mm;
+        }
+
+        .left, .right {
+            display: table-cell;
+            vertical-align: top;
+        }
+
+        .right {
+            width: 34mm;
+            text-align: right;
+        }
+
+        .left-wrap {
+            display: flex;
+            align-items: stretch;
+            gap: 4mm;
+        }
+
+        .reservation-icon {
+            width: 14mm;
+            min-height: 26mm;
+            color: #111;
+        }
+
+        .reservation-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .left-text {
+            flex: 1;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 18pt;
+            letter-spacing: 0.5px;
+        }
+
+        .chip {
+            display: inline-block;
+            margin-top: 2mm;
+            border: 0.3mm solid #111;
+            padding: 1mm 2mm;
+            font-size: 8.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .meta {
+            margin-top: 2mm;
+            color: #222;
+        }
+
+        .qr {
+            width: 30mm;
+            height: 30mm;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4mm;
+        }
+
+        th, td {
+            border: 0.3mm solid #333;
+            padding: 2mm;
+        }
+
+        th {
+            background: #f2f2f2;
+            text-align: left;
+        }
+
+        .right-align {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .state {
+            text-transform: capitalize;
+            font-weight: 600;
+        }
+
+        .total {
+            margin-top: 5mm;
+            text-align: right;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+
+        .note {
+            margin-top: 2mm;
+            font-size: 8.5pt;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="top">
+        <div class="left">
+            <div class="left-wrap">
+                <div class="reservation-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3a9 9 0 1 0 9 9" />
+                        <path d="M12 1v4" />
+                        <path d="M20.5 3.5 18 6" />
+                        <path d="m9.5 12 2 2 4-4" />
+                    </svg>
+                </div>
+                <div class="left-text">
+                    <h1>Bon de reservation</h1>
+                    <div class="chip">Validation retour par QRCode</div>
+                    <div class="meta">Ref. {{ order.reference }} | Etat <span class="state">{{ order.state }}</span></div>
+                    <div class="meta">Fournisseur : {{ order.supplier_name }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="right">
+            <img class="qr" src="{{ qr_code_data_uri }}" alt="QR validation reservation">
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Article</th>
+                <th class="right-align">Quantite reservee</th>
+                <th>Etat ligne</th>
+                <th class="right-align">PU HT</th>
+                <th class="right-align">Total HT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr>
+                <td>{{ line.article_name }}</td>
+                <td class="right-align">{{ line.quantity }}</td>
+                <td class="state">{{ line.line_state }}</td>
+                <td class="right-align">{{ line.unit_price }}</td>
+                <td class="right-align">{{ line.line_total_ht }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total">Total HT : {{ total_ht }}</div>
+    <div class="note">Conservez ce bon de réservation pour traçabilité des stocks.</div>
+</body>
+</html>

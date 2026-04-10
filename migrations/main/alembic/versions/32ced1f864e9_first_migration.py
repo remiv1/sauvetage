@@ -1,8 +1,8 @@
 """first_migration
 
-Revision ID: b60b5de6b88d
+Revision ID: 32ced1f864e9
 Revises: 
-Create Date: 2026-03-31 16:40:18.024733
+Create Date: 2026-04-07 12:56:15.844119
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b60b5de6b88d'
+revision: str = '32ced1f864e9'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,34 +33,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('henrri_id'),
     sa.UniqueConstraint('wpwc_id'),
-    schema='app_schema'
-    )
-    op.create_table('invoices',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('reference', sa.String(length=14), nullable=False),
-    sa.Column('total_amount', sa.Numeric(precision=10, scale=2), nullable=False, comment='Montant total de la facture'),
-    sa.Column('vat_amount', sa.Numeric(precision=10, scale=2), nullable=False, comment='Montant de la TVA de la facture'),
-    sa.Column('create_source', sa.String(length=50), nullable=False, comment='Source de la facture'),
-    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création de la facture'),
-    sa.Column('update_source', sa.String(length=50), nullable=True, comment='Source de la dernière mise à jour'),
-    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Date dernière mise à jour de la facture'),
-    sa.Column('last_synced_at', sa.DateTime(), nullable=True, comment='Dernière synchronisation'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('reference'),
-    schema='app_schema'
-    )
-    op.create_table('shipments',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('reference', sa.String(length=14), nullable=False),
-    sa.Column('carrier', sa.String(length=50), nullable=False),
-    sa.Column('tracking_number', sa.String(length=50), nullable=True),
-    sa.Column('create_source', sa.String(length=50), nullable=False, comment="Source de l'envoi"),
-    sa.Column('created_at', sa.DateTime(), nullable=False, comment="Date de création de l'envoi"),
-    sa.Column('update_source', sa.String(length=50), nullable=True, comment='Source de la dernière mise à jour'),
-    sa.Column('updated_at', sa.DateTime(), nullable=False, comment="Date dernière mise à jour de l'envoi"),
-    sa.Column('last_synced_at', sa.DateTime(), nullable=True, comment='Dernière synchronisation'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('reference'),
     schema='app_schema'
     )
     op.create_table('suppliers',
@@ -91,8 +63,8 @@ def upgrade() -> None:
     sa.Column('code', sa.Integer(), nullable=False, comment='Code TVA (0=super-réduit, 1=réduit, 2=intermédiaire, 3=normal)'),
     sa.Column('rate', sa.Numeric(precision=5, scale=2), nullable=False, comment='Taux de TVA en pourcentage (ex: 5.50)'),
     sa.Column('label', sa.String(), nullable=False, comment='Libellé du taux (ex: Taux réduit)'),
-    sa.Column('date_start', sa.DateTime(), nullable=False, comment='Date de début de validité du taux'),
-    sa.Column('date_end', sa.DateTime(), nullable=True, comment='Date de fin de validité (NULL = taux actuellement en vigueur)'),
+    sa.Column('date_start', sa.DateTime(timezone=True), nullable=False, comment='Date de début de validité du taux'),
+    sa.Column('date_end', sa.DateTime(timezone=True), nullable=True, comment='Date de fin de validité (NULL = taux actuellement en vigueur)'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('code', 'date_start', name='uq_vat_rates_code_date_start'),
     schema='app_schema'
@@ -297,8 +269,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('reference', sa.String(length=14), nullable=False),
     sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('invoice_address_id', sa.Integer(), nullable=False, comment='Adresse de facturat°'),
-    sa.Column('delivery_address_id', sa.Integer(), nullable=False, comment='Adresse de livraison'),
+    sa.Column('invoice_address_id', sa.Integer(), nullable=True, comment='Adresse de facturat°'),
+    sa.Column('delivery_address_id', sa.Integer(), nullable=True, comment='Adresse de livraison'),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('create_source', sa.String(length=50), nullable=False, comment='Source de la commande'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création de la commande'),
@@ -321,6 +293,23 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
     )
+    op.create_table('invoices',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('order_id', sa.Integer(), nullable=False, comment='Commande parente'),
+    sa.Column('ext_id', sa.String(length=50), nullable=True, comment='ID externe de la facture (Henrri)'),
+    sa.Column('reference', sa.String(length=14), nullable=False),
+    sa.Column('total_amount', sa.Numeric(precision=10, scale=2), nullable=False, comment='Montant total de la facture'),
+    sa.Column('vat_amount', sa.Numeric(precision=10, scale=2), nullable=False, comment='Montant de la TVA de la facture'),
+    sa.Column('create_source', sa.String(length=50), nullable=False, comment='Source de la facture'),
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création de la facture'),
+    sa.Column('update_source', sa.String(length=50), nullable=True, comment='Source de la dernière mise à jour'),
+    sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Date dernière mise à jour de la facture'),
+    sa.Column('last_synced_at', sa.DateTime(), nullable=True, comment='Dernière synchronisation'),
+    sa.ForeignKeyConstraint(['order_id'], ['app_schema.orders.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('reference'),
+    schema='app_schema'
+    )
     op.create_table('order_in_lines',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('order_in_id', sa.Integer(), nullable=False, comment="ID de la commande d'entrée"),
@@ -340,19 +329,58 @@ def upgrade() -> None:
     op.create_table('order_lines',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='Identifiant unique de la ligne de commande'),
     sa.Column('order_id', sa.Integer(), nullable=False),
-    sa.Column('invoice_id', sa.Integer(), nullable=True, comment='Facture associée à la ligne de commande'),
-    sa.Column('shipment_id', sa.Integer(), nullable=True, comment='Envoi associé à la ligne de commande'),
     sa.Column('general_object_id', sa.Integer(), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False, comment='Quantité commandée'),
-    sa.Column('unit_price', sa.Numeric(precision=10, scale=2), nullable=False, comment="Prix unitaire en centimes d'euro"),
+    sa.Column('status', sa.String(length=20), nullable=False, comment='État de la ligne'),
+    sa.Column('unit_price', sa.Numeric(precision=10, scale=2), nullable=False, comment='Prix unitaire HT en euros'),
+    sa.Column('discount', sa.Numeric(precision=5, scale=2), nullable=False, comment='Remise en pourcentage'),
     sa.Column('vat_rate', sa.Numeric(precision=10, scale=3), nullable=False, comment='Taux de TVA en pourcentage'),
     sa.Column('create_source', sa.String(length=50), nullable=False, comment='Source de la ligne de commande'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création de la ligne de commande'),
     sa.Column('update_source', sa.String(length=50), nullable=True, comment='Source last MaJ de la ligne de commande'),
     sa.Column('updated_at', sa.DateTime(), nullable=True, comment='Date last MaJ de la ligne de commande'),
     sa.ForeignKeyConstraint(['general_object_id'], ['app_schema.general_objects.id'], ),
-    sa.ForeignKeyConstraint(['invoice_id'], ['app_schema.invoices.id'], ),
     sa.ForeignKeyConstraint(['order_id'], ['app_schema.orders.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    schema='app_schema'
+    )
+    op.create_table('shipments',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('order_id', sa.Integer(), nullable=False, comment='Commande parente'),
+    sa.Column('reference', sa.String(length=14), nullable=False),
+    sa.Column('carrier', sa.String(length=50), nullable=False),
+    sa.Column('tracking_number', sa.String(length=50), nullable=True),
+    sa.Column('create_source', sa.String(length=50), nullable=False, comment="Source de l'envoi"),
+    sa.Column('created_at', sa.DateTime(), nullable=False, comment="Date de création de l'envoi"),
+    sa.Column('update_source', sa.String(length=50), nullable=True, comment='Source de la dernière mise à jour'),
+    sa.Column('updated_at', sa.DateTime(), nullable=False, comment="Date dernière mise à jour de l'envoi"),
+    sa.Column('last_synced_at', sa.DateTime(), nullable=True, comment='Dernière synchronisation'),
+    sa.ForeignKeyConstraint(['order_id'], ['app_schema.orders.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('reference'),
+    schema='app_schema'
+    )
+    op.create_table('invoice_lines',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('invoice_id', sa.Integer(), nullable=False),
+    sa.Column('order_line_id', sa.Integer(), nullable=False),
+    sa.Column('reference', sa.String(length=14), nullable=False, comment='Référence de la ligne de facture'),
+    sa.Column('description', sa.String(length=255), nullable=False, comment='Description de la ligne de facture'),
+    sa.Column('quantity', sa.Integer(), nullable=False, comment='Quantité facturée'),
+    sa.Column('unit_price', sa.Numeric(precision=10, scale=2), nullable=False, comment='Prix unitaire de la ligne de facture'),
+    sa.Column('discount', sa.Numeric(precision=5, scale=2), nullable=False, comment='Remise appliquée à la ligne de facture'),
+    sa.Column('vat_rate', sa.Numeric(precision=5, scale=2), nullable=False, comment='Taux de TVA appliqué à la ligne de facture'),
+    sa.ForeignKeyConstraint(['invoice_id'], ['app_schema.invoices.id'], ),
+    sa.ForeignKeyConstraint(['order_line_id'], ['app_schema.order_lines.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    schema='app_schema'
+    )
+    op.create_table('shipment_lines',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('shipment_id', sa.Integer(), nullable=False),
+    sa.Column('order_line_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Integer(), nullable=False, comment='Quantité expédiée'),
+    sa.ForeignKeyConstraint(['order_line_id'], ['app_schema.order_lines.id'], ),
     sa.ForeignKeyConstraint(['shipment_id'], ['app_schema.shipments.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='app_schema'
@@ -363,8 +391,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('shipment_lines', schema='app_schema')
+    op.drop_table('invoice_lines', schema='app_schema')
+    op.drop_table('shipments', schema='app_schema')
     op.drop_table('order_lines', schema='app_schema')
     op.drop_table('order_in_lines', schema='app_schema')
+    op.drop_table('invoices', schema='app_schema')
     op.drop_table('other_objects', schema='app_schema')
     op.drop_table('orders', schema='app_schema')
     op.drop_table('object_tags', schema='app_schema')
@@ -384,7 +416,5 @@ def downgrade() -> None:
     op.drop_table('vat_rates', schema='app_schema')
     op.drop_table('tags', schema='app_schema')
     op.drop_table('suppliers', schema='app_schema')
-    op.drop_table('shipments', schema='app_schema')
-    op.drop_table('invoices', schema='app_schema')
     op.drop_table('customers', schema='app_schema')
     # ### end Alembic commands ###

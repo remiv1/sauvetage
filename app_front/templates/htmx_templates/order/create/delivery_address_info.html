@@ -1,0 +1,28 @@
+{# Adresse de livraison en édition commande #}
+<div id="delivery-address-info" class="order-address-section">
+    <span class="info-label">Livraison</span>
+
+    {% if order.status == 'draft' %}
+    <form hx-post="{{ url_for('order_htmx_create.update_delivery_address', order_id=order.id) }}"
+          hx-target="#delivery-address-info"
+          hx-swap="outerHTML">
+        <select id="delivery-address-edit-select" name="delivery_address_id" required class="address-select-compact">
+            <option value="">— Sélectionner —</option>
+            {% for address in order.shipping_addresses or [] %}
+            <option value="{{ address.id }}" {% if address.id == order.delivery_address_id %}selected{% endif %}>
+                {{ address.label }}
+            </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary btn-address-update">Mettre à jour</button>
+    </form>
+    {% elif order.delivery_address %}
+    <span class="info-value info-value--sm">
+        {{ order.delivery_address.address_name or 'Adresse' }} —
+        {{ order.delivery_address.address_line1 }},
+        {{ order.delivery_address.postal_code }} {{ order.delivery_address.city }}
+    </span>
+    {% else %}
+    <span class="info-value info-value--sm info-value--muted">—</span>
+    {% endif %}
+</div>

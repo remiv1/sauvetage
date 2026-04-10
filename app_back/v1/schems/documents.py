@@ -8,3 +8,4 @@ class DocumentSchema(BaseModel):
     template: str
     data: Dict[str, Any]
     base_url: Optional[str] = None
+    filename: Optional[str] = None

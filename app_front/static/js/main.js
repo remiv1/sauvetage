@@ -16,12 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
         function closeDropdown(e) {
             if (!dropdown.contains(e.target) && !avatar.contains(e.target)) {
                 dropdown.classList.remove('open');
+                dropdown.setAttribute('aria-hidden', 'true');
                 avatar.setAttribute('aria-expanded', 'false');
                 document.removeEventListener('mousedown', closeDropdown);
             }
         }
         avatar.addEventListener('click', () => {
             const isOpen = dropdown.classList.toggle('open');
+            dropdown.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
             avatar.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
             if (isOpen) {
                 setTimeout(() => document.addEventListener('mousedown', closeDropdown), 0);

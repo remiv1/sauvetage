@@ -1,0 +1,795 @@
+@use '../core/variables' as v;
+@use '../core/mixins' as m;
+@use 'sass:color';
+
+/* ============================================================================ */
+/* Commandes — Page de gestion                                                 */
+/* ============================================================================ */
+
+.order-container {
+  max-width: 1200px;
+  margin: v.$space-lg auto;
+  padding: 0 v.$space-lg;
+}
+
+/* ── En-tête ─────────────────────────────────────────────────────────────── */
+.order-header {
+  margin-bottom: v.$space-lg;
+
+  h2 {
+    color: v.$primary-color;
+    margin: 0;
+  }
+}
+
+/* ── Accordéon de filtres ────────────────────────────────────────────────── */
+.search-accordion {
+  margin-bottom: v.$space-lg;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-sm;
+  overflow: hidden;
+}
+
+.accordion-toggle {
+  display: flex;
+  align-items: center;
+  gap: v.$space-sm;
+  padding: v.$space-md v.$space-lg;
+  background: v.$gray-100;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: v.$primary-color;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+details[open] > .accordion-toggle {
+  border-bottom: 1px solid v.$gray-200;
+}
+
+#order-search-filters {
+  padding: v.$space-lg;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: v.$space-md;
+  margin-bottom: v.$space-lg;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-xs;
+}
+
+.filter-label {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: v.$gray-700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.filter-control {
+  @include m.input-base;
+}
+
+.filters-actions {
+  display: flex;
+  gap: v.$space-sm;
+}
+
+/* ── Boutons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: v.$space-xs;
+  padding: v.$space-sm v.$space-md;
+  border: none;
+  border-radius: v.$radius-xs;
+  font-family: v.$font-primary;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, opacity 0.2s;
+
+  svg { flex-shrink: 0; }
+  &:hover { opacity: 0.9; }
+}
+
+.btn-primary {
+  background: v.$primary-color;
+  color: #fff;
+  &:hover { background: color.adjust(v.$primary-color, $lightness: -10%); }
+}
+
+.btn-secondary {
+  background: v.$gray-200;
+  color: v.$text-dark;
+  &:hover { background: v.$gray-300; }
+}
+
+.btn-danger {
+  background: v.$color-danger;
+  color: #fff;
+  &:hover { background: color.adjust(v.$color-danger, $lightness: -10%); }
+}
+
+.btn-sm {
+  font-size: 0.82rem;
+  padding: v.$space-xs (v.$space-sm * 0.5);
+}
+
+/* ── Résumé et chargement ────────────────────────────────────────────────── */
+.table-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: v.$space-sm 0;
+  font-size: 0.88rem;
+  color: v.$gray-600;
+  border-bottom: 1px solid v.$gray-200;
+  margin-bottom: v.$space-sm;
+}
+
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  padding: 4rem;
+  color: v.$gray-500;
+}
+
+/* ── Bouton nouvelle commande ────────────────────────────────────────────── */
+.order-actions {
+  display: flex;
+  gap: v.$space-md;
+  margin-bottom: v.$space-lg;
+  align-items: center;
+}
+
+/* ── Tableau commandes ───────────────────────────────────────────────────── */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.order-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-xs;
+  overflow: hidden;
+
+  th, td {
+    padding: v.$space-sm v.$space-md;
+    font-size: 0.88rem;
+  }
+
+  th {
+    background: v.$primary-color;
+    color: white;
+    text-align: left;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  td {
+    border-top: 1px solid v.$gray-200;
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+    &:nth-child(even) { background: v.$gray-100; }
+    &:hover { background: color.adjust(v.$gray-200, $lightness: -3%); }
+  }
+
+  .text-center { text-align: center; }
+
+  .cell-ref {
+    font-family: monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+  }
+
+  .cell-customer {
+    font-weight: 500;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* ── Badges statut ───────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-draft {
+  background: v.$gray-200;
+  color: v.$gray-700;
+}
+
+.badge-info {
+  background: color.adjust(v.$primary-color, $lightness: 40%);
+  color: v.$primary-color;
+}
+
+.badge-warning {
+  background: color.adjust(v.$color-warning, $lightness: 35%);
+  color: color.adjust(v.$color-warning, $lightness: -15%);
+}
+
+.badge-success {
+  background: color.adjust(v.$color-success, $lightness: 35%);
+  color: v.$success-color;
+}
+
+.badge-danger {
+  background: color.adjust(v.$color-danger, $lightness: 35%);
+  color: v.$color-danger;
+}
+
+/* ── Icônes d'action ─────────────────────────────────────────────────────── */
+.actions-cell {
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+
+  .action-icon + .action-icon {
+    margin-left: v.$space-xs;
+  }
+}
+
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: v.$radius-xs;
+  border: 1px solid v.$gray-200;
+  background: #fff;
+  color: v.$gray-600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    color: v.$primary-color;
+    border-color: v.$primary-color;
+    background: color.adjust(v.$primary-color, $lightness: 45%);
+  }
+
+  &.action-cancel:hover {
+    color: v.$color-danger;
+    border-color: v.$color-danger;
+    background: color.adjust(v.$color-danger, $lightness: 40%);
+  }
+}
+
+/* ── État vide ───────────────────────────────────────────────────────────── */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: v.$space-md;
+  padding: 4rem v.$space-md;
+  color: v.$gray-500;
+  text-align: center;
+
+  svg {
+    opacity: 0.4;
+    width: 48px;
+    height: 48px;
+  }
+
+  p { font-size: 1.05rem; }
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: v.$space-sm;
+  padding: v.$space-lg 0;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.page-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 v.$space-xs;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-xs;
+  background: #fff;
+  color: v.$gray-700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: v.$font-primary;
+
+  &:hover {
+    background: color.adjust(v.$primary-color, $lightness: 45%);
+    border-color: v.$primary-color;
+    color: v.$primary-color;
+  }
+
+  &.current {
+    background: v.$primary-color;
+    color: #fff;
+    border-color: v.$primary-color;
+    cursor: default;
+  }
+}
+
+.page-ellipsis {
+  padding: 0 v.$space-xs;
+  color: v.$gray-400;
+}
+
+/* ── Modale ──────────────────────────────────────────────────────────────── */
+dialog.modal-overlay {
+  border: none;
+  padding: 0;
+  max-width: 100vw;
+  max-height: 100vh;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+  }
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: v.$radius-sm;
+  box-shadow: v.$shadow-hard;
+  width: 90%;
+  max-width: 700px;
+  margin: 10vh auto;
+  overflow: hidden;
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: v.$space-md v.$space-lg;
+    border-bottom: 1px solid v.$gray-200;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: v.$primary-color;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: v.$gray-500;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.2s;
+      &:hover { color: v.$text-dark; }
+    }
+  }
+
+  .modal-body {
+    padding: v.$space-lg;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: v.$space-sm;
+    padding: v.$space-md v.$space-lg;
+    border-top: 1px solid v.$gray-200;
+  }
+}
+
+/* ── Infos dans modale ───────────────────────────────────────────────────── */
+.info-group {
+  display: flex;
+  justify-content: space-between;
+  padding: v.$space-sm 0;
+  border-bottom: 1px solid v.$gray-100;
+
+  &:last-child { border-bottom: none; }
+}
+
+.info-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: v.$gray-600;
+}
+
+.info-value {
+  font-size: 0.9rem;
+  color: v.$text-dark;
+}
+
+/* ── Lignes de commande (dans modale view) ───────────────────────────────── */
+.order-lines-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: v.$space-md;
+
+  th, td {
+    padding: v.$space-xs v.$space-sm;
+    font-size: 0.82rem;
+    text-align: left;
+  }
+
+  th {
+    background: v.$gray-100;
+    font-weight: 600;
+    color: v.$gray-700;
+    border-bottom: 2px solid v.$gray-200;
+  }
+
+  td {
+    border-bottom: 1px solid v.$gray-100;
+  }
+
+  tbody tr:hover {
+    background: v.$gray-100;
+  }
+}
+
+/* ============================================================================ */
+/* Page de création de commande                                                */
+/* ============================================================================ */
+
+.order-create-container {
+  max-width: 900px;
+  margin: v.$space-lg auto;
+  padding: 0 v.$space-lg;
+}
+
+/* ── Recherche client (dropdown) ─────────────────────────────────────────── */
+.customer-search-wrapper {
+  position: relative;
+  margin-bottom: v.$space-lg;
+}
+
+.customer-search-input {
+  @include m.input-base;
+  width: 100%;
+}
+
+.customer-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid v.$gray-200;
+  border-top: none;
+  border-radius: 0 0 v.$radius-xs v.$radius-xs;
+  box-shadow: v.$shadow-soft;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: v.$space-sm v.$space-md;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 1px solid v.$gray-100;
+  transition: background 0.15s;
+
+  &:hover {
+    background: color.adjust(v.$primary-color, $lightness: 95%);
+  }
+
+  &:last-child { border-bottom: none; }
+
+  small {
+    color: v.$gray-500;
+  }
+}
+
+.text-muted { color: v.$gray-500; }
+.text-primary { color: v.$primary-color; }
+
+/* ── Récapitulatif commande sélectionnée ─────────────────────────────────── */
+.selected-customer {
+  display: flex;
+  align-items: center;
+  gap: v.$space-md;
+  padding: v.$space-md;
+  background: color.adjust(v.$primary-color, $lightness: 95%);
+  border: 1px solid v.$primary-color;
+  border-radius: v.$radius-xs;
+  margin-bottom: v.$space-lg;
+
+  .customer-name {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .btn-change {
+    margin-left: auto;
+  }
+}
+
+/* ── Infos commande (style cohérent avec stock orders) ───────────────────── */
+.order-info-section {
+  display: flex;
+  gap: v.$space-xl;
+  padding: v.$space-lg;
+  margin-bottom: v.$space-lg;
+  background: v.$gray-100;
+  border-radius: v.$radius-sm;
+  border-left: 4px solid v.$primary-color;
+
+  .info-group {
+    display: flex;
+    flex-direction: column;
+    gap: v.$space-xs;
+  }
+
+  .info-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: v.$gray-500;
+  }
+
+  .info-value {
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: v.$gray-800;
+  }
+
+  .info-value--sm {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: v.$gray-800;
+  }
+}
+
+/* ── Rangée méta commande (infos + adresses côte à côte) ─────────────────── */
+.order-meta-row {
+  display: flex;
+  gap: v.$space-md;
+  margin-bottom: v.$space-lg;
+  align-items: flex-start;
+  flex-wrap: wrap;
+
+  .order-info-section {
+    flex: 2 1 300px;
+    margin-bottom: 0;
+  }
+}
+
+/* ── Section adresse de livraison ────────────────────────────────────────── */
+.order-address-section {
+  flex: 1 1 220px;
+  padding: v.$space-lg;
+  background: v.$gray-100;
+  border-radius: v.$radius-sm;
+  border-left: 4px solid v.$primary-color;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-sm;
+
+  .info-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: v.$gray-500;
+  }
+
+  .info-value--sm {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: v.$gray-800;
+  }
+
+  .info-value--muted {
+    color: v.$gray-400;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: v.$space-xs;
+  }
+
+  .address-select-compact {
+    width: 100%;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.85rem;
+    border: 1px solid v.$gray-300;
+    border-radius: v.$radius-xs;
+  }
+
+  .btn-address-update {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    align-self: flex-start;
+  }
+}
+
+/* ── Boutons d'action commande ───────────────────────────────────────────── */
+.order-action-buttons {
+  display: flex;
+  gap: v.$space-sm;
+  margin-bottom: v.$space-lg;
+  align-items: center;
+}
+
+.order-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: v.$space-md;
+}
+
+.btn.btn-validate-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: v.$color-success;
+  color: #fff;
+
+  &:hover {
+    background: color.adjust(v.$color-success, $lightness: -7%);
+    text-decoration: none;
+  }
+}
+
+/* ── Formulaire modal ajout d'article ────────────────────────────────────── */
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: v.$space-md;
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── Multi-sélection statut ──────────────────────────────────────────────── */
+.filter-status-group .status-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: v.$space-xs v.$space-md;
+}
+
+.status-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: v.$space-xs;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+}
+
+/* ── Formulaire d'ajout de ligne ─────────────────────────────────────────── */
+.line-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: v.$space-sm;
+  align-items: end;
+  margin-bottom: v.$space-lg;
+  padding: v.$space-md;
+  background: v.$gray-100;
+  border: 1px solid v.$gray-200;
+  border-radius: v.$radius-xs;
+}
+
+.line-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-xs;
+
+  label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: v.$gray-700;
+    text-transform: uppercase;
+  }
+
+  input {
+    @include m.input-base;
+  }
+}
+
+/* ── Article search (dropdown) ───────────────────────────────────────────── */
+.article-search-wrapper {
+  position: relative;
+}
+
+.article-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid v.$gray-200;
+  border-top: none;
+  border-radius: 0 0 v.$radius-xs v.$radius-xs;
+  box-shadow: v.$shadow-soft;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ── Stock warning ───────────────────────────────────────────────────────── */
+.stock-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: v.$space-xs;
+  padding: 2px 6px;
+  border-radius: v.$radius-xs;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: color.adjust(v.$color-warning, $lightness: 35%);
+  color: color.adjust(v.$color-warning, $lightness: -20%);
+}
+
+/* ── Quantité input (modales facture / envoi) ────────────────────────────── */
+.qty-input {
+  width: 60px;
+  padding: v.$space-xs;
+  text-align: center;
+  border: 1px solid v.$gray-300;
+  border-radius: v.$radius-xs;
+  font-size: 0.85rem;
+
+  &:disabled {
+    background: v.$gray-100;
+    color: v.$gray-400;
+    cursor: not-allowed;
+  }
+}
+
+/* ── Err msg ─────────────────────────────────────────────────────────────── */
+.error {
+  color: v.$color-danger;
+  font-size: 0.85rem;
+  padding: v.$space-sm;
+}

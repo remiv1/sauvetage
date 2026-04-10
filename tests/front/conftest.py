@@ -109,16 +109,30 @@ def ensure_mongo_patches():
 @pytest.fixture(autouse=True)
 def patch_requests_to_fastapi():
     """Patch requests AVANT import Flask/FastAPI."""
-    API_BASE = "http://app-back:8000" # pylint: disable=invalid-name
+    API_BASE = "http://app-back:8000"  # pylint: disable=invalid-name
 
     from requests.sessions import Session   # pylint: disable=import-outside-toplevel
     original_request = Session.request
 
+    # Client créé à la demande si aucune instance proxy n'existe encore
+    created_client = None
+
     def fake_request(self, method, url, **kwargs):
-        if _fastapi_proxy is None:
-            return original_request(self, method, url, **kwargs)
+        nonlocal created_client
+        global _fastapi_proxy   # pylint: disable=global-statement
 
         if url.startswith(API_BASE):
+            # Créer un TestClient à la demande pour éviter la résolution DNS
+            if _fastapi_proxy is None:  # pylint: disable=possibly-used-before-assignment
+                try:
+                    fastapp = get_fast_app()
+                    client = TestClient(fastapp)
+                    _fastapi_proxy = client
+                    created_client = client
+                except Exception:   # pylint: disable=broad-except
+                    # Si on ne peut pas créer le proxy, retomber sur la requête normale
+                    return original_request(self, method, url, **kwargs)
+
             path = url.replace(API_BASE, "")
             kwargs.pop("timeout", None)
             return _fastapi_proxy.request(method, path, **kwargs)
@@ -128,8 +142,16 @@ def patch_requests_to_fastapi():
     patcher = patch.object(Session, "request", new=fake_request)
 
     patcher.start()
-    yield
-    patcher.stop()
+    try:
+        yield
+    finally:
+        patcher.stop()
+        if created_client is not None:
+            try:
+                created_client.close()
+            except Exception:   # pylint: disable=broad-except
+                pass
+            _fastapi_proxy = None
 
 
 def get_flask_app():

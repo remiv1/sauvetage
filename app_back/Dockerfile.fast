@@ -1,6 +1,10 @@
 FROM docker.io/library/python:3.12-slim-bookworm
 
-RUN apt-get update && apt-get install -y netcat-openbsd
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    netcat-openbsd libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+    libgdk-pixbuf2.0-0 libglib2.0-0 libfontconfig1 libjpeg62-turbo \
+    libffi-dev shared-mime-info fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ENV PYTHONPATH=/app
@@ -17,11 +21,7 @@ COPY migrations/main/ main/
 COPY migrations/users/ users/
 
 # Rendre l'entrypoint exécutable
-RUN chmod +x app_back/entrypoint.sh
-
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/').read()" || exit 1
+RUN chmod +x app_back/bootstrap.py
 
 # Entrypoint
-ENTRYPOINT ["app_back/entrypoint.sh"]
+ENTRYPOINT ["python", "app_back/bootstrap.py"]

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bon de commande {{ order.reference }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Italianno&display=swap');
+
+        @page {
+            size: A4 portrait;
+            margin: 14mm 14mm 18mm 14mm;
+        }
+
+        body {
+            font-family: "Asap", "DejaVu Sans", sans-serif;
+            color: #202020;
+            font-size: 10pt;
+            margin: 0;
+        }
+
+        /* ─── Header ───────────────────────────────────────── */
+        .header {
+            display: table;
+            width: 100%;
+            margin-bottom: 3mm;
+        }
+
+        .header-left,
+        .header-right {
+            display: table-cell;
+            vertical-align: top;
+        }
+
+        .header-right {
+            width: 32mm;
+            text-align: right;
+        }
+
+        .title {
+            font-family: "Italianno", "DejaVu Serif", serif;
+            font-size: 30pt;
+            color: #00086f;
+            margin: 0 0 1mm 0;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            font-size: 9pt;
+            font-weight: 600;
+            color: #4c69fd;
+            letter-spacing: 0.3mm;
+            text-transform: uppercase;
+            margin: 0 0 2mm 0;
+        }
+
+        .divider {
+            height: 0.5mm;
+            background: #002bff;
+            border-radius: 1mm;
+            margin: 2mm 0 6mm 0;
+        }
+
+        .qr {
+            width: 28mm;
+            height: 28mm;
+        }
+
+        /* ─── Meta table ────────────────────────────────────── */
+        table.meta {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #4c69fd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 8mm;
+        }
+
+        table.meta th {
+            background: #f0f4ff;
+            color: #00086f;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2mm;
+            padding: 2.5mm 3mm;
+            text-align: left;
+            border-bottom: 1px solid #4c69fd;
+            border-right: 1px solid #d0d8ff;
+        }
+
+        table.meta td {
+            padding: 2.5mm 3mm;
+            vertical-align: top;
+            border-right: 1px solid #d0d8ff;
+            border-bottom: 1px solid #d0d8ff;
+        }
+
+        table.meta tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.meta td:last-child {
+            border-right: none;
+        }
+
+        .label {
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #00086f;
+            text-transform: uppercase;
+            letter-spacing: 0.2mm;
+        }
+
+        .value {
+            margin-top: 0.8mm;
+            font-size: 9.5pt;
+            color: #202020;
+            white-space: pre-line;
+        }
+
+        /* ─── Lines table ───────────────────────────────────── */
+        table.lines {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #4c69fd;
+            border-radius: 5px;
+            margin-top: 30mm;
+            overflow: hidden;
+        }
+
+        table.lines th {
+            background: #f0f4ff;
+            color: #00086f;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2mm;
+            padding: 2.5mm 3mm;
+            text-align: left;
+            border-bottom: 1px solid #4c69fd;
+            border-right: 1px solid #d0d8ff;
+        }
+
+        table.lines th:last-child {
+            border-right: none;
+        }
+
+        table.lines td {
+            padding: 2.2mm 3mm;
+            font-size: 9.5pt;
+            border-bottom: 1px solid #e8ecff;
+            border-right: 1px solid #e8ecff;
+        }
+
+        table.lines td:last-child {
+            border-right: none;
+        }
+
+        table.lines tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.lines tbody tr:nth-child(even) td {
+            background: #fafbff;
+        }
+
+        .right {
+            text-align: right !important;
+            white-space: nowrap;
+        }
+
+        .left {
+            text-align: left !important;
+            white-space: nowrap;
+        }
+
+        /* ─── Footer ────────────────────────────────────────── */
+        .footer-total {
+            margin-top: 12mm;
+            text-align: right;
+            font-size: 12pt;
+            font-weight: 700;
+            color: #00086f;
+        }
+
+        .footer-total span {
+            display: inline-block;
+            border-top: 0.5mm solid #002bff;
+            padding-top: 2mm;
+        }
+
+        .print-note {
+            margin-top: 4mm;
+            color: #808080;
+            font-size: 8pt;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1 class="title">Bon de commande client</h1>
+            <p class="subtitle">Réf. {{ order.reference }}</p>
+        </div>
+        <div class="header-right">
+            <img class="qr" src="{{ qr_code_data_uri }}" alt="QR code commande">
+        </div>
+    </div>
+    <div class="divider"></div>
+
+    <table class="meta">
+        <thead>
+            <tr>
+                <th class="left">Client</th>
+                <th class="left">Référence</th>
+                <th class="left">Date</th>
+                <th class="left">Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="value">{{ order.customer_name }}</div>
+                </td>
+                <td>
+                    <div class="value">{{ order.reference }}</div>
+                </td>
+                <td>
+                    <div class="value">{{ order.created_at }}</div>
+                </td>
+                <td>
+                    <div class="value">{{ order.status_label }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div class="label">Adresse de facturation</div>
+                    <div class="value">{{ order.invoice_address }}</div>
+                </td>
+                <td colspan="2">
+                    <div class="label">Adresse de livraison</div>
+                    <div class="value">{{ order.delivery_address }}</div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="lines">
+        <thead>
+            <tr>
+                <th>Article</th>
+                <th class="right">Qté</th>
+                <th class="right">PU HT</th>
+                <th class="right">TVA</th>
+                <th class="right">Total HT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr>
+                <td>{{ line.article_name }}</td>
+                <td class="right">{{ line.quantity }}</td>
+                <td class="right">{{ line.unit_price }}</td>
+                <td class="right">{{ line.vat_rate }}</td>
+                <td class="right">{{ line.line_total_ht }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer-total"><span>Total HT : {{ total_ht }}</span></div>
+    <div class="print-note">Bon de commande à conserver pour suivi et traçabilité.</div>
+</body>
+</html>

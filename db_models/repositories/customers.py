@@ -130,8 +130,11 @@ class CustomersRepository(BaseRepository):
             for field in pro_fields:
                 if field in data:
                     setattr(customer.pro, field, data[field])
-
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return customer
 
     def create(self, customer_data: dict) -> Customers:
@@ -146,7 +149,7 @@ class CustomersRepository(BaseRepository):
         elif customer_data.get("customer_type") == "pro" and "pro" in customer_data:
             customer_data["pro"] = CustomerPros(**customer_data["pro"])
         else:
-            message = "Le type client doit être 'part' ou 'pro' et les données doivent être fournies."
+            message = "Le type client doit être 'part' ou 'pro' et les données fournies."
             raise ValueError(message)
         if "addresses" in customer_data:
             customer_data["addresses"] = [
@@ -162,7 +165,11 @@ class CustomersRepository(BaseRepository):
             ]
         new_customer = Customers(**customer_data)
         self.session.add(new_customer)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return new_customer
 
 
@@ -191,7 +198,11 @@ class CustomerAddressesRepository(BaseRepository):
 
         new_address = CustomerAddresses(**address_data, customer=customer)
         self.session.add(new_address)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return new_address
 
     def update_address(
@@ -213,8 +224,7 @@ class CustomerAddressesRepository(BaseRepository):
                 and_(
                     CustomerAddresses.id == address_id,
                     CustomerAddresses.customer_id == customer_id,
-                    CustomerAddresses.is_active
-                    == True,  # pylint: disable=singleton-comparison
+                    CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
                 )
             )
             .first()
@@ -225,8 +235,11 @@ class CustomerAddressesRepository(BaseRepository):
         # Mise à jour des champs de l'adresse
         for field, value in address_data.items():
             setattr(address, field, value)
-
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
         return address
 
@@ -242,8 +255,8 @@ class CustomerAddressesRepository(BaseRepository):
             .filter(
                 and_(
                     CustomerAddresses.id == address_id,
-                    CustomerAddresses.is_active == True,
-                )  # pylint: disable=singleton-comparison
+                    CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
+                )
             )
             .first()
         )
@@ -251,7 +264,11 @@ class CustomerAddressesRepository(BaseRepository):
             raise ValueError(f"Adresse #{address_id} introuvable.")
 
         address.is_active = False
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
 
 class CustomerMailsRepository(BaseRepository):
@@ -277,7 +294,11 @@ class CustomerMailsRepository(BaseRepository):
 
         new_email = CustomerMails(**email_data)
         self.session.add(new_email)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return new_email
 
     def update_email(
@@ -298,8 +319,7 @@ class CustomerMailsRepository(BaseRepository):
             .filter(
                 and_(
                     CustomerMails.id == email_id,
-                    CustomerMails.is_active
-                    == True,  # pylint: disable=singleton-comparison
+                    CustomerMails.is_active == True,  # pylint: disable=singleton-comparison
                     CustomerMails.customer_id == customer_id,
                 )
             )
@@ -311,8 +331,11 @@ class CustomerMailsRepository(BaseRepository):
         # Mise à jour des champs de l'e-mail
         for field, value in email_data.items():
             setattr(email, field, value)
-
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
         return email
 
@@ -327,8 +350,9 @@ class CustomerMailsRepository(BaseRepository):
             self.session.query(CustomerMails)
             .filter(
                 and_(
-                    CustomerMails.id == email_id, CustomerMails.is_active == True
-                )  # pylint: disable=singleton-comparison
+                    CustomerMails.id == email_id,
+                    CustomerMails.is_active == True  # pylint: disable=singleton-comparison
+                )
             )
             .first()
         )
@@ -336,7 +360,11 @@ class CustomerMailsRepository(BaseRepository):
             raise ValueError(f"E-mail #{email_id} introuvable.")
 
         email.is_active = False
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
 
 class CustomerPhonesRepository(BaseRepository):
@@ -362,7 +390,11 @@ class CustomerPhonesRepository(BaseRepository):
 
         new_phone = CustomerPhones(**phone_data)
         self.session.add(new_phone)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return new_phone
 
     def update_phone(
@@ -384,8 +416,7 @@ class CustomerPhonesRepository(BaseRepository):
                 and_(
                     CustomerPhones.id == phone_id,
                     CustomerPhones.customer_id == customer_id,
-                    CustomerPhones.is_active
-                    == True,  # pylint: disable=singleton-comparison
+                    CustomerPhones.is_active == True,  # pylint: disable=singleton-comparison
                 )
             )
             .first()
@@ -397,7 +428,11 @@ class CustomerPhonesRepository(BaseRepository):
         for field, value in phone_data.items():
             setattr(phone, field, value)
 
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
         return phone
 
@@ -412,8 +447,9 @@ class CustomerPhonesRepository(BaseRepository):
             self.session.query(CustomerPhones)
             .filter(
                 and_(
-                    CustomerPhones.id == phone_id, CustomerPhones.is_active == True
-                )  # pylint: disable=singleton-comparison
+                    CustomerPhones.id == phone_id,
+                    CustomerPhones.is_active == True  # pylint: disable=singleton-comparison
+                )
             )
             .first()
         )
@@ -421,4 +457,8 @@ class CustomerPhonesRepository(BaseRepository):
             raise ValueError(f"Téléphone #{phone_id} introuvable.")
 
         phone.is_active = False
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc

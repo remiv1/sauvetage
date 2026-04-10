@@ -1,0 +1,186 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+<div class="order-create-container">
+
+    {# ── En-tête ────────────────────────────────────────────────────────────── #}
+    <div class="h2-header">
+        <div class="header-top">
+            <a href="{{ url_for('order.index') }}" class="btn btn-back"
+               title="Retour aux commandes">
+                {% include "svg/back.html" %}
+            </a>
+            <h2>Commande {{ order.reference }}</h2>
+        </div>
+    </div>
+
+    {# ── Infos commande + Adresses ───────────────────────────────────────── #}
+    <div class="order-meta-row">
+        <div class="order-info-section">
+            <div class="info-group">
+                <span class="info-label">Référence</span>
+                <span class="info-value">{{ order.reference }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Client</span>
+                <span class="info-value">{{ order.customer_name }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Statut</span>
+                <span class="info-value">
+                    <span class="badge {{ order.status_badge }}">{{ order.status_label }}</span>
+                </span>
+            </div>
+            {% if order.invoice_address %}
+            <div class="info-group">
+                <span class="info-label">Facturation</span>
+                <span class="info-value info-value--sm">
+                    {{ order.invoice_address.address_name or 'Adresse' }} —
+                    {{ order.invoice_address.address_line1 }},
+                    {{ order.invoice_address.postal_code }} {{ order.invoice_address.city }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        {% include "htmx_templates/order/create/delivery_address_info.html" %}
+    </div>
+
+    {# ── Boutons d'action ────────────────────────────────────────────────── #}
+    <div class="order-action-buttons">
+        {% if order.status == 'draft' %}
+        <button class="btn btn-primary" id="btn-open-add-line">
+            {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Ajouter un article
+        </button>
+        {% endif %}
+    </div>
+
+    {# ── Modale ajout de ligne ──────────────────────────────────────────── #}
+    {% if order.status == 'draft' %}
+    <dialog class="modal-overlay" id="add-line-dialog" aria-label="Ajouter un article">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Ajouter un article</h3>
+                <button class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-line-form"
+                      hx-post="{{ url_for('order_htmx_create.add_line', order_id=order.id) }}"
+                      hx-swap="none"
+                      hx-on::after-request="if(event.detail.successful && event.detail.requestConfig.verb === 'post') { this.reset(); document.getElementById('add-line-dialog').close(); }">
+
+                    {{ line_form.hidden_tag() }}
+
+                    <div class="modal-form-grid">
+                        {# Article (recherche) #}
+                        <div class="line-form-group article-search-wrapper full-width">
+                            <label for="article-search">Article</label>
+                            <input type="text"
+                                   id="article-search"
+                                   placeholder="Rechercher un article…"
+                                   autocomplete="off"
+                                   hx-get="{{ url_for('order_htmx_create.search_articles') }}"
+                                   hx-trigger="keyup changed delay:300ms"
+                                   hx-target="#article-dropdown"
+                                   hx-swap="innerHTML"
+                                   name="q">
+                            <input type="hidden" id="general_object_id" name="general_object_id" value="">
+                            <div id="article-dropdown" class="article-dropdown"></div>
+                        </div>
+
+                        {# Quantité #}
+                        <div class="line-form-group">
+                            <label for="quantity">Quantité</label>
+                            <input type="number" id="quantity" name="quantity" min="1" value="1">
+                        </div>
+
+                        {# Prix unitaire #}
+                        <div class="line-form-group">
+                            <label for="unit_price">PU HT (€)</label>
+                            <input type="number" id="unit_price" name="unit_price" min="0" step="0.01" value="0.00">
+                        </div>
+
+                        {# TVA #}
+                        <div class="line-form-group">
+                            <label for="vat_rate">TVA (%)</label>
+                            <input type="number" id="vat_rate" name="vat_rate" min="0" step="0.1" value="5.5">
+                        </div>
+
+                        {# Remise #}
+                        <div class="line-form-group">
+                            <label for="discount">Remise (%)</label>
+                            <input type="number" id="discount" name="discount" min="0" max="100" step="0.01" value="0">
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-cancel-close">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </dialog>
+    {% endif %}
+
+    {# ── Tableau des lignes (chargé via HTMX) ──────────────────────────── #}
+    <h3>Lignes de commande</h3>
+    <div id="order-lines-wrapper"
+         hx-get="{{ url_for('order_htmx_create.order_lines', order_id=order.id) }}"
+         hx-trigger="load, refreshOrderLines from:body"
+         hx-swap="innerHTML">
+        <div class="loading-indicator">
+            <p>Chargement des lignes…</p>
+        </div>
+    </div>
+
+    {% if order.status == 'draft' %}
+    <div class="order-footer-actions">
+        <a href="{{ url_for('order.order_view', order_id=order.id) }}" class="btn btn-validate-order">
+            {% with height=24 %}{% include "svg/check-circle.html" %}{% endwith %} Valider la commande
+        </a>
+    </div>
+    {% endif %}
+
+    {# ── Conteneur modale ───────────────────────────────────────────────── #}
+    <div id="order-modal-container"></div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modale ajout de ligne
+    var dialog = document.getElementById('add-line-dialog');
+    var openBtn = document.getElementById('btn-open-add-line');
+    if (dialog && openBtn) {
+        openBtn.addEventListener('click', function() { dialog.showModal(); });
+        dialog.addEventListener('click', function(e) {
+            if (e.target === dialog) dialog.close();
+        });
+        dialog.addEventListener('cancel', function() { dialog.close(); });
+        var closeButtons = dialog.querySelectorAll('.btn-close, .btn-cancel-close');
+        closeButtons.forEach(function(btn) {
+            btn.addEventListener('click', function() { dialog.close(); });
+        });
+    }
+
+    // Sélection d'un article dans le dropdown
+    var articleDropdown = document.getElementById('article-dropdown');
+    if (articleDropdown) {
+        articleDropdown.addEventListener('click', function(e) {
+            var item = e.target.closest('[data-article-id]');
+            if (!item) return;
+
+            document.getElementById('general_object_id').value = item.dataset.articleId;
+            document.getElementById('article-search').value = item.dataset.articleName;
+            articleDropdown.innerHTML = '';
+
+            // Pré-remplir le prix si disponible
+            var price = item.dataset.articlePrice;
+            if (price) document.getElementById('unit_price').value = price;
+            var vat = item.dataset.articleVat;
+            if (vat) document.getElementById('vat_rate').value = vat;
+        });
+    }
+});
+</script>
+{% endblock %}

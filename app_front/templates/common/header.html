@@ -23,10 +23,10 @@
                 {% endif %}
                 {% if flags.userbar and flags.userbar == true %}
                 <div class="userbar">
-                    <div class="userbar__avatar" id="userbar-avatar" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="userbar__avatar" id="userbar-avatar" aria-haspopup="true" aria-expanded="false" aria-controls="userbar-dropdown">
                         {% include "svg/avatar.html" %}
-                    </div>
-                    <div class="userbar__dropdown" id="userbar-dropdown" role="menu" aria-labelledby="userbar-avatar">
+                    </button>
+                    <div class="userbar__dropdown" id="userbar-dropdown" role="menu" aria-labelledby="userbar-avatar" aria-hidden="true">
                         <div class="userbar__item"><a href="{{ url_for('user.modify', username=session['username'] | urlencode) }}">Mon compte</a></div>
                         <div class="userbar__item"><a href="{{ url_for('user.chg_pwd', username=session['username'] | urlencode) }}">Changer le mot de passe</a></div>
                         {% if session and ('1' in session['permissions'] or '9' in session['permissions']) %}

@@ -88,6 +88,7 @@ class ObjectsRepository(BaseRepository):
         stmt = (
             self._get_global_select()
             .where(self.model.name.ilike(f"%{name.lower()}%"))
+            .order_by(self.model.name)
             .limit(10)
         )
         return self.session.execute(stmt).unique().scalars().all()
@@ -121,7 +122,11 @@ class ObjectsRepository(BaseRepository):
         if not obj:
             raise ValueError(f"Object with id {object_id} not found.")
         obj.is_active = False
-        self.session.commit()
+        try:
+            self.session.commit()
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            raise ValueError(f"Error committing object changes: {str(e)}") from e
 
     def toggle_active(self, object_id: int) -> bool:
         """Bascule le statut actif/inactif d'un objet. Retourne le nouveau statut."""
@@ -129,7 +134,11 @@ class ObjectsRepository(BaseRepository):
         if not obj:
             raise ValueError(f"Object with id {object_id} not found.")
         obj.is_active = not obj.is_active
-        self.session.commit()
+        try:
+            self.session.commit()
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            raise ValueError(f"Error committing object changes: {str(e)}") from e
         return obj.is_active
 
     def save_from_form(
@@ -149,7 +158,10 @@ class ObjectsRepository(BaseRepository):
         instance.name = form.name.data
         instance.description = form.description.data
         instance.price = float(form.price.data or 0)
-        instance.purchase_price = float(form.purchase_price.data) if getattr(form, 'purchase_price', None) and form.purchase_price.data else None
+        instance.purchase_price = float(form.purchase_price.data) \
+                                        if getattr(form, 'purchase_price', None) \
+                                              and form.purchase_price.data \
+                                        else None   # type: ignore
         vat_id = getattr(form, 'vat_rate_id', None) and form.vat_rate_id.data
         instance.vat_rate_id = int(vat_id) if vat_id else None
         self.session.flush()

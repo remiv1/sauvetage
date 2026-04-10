@@ -19,7 +19,3 @@ RUN chmod +x /tmp/00_generate_config.sh && \
     ./00_generate_config.sh && \
     mkdir -p /docker-entrypoint-initdb.d && \
     cp /tmp/*.js /docker-entrypoint-initdb.d/ 2>/dev/null || true
-
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-    CMD mongosh --eval "db.adminCommand('ping')" || exit 1

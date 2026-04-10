@@ -12,6 +12,8 @@ from .inventory.routes import bp_inventory  # type: ignore
 from .inventory.routes_data import bp_inventory_data  # type: ignore
 from .inventory.routes_htmx import bp_inventory_htmx  # type: ignore
 from .order.routes import bp_order  # type: ignore
+from .order.routes_htmx_list import bp_order_htmx_list  # type: ignore
+from .order.routes_htmx_create import bp_order_htmx_create  # type: ignore
 from .stock.routes import bp_stock  # type: ignore
 from .stock.routes_data import bp_stock_data  # type: ignore
 from .stock.routes_htmx_council import bp_stock_htmx_council  # type: ignore

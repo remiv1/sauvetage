@@ -7,8 +7,8 @@ from db_models.objects import GeneralObjects, Books, Suppliers
 def test_object_create_read_and_update(
     db_session_main: Session,
     supplier: Suppliers,  # pylint: disable=redefined-outer-name, unused-argument
-    book_object: Books,
-) -> None:  # pylint: disable=redefined-outer-name, unused-argument
+    book_object: Books,  # pylint: disable=redefined-outer-name, unused-argument
+) -> None:
     """test de lecture de l'objet rentré précédemment et de modification"""
     retrieved = (
         db_session_main.query(GeneralObjects)
@@ -37,6 +37,6 @@ def test_object_create_read_and_update(
     assert retrieved.supplier.name == "Fournisseur Test"  # type: ignore
     assert retrieved.book.author == "John Doe"  # type: ignore
     assert len(retrieved.object_tags) == 3  # type: ignore
-    assert retrieved.obj_metadatas[0].semistructured_data == {"key": "value"}  # type: ignore
+    assert retrieved.obj_metadatas.semistructured_data == {"key": "value"}  # type: ignore
     assert len(retrieved.media_files) == 1  # type: ignore
     assert retrieved.media_files[0].file_name == "test_image.jpg"  # type: ignore

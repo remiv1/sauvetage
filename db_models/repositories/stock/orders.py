@@ -400,13 +400,16 @@ class OrderRepository(BaseRepository):
 
         # Gestion de l'opération d'édition
         elif action == "edit":
-            existing_line = self.get_order_by_id(new_line.order_in_id)
+            existing_line = self.session.get(OrderInLine, new_line.id)
+            if existing_line is None:
+                raise ValueError(f"Ligne de commande {new_line.id} introuvable")
+            inventory_movement_id = existing_line.inventory_movement_id
             existing_movement = self.session.get(
-                InventoryMovements, existing_line.inventory_movement_id
+                InventoryMovements, inventory_movement_id
             )
             if existing_movement is None:
                 raise ValueError(
-                    f"Mouvement d'inventaire {existing_line.inventory_movement_id} introuvable"
+                    f"Mouvement d'inventaire {inventory_movement_id} introuvable"
                 )
             existing_line.general_object_id = new_line.general_object_id
             existing_line.qty_ordered = new_line.qty_ordered

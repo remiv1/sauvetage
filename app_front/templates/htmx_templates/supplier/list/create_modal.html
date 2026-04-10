@@ -1,9 +1,5 @@
 {# Modale de création d'un fournisseur #}
-<button type="button"
-        class="modal-overlay"
-        aria-label="Fermer la fenêtre"
-        onclick="if(event.target===this)this.remove()"
-        onKeyDown="if(event.key==='Escape'||event.key==='Enter')this.remove()">
+<dialog class="modal-overlay" aria-label="Ajouter un fournisseur">
     <div class="modal-box modal-supplier">
         <div class="modal-header">
             <h3>Ajouter un fournisseur</h3>
@@ -55,4 +51,13 @@
             </form>
         </div>
     </div>
-</button>
+</dialog>
+<script>
+(function(){
+    var d = document.currentScript.previousElementSibling;
+    d.showModal();
+    d.addEventListener('click', function(e){ if(e.target === d) d.remove(); });
+    d.addEventListener('cancel', function(e){ e.preventDefault(); d.remove(); });
+    d.addEventListener('keydown', function(e){ if(e.key === 'Enter' && e.target.tagName !== 'INPUT') d.remove(); });
+})();
+</script>

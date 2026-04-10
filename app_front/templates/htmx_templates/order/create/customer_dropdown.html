@@ -1,0 +1,15 @@
+{# Dropdown de sélection de client pour la création de commande #}
+{% if customers %}
+    {% for c in customers %}
+    <div class="dropdown-item"
+         data-customer-id="{{ c.id }}"
+         data-customer-name="{{ c.display_name }}">
+        {{ c.display_name }}
+        <small class="text-muted"> — {{ c.customer_type|upper }} — {{ c.location }}</small>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="dropdown-item text-muted">
+        Aucun client trouvé pour "{{ query }}".
+    </div>
+{% endif %}

@@ -1,0 +1,79 @@
+{# Modale de création rapide d'un client depuis la commande #}
+<dialog class="modal-overlay" aria-label="Créer un client">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Création rapide d'un client</h3>
+            <button class="btn-close">&times;</button>
+        </div>
+        <form hx-post="{{ url_for('order_htmx_create.quick_customer_submit') }}"
+              hx-swap="none">
+            {{ form.hidden_tag() }}
+            <div class="modal-body">
+                <div class="filter-group" style="margin-bottom: 1rem;">
+                    {{ form.customer_type.label(class="filter-label") }}
+                    {{ form.customer_type(class="filter-control", id="quick-customer-type") }}
+                </div>
+
+                {# Champs Particulier #}
+                <div id="quick-part-fields">
+                    <div class="filter-group" style="margin-bottom: 0.5rem;">
+                        {{ form.civil_title.label(class="filter-label") }}
+                        {{ form.civil_title(class="filter-control") }}
+                    </div>
+                    <div class="filter-group" style="margin-bottom: 0.5rem;">
+                        {{ form.first_name.label(class="filter-label") }}
+                        {{ form.first_name(class="filter-control", placeholder="Prénom") }}
+                    </div>
+                    <div class="filter-group" style="margin-bottom: 0.5rem;">
+                        {{ form.last_name.label(class="filter-label") }}
+                        {{ form.last_name(class="filter-control", placeholder="Nom") }}
+                    </div>
+                </div>
+
+                {# Champs Professionnel #}
+                <div id="quick-pro-fields" style="display: none;">
+                    <div class="filter-group" style="margin-bottom: 0.5rem;">
+                        {{ form.company_name.label(class="filter-label") }}
+                        {{ form.company_name(class="filter-control", placeholder="Raison sociale") }}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel-close">Annuler</button>
+                <button type="submit" class="btn btn-primary">Créer le client</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+(function() {
+    var d = document.currentScript.previousElementSibling;
+    d.showModal();
+    d.addEventListener('click', function(e) {
+        if (e.target === d) d.close();
+    });
+    d.addEventListener('cancel', function() { d.remove(); });
+    d.addEventListener('close', function() { d.remove(); });
+    var closeButtons = d.querySelectorAll('.btn-close, .btn-cancel-close');
+    closeButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() { d.close(); });
+    });
+
+    // Toggle part/pro fields
+    var typeSelect = d.querySelector('#quick-customer-type');
+    var partFields = d.querySelector('#quick-part-fields');
+    var proFields = d.querySelector('#quick-pro-fields');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            if (this.value === 'pro') {
+                partFields.style.display = 'none';
+                proFields.style.display = 'block';
+            } else {
+                partFields.style.display = 'block';
+                proFields.style.display = 'none';
+            }
+        });
+    }
+})();
+</script>

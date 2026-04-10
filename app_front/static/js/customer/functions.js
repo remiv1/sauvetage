@@ -105,3 +105,12 @@ export function serializeForm(form) {
     }
     return data;
 }
+
+// Considère certaines valeurs (ex: 'N/A') comme absentes
+export function isPresent(value) {
+    if (value === undefined || value === null) return false;
+    const s = String(value).trim();
+    if (s === '') return false;
+    const up = s.toUpperCase();
+    return up !== 'N/A' && up !== 'NA';
+}

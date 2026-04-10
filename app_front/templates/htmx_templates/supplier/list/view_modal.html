@@ -1,9 +1,5 @@
 {# Modale de consultation d'un fournisseur #}
-<button type="button"
-        class="modal-overlay"
-        aria-label="Fermer la fenêtre"
-        onclick="if(event.target===this)this.remove()"
-        onKeyDown="if(event.key==='Escape'||event.key==='Enter')this.remove()">
+<dialog class="modal-overlay" aria-label="Détail du fournisseur">
     <div class="modal-box modal-supplier">
         <div class="modal-header">
             <h3>Détail du fournisseur</h3>
@@ -65,4 +61,13 @@
             </div>
         </div>
     </div>
-</button>
+</dialog>
+<script>
+(function(){
+    var d = document.currentScript.previousElementSibling;
+    d.showModal();
+    d.addEventListener('click', function(e){ if(e.target === d) d.remove(); });
+    d.addEventListener('cancel', function(e){ e.preventDefault(); d.remove(); });
+    d.addEventListener('keydown', function(e){ if(e.key === 'Enter') d.remove(); });
+})();
+</script>

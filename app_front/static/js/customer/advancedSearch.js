@@ -4,7 +4,7 @@
  * et affiche les résultats dans un tableau.
  */
 
-import { fetchJson } from './functions.js';
+import { fetchJson, isPresent } from './functions.js';
 
 const SEARCH_URL = '/customer/data/search/long';
 
@@ -84,8 +84,12 @@ function renderResults(data, section) {
                 </span>
             </td>
             <td>${escapeHtml(c.location || '—')}</td>
-            <td>${escapeHtml(c.email || '—')}</td>
-            <td>${escapeHtml(c.phone || '—')}</td>
+            <td class="email-col">
+                <span class="status-dot ${isPresent(c.email) ? 'present' : 'absent'}" title="${escapeHtml(c.email || 'Aucun e-mail')}"></span>
+            </td>
+            <td class="phone-col">
+                <span class="status-dot ${isPresent(c.phone) ? 'present' : 'absent'}" title="${escapeHtml(c.phone || 'Aucun téléphone')}"></span>
+            </td>
             <td>
                 <span class="badge ${c.is_active ? 'badge-active' : 'badge-inactive'}">
                     ${c.is_active ? 'Actif' : 'Inactif'}

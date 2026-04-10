@@ -1,0 +1,32 @@
+# ------------------------------------------------------------------------------
+# --- Configuration page de gestion des commandes clients                    ---
+# ------------------------------------------------------------------------------
+# Paramètres
+[params]
+tab = "Commandes"
+styles = [
+    "css/main.css",
+    "css/order/list.css"
+]
+scripts = ["js/main.js"]
+# Clées
+[meta]
+title = "Commandes | Intranet"
+description = "Page de gestion des commandes clients de l'intranet Sauvetage"
+keywords = "commandes, clients, gestion, intranet"
+author = "Rémi Verschuur"
+robots = "noindex, nofollow"
+[meta.accessibility]
+lang="fr"
+direction="ltr"
+aria_role="main"
+# Pages spécifiques
+[layout]
+main_layout = "order/list.html"
+extend_layout = "index.html"
+# Flags pour afficher ou non les éléments sur les commons
+[flags]
+navbar = true
+searchbar = false
+htmx = true
+userbar = true

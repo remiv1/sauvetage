@@ -12,6 +12,34 @@
     border-bottom: 8px solid variables.$border-blue;
 }
 
+/* Onglets vue commande (order view tabs) */
+.order-tabs {
+    margin-bottom: variables.$space-md;
+}
+.order-tabs-list {
+    display: flex;
+    gap: variables.$space-sm;
+    margin: 0 0 variables.$space-sm 0;
+    padding: 0;
+    list-style: none;
+}
+.order-tabs-list .order-tab {
+    background: transparent;
+    border: 1px solid variables.$gray-200;
+    padding: variables.$space-xs variables.$space-md;
+    border-radius: variables.$radius-sm;
+    cursor: pointer;
+    color: variables.$primary-color;
+    font-weight: 600;
+}
+.order-tabs-list .order-tab.active {
+    background: variables.$primary-color;
+    color: #fff;
+    border-color: variables.$primary-color;
+}
+.order-tab-panel { display: none; margin-top: variables.$space-sm; }
+.order-tab-panel.active { display: block; }
+
 .header-container {
     display: flex;
     justify-content: space-between;
@@ -263,4 +291,32 @@
         margin: 0;
         display: inline;
     }
+}
+
+/* Points d'état pour email / téléphone et largeur des colonnes */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin: 0 0.4rem;
+    vertical-align: middle;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.04);
+}
+.status-dot.present {
+    background: variables.$color-success;
+}
+.status-dot.absent {
+    background: variables.$color-danger;
+}
+
+.email-col,
+.phone-col {
+    max-width: 90px;
+    width: 90px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
 }

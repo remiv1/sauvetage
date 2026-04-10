@@ -236,7 +236,13 @@ class DilicomReferencial(WorkingBase, QueryMixin):
 
     def to_pipe(self) -> str:
         """Création du pipe de commandes pour Dilicom."""
-        direction = "c" if self.create_ref else "d"
+        match self.create_ref, self.delete_ref:
+            case True, False:
+                direction = "C"
+            case False, True:
+                direction = "S"
+            case _:
+                raise ValueError("Etat invalide, doit être create_ref OU delete_ref")
         return f"{direction}|{self.ean13}|{self.gln13}"
 
     @classmethod

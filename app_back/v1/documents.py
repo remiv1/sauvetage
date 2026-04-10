@@ -17,7 +17,8 @@ def create_document(payload: DocumentSchema):
     try:
         pdf_bytes = create_document_buffer(
             template_name=payload.template,
-            data=payload.data
+            data=payload.data,
+            base_url=payload.base_url,
         )
 
         # Encodage base64 pour transit JSON
@@ -25,7 +26,7 @@ def create_document(payload: DocumentSchema):
 
         return {
             "status": "success",
-            "filename": f"{payload.template}.pdf",
+            "filename": payload.filename or f"{payload.template}.pdf",
             "content": pdf_b64,
             "content_type": "application/pdf"
         }

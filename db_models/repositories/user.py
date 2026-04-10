@@ -59,7 +59,11 @@ class UsersRepository(BaseRepository):
         """
         user.email = email
         user.permissions = permissions
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return user
 
     def hash_password(self, password: str) -> str:
@@ -103,7 +107,11 @@ class UsersRepository(BaseRepository):
             to_date=None,
         )
         user.passwords.append(new_pwd)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
         return user
 
     def add_failed_login(self, user: Users) -> None:
@@ -117,7 +125,11 @@ class UsersRepository(BaseRepository):
         if user.nb_failed_logins >= 3:
             user.is_locked = True
         user.nb_failed_logins += 1
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
 
     def reset_failed_logins(self, user: Users) -> bool:
         """Réinitialise le nombre de tentatives de connexion échouées pour un utilisateur donné.
@@ -130,7 +142,11 @@ class UsersRepository(BaseRepository):
         """
         if not user.is_locked:
             user.nb_failed_logins = 0
-            self.session.commit()
+            try:
+                self.session.commit()
+            except Exception as exc:
+                self.session.rollback()
+                raise ValueError(str(exc)) from exc
             return True
         return False
 

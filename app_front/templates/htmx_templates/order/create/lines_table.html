@@ -1,0 +1,58 @@
+{# Fragment HTMX — Tableau des lignes de commande #}
+
+{% if order.lines %}
+<table class="order-lines-table">
+    <thead>
+        <tr>
+            <th>Article</th>
+            <th>Qté</th>
+            <th>PU HT</th>
+            <th>Remise</th>
+            <th>TVA</th>
+            <th>Total HT</th>
+            <th>Statut</th>
+            {% if order.status == 'draft' %}
+            <th class="text-center">Actions</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% set ns = namespace(total_ht=0) %}
+        {% for line in order.lines %}
+        <tr>
+            <td>{{ line.article_name }}</td>
+            <td>{{ line.quantity }}</td>
+            <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+            <td>{{ "%.2f"|format(line.discount) }} %</td>
+            <td>{{ "%.1f"|format(line.vat_rate) }} %</td>
+            <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
+            <td><span class="badge">{{ line.status_label }}</span></td>
+            {% if order.status == 'draft' %}
+            <td class="text-center">
+                {% if line.status == 'draft' %}
+                <button class="action-icon action-cancel"
+                        title="Annuler la ligne"
+                        hx-delete="{{ url_for('order_htmx_create.delete_line', order_id=order.id, line_id=line.id) }}"
+                        hx-swap="none"
+                        hx-confirm="Annuler cette ligne ?">
+                    {% include "svg/close.html" %}
+                </button>
+                {% endif %}
+            </td>
+            {% endif %}
+            {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="5" class="weight-600 text-right">Total HT</td>
+            <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
+            <td></td>
+            {% if order.status == 'draft' %}<td></td>{% endif %}
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<p class="subtile-text-500">Aucune ligne de commande.</p>
+{% endif %}

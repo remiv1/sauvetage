@@ -2,6 +2,8 @@
 
 import pytest   # pylint: disable=unused-import
 
+HOME_TEMPLATE_START = "<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">"
+
 # +================================================================================================+
 # |                          Gestion des tests de routes                                           |
 # +================================================================================================+
@@ -10,7 +12,7 @@ def test_index(client_all):
     """Test de la page d'accueil du module fournisseurs."""
     response = client_all.get("/supplier/")
     assert response.status_code == 200
-    assert response.text.startswith("\n    <h1>Fournisseurs</h1>\n")
+    assert response.text.startswith(HOME_TEMPLATE_START)
 
 # +================================================================================================+
 # |                          Gestion des tests de routes_htmx                                      |

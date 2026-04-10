@@ -30,7 +30,3 @@ RUN set -a && \
     chmod 644 *.sql && \
     rm 00_generate_models.sh *.pattern && \
     ls -la
-
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-    CMD pg_isready -U app -d sauvetage_main

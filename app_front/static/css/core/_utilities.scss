@@ -1,3 +1,4 @@
+@use 'sass:map' as map;
 @use './variables' as variables;
 
 // Marges
@@ -93,4 +94,17 @@
 .error-illustration {
 	border-radius: 8px;
 	box-shadow: 0 8px 24px rgba(15,23,42,0.06);
+}
+
+@for $i from 1 through 9 {
+	$shade: $i * 100;
+	.subtile-text-#{$shade} {
+		color: map.get(variables.$grays, $shade);
+	}
+}
+
+@for $i from 1 through 9 {
+	.weight-#{$i}00 {
+		font-weight: #{$i}00;
+	}
 }

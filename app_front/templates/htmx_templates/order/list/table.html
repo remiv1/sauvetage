@@ -1,0 +1,124 @@
+{# Fragment HTMX — Tableau des commandes paginé #}
+
+{% set total_pages = (total / per_page) | round(0, 'ceil') | int %}
+{% set total_pages = total_pages if total_pages > 0 else 1 %}
+
+{# ── Résumé ─────────────────────────────────────────────────────────────── #}
+<div class="table-summary">
+    <span>{{ total }} commande{{ 's' if total > 1 else '' }} trouvée{{ 's' if total > 1 else '' }}</span>
+    <span class="page-info">Page {{ page }} / {{ total_pages }}</span>
+</div>
+
+{# ── Tableau ────────────────────────────────────────────────────────────── #}
+{% if items %}
+<div class="table-responsive">
+    <table class="order-table">
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Client</th>
+                <th class="text-center">Total HT</th>
+                <th class="text-center">Statut</th>
+                <th class="text-center">Date</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="cell-ref">{{ item.reference }}</td>
+                <td class="cell-customer">{{ item.customer_name }}</td>
+                <td class="text-center">{{ "%.2f"|format(item.total_ht) }} €</td>
+                <td class="text-center">
+                    <span class="badge {{ item.status_badge }}">{{ item.status_label }}</span>
+                </td>
+                <td class="text-center">{{ item.created_at }}</td>
+                <td>
+                    <div class="actions-cell">
+                        {# Bouton Voir #}
+                        <a class="action-icon action-view"
+                           title="Voir le détail"
+                                    href="{{ url_for('order.order_view', order_id=item.id, modal='view') }}">
+                            {% include "svg/eye.html" %}
+                        </a>
+                                {% if item.status != 'draft' %}
+                                <a class="action-icon"
+                                    title="Télécharger le bon de commande"
+                                    href="{{ url_for('order.order_download_slip', order_id=item.id) }}">
+                                     {% include "svg/download.html" %}
+                                </a>
+                                {% endif %}
+                        {# Bouton Modifier (redirection page édition) #}
+                        {% if item.status == 'draft' %}
+                        <a href="{{ url_for('order_htmx_create.edit_order', order_id=item.id) }}"
+                           class="action-icon action-edit" title="Modifier la commande">
+                            {% include "svg/edit.html" %}
+                        </a>
+                        {% endif %}
+                        {# Bouton Annuler #}
+                        {% if item.status not in ('canceled', 'returned', 'shipped') %}
+                        <button class="action-icon action-cancel"
+                                title="Annuler la commande"
+                                hx-get="{{ url_for('order_htmx_list.order_cancel_modal', order_id=item.id) }}"
+                                hx-target="#order-modal-container"
+                                hx-swap="innerHTML">
+                            {% include "svg/close.html" %}
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ── Pagination ─────────────────────────────────────────────────────────── #}
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('order_htmx_list.order_table', page=page - 1) }}"
+            hx-target="#order-table-wrapper"
+            hx-swap="innerHTML"
+            hx-include="#order-search-filters">
+        &laquo; Précédent
+    </button>
+    {% endif %}
+
+    <span class="page-numbers">
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <span class="page-num current">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+                <button class="page-num"
+                        hx-get="{{ url_for('order_htmx_list.order_table', page=p) }}"
+                        hx-target="#order-table-wrapper"
+                        hx-swap="innerHTML"
+                        hx-include="#order-search-filters">
+                    {{ p }}
+                </button>
+            {% elif p == 4 or p == total_pages - 3 %}
+                <span class="page-ellipsis">…</span>
+            {% endif %}
+        {% endfor %}
+    </span>
+
+    {% if page < total_pages %}
+    <button class="btn btn-secondary btn-sm"
+            hx-get="{{ url_for('order_htmx_list.order_table', page=page + 1) }}"
+            hx-target="#order-table-wrapper"
+            hx-swap="innerHTML"
+            hx-include="#order-search-filters">
+        Suivant &raquo;
+    </button>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="no-results">
+    {% include "svg/box.html" %}
+    <p>Aucune commande trouvée.</p>
+</div>
+{% endif %}

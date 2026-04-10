@@ -60,10 +60,6 @@ def new_order_section():
         return render_template(
             EDIT_TABLE, view_state="new", order=order, ext_ref_form=ExternalRefForm()
             )
-    else:
-        if request.method == "POST":
-            msg = "Formulaire de création de commande invalide : " + str(form.errors)
-            raise ValueError(msg)
     return render_template(SECTION_NEW, form=form)
 
 
@@ -82,7 +78,8 @@ def view_order(order_id: int):
     """Retourne la vue détaillée d'une commande fournisseur (HTMX)."""
     # Récupérer les détails de la commande à partir de l'ID
     order = get_order_by_id(order_id)
-    return render_template(EDIT_TABLE, order=order, view_state="view")
+    modal = request.args.get("modal", "")
+    return render_template(EDIT_TABLE, order=order, view_state="view", modal=modal)
 
 
 @bp_stock_htmx_orders.route("/cancel/<int:order_id>", methods=["GET", "POST"])
