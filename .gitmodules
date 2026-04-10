@@ -1,3 +1,6 @@
 [submodule "sales"]
 	path = sales
 	url = https://github.com/remiv1/sauvetage_sales.git
+[submodule "datas"]
+	path = datas
+	url = https://github.com/remiv1/sauvetage_datas.git

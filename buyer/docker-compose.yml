@@ -21,6 +21,8 @@ services:
     restart: always
     depends_on:
       - db
+    env_file:
+      - .env.wordpress
     environment:
       WORDPRESS_DB_HOST: db:3306
       WORDPRESS_DB_USER: wpuser
@@ -44,6 +46,26 @@ services:
       - wp_data:/var/www/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:Z
       - ./ssl:/etc/nginx/ssl:Z
+    networks:
+      - wpnet
+
+  backup:
+    build:
+      context: .
+      dockerfile: backup/Dockerfile
+    container_name: wp_backup
+    restart: unless-stopped
+    depends_on:
+      - db
+      - wordpress
+    env_file:
+      - .env.wordpress
+    volumes:
+      - wp_data:/var/www/html:ro
+      - ./backups:/backups
+      - ./backup_logs:/var/log/backup
+      - ./.env.wordpress:/etc/backup/.env.wordpress:ro
+      - ./ssh:/root/.ssh:ro
     networks:
       - wpnet
 
