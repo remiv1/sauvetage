@@ -9,7 +9,7 @@ from os import getenv
 from typing import Sequence
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from db_models.repositories.dilicom import DilicomRepository
+from db_models.repositories.dilicom.dilicom import DilicomRepository
 from db_models.objects.stocks import DilicomReferencial
 
 class DilicomService:

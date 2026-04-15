@@ -11,6 +11,16 @@ class DilicomConfig:
     username: str
     password: str
 
+    def __repr__(self) -> str:
+        return f"""
+        <DilicomConfig :
+            - Host : {self.host}
+            - Port : {self.port}
+            - Username : {self.username}
+            - Password : {self.password is not None and '****' or None}
+        >
+        """
+
 def load_dilicom_config() -> DilicomConfig:
     """Charge la configuration de Dilicom à partir des variables d'environnement."""
     return DilicomConfig(
