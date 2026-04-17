@@ -5,22 +5,21 @@ Ce module inclut:
 """
 
 from datetime import datetime, timezone
-from os import getenv
 from typing import Sequence
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from db_models.repositories.dilicom.dilicom import DilicomRepository
+from dilicom_parser.transport import Connector
+from dilicom_parser.parser import DistributorParser
 from db_models.objects.stocks import DilicomReferencial
 
 class DilicomService:
     """
     Service pour les opérations SFTP avec le serveur de Dilicom.
-    Cette classe utilise `DilicomRepository` pour gérer les connexions et les opérations SFTP.
+    Cette classe utilise `Connector` pour gérer les connexions et les opérations SFTP.
     """
     def __init__(self, session: Session):
         self.session = session
-        self.repository = DilicomRepository()
-        self.abonned: str = getenv("DILICOM_ID", "")
+        self.connect = Connector(env_path=".env.dilicom")
 
     def send_updates(self):
         """
@@ -30,11 +29,11 @@ class DilicomService:
         """
         txt_content: str | bool = self._build_refel_content(to_file=False)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
-        filename = f"{self.abonned}_MVT-REF_{timestamp}.txt"
+        filename = f"{self.connect.config.username}_MVT-REF_{timestamp}.txt"
         if isinstance(txt_content, bool):
             raise ValueError("Erreur lors de la création du fichier de mise à jour.")
-        with self.repository as repo:
-            repo.upload_from_memory(txt_content, filename)
+        with self.connect as server:
+            server.upload_from_memory(txt_content, filename)
 
     def fetch_returns(self):
         """
@@ -42,8 +41,10 @@ class DilicomService:
         Cette méthode se connecte au serveur SFTP, télécharge les fichiers de retour,
         et les traite pour mettre à jour les statuts des commandes dans la base de données.
         """
-        m = "La méthode fetch_returns doit être implémentée."
-        raise NotImplementedError(m)
+        with self.connect as server:
+            files_list = server.download_all(archive=False)
+        for file_content in files_list:
+            self._parse_return(file_content)
 
     def fetch_archives(self):
         """
@@ -98,6 +99,8 @@ class DilicomService:
         param :
             - file_content: Le contenu du fichier de retour à analyser.
         """
+        dp = DistributorParser()
+        parsed_file = dp.parse_file(file_content)
         m = f"La méthode _parse_return doit être implémentée pour {file_content}."
         raise NotImplementedError(m)
 

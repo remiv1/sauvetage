@@ -19,6 +19,7 @@ COPY db_models/ db_models/
 COPY logs/ logs/
 COPY migrations/main/ main/
 COPY migrations/users/ users/
+COPY app_back/.env.dilicom .env.dilicom
 
 # Rendre l'entrypoint exécutable
 RUN chmod +x app_back/bootstrap.py
