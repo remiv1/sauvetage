@@ -1,4 +1,5 @@
 {# Modale de création rapide d'un client depuis la commande #}
+{% from 'common/macros.html' import render_field_errors %}
 <dialog class="modal-overlay" aria-label="Créer un client">
     <div class="modal-box">
         <div class="modal-header">
@@ -12,6 +13,7 @@
                 <div class="filter-group" style="margin-bottom: 1rem;">
                     {{ form.customer_type.label(class="filter-label") }}
                     {{ form.customer_type(class="filter-control", id="quick-customer-type") }}
+                    {{ render_field_errors(form.customer_type) }}
                 </div>
 
                 {# Champs Particulier #}
@@ -19,14 +21,17 @@
                     <div class="filter-group" style="margin-bottom: 0.5rem;">
                         {{ form.civil_title.label(class="filter-label") }}
                         {{ form.civil_title(class="filter-control") }}
+                        {{ render_field_errors(form.civil_title) }}
                     </div>
                     <div class="filter-group" style="margin-bottom: 0.5rem;">
                         {{ form.first_name.label(class="filter-label") }}
                         {{ form.first_name(class="filter-control", placeholder="Prénom") }}
+                        {{ render_field_errors(form.first_name) }}
                     </div>
                     <div class="filter-group" style="margin-bottom: 0.5rem;">
                         {{ form.last_name.label(class="filter-label") }}
                         {{ form.last_name(class="filter-control", placeholder="Nom") }}
+                        {{ render_field_errors(form.last_name) }}
                     </div>
                 </div>
 
@@ -35,6 +40,7 @@
                     <div class="filter-group" style="margin-bottom: 0.5rem;">
                         {{ form.company_name.label(class="filter-label") }}
                         {{ form.company_name(class="filter-control", placeholder="Raison sociale") }}
+                        {{ render_field_errors(form.company_name) }}
                     </div>
                 </div>
             </div>

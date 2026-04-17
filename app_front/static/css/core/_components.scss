@@ -7,7 +7,14 @@
     margin-bottom: variables.$space-md;
 
     &.alert-success { background: color.adjust(variables.$color-success, $lightness: 40%); }
-    &.alert-danger { background: color.adjust(variables.$color-danger, $lightness: 40%); }
+    &.alert-danger  { background: color.adjust(variables.$color-danger, $lightness: 40%); }
+    &.alert-error   { background: color.adjust(variables.$color-danger, $lightness: 40%); }
+}
+
+.form-error {
+    color: variables.$color-danger;
+    font-size: 0.82rem;
+    margin-top: 2px;
 }
 
 .btn {

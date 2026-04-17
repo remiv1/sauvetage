@@ -3,39 +3,22 @@
 {% block title %}Editions Sauvetage - Inscription{% endblock %}
 
 {% block content %}
+{% from 'common/macros.html' import render_field_errors %}
     <div class="register-container pb-5">
-        {# Message Flash #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
         <h2 class="register-container__title">Inscription</h2>
-        {% for error in form.username.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.email.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.password.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.confirm_password.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
         <form class="register-container__form" method="POST">
             {{ form.hidden_tag() }}
 
             <div class="form-group register-container__form__group mb-3">
                 {{ form.username.label(class="form-label") }}
                 {{ form.username(class="form-control", placeholder="Nom d'utilisateur") }}
+                {{ render_field_errors(form.username) }}
             </div>
 
             <div class="form-group register-container__form__group mb-3">
                 {{ form.email.label(class="form-label") }}
                 {{ form.email(class="form-control", placeholder="Adresse e-mail") }}
+                {{ render_field_errors(form.email) }}
                 <div id="email-error" class="email-error"></div>
             </div>
 
@@ -45,6 +28,7 @@
                     {{ form.password(class="form-control", placeholder="Mot de passe") }}
                     <span class="password-toggle" id="password-toggle">👁️</span>
                 </div>
+                {{ render_field_errors(form.password) }}
                 
                 <div class="password-criteria mt-3">
                     <p id="password-length" class="criterion invalid">✗ Au moins 15 caractères</p>
@@ -61,6 +45,7 @@
                     {{ form.confirm_password(class="form-control", placeholder="Confirmez le mot de passe") }}
                     <span class="password-toggle" id="confirm-password-toggle">👁️</span>
                 </div>
+                {{ render_field_errors(form.confirm_password) }}
                 <div id="password-match" class="password-match invalid" style="margin-top: 0.5rem;">❌ Les mots de passe ne correspondent pas</div>
             </div>
 

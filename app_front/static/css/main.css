@@ -135,6 +135,15 @@ form input[type=submit]:hover {
 .alert.alert-danger {
   background: rgb(255, 131, 143.2637362637);
 }
+.alert.alert-error {
+  background: rgb(255, 131, 143.2637362637);
+}
+
+.form-error {
+  color: #b60012;
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
 
 .btn {
   padding: 0.5rem 1rem;

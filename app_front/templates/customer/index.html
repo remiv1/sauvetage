@@ -3,14 +3,6 @@
 {% block content %}
 <div class="customer-container">
 
-    {# Messages Flash #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} mb-3 fade-alert">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
     <div class="h2-header">
         <div class="header-top">
             <a href="{{ url_for('home') }}" class="btn btn-back"

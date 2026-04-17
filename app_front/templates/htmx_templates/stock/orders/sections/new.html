@@ -1,4 +1,5 @@
 <!-- template new.html -->
+{% from 'common/macros.html' import render_field_errors %}
 {% set reservation = reservation|default(false) %}
 <div class="orders-header">
     <h2 id="create-order-title">{{ 'Nouvelle réservation' if reservation else 'Nouvelle commande' }}</h2>
@@ -31,11 +32,8 @@
                  class="dropdown-menu show">
                  <!-- Les résultats de la recherche seront injectés ici -->
             </div>
-            {% if form.supplier_name.errors %}
-                <div class="text-danger small">{{ form.supplier_name.errors[0] }}</div>
-            {% elif form.supplier_id.errors %}
-                <div class="text-danger small">{{ form.supplier_id.errors[0] }}</div>
-            {% endif %}
+            {{ render_field_errors(form.supplier_name) }}
+            {{ render_field_errors(form.supplier_id) }}
         </div>
 
         <div class="mt-2">

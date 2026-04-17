@@ -3,15 +3,6 @@
 {% block content %}
 <div class="customer-container">
 
-    {# Messages Flash #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} mb-3 fade-alert">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     <h2 class="customer-container__title">Recherche avancée</h2>
 
     {# ── Formulaire de recherche ─────────────────────────────────────────── #}

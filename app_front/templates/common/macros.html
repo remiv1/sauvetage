@@ -1,0 +1,32 @@
+{# ── Macros réutilisables pour l'affichage des messages et erreurs ─────── #}
+
+{# Affiche les messages flash Flask #}
+{% macro render_flash_messages() %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+{% endmacro %}
+
+{# Affiche les erreurs d'un champ de formulaire WTF (inline sous le champ) #}
+{% macro render_field_errors(field) %}
+    {% if field.errors %}
+        {% for error in field.errors %}
+            <p class="form-error">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+{% endmacro %}
+
+{# Affiche toutes les erreurs d'un formulaire WTF en bloc #}
+{% macro render_form_errors(form) %}
+    {% for field in form %}
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <div class="alert alert-danger mb-2">{{ field.label.text }} : {{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}

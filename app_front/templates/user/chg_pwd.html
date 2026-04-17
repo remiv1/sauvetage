@@ -3,25 +3,9 @@
 {% block title %}Editions Sauvetage - Changement de mot de passe{% endblock %}
 
 {% block content %}
+{% from 'common/macros.html' import render_field_errors %}
     <div class="register-container pb-5">
-        {# Message Flash #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
         <h2 class="register-container__title">Changement de mot de passe</h2>
-        {% for error in form.old_password.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.new_password.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
-        {% for error in form.new_password_confirm.errors %}
-            <div class="alert alert-danger mb-3">{{ error }}</div>
-        {% endfor %}
         <form class="register-container__form" method="POST">
             {{ form.hidden_tag() }}
 
@@ -31,6 +15,7 @@
                     {{ form.old_password(class="form-control", placeholder="Ancien mot de passe") }}
                     <span class="password-toggle" id="old-password-toggle">👁️</span>
                 </div>
+                {{ render_field_errors(form.old_password) }}
             </div>
 
             <div class="form-group register-container__form__group mb-3">
@@ -39,6 +24,7 @@
                     {{ form.new_password(class="form-control", placeholder="Nouveau mot de passe") }}
                     <span class="password-toggle" id="new-password-toggle">👁️</span>
                 </div>
+                {{ render_field_errors(form.new_password) }}
                 <div class="password-criteria mt-3">
                     <p id="password-length" class="criterion invalid">✗ Au moins 15 caractères</p>
                     <p id="password-uppercase" class="criterion invalid">✗ Une lettre majuscule (A-Z)</p>
@@ -54,6 +40,7 @@
                     {{ form.new_password_confirm(class="form-control", placeholder="Confirmez le mot de passe") }}
                     <span class="password-toggle" id="new-password-confirm-toggle">👁️</span>
                 </div>
+                {{ render_field_errors(form.new_password_confirm) }}
                 <div id="new-password-match" class="password-match invalid" style="margin-top: 0.5rem;">x Les mots de passe ne correspondent pas</div>
             </div>
 

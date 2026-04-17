@@ -1,5 +1,6 @@
 <!-- template add_supplier_form.html -->
 {# Template HTMX pour le formulaire d'ajout rapide d'un fournisseur #}
+{% from 'common/macros.html' import render_field_errors %}
 <dialog class="modal" aria-modal="true">
 	<div class="modal__content">
 		<h3>Créer un fournisseur</h3>
@@ -13,21 +14,25 @@
 			<div class="form-group">
 				{{ form.supplier_name.label(for='create_supplier_name') }}
 				{{ form.supplier_name(id='create_supplier_name', class='form-control') }}
+				{{ render_field_errors(form.supplier_name) }}
 			</div>
 
 			<div class="form-group">
 				{{ form.gln13.label(for='create_gln13') }}
 				{{ form.gln13(id='create_gln13', class='form-control') }}
+				{{ render_field_errors(form.gln13) }}
 			</div>
 
 			<div class="form-group">
 				{{ form.contact_email.label(for='create_contact_email') }}
 				{{ form.contact_email(id='create_contact_email', class='form-control') }}
+				{{ render_field_errors(form.contact_email) }}
 			</div>
 
 			<div class="form-group">
 				{{ form.contact_phone.label(for='create_contact_phone') }}
 				{{ form.contact_phone(id='create_contact_phone', class='form-control') }}
+				{{ render_field_errors(form.contact_phone) }}
 			</div>
 
 			<div class="form-actions" style="margin-top: .8rem; display:flex; gap:.6rem;">
