@@ -8,7 +8,9 @@ from logs.logger import get_logger
 sauv_log = get_logger()
 
 def start_dilicom_scheduler():
-    """Démarre le scheduler pour les opérations Dilicom."""
+    """
+    Démarre le scheduler pour les opérations Dilicom.
+    """
     session = config.get_main_session()
     service = DilicomService(session=session)
     scheduler = BackgroundScheduler(
