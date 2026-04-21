@@ -16,12 +16,32 @@
                     <span class="info-value">{{ supplier.gln13 or '—' }}</span>
                 </div>
                 <div class="info-group">
+                    <span class="info-label">SIREN / SIRET</span>
+                    <span class="info-value">{{ supplier.siren_siret or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Numéro de TVA</span>
+                    <span class="info-value">{{ supplier.vat_number or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Adresse</span>
+                    <span class="info-value">{{ supplier.address or '—' }}</span>
+                </div>
+                <div class="info-group">
                     <span class="info-label">Email</span>
                     <span class="info-value">{{ supplier.contact_email or '—' }}</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Téléphone</span>
                     <span class="info-value">{{ supplier.contact_phone or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Fax</span>
+                    <span class="info-value">{{ supplier.contact_fax or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Site web</span>
+                    <span class="info-value">{{ supplier.web_site or '—' }}</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Statut</span>
@@ -32,6 +52,24 @@
                             <span class="badge badge-inactive">Inactif</span>
                         {% endif %}
                     </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Statut EDI</span>
+                    <span class="info-value">
+                        {% if supplier.edi_active %}
+                            <span class="badge badge-active">Actif</span>
+                        {% else %}
+                            <span class="badge badge-inactive">Inactif</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Jours de collecte</span>
+                    <span class="info-value">{{ supplier.collect_days or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Heure limite</span>
+                    <span class="info-value">{{ supplier.cutoff_time or '—' }}</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Créé le</span>

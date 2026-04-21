@@ -108,3 +108,33 @@
 		font-weight: #{$i}00;
 	}
 }
+
+// Disposition en ligne (grille de formulaire)
+.form-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: variables.$space-md;
+	margin-bottom: variables.$space-md;
+	align-items: flex-start;
+
+	> .form-group {
+		margin-bottom: 0;
+		min-width: 0;
+	}
+}
+
+// Largeurs proportionnelles (à utiliser dans .form-row)
+.w100 { flex: 0 0 100%; }
+.w75  { flex: 3; min-width: 0; }
+.w50  { flex: 1; min-width: 0; }
+.w33  { flex: 1; min-width: 0; }
+.w25  { flex: 1; min-width: 0; }
+.w10  { flex: 0 0 80px; min-width: 0; }
+
+// Grille de cases à cocher en 2 colonnes
+.checkbox-grid-2col {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: variables.$space-xs variables.$space-md;
+	margin-top: variables.$space-xs;
+}

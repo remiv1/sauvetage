@@ -6,13 +6,15 @@ Ce module inclut:
 
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Sequence, Any
+from typing import Sequence, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from dilicom_parser.transport import Connector
 from dilicom_parser.classifier import FilesClassifier
 from dilicom_parser.models import DistributorData
 from db_models.objects.stocks import DilicomReferencial
+from db_models.repositories.suppliers import SuppliersRepository, Suppliers
+
 
 class DilicomService:
     """
@@ -49,16 +51,17 @@ class DilicomService:
             files_list = server.download_all(archive=False)
         self.classifier = FilesClassifier(files_list)
         objects_to_merge = self.classifier.classify().parse()
-        match objects_to_merge.items():
-            case {"distributor": distributor_list}:
-                self._update_distributors(distributor_list)
-            case {"eancom": eancom_list}:
-                self._update_services(eancom_list)
-            case {"gencod": gencod_list}:
-                self._update_services(gencod_list)
-            case _:
-                message = "Aucun type de fichier reconnu dans les fichiers de retour."
-                raise ValueError(message)
+
+        if not objects_to_merge:
+            message = "Aucun type de fichier reconnu dans les fichiers de retour."
+            raise ValueError(message)
+
+        if "distributor" in objects_to_merge:
+            self._update_distributors(objects_to_merge["distributor"])
+        if "eancom" in objects_to_merge:
+            self._update_services(objects_to_merge["eancom"])
+        if "gencod" in objects_to_merge:
+            self._update_services(objects_to_merge["gencod"])
 
     def fetch_archives(self) -> list[Path]:
         """
@@ -128,9 +131,32 @@ class DilicomService:
         param :
             - distributor_list: liste des données de distributeurs extraites du fichier de retour.
         """
-        print("Données de distributeurs à mettre à jour:", distributor_list)
-        m = "Méthode _update_distributors non implémentée."
-        raise NotImplementedError(m)
+        suppliers_list: list[Suppliers] = []
+        for d in distributor_list:
+            for l in d.lines:
+                b1, b2, _ = l.bloc1, l.bloc2, l.bloc3
+                global_address = "".join(
+                        [b1.numero_voie or "", b1.adresse_l1 or "", b1.adresse_l2 or "",
+                        b1.adresse_l3 or "", b1.code_postal or "", b1.ville or "", b1.pays or ""]
+                    )
+                s = Suppliers(
+                    name=b1.rs1,
+                    gln13=b1.gln,
+                    siren_siret=b1.siren_or_siret,
+                    vat_number=b1.num_tva_intracom,
+                    address=global_address,
+                    contact_email=b1.email,
+                    contact_phone=b1.num_tel,
+                    contact_fax=b1.num_fax,
+                    web_site=b1.website,
+                    is_active=b1.gln_repreneur is None,
+                    edi_active=b2.type_connection == "02",
+                    collect_days=__convert_collect_days(b2.jours_collecte),
+                    cutoff_time=__convert_cutoff_time(b2.heure_limite),
+                )
+                suppliers_list.append(s)
+        repo = SuppliersRepository(self.session)
+        repo.sync_supplier(suppliers_list)
 
     def _update_services(self, service_list: list[Any]) -> None:
         """
@@ -145,3 +171,21 @@ class DilicomService:
         print("Données de services à mettre à jour:", service_list)
         m = "Méthode _update_services non implémentée."
         raise NotImplementedError(m)
+
+def __convert_collect_days(collect_days_str: Optional[str]) -> Optional[str]:
+    """
+    Convertit une chaîne de caractères représentant les jours de collecte binaire en une chaîne
+    de rang de jours de la semaine (1-7). Par exemple, "1010100" devient "135".
+    """
+    if collect_days_str is None:
+        return None
+    return "".join(str(i) for i, bit in enumerate(collect_days_str, start=1) if bit == "1")
+
+def __convert_cutoff_time(cutoff_time_str: Optional[str]) -> Optional[str]:
+    """
+    Convertit une chaîne de caractères représentant l'heure limite de collecte au format "HHMM"
+    en une chaîne au format "HH:MM". Par exemple, "1730" devient "17:30".
+    """
+    if cutoff_time_str is None or len(cutoff_time_str) != 4:
+        return None
+    return f"{cutoff_time_str[:2]}:{cutoff_time_str[2:]}"

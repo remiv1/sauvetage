@@ -1,5 +1,7 @@
 """Blueprint HTMX pour la gestion des fournisseurs (liste, modales)."""
 
+from datetime import datetime
+
 from flask import Blueprint, make_response, render_template, request
 from app_front.blueprints.supplier.forms import SupplierCreateForm, SupplierEditForm
 from app_front.blueprints.supplier.utils import (
@@ -22,6 +24,38 @@ SUPPLIER_EDIT_MODAL = "htmx_templates/supplier/list/edit_modal.html"
 SUPPLIER_TOGGLE_MODAL = "htmx_templates/supplier/list/toggle_modal.html"
 SUPPLIER_CREATE_MODAL = "htmx_templates/supplier/list/create_modal.html"
 SUPPLIER_NOT_FOUND = "<p>Fournisseur introuvable.</p>"
+
+
+def _serialize_collect_days(values: list[str] | None) -> str:
+    """Convertit la sélection de cases à cocher en format DB, ex: 12345."""
+    if not values:
+        return ""
+    selected = set(values)
+    return "".join(day for day in "1234567" if day in selected)
+
+
+def _deserialize_collect_days(value: str | None) -> list[str]:
+    """Convertit la valeur DB en liste exploitable par SelectMultipleField."""
+    if not value:
+        return []
+    return [day for day in "1234567" if day in value]
+
+
+def _serialize_cutoff_time(value) -> str:
+    """Convertit un objet heure WTForms en HH:MM."""
+    if value is None:
+        return ""
+    return value.strftime("%H:%M")
+
+
+def _deserialize_cutoff_time(value: str | None):
+    """Convertit HH:MM en objet time pour pré-remplir le formulaire."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%H:%M").time()
+    except ValueError:
+        return None
 
 
 @bp_supplier_htmx_list.get("/table")
@@ -61,10 +95,19 @@ def supplier_edit_form(supplier_id: int):
     if supplier is None:
         return SUPPLIER_NOT_FOUND, 404
     form = SupplierEditForm()
-    form.supplier_name.data = supplier["name"]
-    form.gln13.data = supplier["gln13"]
-    form.contact_email.data = supplier["contact_email"]
-    form.contact_phone.data = supplier["contact_phone"]
+    form.supplier_name.data = supplier.get("name", "")
+    form.gln13.data = supplier.get("gln13", "")
+    form.siren_siret.data = supplier.get("siren_siret", "")
+    form.vat_number.data = supplier.get("vat_number", "")
+    form.address.data = supplier.get("address", "")
+    form.contact_email.data = supplier.get("contact_email", "")
+    form.contact_phone.data = supplier.get("contact_phone", "")
+    form.contact_fax.data = supplier.get("contact_fax", "")
+    form.web_site.data = supplier.get("web_site", "")
+    form.collect_days.data = _deserialize_collect_days(supplier.get("collect_days", ""))
+    form.cutoff_time.data = _deserialize_cutoff_time(supplier.get("cutoff_time", ""))
+    form.is_active.data = supplier.get("is_active", False)
+    form.edi_active.data = supplier.get("edi_active", False)
     return render_template(SUPPLIER_EDIT_MODAL, form=form, supplier=supplier)
 
 
@@ -76,8 +119,17 @@ def supplier_edit_submit(supplier_id: int):
         data = {
             "name": form.supplier_name.data,
             "gln13": form.gln13.data,
+            "siren_siret": form.siren_siret.data,
+            "vat_number": form.vat_number.data,
+            "address": form.address.data,
             "contact_email": form.contact_email.data,
             "contact_phone": form.contact_phone.data,
+            "contact_fax": form.contact_fax.data,
+            "web_site": form.web_site.data,
+            "collect_days": _serialize_collect_days(form.collect_days.data),
+            "cutoff_time": _serialize_cutoff_time(form.cutoff_time.data),
+            "is_active": form.is_active.data,
+            "edi_active": form.edi_active.data,
         }
         try:
             update_supplier_data(supplier_id, data)
@@ -131,8 +183,17 @@ def supplier_create_submit():
         data = {
             "name": form.supplier_name.data,
             "gln13": form.gln13.data,
+            "siren_siret": form.siren_siret.data,
+            "vat_number": form.vat_number.data,
+            "address": form.address.data,
             "contact_email": form.contact_email.data,
             "contact_phone": form.contact_phone.data,
+            "contact_fax": form.contact_fax.data,
+            "web_site": form.web_site.data,
+            "collect_days": _serialize_collect_days(form.collect_days.data),
+            "cutoff_time": _serialize_cutoff_time(form.cutoff_time.data),
+            "is_active": form.is_active.data,
+            "edi_active": form.edi_active.data,
         }
         try:
             create_supplier(data)

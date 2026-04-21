@@ -60,6 +60,8 @@ def new_order_section():
         return render_template(
             EDIT_TABLE, view_state="new", order=order, ext_ref_form=ExternalRefForm()
             )
+    if request.method == "POST":
+        raise ValueError("Formulaire de création de commande invalide")
     return render_template(SECTION_NEW, form=form)
 
 

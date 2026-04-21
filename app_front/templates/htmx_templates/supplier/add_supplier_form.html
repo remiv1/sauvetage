@@ -24,6 +24,24 @@
 			</div>
 
 			<div class="form-group">
+				{{ form.siren_siret.label(for='create_siren_siret') }}
+				{{ form.siren_siret(id='create_siren_siret', class='form-control') }}
+				{{ render_field_errors(form.siren_siret) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.vat_number.label(for='create_vat_number') }}
+				{{ form.vat_number(id='create_vat_number', class='form-control') }}
+				{{ render_field_errors(form.vat_number) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.address.label(for='create_address') }}
+				{{ form.address(id='create_address', class='form-control') }}
+				{{ render_field_errors(form.address) }}
+			</div>
+
+			<div class="form-group">
 				{{ form.contact_email.label(for='create_contact_email') }}
 				{{ form.contact_email(id='create_contact_email', class='form-control') }}
 				{{ render_field_errors(form.contact_email) }}
@@ -33,6 +51,46 @@
 				{{ form.contact_phone.label(for='create_contact_phone') }}
 				{{ form.contact_phone(id='create_contact_phone', class='form-control') }}
 				{{ render_field_errors(form.contact_phone) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.contact_fax.label(for='create_contact_fax') }}
+				{{ form.contact_fax(id='create_contact_fax', class='form-control') }}
+				{{ render_field_errors(form.contact_fax) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.web_site.label(for='create_web_site') }}
+				{{ form.web_site(id='create_web_site', class='form-control') }}
+				{{ render_field_errors(form.web_site) }}
+			</div>
+
+			<div class="form-group">
+				<span class="form-label">Jours de collecte</span>
+				<div class="checkbox-group">
+					{% for day in form.collect_days %}
+						<label class="checkbox-inline" for="{{ day.id }}">{{ day(id=day.id) }} {{ day.label.text }}</label>
+					{% endfor %}
+				</div>
+				{{ render_field_errors(form.collect_days) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.cutoff_time.label(for='create_cutoff_time') }}
+				{{ form.cutoff_time(id='create_cutoff_time', class='form-control', step='60') }}
+				{{ render_field_errors(form.cutoff_time) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.is_active.label(for='create_is_active') }}
+				{{ form.is_active(id='create_is_active') }}
+				{{ render_field_errors(form.is_active) }}
+			</div>
+
+			<div class="form-group">
+				{{ form.edi_active.label(for='create_edi_active') }}
+				{{ form.edi_active(id='create_edi_active') }}
+				{{ render_field_errors(form.edi_active) }}
 			</div>
 
 			<div class="form-actions" style="margin-top: .8rem; display:flex; gap:.6rem;">

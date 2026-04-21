@@ -27,14 +27,38 @@ class Suppliers(WorkingBase):
     gln13: Mapped[str] = mapped_column(
         String, unique=True, comment="Code GLN du fournisseur"
     )
+    siren_siret: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Numéro SIREN ou SIRET du fournisseur"
+    )
+    vat_number: Mapped[str] = mapped_column(
+        String, unique=True, nullable=True, comment="Numéro de TVA intracom fournisseur"
+    )
+    address: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Adresse complète du fournisseur"
+    )
     contact_email: Mapped[str] = mapped_column(
-        String, comment="Email de contact du fournisseur"
+        String, nullable=True, comment="Email de contact du fournisseur"
     )
     contact_phone: Mapped[str] = mapped_column(
-        String, comment="Téléphone de contact du fournisseur"
+        String, nullable=True, comment="Téléphone de contact du fournisseur"
+    )
+    contact_fax: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Fax de contact du fournisseur"
+    )
+    web_site: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Site web du fournisseur"
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, comment="Indique si le fournisseur est actif"
+    )
+    edi_active: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="Indique si le fournisseur est actif pour l'EDI"
+    )
+    collect_days: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Jours de collecte des commandes (ex: '12345' pour LMMJV)"
+    )
+    cutoff_time: Mapped[str] = mapped_column(
+        String, nullable=True, comment="Heure limite de PEC des commandes pour le jour même."
     )
 
     # Méta-données de suivi

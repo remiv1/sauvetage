@@ -70,8 +70,11 @@ def search_suppliers_paginated(
                 "id": s.id,
                 "name": s.name,
                 "gln13": s.gln13 or "",
+                "siren_siret": s.siren_siret or "",
+                "vat_number": s.vat_number or "",
                 "contact_email": s.contact_email or "",
                 "contact_phone": s.contact_phone or "",
+                "edi_active": s.edi_active,
                 "is_active": s.is_active,
             }
             for s in result["items"]
@@ -93,7 +96,8 @@ def get_supplier_by_id(supplier_id: int) -> Optional[Dict[str, Any]]:
         supplier = repo.get_by_id(supplier_id)
         if supplier is None:
             return None
-        return supplier.to_dict()
+        supplier_dict = supplier.to_dict()
+        return supplier_dict
     finally:
         session.close()
 
@@ -111,22 +115,12 @@ def update_supplier_data(supplier_id: int, data: Dict[str, Any]) -> Dict[str, An
     session = db_conf.get_main_session()
     try:
         repo = SuppliersRepository(session)
-        supplier = repo.get_by_id(supplier_id)
-        if supplier is None:
-            raise ValueError("Fournisseur introuvable")
-
-        if "name" in data and data["name"]:
-            supplier.name = data["name"]
-        if "gln13" in data:
-            supplier.gln13 = data["gln13"]
-        if "contact_email" in data:
-            supplier.contact_email = data["contact_email"]
-        if "contact_phone" in data:
-            supplier.contact_phone = data["contact_phone"]
-
-        session.commit()
+        supplier = repo.update_supplier(
+            supplier=Suppliers.from_dict({**data}),
+            existing_id=supplier_id,
+        )
         return supplier.to_dict()
-    except Exception as exc:
+    except ValueError as exc:
         session.rollback()
         raise ValueError(f"Erreur lors de la mise à jour : {exc}") from exc
     finally:
@@ -168,14 +162,9 @@ def create_supplier(data: Dict[str, Any]) -> Dict[str, Any]:
     Raises:
         ValueError: en cas d'erreur DB ou données invalides.
     """
-    name = (data.get("name") or "").strip()
+    name = data.get("name")
     if not name:
         raise ValueError("Le nom du fournisseur est requis")
-
-    gln13 = (data.get("gln13") or "").strip() or ""
-    contact_email = (data.get("contact_email") or "").strip() or ""
-    contact_phone = (data.get("contact_phone") or "").strip() or ""
-
     session = db_conf.get_main_session()
     try:
         existing = (
@@ -188,9 +177,18 @@ def create_supplier(data: Dict[str, Any]) -> Dict[str, Any]:
 
         supplier = Suppliers(
             name=name,
-            gln13=gln13,
-            contact_email=contact_email,
-            contact_phone=contact_phone,
+            gln13=data.get("gln13"),
+            siren_siret=data.get("siren_siret"),
+            vat_number=data.get("vat_number"),
+            address=data.get("address"),
+            contact_email=data.get("contact_email"),
+            contact_phone=data.get("contact_phone"),
+            contact_fax=data.get("contact_fax"),
+            web_site=data.get("web_site"),
+            collect_days=data.get("collect_days"),
+            cutoff_time=data.get("cutoff_time"),
+            is_active=data.get("is_active"),
+            edi_active=data.get("edi_active"),
         )
         session.add(supplier)
         session.commit()
