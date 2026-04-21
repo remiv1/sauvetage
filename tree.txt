@@ -1,0 +1,729 @@
+├── app_back
+│   ├── config
+│   │   ├── __init__.py
+│   │   ├── mails.py
+│   │   └── security.py
+│   ├── db_connection
+│   │   ├── config.py
+│   │   └── __init__.py
+│   ├── scheduler
+│   │   ├── dilicom_scheduler.py
+│   │   └── __init__.py
+│   ├── templates
+│   │   ├── emails
+│   │   │   └── purchase_order_email.html
+│   │   └── pdf
+│   │       ├── customer_order_slip.html
+│   │       ├── purchase_order.html
+│   │       ├── reservation_slip.html
+│   │       └── supplier_order_slip.html
+│   ├── utils
+│   │   ├── decorators.py
+│   │   ├── documents.py
+│   │   ├── __init__.py
+│   │   └── mails.py
+│   ├── v1
+│   │   ├── dilicom
+│   │   │   ├── __init__.py
+│   │   │   └── orders.py
+│   │   ├── schems
+│   │   │   ├── dilicom.py
+│   │   │   ├── documents.py
+│   │   │   ├── __init__.py
+│   │   │   ├── inventory.py
+│   │   │   └── mails.py
+│   │   ├── documents.py
+│   │   ├── __init__.py
+│   │   ├── inventory.py
+│   │   ├── mails.py
+│   │   └── user.py
+│   ├── bootstrap.py
+│   ├── Dockerfile.fast
+│   ├── main.py
+│   ├── migration.py
+│   ├── requirements.txt
+│   └── router.py
+├── app_front
+│   ├── blueprints
+│   │   ├── admin
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_htmx_logs.py
+│   │   │   ├── routes_htmx_users.py
+│   │   │   ├── routes_htmx_vat.py
+│   │   │   ├── routes.py
+│   │   │   └── utils.py
+│   │   ├── customer
+│   │   │   ├── utils
+│   │   │   │   ├── addresses.py
+│   │   │   │   ├── emails.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── phones.py
+│   │   │   │   └── users.py
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_data.py
+│   │   │   └── routes.py
+│   │   ├── dashboard
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_data.py
+│   │   │   ├── routes.py
+│   │   │   └── utils.py
+│   │   ├── inventory
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_data.py
+│   │   │   ├── routes_htmx.py
+│   │   │   ├── routes.py
+│   │   │   └── utils.py
+│   │   ├── order
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_htmx_create.py
+│   │   │   ├── routes_htmx_list.py
+│   │   │   ├── routes_htmx.py
+│   │   │   ├── routes.py
+│   │   │   └── utils.py
+│   │   ├── stock
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_data.py
+│   │   │   ├── routes_htmx_council.py
+│   │   │   ├── routes_htmx_orders.py
+│   │   │   ├── routes_htmx_reservations.py
+│   │   │   ├── routes_htmx_return.py
+│   │   │   ├── routes_htmx_search.py
+│   │   │   ├── routes.py
+│   │   │   ├── utils.py
+│   │   │   └── workflow_supplier_order.md
+│   │   ├── supplier
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes_data.py
+│   │   │   ├── routes_htmx_list.py
+│   │   │   ├── routes_htmx.py
+│   │   │   ├── routes.py
+│   │   │   └── utils.py
+│   │   ├── user
+│   │   │   ├── forms.py
+│   │   │   ├── __init__.py
+│   │   │   ├── routes.py
+│   │   │   └── utils.py
+│   │   └── __init__.py
+│   ├── config
+│   │   ├── pages
+│   │   │   ├── admin
+│   │   │   │   ├── logs.toml
+│   │   │   │   ├── users.toml
+│   │   │   │   └── vat.toml
+│   │   │   ├── customer
+│   │   │   │   ├── create.toml
+│   │   │   │   ├── index.toml
+│   │   │   │   ├── search.toml
+│   │   │   │   └── view.toml
+│   │   │   ├── error
+│   │   │   │   ├── 4xx.toml
+│   │   │   │   └── 5xx.toml
+│   │   │   ├── order
+│   │   │   │   ├── create.toml
+│   │   │   │   ├── edit.toml
+│   │   │   │   ├── index.toml
+│   │   │   │   └── view.toml
+│   │   │   ├── stock
+│   │   │   │   ├── council.toml
+│   │   │   │   ├── index.toml
+│   │   │   │   ├── order.toml
+│   │   │   │   ├── reservations.toml
+│   │   │   │   └── search.toml
+│   │   │   ├── user
+│   │   │   │   ├── change_password.toml
+│   │   │   │   ├── login.toml
+│   │   │   │   ├── modify.toml
+│   │   │   │   └── register.toml
+│   │   │   ├── admin.toml
+│   │   │   ├── dashboard.toml
+│   │   │   ├── home.toml
+│   │   │   ├── inventory.toml
+│   │   │   ├── pages.toml
+│   │   │   ├── stock.toml
+│   │   │   └── supplier.toml
+│   │   ├── db_conf.py
+│   │   ├── flask_conf.py
+│   │   └── __init__.py
+│   ├── static
+│   │   ├── css
+│   │   │   ├── admin
+│   │   │   │   ├── admin.css
+│   │   │   │   ├── admin.css.map
+│   │   │   │   └── admin.scss
+│   │   │   ├── core
+│   │   │   │   ├── _base.scss
+│   │   │   │   ├── _components.scss
+│   │   │   │   ├── _forms.scss
+│   │   │   │   ├── _layout.scss
+│   │   │   │   ├── _mixins.scss
+│   │   │   │   ├── _reset.scss
+│   │   │   │   ├── _utilities.scss
+│   │   │   │   └── _variables.scss
+│   │   │   ├── customer
+│   │   │   │   ├── customer.css
+│   │   │   │   ├── customer.css.map
+│   │   │   │   └── customer.scss
+│   │   │   ├── dashboard
+│   │   │   │   ├── dashboard.css
+│   │   │   │   ├── dashboard.css.map
+│   │   │   │   ├── dashboard.scss
+│   │   │   │   ├── orders.css
+│   │   │   │   ├── orders.css.map
+│   │   │   │   ├── orders.scss
+│   │   │   │   ├── stocks.css
+│   │   │   │   ├── stocks.css.map
+│   │   │   │   ├── stocks.scss
+│   │   │   │   └── _tables.scss
+│   │   │   ├── home
+│   │   │   │   ├── home.css
+│   │   │   │   ├── home.css.map
+│   │   │   │   └── home.scss
+│   │   │   ├── inventory
+│   │   │   │   ├── inventory.css
+│   │   │   │   ├── inventory.css.map
+│   │   │   │   └── inventory.scss
+│   │   │   ├── order
+│   │   │   │   ├── list.css
+│   │   │   │   ├── list.css.map
+│   │   │   │   └── list.scss
+│   │   │   ├── stock
+│   │   │   │   ├── council.css
+│   │   │   │   ├── council.css.map
+│   │   │   │   ├── council.scss
+│   │   │   │   ├── home.css
+│   │   │   │   ├── home.css.map
+│   │   │   │   ├── home.scss
+│   │   │   │   ├── order.css
+│   │   │   │   ├── order.css.map
+│   │   │   │   ├── order.scss
+│   │   │   │   ├── search.css
+│   │   │   │   ├── search.css.map
+│   │   │   │   └── search.scss
+│   │   │   ├── supplier
+│   │   │   │   ├── list.css
+│   │   │   │   ├── list.css.map
+│   │   │   │   └── list.scss
+│   │   │   ├── user
+│   │   │   │   ├── login.css
+│   │   │   │   ├── login.css.map
+│   │   │   │   ├── login.scss
+│   │   │   │   ├── register.css
+│   │   │   │   ├── register.css.map
+│   │   │   │   └── register.scss
+│   │   │   ├── main.css
+│   │   │   ├── main.css.map
+│   │   │   ├── main.scss
+│   │   │   └── README_SCSS.md
+│   │   ├── img
+│   │   │   ├── 4xx.png
+│   │   │   ├── 4xx.svg
+│   │   │   ├── 5xx.png
+│   │   │   ├── 5xx.svg
+│   │   │   └── placeholder-4xx.svg
+│   │   └── js
+│   │       ├── common
+│   │       │   └── objects.js
+│   │       ├── customer
+│   │       │   ├── addresses.js
+│   │       │   ├── advancedSearch.js
+│   │       │   ├── customer.js
+│   │       │   ├── emails.js
+│   │       │   ├── fastSearch.js
+│   │       │   ├── form.js
+│   │       │   ├── functions.js
+│   │       │   ├── index.js
+│   │       │   ├── phones.js
+│   │       │   ├── search.js
+│   │       │   └── view.js
+│   │       ├── dashboard
+│   │       │   ├── dashboard.js
+│   │       │   ├── finances.js
+│   │       │   ├── functions.js
+│   │       │   ├── orders.js
+│   │       │   └── stocks.js
+│   │       ├── inventory
+│   │       │   ├── api.js
+│   │       │   ├── functions.js
+│   │       │   ├── input.js
+│   │       │   ├── inventory.js
+│   │       │   ├── README.md
+│   │       │   ├── reconcile.js
+│   │       │   ├── status.js
+│   │       │   └── unknown.js
+│   │       ├── user
+│   │       │   ├── chg_pwd.js
+│   │       │   ├── modify.js
+│   │       │   └── register.js
+│   │       └── main.js
+│   ├── templates
+│   │   ├── admin
+│   │   │   ├── admin.html
+│   │   │   ├── index.html
+│   │   │   ├── logs.html
+│   │   │   ├── users.html
+│   │   │   └── vat.html
+│   │   ├── common
+│   │   │   ├── footer.html
+│   │   │   ├── header.html
+│   │   │   └── macros.html
+│   │   ├── customer
+│   │   │   ├── create.html
+│   │   │   ├── edit_part.html
+│   │   │   ├── edit_pro.html
+│   │   │   ├── index.html
+│   │   │   ├── search.html
+│   │   │   └── view.html
+│   │   ├── dashboard
+│   │   │   └── dashboard.html
+│   │   ├── error
+│   │   │   ├── 4xx.html
+│   │   │   └── 5xx.html
+│   │   ├── home
+│   │   │   └── home.html
+│   │   ├── htmx_templates
+│   │   │   ├── admin
+│   │   │   │   ├── logs
+│   │   │   │   │   ├── stats.html
+│   │   │   │   │   └── table.html
+│   │   │   │   ├── users
+│   │   │   │   │   ├── create_modal.html
+│   │   │   │   │   ├── edit_modal.html
+│   │   │   │   │   ├── table.html
+│   │   │   │   │   └── toggle_modal.html
+│   │   │   │   └── vat
+│   │   │   │       ├── close_modal.html
+│   │   │   │       ├── create_modal.html
+│   │   │   │       ├── edit_modal.html
+│   │   │   │       └── table.html
+│   │   │   ├── inventory
+│   │   │   │   └── objects
+│   │   │   │       └── fragments
+│   │   │   │           ├── dropdown.html
+│   │   │   │           ├── dropdown_objects.html
+│   │   │   │           └── object_fill_fragment.html
+│   │   │   ├── order
+│   │   │   │   ├── create
+│   │   │   │   │   ├── address_selector.html
+│   │   │   │   │   ├── article_dropdown.html
+│   │   │   │   │   ├── customer_dropdown.html
+│   │   │   │   │   ├── delivery_address_info.html
+│   │   │   │   │   ├── lines_table.html
+│   │   │   │   │   └── quick_customer_modal.html
+│   │   │   │   └── list
+│   │   │   │       ├── cancel_modal.html
+│   │   │   │       ├── table.html
+│   │   │   │       └── view_modal.html
+│   │   │   ├── stock
+│   │   │   │   ├── council
+│   │   │   │   │   ├── fragments
+│   │   │   │   │   │   ├── error.html
+│   │   │   │   │   │   ├── row.html
+│   │   │   │   │   │   └── success_row.html
+│   │   │   │   │   └── sections
+│   │   │   │   │       └── home.html
+│   │   │   │   ├── orders
+│   │   │   │   │   ├── fragments
+│   │   │   │   │   │   ├── new_line.html
+│   │   │   │   │   │   └── receive_line.html
+│   │   │   │   │   └── sections
+│   │   │   │   │       ├── canceled.html
+│   │   │   │   │       ├── confirmed.html
+│   │   │   │   │       ├── home.html
+│   │   │   │   │       ├── new.html
+│   │   │   │   │       └── view.html
+│   │   │   │   ├── returns
+│   │   │   │   │   ├── fragments
+│   │   │   │   │   │   ├── new_line.html
+│   │   │   │   │   │   ├── new_return.html
+│   │   │   │   │   │   └── new_table.html
+│   │   │   │   │   └── sections
+│   │   │   │   │       ├── canceled.html
+│   │   │   │   │       ├── home.html
+│   │   │   │   │       ├── new.html
+│   │   │   │   │       └── view.html
+│   │   │   │   └── search
+│   │   │   │       ├── autocomplete_dropdown.html
+│   │   │   │       ├── dilicom_modal.html
+│   │   │   │       ├── object_complement.html
+│   │   │   │       ├── single_object_form.html
+│   │   │   │       ├── table.html
+│   │   │   │       ├── tag_autocomplete_dropdown.html
+│   │   │   │       ├── tag_selected.html
+│   │   │   │       └── toggle_active_modal.html
+│   │   │   └── supplier
+│   │   │       ├── list
+│   │   │       │   ├── create_modal.html
+│   │   │       │   ├── edit_modal.html
+│   │   │       │   ├── table.html
+│   │   │       │   ├── toggle_modal.html
+│   │   │       │   └── view_modal.html
+│   │   │       ├── add_supplier_form.html
+│   │   │       ├── filter_suppliers_dropdown.html
+│   │   │       ├── select_supplier.html
+│   │   │       └── suppliers_dropdown.html
+│   │   ├── inventory
+│   │   │   ├── counciliation.html
+│   │   │   ├── create_modal.html
+│   │   │   ├── ean_production.html
+│   │   │   ├── final_status.html
+│   │   │   ├── inventory.html
+│   │   │   ├── inventory_type.html
+│   │   │   └── unknown_product.html
+│   │   ├── order
+│   │   │   ├── create.html
+│   │   │   ├── edit.html
+│   │   │   ├── list.html
+│   │   │   ├── order.html
+│   │   │   └── view.html
+│   │   ├── stock
+│   │   │   ├── council.html
+│   │   │   ├── index.html
+│   │   │   ├── order.html
+│   │   │   ├── reservations.html
+│   │   │   └── search.html
+│   │   ├── supplier
+│   │   │   ├── list.html
+│   │   │   └── supplier.html
+│   │   ├── svg
+│   │   │   ├── add-user.html
+│   │   │   ├── avatar.html
+│   │   │   ├── back.html
+│   │   │   ├── bag.html
+│   │   │   ├── box.html
+│   │   │   ├── calendar.html
+│   │   │   ├── cart.html
+│   │   │   ├── chart.html
+│   │   │   ├── check-circle.html
+│   │   │   ├── checkmark.html
+│   │   │   ├── close.html
+│   │   │   ├── dashboard.html
+│   │   │   ├── del.html
+│   │   │   ├── download.html
+│   │   │   ├── edit.html
+│   │   │   ├── eye.html
+│   │   │   ├── filter.html
+│   │   │   ├── grid.html
+│   │   │   ├── package.html
+│   │   │   ├── plus.html
+│   │   │   ├── profile.html
+│   │   │   ├── refresh.html
+│   │   │   ├── search.html
+│   │   │   ├── settings.html
+│   │   │   ├── smiley.html
+│   │   │   ├── tag.html
+│   │   │   ├── target.html
+│   │   │   ├── toggle-io.html
+│   │   │   ├── truck.html
+│   │   │   ├── user.html
+│   │   │   └── warning.html
+│   │   ├── user
+│   │   │   ├── chg_pwd.html
+│   │   │   ├── login.html
+│   │   │   ├── modify.html
+│   │   │   └── register.html
+│   │   └── index.html
+│   ├── utils
+│   │   ├── decorators.py
+│   │   ├── documents.py
+│   │   ├── __init__.py
+│   │   ├── pages.py
+│   │   └── router.py
+│   ├── Dockerfile.flask
+│   ├── entrypoint.sh
+│   ├── __init__.py
+│   ├── main.py
+│   ├── README.md
+│   └── requirements.txt
+├── buyer
+│   ├── backup
+│   │   ├── Dockerfile
+│   │   ├── entrypoint.sh
+│   │   └── README.md
+│   ├── backup_logs
+│   ├── backups
+│   ├── ssh
+│   ├── ssl
+│   │   ├── ca.crt
+│   │   ├── ca.key
+│   │   ├── ca.srl
+│   │   ├── cert.pem
+│   │   ├── fullchain.pem
+│   │   ├── key.pem
+│   │   ├── server.csr
+│   │   ├── server.csr.cnf
+│   │   └── server.ext
+│   ├── tools
+│   │   ├── backup_wp.py
+│   │   ├── bkpctl.py
+│   │   ├── functions.py
+│   │   ├── __inti__.py
+│   │   ├── README.md
+│   │   └── restore_wp.py
+│   ├── docker-compose.yml
+│   ├── generate-certs.sh
+│   ├── __init__.py
+│   ├── nginx.conf
+│   ├── README.md
+│   └── test_api.ipynb
+├── databases
+│   ├── logs
+│   │   ├── init
+│   │   │   ├── 00_generate_config.sh
+│   │   │   ├── 01_create_db_users.js.pattern
+│   │   │   ├── 02_immutable_collections.js
+│   │   │   ├── 03_collections_rotation.js
+│   │   │   └── mongod.conf
+│   │   ├── Dockerfile.mongo
+│   │   └── entrypoint.sh
+│   ├── main
+│   │   ├── init
+│   │   │   ├── 00_generate_models.sh
+│   │   │   ├── 01_db_build.sql.pattern
+│   │   │   ├── 02_create_users.sql.pattern
+│   │   │   ├── 03_create_extensions.sql.pattern
+│   │   │   ├── 04_secure_hba.sh
+│   │   │   ├── 05_secure_conf.sh
+│   │   │   └── 99_cleanup.sh
+│   │   └── Dockerfile.postgres
+│   └── README.md
+├── db_models
+│   ├── config
+│   │   ├── dilicom.py
+│   │   ├── henrri.py
+│   │   ├── __init__.py
+│   │   └── woocommerce.py
+│   ├── objects
+│   │   ├── common.py
+│   │   ├── customers.py
+│   │   ├── __init__.py
+│   │   ├── inventory.py
+│   │   ├── invoices.py
+│   │   ├── objects.py
+│   │   ├── orders.py
+│   │   ├── shipments.py
+│   │   ├── stocks.py
+│   │   ├── suppliers.py
+│   │   ├── users.py
+│   │   └── vat.py
+│   ├── repositories
+│   │   ├── objects
+│   │   │   ├── books.py
+│   │   │   ├── __init__.py
+│   │   │   ├── media.py
+│   │   │   ├── objects.py
+│   │   │   ├── object_tags.py
+│   │   │   ├── obj_metadatas.py
+│   │   │   └── other_objects.py
+│   │   ├── stock
+│   │   │   ├── dilicom.py
+│   │   │   ├── __init__.py
+│   │   │   ├── inventory.py
+│   │   │   └── orders.py
+│   │   ├── base_repo.py
+│   │   ├── customers.py
+│   │   ├── henrii.py
+│   │   ├── __init__.py
+│   │   ├── inventory.py
+│   │   ├── invoices.py
+│   │   ├── orders.py
+│   │   ├── shipments.py
+│   │   ├── stock.py
+│   │   ├── suppliers.py
+│   │   ├── tags.py
+│   │   ├── user.py
+│   │   └── woocommerce.py
+│   ├── security
+│   │   ├── __init__.py
+│   │   └── secur_sauv.py
+│   ├── services
+│   │   ├── auth.py
+│   │   ├── decorators.py
+│   │   ├── dilicom.py
+│   │   ├── __init__.py
+│   │   ├── objects.py
+│   │   └── user.py
+│   ├── config.py
+│   ├── diagram.mmd
+│   ├── diagram.svg
+│   ├── __init__.py
+│   └── README.md
+├── documentations
+│   ├── data
+│   │   └── dilicom
+│   │       └── input
+│   │           ├── ExtracDistrib_DLC_10042026.csv
+│   │           ├── PTD487898165.csv
+│   │           ├── PTD487965360.csv
+│   │           ├── PTD487994744.csv
+│   │           ├── PTD488082156.csv
+│   │           └── PTD488210613.csv
+│   ├── databases
+│   │   ├── books_collection.md
+│   │   ├── customers.md
+│   │   ├── orders_invoices.md
+│   │   └── stocks_movements.md
+│   ├── dilicom
+│   │   ├── description des tests (1).txt
+│   │   ├── DISTRIPART - FICHIER PARTENAIRES_DISTRIBUTEURS.pdf
+│   │   ├── DOCTECHN COMMANDES - ADDENDUM - Commandes (émission) (3).pdf
+│   │   ├── DOCTECHN COMMANDES - Notice des formats en usage (émission) (3).pdf
+│   │   ├── DOCTECHN message de service (réception) (2).pdf
+│   │   ├── DOC TECH REVENDEUR - REF-FEL.pdf
+│   │   └── POINTS DE VIGILANCE - REF FEL.xlsx
+│   ├── databases.md
+│   ├── parsing.ipynb
+│   └── test_dilicom.ipynb
+├── documents
+│   ├── back
+│   └── front
+├── logs
+│   ├── __init__.py
+│   └── logger.py
+├── migrations
+│   ├── main
+│   │   ├── alembic
+│   │   │   ├── versions
+│   │   │   │   ├── 32ced1f864e9_first_migration.py
+│   │   │   │   └── b1fb33862cac_completion_of_suppliers.py
+│   │   │   ├── env.py
+│   │   │   ├── README
+│   │   │   └── script.py.mako
+│   │   └── alembic.ini
+│   ├── users
+│   │   ├── alembic
+│   │   │   ├── versions
+│   │   │   │   └── ca48d65cbad9_first_migration.py
+│   │   │   ├── env.py
+│   │   │   ├── README
+│   │   │   └── script.py.mako
+│   │   └── alembic.ini
+│   ├── Dockerfile.migr
+│   ├── __init__.py
+│   ├── requirements.txt
+│   └── run-migrations.sh
+├── proxy
+│   ├── dynamic
+│   │   ├── middlewares.yml
+│   │   ├── routers.yml
+│   │   └── services.yml
+│   ├── scripts
+│   │   ├── entrypoint.sh
+│   │   ├── generate-certs.sh
+│   │   └── init-pki.sh
+│   ├── systemd
+│   │   ├── sauv-traefik-renewer.service
+│   │   └── sauv-traefik-renewer.timer
+│   ├── Dockerfile.traefik
+│   ├── README.md
+│   └── traefik.yml
+├── scripts
+│   ├── cleanup.sh
+│   ├── recup-logs.sh
+│   ├── SETUP-ENV.md
+│   ├── setup-env.ps1
+│   ├── setup-env.sh
+│   └── start_sequence.sh
+├── systemd
+│   ├── README.md
+│   └── sauvetage.service
+├── tests
+│   ├── back
+│   │   └── __init__.py
+│   ├── db_objects
+│   │   ├── __init__.py
+│   │   ├── test_customers.py
+│   │   ├── test_inventory.py
+│   │   ├── test_objects.py
+│   │   ├── test_orders.py
+│   │   └── test_users.py
+│   ├── fixtures
+│   │   ├── db_fixture.py
+│   │   ├── f_customers.py
+│   │   ├── f_inventory.py
+│   │   ├── f_objects.py
+│   │   ├── f_orders.py
+│   │   ├── f_stock.py
+│   │   ├── f_suppliers.py
+│   │   ├── f_users.py
+│   │   └── __init__.py
+│   ├── front
+│   │   ├── conftest.py
+│   │   ├── __init__.py
+│   │   ├── test_admin.py
+│   │   ├── test_customer.py
+│   │   ├── test_dashboard.py
+│   │   ├── test_inventory_e2e.py
+│   │   ├── test_inventory.py
+│   │   ├── test_order.py
+│   │   ├── test_stocks.py
+│   │   ├── test_supplier.py
+│   │   └── test_user.py
+│   ├── init_mongo
+│   │   ├── 00_generate_config.sh
+│   │   ├── 01_create_db_users.js.pattern
+│   │   ├── 02_immutable_collections.js
+│   │   ├── 03_collections_rotation.js
+│   │   └── mongod.conf
+│   ├── init_postgres
+│   │   ├── 00_generate_models copy.sh
+│   │   ├── 00_generate_models.sh
+│   │   ├── 01_db_build.sql.pattern
+│   │   ├── 02_create_users.sql.pattern
+│   │   ├── 03_create_extensions.sql.pattern
+│   │   ├── 04_secure_hba.sh
+│   │   ├── 05_secure_conf.sh
+│   │   └── 99_cleanup.sh
+│   ├── reports
+│   │   ├── front
+│   │   │   ├── 26-03-27-11-23_test_report_front.md
+│   │   │   ├── 26-03-27-20-18_test_report_front.md
+│   │   │   └── 26-04-02-17-20_test_report_front.md
+│   │   ├── junit
+│   │   │   ├── front
+│   │   │   │   ├── 26-03-27-11-23_test_results.xml
+│   │   │   │   ├── 26-03-27-20-18_test_results.xml
+│   │   │   │   └── 26-04-02-17-20_test_results.xml
+│   │   │   └── unit_db
+│   │   │       ├── 26-03-27-11-23_test_results.xml
+│   │   │       ├── 26-03-27-20-18_test_results.xml
+│   │   │       ├── 26-04-02-17-20_test_results.xml
+│   │   │       └── 26-04-21-08-13_test_results.xml
+│   │   └── unit_db
+│   │       ├── 26-03-27-11-23_test_report_db_objects.md
+│   │       ├── 26-03-27-20-18_test_report_db_objects.md
+│   │       ├── 26-04-02-17-20_test_report_db_objects.md
+│   │       └── 26-04-21-08-13_test_report_db_objects.md
+│   ├── scripts
+│   │   ├── functions.sh
+│   │   ├── generate_test_report.py
+│   │   ├── print_junit_table.py
+│   │   ├── run_tests_db_objects.sh
+│   │   └── run_tests_front.sh
+│   ├── conftest.py
+│   ├── docker-compose.test.yml
+│   ├── Dockerfile.mongo.test
+│   ├── Dockerfile.postgres.test
+│   ├── entrypoint.sh
+│   ├── __init__.py
+│   ├── README.md
+│   ├── run_db_test_down_cleanup.sh
+│   └── run_db_test_up.sh
+├── BackRoadMap.md
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── docker-compose.yml
+├── htmx.md
+├── LICENSE
+├── pyrightconfig.json
+├── README.md
+├── REPORT_QUALITATIVE.md
+├── TODO.md
+└── tree.txt
+
+145 directories, 583 files

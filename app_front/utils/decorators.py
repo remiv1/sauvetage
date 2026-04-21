@@ -9,12 +9,12 @@ d'un utilisateur avant d'accéder à une route spécifique, en utilisant les con
 dans ce module pour construire la chaîne de permissions requise.
 """
 
+import logging
 from functools import wraps
 from typing import List, Callable, Any
 from flask import abort, g, session, redirect
-from logs.logger import MongoDBLogger
 
-logger = MongoDBLogger()
+logger = logging.getLogger("app_front.decorators")
 
 # Définition des niveaux d'habilitation
 ADMIN = "1"
@@ -75,8 +75,11 @@ def permission_required(
                     f"pour accéder à la route {f.__name__} "
                     f"qui nécessite les permissions {permission}."
                 )
-                logger.log_user_action(
-                    user_id=session.get("user_id", "unknown"), action=log
+                logger.warning(
+                    log, extra={
+                        "action": "access_denied",
+                        "user_id": session.get("username")
+                    }
                 )
                 abort(
                     403,

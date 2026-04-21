@@ -281,7 +281,6 @@ class OrderRepository(BaseRepository):
             ).label("total_ttc")
         ).where(OrderInLine.order_in_id == order_id)
         total_ttc = self.session.execute(stmt).scalar_one()
-        print(f"DEBUG Calculated total TTC for order {order_id}: {total_ttc}")  # Debug log
         order.value = float(total_ttc)
         try:
             self.session.commit()

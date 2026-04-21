@@ -4,7 +4,7 @@ Dépôt de données pour les fournisseurs. Ceci ne contient que d'une classe :
         notamment la validation des données, la création de nouveaux fournisseurs, et la
         gestion des fournisseurs.
 """
-
+import logging
 from typing import Dict, Any, Optional
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +12,7 @@ from sqlalchemy.sql import and_
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Suppliers
 
+logger = logging.getLogger("app_back.repositories.suppliers")
 
 class SuppliersRepository(BaseRepository):
     """
@@ -146,12 +147,20 @@ class SuppliersRepository(BaseRepository):
         param :
             - suppliers: liste des fournisseurs à synchroniser avec la base de données.
         """
+        ex, nex = 0, 0
         for supplier in suppliers:
             existing = self.get_by_gln13(supplier.gln13)
             if existing is None:
+                ex += 1
                 self.create_supplier(supplier=supplier, commit=False)
             else:
+                nex += 1
                 self.update_supplier(supplier=supplier, commit=False)
+        logger.info(
+            "Synchronisation des fournisseurs terminée: %d créés, %d mis à jour.",
+            ex,
+            nex,
+        )
         self.commit()
 
     def toggle_active(self, supplier: Suppliers) -> Suppliers:

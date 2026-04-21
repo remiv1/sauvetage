@@ -62,7 +62,7 @@ prompt_yesno() {
 # ============================================================================
 # ÉTAPE 1 : PostgreSQL
 # ============================================================================
-echo -e "${BLUE}[1/6] Configuration PostgreSQL${NC}"
+echo -e "${BLUE}[1/7] Configuration PostgreSQL${NC}"
 echo ""
 
 echo -e "${YELLOW}Génération de mots de passe sécurisés...${NC}"
@@ -114,7 +114,7 @@ echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 # ÉTAPE 2 : Alembic Migrations
 # ============================================================================
 
-echo -e "${BLUE}[2/6] Configuration Alembic${NC}"
+echo -e "${BLUE}[2/7] Configuration Alembic${NC}"
 echo ""
 
 # Créer le fichier environnement pour les migrations
@@ -147,7 +147,7 @@ echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 # ============================================================================
 # ÉTAPE 3 : MongoDB
 # ============================================================================
-echo -e "${BLUE}[3/6] Configuration MongoDB${NC}"
+echo -e "${BLUE}[3/7] Configuration MongoDB${NC}"
 echo ""
 
 echo -e "${YELLOW}Génération de mots de passe sécurisés...${NC}"
@@ -185,7 +185,7 @@ echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 # ============================================================================
 # ÉTAPE 4 : Traefik Proxy
 # ============================================================================
-echo -e "${BLUE}[4/6] Configuration Traefik Proxy${NC}"
+echo -e "${BLUE}[4/7] Configuration Traefik Proxy${NC}"
 echo ""
 
 PROXY_STANDARD=$(prompt_yesno "  → Utiliser configuration standard?" "y")
@@ -214,14 +214,14 @@ echo -e "${GREEN}✓ proxy/.env.proxy créé${NC}"
 # ============================================================================
 # ÉTAPE 5 : Backend FastAPI
 # ============================================================================
-echo -e "${BLUE}[5/6] Configuration Backend FastAPI${NC}"
+echo -e "${BLUE}[5/7] Configuration Backend FastAPI${NC}"
 echo ""
 
 BACKEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
 BACKEND_DEBUG=$(prompt_value "  → Mode DEBUG (true/false)" "false")
 SECURITY_TOKEN=$(generate_password)
 
-echo -e "${BLUE}[5bis/6] Configuration mailer SMTP${NC}"
+echo -e "${BLUE}[5bis/7] Configuration mailer SMTP${NC}"
 
 SMTP_SERVER=$(prompt_value "  → Serveur SMTP" "smtp.example.com")
 SMTP_PORT=$(prompt_value "  → Port SMTP" "587")
@@ -260,7 +260,7 @@ echo -e "${GREEN}✓ app_back/.env.fast créé${NC}"
 # ============================================================================
 # ÉTAPE 6 : Frontend Flask
 # ============================================================================
-echo -e "${BLUE}[6/6] Configuration Frontend Flask${NC}"
+echo -e "${BLUE}[6/7] Configuration Frontend Flask${NC}"
 echo ""
 
 FRONTEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
@@ -272,11 +272,6 @@ echo ""
 
 INVOICER_ID=$(prompt_value "  → ID de votre factureur" "your_id_here")
 INVOICER_SECRET=$(prompt_value "  → Secret de votre factureur" "your_secret_here")
-
-DILICOM_ID=$(prompt_value "  → ID de Dilicom" "your_dilicom_id_here")
-DILICOM_SECRET=$(prompt_value "  → Secret de Dilicom" "your_dilicom_secret_here")
-DILICOM_HOST=$(prompt_value "  → Host de Dilicom" "ftpack.centprod.com")
-DILICOM_PORT=$(prompt_value "  → Port de Dilicom" "10022")
 
 EBUSINESS_ID=$(prompt_value "  → ID du site de e-commerce" "your_id_here")
 EBUSINESS_SECRET=$(prompt_value "  → Secret du site de e-commerce" "your_secret_here")
@@ -293,12 +288,6 @@ cat > "app_front/.env.flask" << EOF
 # Gestion des identifiants de l'API de votre outil de facturation
 INVOICER_ID=${INVOICER_ID}
 INVOICER_SECRET=${INVOICER_SECRET}
-
-# Gestion des identifiants Dilicom API
-DILICOM_ID=${DILICOM_ID}
-DILICOM_SECRET=${DILICOM_SECRET}
-DILICOM_HOST=${DILICOM_HOST}
-DILICOM_PORT=${DILICOM_PORT}
 
 # Gestion des identifiants E-business API (site de e-commerce)
 EBUSINESS_ID=${EBUSINESS_ID}
@@ -319,6 +308,65 @@ chmod 600 "app_front/.env.flask"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
 echo -e "${GREEN}✓ app_front/.env.flask créé${NC}"
+
+
+# ============================================================================
+# ÉTAPE 7 : Gestion Dilicom
+# ============================================================================
+echo -e "${BLUE}[7/7] Configuration Dilicom${NC}"
+echo ""
+
+DILICOM_ID=$(prompt_value "  → ID de Dilicom" "your_dilicom_id_here")
+DILICOM_SECRET=$(prompt_value "  → Secret de Dilicom" "your_dilicom_secret_here")
+DILICOM_HOST=$(prompt_value "  → Host de Dilicom" "ftpack.centprod.com")
+DILICOM_PORT=$(prompt_value "  → Port de Dilicom" "10022")
+DILICOM_OUT_DIR=$(prompt_value "  → Répertoire de sortie pour Dilicom" "/home/root/app/dilicom_out")
+DILICOM_IN_DIR=$(prompt_value "  → Répertoire d'entrée pour Dilicom" "/home/root/app/dilicom_in")
+
+echo ""
+
+# Créer le fichier .env.dilicom
+cat > "app_back/.env.dilicom" << EOF
+# Configuration des dossiers et des points de montage pour Dilicom
+DILICOM_OUT_DIR=${DILICOM_OUT_DIR}
+DILICOM_IN_DIR=${DILICOM_IN_DIR}
+
+# Configuration de connexion au serveur SFTP de Dilicom
+DILICOM_HOST=${DILICOM_HOST}
+DILICOM_PORT=${DILICOM_PORT}
+DILICOM_USER=${DILICOM_ID}
+DILICOM_SECRET=${DILICOM_SECRET}
+
+EOF
+chmod 600 "app_back/.env.dilicom"
+echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
+
+echo -e "${GREEN}✓ app_back/.env.dilicom créé${NC}"
+
+cp "app_back/.env.dilicom" "app_front/.env.dilicom"
+
+chmod 600 "app_front/.env.dilicom"
+echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
+
+echo -e "${GREEN}✓ app_front/.env.dilicom créé${NC}"
+
+# ============================================================================
+# ÉTAPE 7bis : Gestion du .env racine pour le docker-compose
+# ============================================================================
+echo -e "${BLUE}[7bis/7] Configuration du .env racine pour le docker-compose${NC}"
+echo ""
+
+# Créer le fichier .env
+cat > ".env" << EOF
+# Configuration des dossiers et des points de montage pour Dilicom
+DILICOM_OUT_DIR=${DILICOM_OUT_DIR}
+DILICOM_IN_DIR=${DILICOM_IN_DIR}
+EOF
+chmod 600 ".env"
+echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
+
+echo -e "${GREEN}✓ .env créé${NC}"
+
 
 # ============================================================================
 # Résumé

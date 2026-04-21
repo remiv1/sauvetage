@@ -4,6 +4,7 @@ Ce module inclut:
 - La classe `DilicomService` qui encapsule les opérations SFTP avec le serveur de Dilicom.
 """
 
+import logging
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Sequence, Any, Optional
@@ -15,6 +16,7 @@ from dilicom_parser.models import DistributorData
 from db_models.objects.stocks import DilicomReferencial
 from db_models.repositories.suppliers import SuppliersRepository, Suppliers
 
+logger = logging.getLogger("app_back.services.dilicom")
 
 class DilicomService:
     """
@@ -41,19 +43,27 @@ class DilicomService:
         with self.connect as server:
             server.upload_from_memory(txt_content, filename)
 
-    def fetch_returns(self) -> None:
+    def fetch_returns(self, archives: bool = False) -> None:
         """
         Récupère les fichiers de retour du serveur de Dilicom.
         Cette méthode se connecte au serveur SFTP, télécharge les fichiers de retour,
         et les traite pour mettre à jour les statuts des commandes dans la base de données.
         """
         with self.connect as server:
-            files_list = server.download_all(archive=False)
+            files_list = server.download_all(archive=archives)
+        logger.debug(
+            "Fichiers téléchargés de Dilicom: %s",
+            [file.name for file in files_list]
+            )
         self.classifier = FilesClassifier(files_list)
         objects_to_merge = self.classifier.classify().parse()
-
+        logger.info(
+            "objets trouvés après classification et parsing: %s",
+            self.classifier.count_by_type()
+        )
         if not objects_to_merge:
             message = "Aucun type de fichier reconnu dans les fichiers de retour."
+            logger.warning(message)
             raise ValueError(message)
 
         if "distributor" in objects_to_merge:
@@ -131,7 +141,7 @@ class DilicomService:
         param :
             - distributor_list: liste des données de distributeurs extraites du fichier de retour.
         """
-        suppliers_list: list[Suppliers] = []
+        suppliers_dict: dict[str, Suppliers] = {}
         for d in distributor_list:
             for l in d.lines:
                 b1, b2, _ = l.bloc1, l.bloc2, l.bloc3
@@ -151,12 +161,12 @@ class DilicomService:
                     web_site=b1.website,
                     is_active=b1.gln_repreneur is None,
                     edi_active=b2.type_connection == "02",
-                    collect_days=__convert_collect_days(b2.jours_collecte),
-                    cutoff_time=__convert_cutoff_time(b2.heure_limite),
+                    collect_days=_convert_collect_days(b2.jours_collecte),
+                    cutoff_time=_convert_cutoff_time(b2.heure_limite),
                 )
-                suppliers_list.append(s)
+                suppliers_dict[b1.gln] = s
         repo = SuppliersRepository(self.session)
-        repo.sync_supplier(suppliers_list)
+        repo.sync_supplier(list(suppliers_dict.values()))
 
     def _update_services(self, service_list: list[Any]) -> None:
         """
@@ -172,7 +182,7 @@ class DilicomService:
         m = "Méthode _update_services non implémentée."
         raise NotImplementedError(m)
 
-def __convert_collect_days(collect_days_str: Optional[str]) -> Optional[str]:
+def _convert_collect_days(collect_days_str: Optional[str]) -> Optional[str]:
     """
     Convertit une chaîne de caractères représentant les jours de collecte binaire en une chaîne
     de rang de jours de la semaine (1-7). Par exemple, "1010100" devient "135".
@@ -181,7 +191,7 @@ def __convert_collect_days(collect_days_str: Optional[str]) -> Optional[str]:
         return None
     return "".join(str(i) for i, bit in enumerate(collect_days_str, start=1) if bit == "1")
 
-def __convert_cutoff_time(cutoff_time_str: Optional[str]) -> Optional[str]:
+def _convert_cutoff_time(cutoff_time_str: Optional[str]) -> Optional[str]:
     """
     Convertit une chaîne de caractères représentant l'heure limite de collecte au format "HHMM"
     en une chaîne au format "HH:MM". Par exemple, "1730" devient "17:30".

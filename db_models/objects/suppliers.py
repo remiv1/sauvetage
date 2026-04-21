@@ -31,7 +31,7 @@ class Suppliers(WorkingBase):
         String, nullable=True, comment="Numéro SIREN ou SIRET du fournisseur"
     )
     vat_number: Mapped[str] = mapped_column(
-        String, unique=True, nullable=True, comment="Numéro de TVA intracom fournisseur"
+        String, nullable=True, comment="Numéro de TVA intracom fournisseur"
     )
     address: Mapped[str] = mapped_column(
         String, nullable=True, comment="Adresse complète du fournisseur"

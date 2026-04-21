@@ -43,9 +43,9 @@ fi
 
 # Affichage de la configuration
 echo "[ENTRYPOINT] Configuration:"
-echo "[ENTRYPOINT]   DATABASE_URL=$DATABASE_URL"
-echo "[ENTRYPOINT]   SECURE_DATABASE_URL=$SECURE_DATABASE_URL"
-echo "[ENTRYPOINT]   MONGODB_URL=$MONGODB_URL"
+echo "[ENTRYPOINT]   DATABASE_URL=*** (masqué pour sécurité contient les mots de passe)"
+echo "[ENTRYPOINT]   SECURE_DATABASE_URL=*** (masqué pour sécurité contient les mots de passe)"
+echo "[ENTRYPOINT]   MONGODB_URL=*** (masqué pour sécurité contient les mots de passe)"
 echo "[ENTRYPOINT]   LOG_LEVEL=${LOG_LEVEL:-info}"
 echo "[ENTRYPOINT]   DEBUG=${DEBUG:-false}"
 

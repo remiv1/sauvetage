@@ -1,11 +1,11 @@
 """Scheduler pour les opérations Dilicom."""
 
+import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from app_back.db_connection import config
 from db_models.services.dilicom import DilicomService
-from logs.logger import get_logger
 
-sauv_log = get_logger()
+logger = logging.getLogger("app_back.scheduler.dilicom")
 
 def start_dilicom_scheduler():
     """
@@ -40,8 +40,7 @@ def start_dilicom_scheduler():
     scheduler.start()
 
     # Logguer le démarrage du scheduler
-    sauv_log.log_client_event(
-        client_id="scheduler",
-        event="[SCHEDULER] Scheduler Dilicom démarré",
-        obj_metadata={"jobs": [job.id for job in scheduler.get_jobs()]},
+    logger.info(
+        "[SCHEDULER] Scheduler Dilicom démarré",
+        extra={"jobs": [job.id for job in scheduler.get_jobs()]},
     )
