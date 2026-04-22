@@ -2,6 +2,7 @@
 
 import sys
 import os
+import urllib.parse
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -27,10 +28,14 @@ from db_models.objects.vat import *  # pylint: disable=wrong-import-position,wil
 config = context.config  # pylint: disable=no-member
 
 # Construire l'URL SQLAlchemy avec les variables d'environnement
+# Encoder le mot de passe pour éviter les problèmes avec les caractères spéciaux
+postgres_password_migr_enc = urllib.parse.quote(
+    os.getenv('POSTGRES_PASSWORD_MIGR', ''), safe=''
+)
 database_url = (
     f"postgresql+psycopg2://"
     f"{os.getenv('POSTGRES_USER_MIGR')}:"
-    f"{os.getenv('POSTGRES_PASSWORD_MIGR')}@"
+    f"{postgres_password_migr_enc}@"
     f"{os.getenv('POSTGRES_HOST')}:"
     f"{os.getenv('POSTGRES_PORT')}/"
     f"{os.getenv('POSTGRES_DB_MAIN')}"

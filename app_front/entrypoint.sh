@@ -10,8 +10,17 @@ if [ -z "$DATABASE_URL" ]; then
         echo "[ENTRYPOINT] ERREUR: Variables PostgreSQL incomplètes"
         exit 1
     fi
-    export DATABASE_URL="postgresql://${POSTGRES_USER_APP}:${POSTGRES_PASSWORD_APP}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB_MAIN}"
-    echo "[ENTRYPOINT] DATABASE_URL construit depuis les variables BD"
+    # Encodage du mot de passe pour l'URL
+    POSTGRES_PASSWORD_APP_ENC=$(python3 << 'PYTHON_EOF'
+import urllib.parse
+import os
+password = os.environ.get('POSTGRES_PASSWORD_APP', '')
+encoded = urllib.parse.quote(password, safe='')
+print(encoded)
+PYTHON_EOF
+)
+    export DATABASE_URL="postgresql://${POSTGRES_USER_APP}:${POSTGRES_PASSWORD_APP_ENC}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB_MAIN}"
+    echo "[ENTRYPOINT] DATABASE_URL construit depuis les variables BD (encodé)"
 fi
 
 if [ -z "$SECURE_DATABASE_URL" ]; then
@@ -19,8 +28,15 @@ if [ -z "$SECURE_DATABASE_URL" ]; then
         echo "[ENTRYPOINT] ERREUR: Variables PostgreSQL incomplètes pour SECURE_DATABASE_URL"
         exit 1
     fi
-    # Encodage du mot de passe pour l'URL
-    POSTGRES_PASSWORD_SECURE_ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$POSTGRES_PASSWORD_SECURE'''))")
+    # Encodage du mot de passe pour l'URL (inclure tous les caractères spéciaux)
+    POSTGRES_PASSWORD_SECURE_ENC=$(python3 << 'PYTHON_EOF'
+import urllib.parse
+import os
+password = os.environ.get('POSTGRES_PASSWORD_SECURE', '')
+encoded = urllib.parse.quote(password, safe='')
+print(encoded)
+PYTHON_EOF
+)
     export SECURE_DATABASE_URL="postgresql://${POSTGRES_USER_SECURE}:${POSTGRES_PASSWORD_SECURE_ENC}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB_USERS}"
     echo "[ENTRYPOINT] SECURE_DATABASE_URL construit depuis les variables BD (encodé)"
 fi
@@ -30,10 +46,18 @@ if [ -z "$MONGODB_URL" ]; then
         echo "[ENTRYPOINT] ERREUR: Variables MongoDB incomplètes"
         exit 1
     fi
-    # Encodage du mot de passe pour l'URL
-    MONGO_PASSWORD_APP_ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$MONGO_PASSWORD_APP'''))")
+    # Encodage du mot de passe pour l'URL (inclure tous les caractères spéciaux)
+    # Utiliser un fichier temporaire pour éviter les problèmes d'interprétation en bash
+    MONGO_PASSWORD_APP_ENC=$(python3 << 'PYTHON_EOF'
+import urllib.parse
+import os
+password = os.environ.get('MONGO_PASSWORD_APP', '')
+encoded = urllib.parse.quote(password, safe='')
+print(encoded)
+PYTHON_EOF
+)
     export MONGODB_URL="mongodb://${MONGO_USER_APP}:${MONGO_PASSWORD_APP_ENC}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB_LOGS}?authSource=${MONGO_DB_LOGS}"
-    echo "[ENTRYPOINT] MONGODB_URL construit depuis les variables BD (encodé, authSource ajouté)"
+    echo "[ENTRYPOINT] MONGODB_URL construit depuis les variables BD (encodé)"
 fi
 
 if [ -z "$FLASK_SECRET_KEY" ]; then

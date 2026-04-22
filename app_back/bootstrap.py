@@ -6,6 +6,7 @@ import threading
 import subprocess
 import socket
 import signal
+import urllib.parse
 from app_back.scheduler.dilicom_scheduler import start_dilicom_scheduler
 
 
@@ -40,6 +41,7 @@ def build_env():
     Construit les URLs de connexion aux bases de données à partir des variables d'environnement
     individuelles. Si les URLs complètes ne sont pas déjà définies, elles sont construites
     automatiquement en utilisant les variables d'environnement spécifiques à chaque base de données.
+    Les mots de passe sont correctement encodés en URL pour éviter les problèmes avec les caractères spéciaux.
     return :
         - None. Les URLs sont définies dans les variables d'environnement.
     """
@@ -47,9 +49,12 @@ def build_env():
 
     # PostgreSQL principal
     if "DATABASE_URL" not in os.environ:
+        postgres_password_app_enc = urllib.parse.quote(
+            os.environ['POSTGRES_PASSWORD_APP'], safe=''
+        )
         os.environ["DATABASE_URL"] = (
             f"postgresql://{os.environ['POSTGRES_USER_APP']}:"
-            f"{os.environ['POSTGRES_PASSWORD_APP']}@"
+            f"{postgres_password_app_enc}@"
             f"{os.environ['POSTGRES_HOST']}:"
             f"{os.environ['POSTGRES_PORT']}/"
             f"{os.environ['POSTGRES_DB_MAIN']}"
@@ -57,9 +62,12 @@ def build_env():
 
     # PostgreSQL sécurisé
     if "DATABASE_SECURE_URL" not in os.environ:
+        postgres_password_secure_enc = urllib.parse.quote(
+            os.environ['POSTGRES_PASSWORD_SECURE'], safe=''
+        )
         os.environ["DATABASE_SECURE_URL"] = (
             f"postgresql://{os.environ['POSTGRES_USER_SECURE']}:"
-            f"{os.environ['POSTGRES_PASSWORD_SECURE']}@"
+            f"{postgres_password_secure_enc}@"
             f"{os.environ['POSTGRES_HOST']}:"
             f"{os.environ['POSTGRES_PORT']}/"
             f"{os.environ['POSTGRES_DB_USERS']}"
@@ -67,12 +75,15 @@ def build_env():
 
     # MongoDB
     if "MONGODB_URL" not in os.environ:
+        mongo_password_app_enc = urllib.parse.quote(
+            os.environ['MONGO_PASSWORD_APP'], safe=''
+        )
         os.environ["MONGODB_URL"] = (
             f"mongodb://{os.environ['MONGO_USER_APP']}:"
-            f"{os.environ['MONGO_PASSWORD_APP']}@"
+            f"{mongo_password_app_enc}@"
             f"{os.environ['MONGO_HOST']}:"
             f"{os.environ['MONGO_PORT']}/"
-            f"{os.environ['MONGO_DB_LOGS']}"
+            f"{os.environ['MONGO_DB_LOGS']}?authSource={os.environ['MONGO_DB_LOGS']}"
         )
 
 
