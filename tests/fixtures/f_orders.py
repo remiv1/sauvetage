@@ -9,7 +9,9 @@ from db_models.objects import (
     Order,
     OrderLine,
     Invoice,
+    InvoiceLine,
     Shipment,
+    ShipmentLine,
 )
 from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
     db_session_main,  # pylint: disable=unused-import # type: ignore
@@ -35,8 +37,7 @@ def order(
         db_session_main.query(CustomerAddresses)
         .filter(
             CustomerAddresses.customer_id == complete_customer_part.id,
-            CustomerAddresses.is_billing
-            == True,  # pylint: disable=singleton-comparison
+            CustomerAddresses.is_billing == True,  # pylint: disable=singleton-comparison
             CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
         )
         .first()
@@ -47,8 +48,7 @@ def order(
         db_session_main.query(CustomerAddresses)
         .filter(
             CustomerAddresses.customer_id == complete_customer_part.id,
-            CustomerAddresses.is_shipping
-            == True,  # pylint: disable=singleton-comparison
+            CustomerAddresses.is_shipping == True,  # pylint: disable=singleton-comparison
             CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
         )
         .first()
@@ -90,7 +90,7 @@ def order(
 
 @pytest.fixture
 def invoice(
-    db_session_main: Session,
+    db_session_main: Session,  # pylint: disable=redefined-outer-name # type: ignore
     order,  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Invoice:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer une facture de test."""
@@ -100,6 +100,7 @@ def invoice(
         for ol in order.order_lines
     )  # type: ignore
     invoice_object = Invoice(
+        order_id=order.id,
         reference="INV123456",
         total_amount=total_amount,
         vat_amount=vat_amount,
@@ -107,20 +108,33 @@ def invoice(
     )
     db_session_main.add(invoice_object)
     db_session_main.flush()
-    order.order_lines[0].invoice_id = invoice_object.id  # type: ignore
-    order.order_lines[1].invoice_id = invoice_object.id  # type: ignore
-    db_session_main.add_all(order.order_lines)  # type: ignore
+
+    # Créer les lignes de facture associées à chaque ligne de commande
+    for order_line in order.order_lines:  # type: ignore
+        invoice_line = InvoiceLine(
+            invoice_id=invoice_object.id,
+            order_line_id=order_line.id,  # type: ignore
+            reference=f"INVL-{invoice_object.id}-{order_line.id}",
+            description=f"Article ligne {order_line.id}",  # type: ignore
+            quantity=order_line.quantity,  # type: ignore
+            unit_price=order_line.unit_price,  # type: ignore
+            discount=order_line.discount,  # type: ignore
+            vat_rate=order_line.vat_rate,  # type: ignore
+        )
+        db_session_main.add(invoice_line)
+
     db_session_main.flush()
     return invoice_object
 
 
 @pytest.fixture
 def shipment(
-    db_session_main: Session,
+    db_session_main: Session,  # pylint: disable=redefined-outer-name # type: ignore
     order,  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Shipment:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer un envoi de test."""
     shipment_object = Shipment(
+        order_id=order.id,
         reference="SHP123456",
         carrier="UPS",
         tracking_number="1Z999AA10123456784",
@@ -128,9 +142,16 @@ def shipment(
     )
     db_session_main.add(shipment_object)
     db_session_main.flush()
-    order.order_lines[0].shipment_id = shipment_object.id  # type: ignore
-    order.order_lines[1].shipment_id = shipment_object.id  # type: ignore
-    db_session_main.add_all(order.order_lines)  # type: ignore
+
+    # Créer les lignes d'envoi associées à chaque ligne de commande
+    for order_line in order.order_lines:  # type: ignore
+        shipment_line = ShipmentLine(
+            shipment_id=shipment_object.id,
+            order_line_id=order_line.id,  # type: ignore
+            quantity=order_line.quantity,  # type: ignore
+        )
+        db_session_main.add(shipment_line)
+
     db_session_main.flush()
     db_session_main.commit()
     return shipment_object

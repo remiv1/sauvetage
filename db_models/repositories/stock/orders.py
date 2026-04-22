@@ -250,7 +250,7 @@ class OrderRepository(BaseRepository):
 
         try:
             self.session.commit()
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             self.session.rollback()
             raise RuntimeError(
                 f"Erreur lors de l'annulation de la commande : {exc}"
@@ -281,7 +281,6 @@ class OrderRepository(BaseRepository):
             ).label("total_ttc")
         ).where(OrderInLine.order_in_id == order_id)
         total_ttc = self.session.execute(stmt).scalar_one()
-        print(f"DEBUG Calculated total TTC for order {order_id}: {total_ttc}")  # Debug log
         order.value = float(total_ttc)
         try:
             self.session.commit()
@@ -449,7 +448,7 @@ class OrderRepository(BaseRepository):
         try:
             self.session.commit()
             return line_id
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             self.session.rollback()
             message = f"Erreur lors de la suppression de la ligne de commande : {exc}"
             raise RuntimeError(message) from exc

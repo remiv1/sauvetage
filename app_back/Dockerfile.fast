@@ -3,7 +3,7 @@ FROM docker.io/library/python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-openbsd libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
     libgdk-pixbuf2.0-0 libglib2.0-0 libfontconfig1 libjpeg62-turbo \
-    libffi-dev shared-mime-info fonts-dejavu-core \
+    libffi-dev shared-mime-info fonts-dejavu-core curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -19,6 +19,7 @@ COPY db_models/ db_models/
 COPY logs/ logs/
 COPY migrations/main/ main/
 COPY migrations/users/ users/
+COPY app_back/.env.dilicom .env.dilicom
 
 # Rendre l'entrypoint exécutable
 RUN chmod +x app_back/bootstrap.py

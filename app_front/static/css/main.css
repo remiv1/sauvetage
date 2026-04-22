@@ -551,6 +551,54 @@ form input[type=submit]:hover {
   font-weight: 900;
 }
 
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+.form-row > .form-group {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.w100 {
+  flex: 0 0 100%;
+}
+
+.w75 {
+  flex: 3;
+  min-width: 0;
+}
+
+.w50 {
+  flex: 1;
+  min-width: 0;
+}
+
+.w33 {
+  flex: 1;
+  min-width: 0;
+}
+
+.w25 {
+  flex: 1;
+  min-width: 0;
+}
+
+.w10 {
+  flex: 0 0 80px;
+  min-width: 0;
+}
+
+.checkbox-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem 1rem;
+  margin-top: 0.25rem;
+}
+
 /* _reset.scss */
 /* Reset des marges, paddings et bordures */
 * {

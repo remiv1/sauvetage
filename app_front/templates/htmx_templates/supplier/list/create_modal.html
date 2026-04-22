@@ -28,6 +28,30 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label" for="siren_siret">SIREN / SIRET</label>
+                    {{ form.siren_siret(class="form-control", id="siren_siret") }}
+                    {% for error in form.siren_siret.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="vat_number">Numéro de TVA</label>
+                    {{ form.vat_number(class="form-control", id="vat_number") }}
+                    {% for error in form.vat_number.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="address">Adresse</label>
+                    {{ form.address(class="form-control", id="address") }}
+                    {% for error in form.address.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
                     <label class="form-label" for="contact_email">Email de contact</label>
                     {{ form.contact_email(class="form-control", id="contact_email") }}
                     {% for error in form.contact_email.errors %}
@@ -39,6 +63,58 @@
                     <label class="form-label" for="contact_phone">Téléphone de contact</label>
                     {{ form.contact_phone(class="form-control", id="contact_phone") }}
                     {% for error in form.contact_phone.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="contact_fax">Fax de contact</label>
+                    {{ form.contact_fax(class="form-control", id="contact_fax") }}
+                    {% for error in form.contact_fax.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="web_site">Site web</label>
+                    {{ form.web_site(class="form-control", id="web_site") }}
+                    {% for error in form.web_site.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <span class="form-label">Jours de collecte</span>
+                    <div class="checkbox-group">
+                        {% for day in form.collect_days %}
+                            <label class="checkbox-inline" for="{{ day.id }}">{{ day(id=day.id) }} {{ day.label.text }}</label>
+                        {% endfor %}
+                    </div>
+                    {% for error in form.collect_days.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cutoff_time">Heure limite</label>
+                    {{ form.cutoff_time(class="form-control", id="cutoff_time", step="60") }}
+                    {% for error in form.cutoff_time.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="is_active">Statut actif</label>
+                    {{ form.is_active(id="is_active") }}
+                    {% for error in form.is_active.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="edi_active">Statut EDI</label>
+                    {{ form.edi_active(id="edi_active") }}
+                    {% for error in form.edi_active.errors %}
                         <p class="form-error">{{ error }}</p>
                     {% endfor %}
                 </div>

@@ -34,11 +34,10 @@ from app_front.blueprints import (
     bp_admin_logs,
     bp_user,
 )
-from logs.logger import get_logger
+from logs.logger import MongoForwardHandler, logging, LOG_LEVEL, get_logger
 
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
-LOG_LEVEL = getenv("LOG_LEVEL", "info").upper()
 
 FLASK_SECRET_KEY = getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 BLUEPRINTS: List[Blueprint] = [
@@ -68,4 +67,14 @@ BLUEPRINTS: List[Blueprint] = [
     bp_admin_logs,
     bp_user,
 ]
-sauv_logger = get_logger()
+def setup_logging():
+    """Configure le logging pour l'application Flask."""
+    mongo_logger = get_logger()
+    mongo_handler = MongoForwardHandler(mongo_logger)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(LOG_LEVEL)
+    root_logger.addHandler(mongo_handler)
+    logging.getLogger("pymongo").setLevel(logging.WARNING)
+    logging.getLogger("pymongo.topology").setLevel(logging.WARNING)
+    logging.getLogger("pymongo.connection").setLevel(logging.WARNING)
+    logging.getLogger("pymongo.command").setLevel(logging.WARNING)

@@ -16,12 +16,42 @@
                     <span class="info-value">{{ supplier.gln13 or '—' }}</span>
                 </div>
                 <div class="info-group">
+                    <span class="info-label">SIREN / SIRET</span>
+                    <span class="info-value">{{ supplier.siren_siret or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Numéro de TVA</span>
+                    <span class="info-value">{{ supplier.vat_number or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Adresse</span>
+                    <span class="info-value">{{ supplier.address or '—' }}</span>
+                </div>
+                <div class="info-group">
                     <span class="info-label">Email</span>
                     <span class="info-value">{{ supplier.contact_email or '—' }}</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Téléphone</span>
                     <span class="info-value">{{ supplier.contact_phone or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Fax</span>
+                    <span class="info-value">{{ supplier.contact_fax or '—' }}</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Site web</span>
+                    <span class="info-value">
+                        {% if supplier.web_site %}
+                            {% set url = supplier.web_site %}
+                            {% if not url.startswith('http://') and not url.startswith('https://') %}
+                                {% set url = 'https://' ~ url %}
+                            {% endif %}
+                            <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ supplier.web_site }}</a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Statut</span>
@@ -32,6 +62,38 @@
                             <span class="badge badge-inactive">Inactif</span>
                         {% endif %}
                     </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Statut EDI</span>
+                    <span class="info-value">
+                        {% if supplier.edi_active %}
+                            <span class="badge badge-active">Actif</span>
+                        {% else %}
+                            <span class="badge badge-inactive">Inactif</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Jours de collecte</span>
+                        <span class="info-value">
+                            {% set days_map = {'1':'Lun','2':'Mar','3':'Mer','4':'Jeu','5':'Ven','6':'Sam','7':'Dim'} %}
+
+                            {% if supplier.collect_days %}
+                                {% set mapped = [] %}
+                                {% for d in supplier.collect_days %}
+                                    {% if d in days_map %}
+                                        {% set _ = mapped.append(days_map[d]) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ mapped | join(', ') if mapped else '—' }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Heure limite</span>
+                    <span class="info-value">{{ supplier.cutoff_time or '—' }}</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Créé le</span>

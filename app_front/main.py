@@ -1,10 +1,12 @@
 """Application principale du frontend Flask pour Sauvetage"""
 
 from typing import Any
+import logging
 from datetime import datetime, timezone
 from jinja2 import TemplateError
 from flask import Flask, jsonify, session, request, redirect, url_for, make_response
 from flask.typing import ResponseReturnValue
+from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
 from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
@@ -12,9 +14,9 @@ from app_front.config.flask_conf import (
     LOG_LEVEL,
     FLASK_SECRET_KEY,
     BLUEPRINTS,
-    sauv_logger,
+    setup_logging,
 )
-from app_front.config.db_conf import DATABASE_URL, MONGODB_URL
+from app_front.config.db_conf import DATABASE_URL, MONGODB_URL, _SessionMain
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -35,7 +37,9 @@ log = f"""
 - FLASK_SECRET_KEY: {'***'}
 - BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
 """
-sauv_logger.log(level=LOG_LEVEL, message=log, action="app_start")
+setup_logging()
+logger = logging.getLogger("app_front")
+logger.info(msg=log, extra={"level": LOG_LEVEL, "action": "app_start"})
 
 
 @app.before_request
@@ -53,6 +57,29 @@ def before_request():
     return redirect(url_for("user.login"))
 
 
+@app.teardown_appcontext
+def cleanup_session(exception=None):
+    """Centralise la gestion des sessions : commit/rollback automatique + fermeture"""
+    if exception is not None:
+        logger.error("Exception detected in request context: %s", str(exception))
+        try:
+            _SessionMain.rollback()
+        except SQLAlchemyError as e:
+            logger.error("Error during rollback: %s", str(e))
+    else:
+        # Pas d'erreur : faire le commit automatique
+        try:
+            _SessionMain.commit()
+        except SQLAlchemyError as e:
+            logger.error("Error during commit: %s", str(e))
+            try:
+                _SessionMain.rollback()
+            except SQLAlchemyError:
+                pass
+    # Fermer la session du contexte courant (fonctionne avec scoped_session)
+    _SessionMain.remove()
+
+
 @app.after_request
 def after_request(response):
     """Fonction exécutée après chaque requête"""
@@ -63,14 +90,16 @@ def after_request(response):
     method = request.method
     if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
         return response
-    sauv_logger.log(
-        level=LOG_LEVEL,
-        message=path,
-        action=method,
-        log_type="logs",
-        user_id=session.get("username"),
-        status_code=response.status_code,
-        ip_address=request.remote_addr,
+    logger.info(
+        msg=path,
+        extra={
+            "level": LOG_LEVEL,
+            "action": method,
+            "log_type": "logs",
+            "user_id": session.get("username"),
+            "status_code": response.status_code,
+            "ip_address": request.remote_addr,
+        },
     )
     return response
 
@@ -128,14 +157,16 @@ def error_handler(_error: Any) -> ResponseReturnValue:   # pylint: disable=unuse
     if not isinstance(code, int):
         code = 400
 
-    sauv_logger.log(
-        level=LOG_LEVEL,
-        message=request.path,
-        action=request.method,
-        log_type="logs",
-        user_id=session.get("username"),
-        status_code=code,
-        ip_address=request.remote_addr,
+    logger.error(
+        msg=request.path,
+        extra={
+            "level": LOG_LEVEL,
+            "action": request.method,
+            "log_type": "logs",
+            "user_id": session.get("username"),
+            "status_code": code,
+            "ip_address": request.remote_addr,
+        },
     )
     message = getattr(_error, "description", None) or str(_error)
     try:
@@ -160,14 +191,16 @@ def error_handler(_error: Any) -> ResponseReturnValue:   # pylint: disable=unuse
 @app.errorhandler(504)
 def internal_error(_error: Any) -> ResponseReturnValue:
     """Gestion des erreurs 500 avec rendu HTML convivial ou JSON pour les requêtes XHR/HTMX."""
-    sauv_logger.log(
-        level=LOG_LEVEL,
-        message=f"Internal server error: {request.path}",
-        action=request.method,
-        log_type="logs",
-        user_id=session.get("username"),
-        status_code=500,
-        ip_address=request.remote_addr,
+    logger.error(
+        msg=f"Internal server error: {request.path}",
+        extra={
+            "level": LOG_LEVEL,
+            "action": request.method,
+            "log_type": "logs",
+            "user_id": session.get("username"),
+            "status_code": 500,
+            "ip_address": request.remote_addr,
+        }
     )
 
     # message lisible pour le template / JSON

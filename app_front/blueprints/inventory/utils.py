@@ -165,17 +165,12 @@ def create_product(product_data: Dict[str, Any]) -> Dict[str, Any]:
             child = OtherObjects(general_object_id=go.id)
 
         session.add(child)
-        session.commit()
 
         return {"status": "created", "ean13": ean13, "general_object_id": go.id}
     except ValueError as e:
-        session.rollback()
         raise ValueError(f"Erreur de validation des données du produit : {e}") from e
     except Exception as e:
-        session.rollback()
         raise ValueError(f"Erreur lors de la création du produit : {e}") from e
-    finally:
-        session.close()
 
 
 def search_objects_info(q: dict[str, str]) -> List[str]:
@@ -241,11 +236,8 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
             f"Critère de recherche invalide : {modal[0]}. "
             "Valeurs acceptées : 'author', 'diffuser', 'editor', 'genre'"
         )
-    try:
-        response = session.execute(stmt).scalars().all()
-        return list({r for r in response if r})  # Uniques et non vides
-    finally:
-        session.close()
+    response = session.execute(stmt).scalars().all()
+    return list({r for r in response if r})  # Uniques et non vides
 
 
 def search_object_by_name(name: str) -> Sequence[GeneralObjects]:

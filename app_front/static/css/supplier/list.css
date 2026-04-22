@@ -434,7 +434,7 @@ dialog.modal-overlay::backdrop {
 }
 
 .modal-supplier {
-  max-width: 540px;
+  max-width: 680px;
 }
 
 .modal-confirm .text-warning {

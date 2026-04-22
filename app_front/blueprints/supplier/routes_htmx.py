@@ -11,6 +11,21 @@ bp_supplier_htmx = Blueprint("supplier_htmx", __name__, url_prefix="/supplier/ht
 ADD_FORM_TEMPLATE = "htmx_templates/supplier/add_supplier_form.html"
 
 
+def _serialize_collect_days(values: list[str] | None) -> str:
+    """Convertit la sélection de cases à cocher en format DB, ex: 12345."""
+    if not values:
+        return ""
+    selected = set(values)
+    return "".join(day for day in "1234567" if day in selected)
+
+
+def _serialize_cutoff_time(value) -> str:
+    """Convertit un objet heure WTForms en HH:MM."""
+    if value is None:
+        return ""
+    return value.strftime("%H:%M")
+
+
 @bp_supplier_htmx.get("/get/suppliers/<type_of_data>")
 def get_suppliers(type_of_data: str):
     """Retourne la liste des fournisseurs."""
@@ -51,8 +66,17 @@ def create_supplier_htmx():
         data = {
             "name": form.supplier_name.data,
             "gln13": form.gln13.data,
+            "siren_siret": form.siren_siret.data,
+            "vat_number": form.vat_number.data,
+            "address": form.address.data,
             "contact_email": form.contact_email.data,
             "contact_phone": form.contact_phone.data,
+            "contact_fax": form.contact_fax.data,
+            "web_site": form.web_site.data,
+            "collect_days": _serialize_collect_days(form.collect_days.data),
+            "cutoff_time": _serialize_cutoff_time(form.cutoff_time.data),
+            "is_active": form.is_active.data,
+            "edi_active": form.edi_active.data,
         }
         try:
             result = create_supplier(data)

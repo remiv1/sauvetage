@@ -1,5 +1,6 @@
 """Blueprint API HTMX pour le module stock."""
 
+import logging
 import json
 from flask import Blueprint, make_response, render_template, request, flash
 from app_front.blueprints.stock.forms import (
@@ -263,7 +264,6 @@ def edit_object(object_id: int):
             )
         except ValueError as exc:
             flash(str(exc), "danger")
-            print(f"DEBUG Error updating object: {exc}")
             return (
                 render_template(
                     OBJECT_FORM,
@@ -274,7 +274,6 @@ def edit_object(object_id: int):
                 ),
                 422,
             )
-    print(f"DEBUG Form errors: {form.errors}")
     return (
         render_template(
             OBJECT_FORM,

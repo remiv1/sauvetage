@@ -12,6 +12,7 @@ import logging
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, PyMongoError
 
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 class MongoDBLogger:
     """
@@ -276,8 +277,70 @@ class MongoDBLogger:
         self.close()
 
 
+class MongoForwardHandler(logging.Handler):
+    """
+    Handler qui redirige les logs Python vers MongoDBLogger.
+    """
+    def __init__(self, mongo_logger):
+        super().__init__()
+        self.mongo_logger = mongo_logger
+        self.setLevel(logging.INFO)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Rediriger le log vers MongoDBLogger"""
+        if record.name.startswith("pymongo"):
+            return
+
+        # Récupérer les extras du record de log
+        extra: Dict[str, Any] = getattr(record, "extra", {})
+
+        self.mongo_logger.log(
+            level=record.levelname,
+            message=record.getMessage(),
+            log_type=extra.get("log_type", "logs"),
+            user_id=extra.get("user_id"),
+            action=extra.get("action"),
+            resource_type=extra.get("resource_type"),
+            resource_id=extra.get("resource_id"),
+            obj_metadata=extra.get("obj_metadata"),
+            ip_address=extra.get("ip_address"),
+            status_code=extra.get("status_code"),
+        )
+
+
+class FilterExtras(logging.Filter):
+    """
+    Génère un filtre pour ajouter les extras de log_type aux enregistrements de log.
+    """
+    def __init__(self, **extras: str):
+        super().__init__()
+        self.extras: dict[str, Any] = extras
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Ajouter le log_type aux extras du record de log"""
+        if not hasattr(record, "extra"):
+            setattr(record, "extra", {})
+        record.extra.setdefault("extra", {})    # type: ignore
+
+        for key, value in self.extras.items():
+            record.extra["extra"].setdefault(key, value)  # type: ignore
+
+        return True
+
+
 # Instance globale (singleton)
 _logger = None  # pylint: disable=invalid-name
+
+
+def setup_logging():
+    """Configure le logging pour l'application."""
+    root_logger = logging.getLogger()
+    # éviter les doublons si reload Uvicorn/Gunicorn
+    if any(isinstance(h, MongoForwardHandler) for h in root_logger.handlers):
+        return
+    handler = MongoForwardHandler(get_logger())
+    root_logger.setLevel(LOG_LEVEL)
+    root_logger.addHandler(handler)
 
 
 def get_logger() -> MongoDBLogger:
