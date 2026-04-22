@@ -141,34 +141,25 @@ def search_orders_paginated(    # pylint: disable=too-many-arguments
     dt_from = None
     dt_to = None
     if date_from:
-        try:
-            dt_from = datetime.strptime(date_from, "%Y-%m-%d")
-        except ValueError:
-            pass
+        dt_from = datetime.strptime(date_from, "%Y-%m-%d")
     if date_to:
-        try:
-            dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(
-                hour=23, minute=59, second=59
-            )
-        except ValueError:
-            pass
+        dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(
+            hour=23, minute=59, second=59
+        )
 
     session = db_conf.get_main_session()
-    try:
-        repo = OrdersRepository(session)
-        result = repo.search_paginated(
-            reference=reference,
-            customer_name=customer_name,
-            status=status,
-            date_from=dt_from,
-            date_to=dt_to,
-            page=page,
-            per_page=per_page,
-        )
-        result["items"] = [_order_to_list_dict(o) for o in result["items"]]
-        return result
-    finally:
-        session.close()
+    repo = OrdersRepository(session)
+    result = repo.search_paginated(
+        reference=reference,
+        customer_name=customer_name,
+        status=status,
+        date_from=dt_from,
+        date_to=dt_to,
+        page=page,
+        per_page=per_page,
+    )
+    result["items"] = [_order_to_list_dict(o) for o in result["items"]]
+    return result
 
 
 # ── Lecture détail ───────────────────────────────────────────────────────
@@ -180,64 +171,61 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
         Dict complet de la commande, ou None.
     """
     session = db_conf.get_main_session()
-    try:
-        repo = OrdersRepository(session)
-        order = repo.get_by_id(order_id)
-        if order is None:
-            return None
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        return None
 
-        data = _order_to_list_dict(order)
-        data["invoice_address"] = (
-            order.invoice_address.to_dict() if order.invoice_address else None
-        )
-        data["delivery_address"] = (
-            order.delivery_address.to_dict() if order.delivery_address else None
-        )
-        data["invoice_address_id"] = order.invoice_address_id
-        data["delivery_address_id"] = order.delivery_address_id
+    data = _order_to_list_dict(order)
+    data["invoice_address"] = (
+        order.invoice_address.to_dict() if order.invoice_address else None
+    )
+    data["delivery_address"] = (
+        order.delivery_address.to_dict() if order.delivery_address else None
+    )
+    data["invoice_address_id"] = order.invoice_address_id
+    data["delivery_address_id"] = order.delivery_address_id
 
-        data["shipping_addresses"] = (
-            _shipping_options_for_customer(order.customer) if order.customer else []
-        )
+    data["shipping_addresses"] = (
+        _shipping_options_for_customer(order.customer) if order.customer else []
+    )
 
-        # Lignes de commande (exclure les annulées pour le tableau principal)
-        data["lines"] = []
-        data["all_lines"] = []  # toutes les lignes y compris annulées
-        for line in (order.order_lines or []):
-            ld = line.to_dict()
-            if line.general_object:
-                ld["article_name"] = getattr(line.general_object, "name", None) \
-                                            or f"Article #{line.general_object_id}"
-            else:
-                ld["article_name"] = f"Article #{line.general_object_id}"
-            ld["status_label"] = STATUS_LABELS.get(line.status, line.status)
-            price = float(line.unit_price) * line.quantity
-            discount_amount = price * float(line.discount) / 100
-            ld["line_total_ht"] = round(price - discount_amount, 2)
-            data["all_lines"].append(ld)
-            if line.status != "canceled":
-                data["lines"].append(ld)
+    # Lignes de commande (exclure les annulées pour le tableau principal)
+    data["lines"] = []
+    data["all_lines"] = []  # toutes les lignes y compris annulées
+    for line in (order.order_lines or []):
+        ld = line.to_dict()
+        if line.general_object:
+            ld["article_name"] = getattr(line.general_object, "name", None) \
+                                        or f"Article #{line.general_object_id}"
+        else:
+            ld["article_name"] = f"Article #{line.general_object_id}"
+        ld["status_label"] = STATUS_LABELS.get(line.status, line.status)
+        price = float(line.unit_price) * line.quantity
+        discount_amount = price * float(line.discount) / 100
+        ld["line_total_ht"] = round(price - discount_amount, 2)
+        data["all_lines"].append(ld)
+        if line.status != "canceled":
+            data["lines"].append(ld)
 
-        # Factures rattachées
-        inv_repo = InvoiceRepository(session)
-        invoices = inv_repo.get_by_order_id(order_id)
-        data["invoices"] = [inv.to_dict() for inv in invoices]
+    # Factures rattachées
+    inv_repo = InvoiceRepository(session)
+    invoices = inv_repo.get_by_order_id(order_id)
+    data["invoices"] = [inv.to_dict() for inv in invoices]
 
-        # Envois rattachés
-        ship_repo = ShipmentsRepository(session)
-        shipments = ship_repo.get_by_order_id(order_id)
-        data["shipments"] = [s.to_dict() for s in shipments]
+    # Envois rattachés
+    ship_repo = ShipmentsRepository(session)
+    shipments = ship_repo.get_by_order_id(order_id)
+    data["shipments"] = [s.to_dict() for s in shipments]
 
-        # Flags pour boutons facturer / expédier
-        data["has_uninvoiced_lines"] = any(
-            l.status == "draft" for l in (order.order_lines or [])
-        )
-        data["has_unshipped_invoiced_lines"] = any(
-            l.status == "invoiced" for l in (order.order_lines or [])
-        )
-        return data
-    finally:
-        session.close()
+    # Flags pour boutons facturer / expédier
+    data["has_uninvoiced_lines"] = any(
+        l.status == "draft" for l in (order.order_lines or [])
+    )
+    data["has_unshipped_invoiced_lines"] = any(
+        l.status == "invoiced" for l in (order.order_lines or [])
+    )
+    return data
 
 
 # ── Création ─────────────────────────────────────────────────────────────
@@ -245,34 +233,31 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
 def create_order(customer_id: int, delivery_address_id: int) -> Dict[str, Any]:
     """Crée une commande avec facturation automatique et livraison choisie."""
     session = db_conf.get_main_session()
-    try:
-        customer_repo = CustomersRepository(session)
-        customer = customer_repo.get_by_id(customer_id, complete=True)
-        if customer is None:
-            raise ValueError(_CUSTOMER_NOT_FOUND)
+    customer_repo = CustomersRepository(session)
+    customer = customer_repo.get_by_id(customer_id, complete=True)
+    if customer is None:
+        raise ValueError(_CUSTOMER_NOT_FOUND)
 
-        billing_address = _find_default_billing_address(customer)
-        if billing_address is None:
-            raise ValueError("Aucune adresse de facturation active disponible pour ce client.")
+    billing_address = _find_default_billing_address(customer)
+    if billing_address is None:
+        raise ValueError("Aucune adresse de facturation active disponible pour ce client.")
 
-        shipping_addresses = _find_shipping_addresses(customer)
-        selected_shipping = next(
-            (address for address in shipping_addresses if address.id == delivery_address_id),
-            None,
-        )
-        if selected_shipping is None:
-            raise ValueError("Adresse de livraison invalide pour ce client.")
+    shipping_addresses = _find_shipping_addresses(customer)
+    selected_shipping = next(
+        (address for address in shipping_addresses if address.id == delivery_address_id),
+        None,
+    )
+    if selected_shipping is None:
+        raise ValueError("Adresse de livraison invalide pour ce client.")
 
-        repo = OrdersRepository(session)
-        order = repo.create_order(
-            customer_id=customer_id,
-            invoice_address_id=billing_address.id,
-            delivery_address_id=selected_shipping.id,
-            create_source="backoffice",
-        )
-        return {"id": order.id, "reference": order.reference}
-    finally:
-        session.close()
+    repo = OrdersRepository(session)
+    order = repo.create_order(
+        customer_id=customer_id,
+        invoice_address_id=billing_address.id,
+        delivery_address_id=selected_shipping.id,
+        create_source="backoffice",
+    )
+    return {"id": order.id, "reference": order.reference}
 
 
 def _format_address_option_label(address: Dict[str, Any]) -> str:
@@ -287,53 +272,47 @@ def _format_address_option_label(address: Dict[str, Any]) -> str:
 def get_customer_order_addresses(customer_id: int) -> Dict[str, Any]:
     """Retourne les adresses de commande disponibles pour un client."""
     session = db_conf.get_main_session()
-    try:
-        customer_repo = CustomersRepository(session)
-        customer = customer_repo.get_by_id(customer_id, complete=True)
-        if customer is None:
-            raise ValueError(_CUSTOMER_NOT_FOUND)
+    customer_repo = CustomersRepository(session)
+    customer = customer_repo.get_by_id(customer_id, complete=True)
+    if customer is None:
+        raise ValueError(_CUSTOMER_NOT_FOUND)
 
-        billing_address = _find_default_billing_address(customer)
-        shipping_addresses = _find_shipping_addresses(customer)
+    billing_address = _find_default_billing_address(customer)
+    shipping_addresses = _find_shipping_addresses(customer)
 
-        return {
-            "billing": billing_address.to_dict() if billing_address else None,
-            "shipping": [
-                {
-                    "id": address.id,
-                    "label": _format_address_option_label(address.to_dict()),
-                }
-                for address in shipping_addresses
-            ],
-        }
-    finally:
-        session.close()
+    return {
+        "billing": billing_address.to_dict() if billing_address else None,
+        "shipping": [
+            {
+                "id": address.id,
+                "label": _format_address_option_label(address.to_dict()),
+            }
+            for address in shipping_addresses
+        ],
+    }
 
 
 def update_order_delivery_address(order_id: int, delivery_address_id: int) -> Dict[str, Any]:
     """Met à jour l'adresse de livraison si la commande est en brouillon."""
     session = db_conf.get_main_session()
-    try:
-        repo = OrdersRepository(session)
-        order = repo.get_by_id(order_id)
-        if order is None:
-            raise ValueError(_ORDER_NOT_FOUND)
-        if order.status != "draft":
-            raise ValueError(
-                "L'adresse de livraison n'est modifiable que pour une commande en brouillon."
-            )
-
-        updated_order = repo.update_delivery_address(
-            order,
-            delivery_address_id=delivery_address_id,
-            update_source="backoffice",
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
+    if order.status != "draft":
+        raise ValueError(
+            "L'adresse de livraison n'est modifiable que pour une commande en brouillon."
         )
-        return {
-            "id": updated_order.id,
-            "delivery_address_id": updated_order.delivery_address_id,
-        }
-    finally:
-        session.close()
+
+    updated_order = repo.update_delivery_address(
+        order,
+        delivery_address_id=delivery_address_id,
+        update_source="backoffice",
+    )
+    return {
+        "id": updated_order.id,
+        "delivery_address_id": updated_order.delivery_address_id,
+    }
 
 
 def add_order_line(     # pylint: disable=too-many-arguments
@@ -351,63 +330,56 @@ def add_order_line(     # pylint: disable=too-many-arguments
         Dict de la ligne créée.
     """
     session = db_conf.get_main_session()
-    try:
-        repo = OrdersRepository(session)
-        order = repo.get_by_id(order_id)
-        if order is None:
-            raise ValueError(_ORDER_NOT_FOUND)
-        line = repo.add_line(
-            order,
-            general_object_id=general_object_id,
-            quantity=quantity,
-            unit_price=unit_price,
-            discount=discount,
-            vat_rate=vat_rate,
-            create_source="backoffice",
-        )
-        # Créer un mouvement de réservation dans inventory_movements
-        movement = InventoryMovements(
-            general_object_id=general_object_id,
-            movement_type="reserved",
-            quantity=quantity,
-            price_at_movement=unit_price,
-            source="order",
-            destination=f"CMD-{order_id}",
-            notes=f"Réservation commande {order.reference}",
-        )
-        session.add(movement)
-        session.commit()
-        return line.to_dict()
-    finally:
-        session.close()
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
+    line = repo.add_line(
+        order,
+        general_object_id=general_object_id,
+        quantity=quantity,
+        unit_price=unit_price,
+        discount=discount,
+        vat_rate=vat_rate,
+        create_source="backoffice",
+    )
+    # Créer un mouvement de réservation dans inventory_movements
+    movement = InventoryMovements(
+        general_object_id=general_object_id,
+        movement_type="reserved",
+        quantity=quantity,
+        price_at_movement=unit_price,
+        source="order",
+        destination=f"CMD-{order_id}",
+        notes=f"Réservation commande {order.reference}",
+    )
+    session.add(movement)
+    return line.to_dict()
 
 
 def remove_order_line(order_id: int, line_id: int) -> bool:
     """Annule une ligne de commande (soft delete) et crée un mouvement d'annulation."""
     session = db_conf.get_main_session()
-    try:
-        repo = OrdersRepository(session)
-        order = repo.get_by_id(order_id)
-        if order is None:
-            raise ValueError(_ORDER_NOT_FOUND)
-        line = next((l for l in order.order_lines if l.id == line_id), None)
-        if line is None:
-            raise ValueError("Ligne introuvable")
-        # Annuler le mouvement de réservation
-        movement = InventoryMovements(
-            general_object_id=line.general_object_id,
-            movement_type="reserved",
-            quantity=-line.quantity,
-            price_at_movement=float(line.unit_price),
-            source="order",
-            destination=f"CMD-{order_id}",
-            notes=f"Annulation réservation commande {order.reference}",
-        )
-        session.add(movement)
-        result = repo.remove_line(line)
-        return result
-    finally:
-        session.close()
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
+    line = next((l for l in order.order_lines if l.id == line_id), None)
+    if line is None:
+        raise ValueError("Ligne introuvable")
+    # Annuler le mouvement de réservation
+    movement = InventoryMovements(
+        general_object_id=line.general_object_id,
+        movement_type="reserved",
+        quantity=-line.quantity,
+        price_at_movement=float(line.unit_price),
+        source="order",
+        destination=f"CMD-{order_id}",
+        notes=f"Annulation réservation commande {order.reference}",
+    )
+    session.add(movement)
+    result = repo.remove_line(line)
+    return result
 
 
 def cancel_order(order_id: int) -> Dict[str, Any]:
@@ -417,17 +389,14 @@ def cancel_order(order_id: int) -> Dict[str, Any]:
         Dict de la commande mise à jour.
     """
     session = db_conf.get_main_session()
-    try:
-        repo = OrdersRepository(session)
-        order = repo.get_by_id(order_id)
-        if order is None:
-            raise ValueError(_ORDER_NOT_FOUND)
-        if order.status in ("canceled", "returned"):
-            raise ValueError("Commande déjà annulée ou retournée")
-        order = repo.update_order_status(order, "canceled", update_source="backoffice")
-        return _order_to_list_dict(order)
-    finally:
-        session.close()
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
+    if order.status in ("canceled", "returned"):
+        raise ValueError("Commande déjà annulée ou retournée")
+    order = repo.update_order_status(order, "canceled", update_source="backoffice")
+    return _order_to_list_dict(order)
 
 
 def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
@@ -443,64 +412,58 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
         raise ValueError("Aucune ligne sélectionnée pour la facturation.")
 
     session = db_conf.get_main_session()
-    try:
-        order_repo = OrdersRepository(session)
-        order = order_repo.get_by_id(order_id)
-        if order is None:
-            raise ValueError(_ORDER_NOT_FOUND)
+    order_repo = OrdersRepository(session)
+    order = order_repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
 
-        # Valider les lignes et enrichir avec les prix
-        line_objects: List[OrderLine] = [
-            l for l in (order.order_lines or []) \
-                if l.id in {item["order_line_id"] for item in line_items}]
-        invoice_lines = []
-        for line in line_objects:
-            if line.status != "draft":
-                raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
-            qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
-            if qty > line.quantity or qty < 1:
-                raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
-            invoice_lines.append(
-                InvoiceLine(
-                    order_line_id=line.id,
-                    reference=line.general_object.ean13,
-                    description=line.general_object.name,
-                    quantity=qty,
-                    unit_price=float(line.unit_price),
-                    discount=float(line.discount),
-                    vat_rate=float(line.vat_rate),
-                )
+    # Valider les lignes et enrichir avec les prix
+    line_objects: List[OrderLine] = [
+        l for l in (order.order_lines or []) \
+            if l.id in {item["order_line_id"] for item in line_items}]
+    invoice_lines = []
+    for line in line_objects:
+        if line.status != "draft":
+            raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
+        qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
+        if qty > line.quantity or qty < 1:
+            raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+        invoice_lines.append(
+            InvoiceLine(
+                order_line_id=line.id,
+                reference=line.general_object.ean13,
+                description=line.general_object.name,
+                quantity=qty,
+                unit_price=float(line.unit_price),
+                discount=float(line.discount),
+                vat_rate=float(line.vat_rate),
             )
-
-        # Créer la facture
-        inv_repo = InvoiceRepository(session)
-        invoice = inv_repo.create_invoice(
-            order_id=order_id,
-            line_items=invoice_lines,
-            create_source="backoffice",
         )
 
-        # Mettre à jour le statut des lignes de commande
-        for line in line_objects:
-            qty_invoiced = next(
-                item["quantity"] for item in line_items if item["order_line_id"] == line.id
-                )
-            if line.quantity == qty_invoiced:
-                line.status = "invoiced"
-            else:
-                # Facturation partielle : couper la ligne
-                order_repo.cut_line_for_invoice(line, qty_invoiced)
-                line.status = "invoiced"
-        session.commit()
+    # Créer la facture
+    inv_repo = InvoiceRepository(session)
+    invoice = inv_repo.create_invoice(
+        order_id=order_id,
+        line_items=invoice_lines,
+        create_source="backoffice",
+    )
 
-        # Recalculer le statut de la commande
-        _recalculate_order_status(order, order_repo)
-        return invoice
-    except SQLAlchemyError as e:
-        session.rollback()
-        raise ValueError(f"Erreur lors de la facturation : {str(e)}") from e
-    finally:
-        session.close()
+    # Mettre à jour le statut des lignes de commande
+    for line in line_objects:
+        qty_invoiced = next(
+            item["quantity"] for item in line_items if item["order_line_id"] == line.id
+            )
+        if line.quantity == qty_invoiced:
+            line.status = "invoiced"
+        else:
+            # Facturation partielle : couper la ligne
+            order_repo.cut_line_for_invoice(line, qty_invoiced)
+            line.status = "invoiced"
+    session.commit()
+
+    # Recalculer le statut de la commande
+    _recalculate_order_status(order, order_repo)
+    return invoice
 
 
 def ship_order(
@@ -523,55 +486,52 @@ def ship_order(
         raise ValueError("Aucune ligne sélectionnée pour l'expédition.")
 
     session = db_conf.get_main_session()
-    try:
-        order_repo = OrdersRepository(session)
-        order = order_repo.get_by_id(order_id)
-        if order is None:
-            raise ValueError(_ORDER_NOT_FOUND)
+    order_repo = OrdersRepository(session)
+    order = order_repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
 
-        line_objects: List[OrderLine] = [
-            l for l in (order.order_lines or []) \
-                if l.id in {item["order_line_id"] for item in line_items}]
+    line_objects: List[OrderLine] = [
+        l for l in (order.order_lines or []) \
+            if l.id in {item["order_line_id"] for item in line_items}]
 
-        shipment_lines: List[ShipmentLine] = []
-        for line in line_objects:
-            if line.status != "invoiced":
-                raise ValueError(f"La ligne {line.id} n'est pas facturée.")
-            qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
-            if qty > line.quantity or qty < 1:
-                raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
-            shipment_lines.append(
-                ShipmentLine(
-                    order_line_id=line.id,
-                    quantity=qty,
-                )
+    shipment_lines: List[ShipmentLine] = []
+    for line in line_objects:
+        if line.status != "invoiced":
+            raise ValueError(f"La ligne {line.id} n'est pas facturée.")
+        qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
+        if qty > line.quantity or qty < 1:
+            raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+        shipment_lines.append(
+            ShipmentLine(
+                order_line_id=line.id,
+                quantity=qty,
             )
-
-        # Créer l'expédition
-        ship_repo = ShipmentsRepository(session)
-        shipment = ship_repo.create_shipment(
-            order_id=order_id,
-            carrier=carrier,
-            tracking_number=tracking_number,
-            line_items=shipment_lines,
-            create_source="backoffice",
         )
 
-        # Mettre à jour le statut des lignes
-        for line in line_objects:
-            qty_shipped = next(
-                item["quantity"] for item in line_items if item["order_line_id"] == line.id
-                )
-            if qty_shipped == line.quantity:
-                line.status = "shipped"
-            # Note: Tout ce qui est facturé est expédié, le cutting est fait lors de la facturation.
-        session.commit()
+    # Créer l'expédition
+    ship_repo = ShipmentsRepository(session)
+    shipment = ship_repo.create_shipment(
+        order_id=order_id,
+        carrier=carrier,
+        tracking_number=tracking_number,
+        line_items=shipment_lines,
+        create_source="backoffice",
+    )
 
-        # Recalculer le statut de la commande
-        _recalculate_order_status(order, order_repo)
-        return shipment.to_dict()
-    finally:
-        session.close()
+    # Mettre à jour le statut des lignes
+    for line in line_objects:
+        qty_shipped = next(
+            item["quantity"] for item in line_items if item["order_line_id"] == line.id
+            )
+        if qty_shipped == line.quantity:
+            line.status = "shipped"
+        # Note: Tout ce qui est facturé est expédié, le cutting est fait lors de la facturation.
+    session.commit()
+
+    # Recalculer le statut de la commande
+    _recalculate_order_status(order, order_repo)
+    return shipment.to_dict()
 
 
 def _recalculate_order_status(order: Order, repo: OrdersRepository) -> None:
@@ -604,22 +564,19 @@ def search_customers_for_dropdown(query: str) -> List[Dict[str, Any]]:
         Liste de dicts avec id, display_name, customer_type, location.
     """
     session = db_conf.get_main_session()
-    try:
-        repo = CustomersRepository(session)
-        customers = repo.get_by_name_like(query, complete=True)
-        if not customers:
-            return []
-        results = []
-        for c in customers:
-            results.append({
-                "id": c.id,
-                "display_name": _customer_display_name(c),
-                "customer_type": c.customer_type,
-                "location": c.addresses[0].city if c.addresses else "—",
-            })
-        return results
-    finally:
-        session.close()
+    repo = CustomersRepository(session)
+    customers = repo.get_by_name_like(query, complete=True)
+    if not customers:
+        return []
+    results = []
+    for c in customers:
+        results.append({
+            "id": c.id,
+            "display_name": _customer_display_name(c),
+            "customer_type": c.customer_type,
+            "location": c.addresses[0].city if c.addresses else "—",
+        })
+    return results
 
 
 # ── Recherche objets (pour autocomplete) ─────────────────────────────────
@@ -631,11 +588,8 @@ def get_objects_by_name(name: str) -> Optional[Sequence[GeneralObjects]]:
         Liste de dicts avec id et name, ou None.
     """
     session = db_conf.get_main_session()
-    try:
-        repo = ObjectsRepository(session)
-        results = repo.get_by_name(name)
-        if results is None:
-            return None
-        return results
-    finally:
-        session.close()
+    repo = ObjectsRepository(session)
+    results = repo.get_by_name(name)
+    if results is None:
+        return None
+    return results

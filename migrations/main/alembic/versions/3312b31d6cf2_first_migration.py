@@ -1,8 +1,8 @@
 """first_migration
 
-Revision ID: 32ced1f864e9
+Revision ID: 3312b31d6cf2
 Revises: 
-Create Date: 2026-04-07 12:56:15.844119
+Create Date: 2026-04-22 05:37:48.174252
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '32ced1f864e9'
+revision: str = '3312b31d6cf2'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -39,9 +39,17 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='Identifiant unique du fournisseur'),
     sa.Column('name', sa.String(), nullable=False, comment='Nom du fournisseur'),
     sa.Column('gln13', sa.String(), nullable=False, comment='Code GLN du fournisseur'),
-    sa.Column('contact_email', sa.String(), nullable=False, comment='Email de contact du fournisseur'),
-    sa.Column('contact_phone', sa.String(), nullable=False, comment='Téléphone de contact du fournisseur'),
+    sa.Column('siren_siret', sa.String(), nullable=True, comment='Numéro SIREN ou SIRET du fournisseur'),
+    sa.Column('vat_number', sa.String(), nullable=True, comment='Numéro de TVA intracom fournisseur'),
+    sa.Column('address', sa.String(), nullable=True, comment='Adresse complète du fournisseur'),
+    sa.Column('contact_email', sa.String(), nullable=True, comment='Email de contact du fournisseur'),
+    sa.Column('contact_phone', sa.String(), nullable=True, comment='Téléphone de contact du fournisseur'),
+    sa.Column('contact_fax', sa.String(), nullable=True, comment='Fax de contact du fournisseur'),
+    sa.Column('web_site', sa.String(), nullable=True, comment='Site web du fournisseur'),
     sa.Column('is_active', sa.Boolean(), nullable=False, comment='Indique si le fournisseur est actif'),
+    sa.Column('edi_active', sa.Boolean(), nullable=False, comment="Indique si le fournisseur est actif pour l'EDI"),
+    sa.Column('collect_days', sa.String(), nullable=True, comment="Jours de collecte des commandes (ex: '12345' pour LMMJV)"),
+    sa.Column('cutoff_time', sa.String(), nullable=True, comment='Heure limite de PEC des commandes pour le jour même.'),
     sa.Column('created_at', sa.DateTime(), nullable=False, comment='Date de création du fournisseur'),
     sa.Column('updated_at', sa.DateTime(), nullable=False, comment='Date de dernière MàJ du fournisseur'),
     sa.PrimaryKeyConstraint('id'),

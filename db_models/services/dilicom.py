@@ -4,6 +4,7 @@ Ce module inclut:
 - La classe `DilicomService` qui encapsule les opérations SFTP avec le serveur de Dilicom.
 """
 
+from os import getenv
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from dilicom_parser.transport import Connector
 from dilicom_parser.classifier import FilesClassifier
-from dilicom_parser.models import DistributorData
+from dilicom_parser.models import DistributorData, DistributorLineData
 from db_models.objects.stocks import DilicomReferencial
 from db_models.repositories.suppliers import SuppliersRepository, Suppliers
 
@@ -36,12 +37,25 @@ class DilicomService:
         génère le fichier de mise à jour, et le transfère via SFTP.
         """
         txt_content: str | bool = self._build_refel_content(to_file=False)
+        byte_content = txt_content.encode(encoding="utf-8") \
+                            if isinstance(txt_content, str) \
+                            else None
+        logger.debug("Contenu du fichier de mise à jour (REFEL) généré: %s", txt_content)
         if isinstance(txt_content, bool):
             raise ValueError("Erreur lors de la création du fichier de mise à jour.")
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
         filename = f"{self.connect.config.username}_MVT-REF_{timestamp}.txt"
+        logger.info(
+            "Envoi du fichier de mise à jour (REFEL) au serveur de Dilicom avec le nom: %s",
+            filename
+        )
+        remote_path = str(Path('/I') / filename)
         with self.connect as server:
-            server.upload_from_memory(txt_content, filename)
+            server.upload_from_memory(byte_content, remote_path=remote_path)
+            logger.info(
+                "REF FEL envoyé avec succès au serveur de Dilicom à l'emplacement: %s",
+                remote_path,
+            )
 
     def fetch_returns(self, archives: bool = False) -> None:
         """
@@ -49,6 +63,9 @@ class DilicomService:
         Cette méthode se connecte au serveur SFTP, télécharge les fichiers de retour,
         et les traite pour mettre à jour les statuts des commandes dans la base de données.
         """
+        # Vidage du dossier local de réception avant téléchargement pour éviter les confusions
+        local_dir = Path(getenv("DILICOM_IN_DIR", "dilicom_returns"))
+        self._clear_directory(local_dir)
         with self.connect as server:
             files_list = server.download_all(archive=archives)
         logger.debug(
@@ -73,15 +90,13 @@ class DilicomService:
         if "gencod" in objects_to_merge:
             self._update_services(objects_to_merge["gencod"])
 
-    def fetch_archives(self) -> list[Path]:
-        """
-        Récupère les fichiers d'archives du serveur de Dilicom.
-        Cette méthode se connecte au serveur SFTP, télécharge les fichiers d'archives,
-        et les stocke localement pour référence future.
-        """
-        with self.connect as server:
-            files_list = server.download_all(archive=True)
-        return files_list
+        # Suppression des fichiers locaux après traitement
+        for file in files_list:
+            try:
+                file.unlink()
+                logger.info("Fichier %s supprimé avec succès après traitement.", file.name)
+            except (FileNotFoundError, RuntimeError) as e:
+                logger.error("Erreur lors de la suppression du fichier %s: %s", file, e)
 
     def _update_synced(self, references: Sequence[DilicomReferencial]):
         """
@@ -105,7 +120,14 @@ class DilicomService:
         stmt = select(DilicomReferencial).where(DilicomReferencial.dilicom_synced == False) # pylint: disable=C0121
         try:
             unsynced_refs = self.session.execute(stmt).scalars().all()
-            txt_content = "BEGIN|MAJREF|" + "\n".join(ref.to_pipe() for ref in unsynced_refs)
+            if not unsynced_refs:
+                logger.info(
+                    "Rien à synchroniser avec Dilicom, REF-FEL non généré.",
+                    )
+                return False
+            txt_content = "BEGIN|MAJREF|\n"  \
+                            + "\n".join(ref.to_pipe() for ref in unsynced_refs) \
+                            + "\n"
             if to_file:
                 with open("refel.txt", "w", encoding="utf-8") as f:
                     f.write(txt_content)
@@ -113,6 +135,10 @@ class DilicomService:
             else:
                 value_to_return = txt_content
             self._update_synced(unsynced_refs)
+            logger.info(
+                "Contenu du fichier REFEL construit avec succès. Nombre de références incluses: %d",
+                len(unsynced_refs)
+            )
             return value_to_return
         except Exception as e:
             message = f"Erreur lors de la construction du contenu REFEL: {e}"
@@ -141,32 +167,131 @@ class DilicomService:
         param :
             - distributor_list: liste des données de distributeurs extraites du fichier de retour.
         """
+        repo = SuppliersRepository(self.session)
         suppliers_dict: dict[str, Suppliers] = {}
         for d in distributor_list:
             for l in d.lines:
-                b1, b2, _ = l.bloc1, l.bloc2, l.bloc3
-                global_address = "".join(
-                        [b1.numero_voie or "", b1.adresse_l1 or "", b1.adresse_l2 or "",
-                        b1.adresse_l3 or "", b1.code_postal or "", b1.ville or "", b1.pays or ""]
+                s = self.__generate_supplier_from_distributor_line(l)
+                if s:
+                    logger.debug(
+                        "Ajout du fournisseur %s avec GLN %s au dictionnaire.",
+                        s.name,
+                        s.gln13
                     )
-                s = Suppliers(
-                    name=b1.rs1,
-                    gln13=b1.gln,
-                    siren_siret=b1.siren_or_siret,
-                    vat_number=b1.num_tva_intracom,
-                    address=global_address,
-                    contact_email=b1.email,
-                    contact_phone=b1.num_tel,
-                    contact_fax=b1.num_fax,
-                    web_site=b1.website,
-                    is_active=b1.gln_repreneur is None,
-                    edi_active=b2.type_connection == "02",
-                    collect_days=_convert_collect_days(b2.jours_collecte),
-                    cutoff_time=_convert_cutoff_time(b2.heure_limite),
-                )
-                suppliers_dict[b1.gln] = s
-        repo = SuppliersRepository(self.session)
-        repo.sync_supplier(list(suppliers_dict.values()))
+                    suppliers_dict[s.gln13] = s
+            repo.sync_supplier(list(suppliers_dict.values()))
+
+    def _clear_directory(self, directory: Path) -> None:
+        """
+        Supprime tous les fichiers d'un répertoire donné. Cette méthode prend un objet `Path`
+        représentant le répertoire à nettoyer, et supprime tous les fichiers qu'il contient.
+        
+        param :
+            - directory: Le répertoire à nettoyer.
+        """
+        if directory.exists() and directory.is_dir():
+            for file in directory.iterdir():
+                if file.is_file():
+                    try:
+                        file.unlink()
+                        logger.info(
+                            "Fichier %s supprimé avec succès dans le répertoire %s.",
+                            file.name,
+                            directory
+                        )
+                    except (FileNotFoundError, RuntimeError) as e:
+                        logger.error(
+                            "Erreur lors de la suppression du fichier %s dans le répertoire %s: %s",
+                            file.name,
+                            directory,
+                            e
+                        )
+
+    def __generate_supplier_from_distributor_line(
+            self, line: DistributorLineData
+        ) -> Optional[Suppliers]:
+        """
+        Génère un objet `Suppliers` à partir d'une ligne de données de distributeur.
+        Cette méthode prend une ligne de données de distributeur, et crée un objet `Suppliers`
+        avec les informations correspondantes, en fonction du type de mouvement (mvt) indiqué
+        dans la ligne.
+        
+        param :
+            - line: La ligne de données de distributeur à partir de laquelle générer
+                    l'objet `Suppliers`.
+        """
+        l = _clean_fields_in_lines(line)
+        b1, b2, _ = l.bloc1, l.bloc2, l.bloc3
+        global_address = _generate_address_from_distributor_line(line)
+        if b1.mvt in ["00", "01", "03", "04"]:
+            logger.debug(
+                "Génération d'un objet Suppliers pour le distributeur %s avec mvt %s",
+                b1.rs1,
+                b1.mvt
+            )
+            s = Suppliers(
+                name=b1.rs1,
+                gln13=b1.gln,
+                siren_siret=b1.siren_or_siret,
+                vat_number=b1.num_tva_intracom,
+                address=global_address,
+                contact_email=b1.email,
+                contact_phone=b1.num_tel,
+                contact_fax=b1.num_fax,
+                web_site=b1.website,
+                is_active=True,
+                edi_active=b2.type_connection == "02",
+                collect_days=_convert_collect_days(b2.jours_collecte),
+                cutoff_time=_convert_cutoff_time(b2.heure_limite),
+            )
+        elif b1.mvt == "05":
+            logger.debug(
+                "Génération d'un objet Suppliers bloc 1 pour le distributeur %s avec mvt %s",
+                b1.rs1,
+                b1.mvt
+            )
+            s = Suppliers(
+                name=b1.rs1,
+                gln13=b1.gln,
+                siren_siret=b1.siren_or_siret,
+                vat_number=b1.num_tva_intracom,
+                address=global_address,
+                contact_email=b1.email,
+                contact_phone=b1.num_tel,
+                contact_fax=b1.num_fax,
+                web_site=b1.website,
+                is_active=bool(b1.gln_repreneur),
+            )
+        elif b1.mvt == "06":
+            logger.debug(
+                "Génération d'un objet Suppliers bloc 2 pour le distributeur %s avec mvt %s",
+                b1.rs1,
+                b1.mvt
+            )
+            s = Suppliers(
+                gln13=b1.gln,
+                edi_active=b2.type_connection == "02",
+                collect_days=_convert_collect_days(b2.jours_collecte),
+                cutoff_time=_convert_cutoff_time(b2.heure_limite),
+            )
+        elif b1.mvt == "08":
+            logger.debug(
+                "Génération d'un objet Suppliers pour suppression du distributeur %s avec mvt %s",
+                b1.rs1,
+                b1.mvt
+            )
+            s = Suppliers(
+                gln13=b1.gln,
+                is_active=False,
+            )
+        else:
+            logger.warning(
+                "Mouvement (mvt) non reconnu %s pour le distributeur %s, aucune action réalisée.",
+                b1.mvt,
+                b1.rs1
+            )
+            s = None
+        return s
 
     def _update_services(self, service_list: list[Any]) -> None:
         """
@@ -187,7 +312,7 @@ def _convert_collect_days(collect_days_str: Optional[str]) -> Optional[str]:
     Convertit une chaîne de caractères représentant les jours de collecte binaire en une chaîne
     de rang de jours de la semaine (1-7). Par exemple, "1010100" devient "135".
     """
-    if collect_days_str is None:
+    if collect_days_str is None or collect_days_str == "0000000":
         return None
     return "".join(str(i) for i, bit in enumerate(collect_days_str, start=1) if bit == "1")
 
@@ -199,3 +324,37 @@ def _convert_cutoff_time(cutoff_time_str: Optional[str]) -> Optional[str]:
     if cutoff_time_str is None or len(cutoff_time_str) != 4:
         return None
     return f"{cutoff_time_str[:2]}:{cutoff_time_str[2:]}"
+
+def _clean_fields_in_lines(line: DistributorLineData) -> DistributorLineData:
+    """
+    Nettoie les champs vides dans les lignes de données en les remplaçant par None.
+    Cette fonction modifie les objets de ligne en place, en vérifiant les champs
+    bloc1, bloc2, et bloc3.
+    
+    param :
+        - line: La ligne à nettoyer.
+    """
+    for field in [line.bloc1, line.bloc2, line.bloc3]:
+        if field == "":
+            field = None
+    return line
+
+def _generate_address_from_distributor_line(line: DistributorLineData) -> str:
+    """
+    Génère une adresse complète à partir d'une ligne de données de distributeur.
+    Cette fonction prend les différents champs d'adresse de la ligne, et les concatène
+    pour former une adresse complète.
+    
+    param :
+        - line: La ligne de données de distributeur à partir de laquelle générer l'adresse.
+    """
+    b1 = line.bloc1
+    x: str = ""
+    x += b1.numero_voie + " " if b1.numero_voie else ""
+    x += b1.adresse_l1 + " " if b1.adresse_l1 else ""
+    x += b1.adresse_l2 + " " if b1.adresse_l2 else ""
+    x += b1.adresse_l3 + " " if b1.adresse_l3 else ""
+    x += b1.code_postal + " " if b1.code_postal else ""
+    x += b1.ville + " " if b1.ville else ""
+    x += b1.pays if b1.pays else ""
+    return x.strip()

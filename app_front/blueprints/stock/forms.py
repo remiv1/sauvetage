@@ -5,6 +5,7 @@ from collections import namedtuple
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
+    IntegerField,
     FieldList,
     FormField,
     SubmitField,
@@ -13,7 +14,7 @@ from wtforms import (
     FileField,
     TextAreaField,
 )
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional, NumberRange
 
 
 OrderTuple = namedtuple("Order", ["id", "general_object_id", "qty", "pu", "vat_rate"])
@@ -95,8 +96,16 @@ class BookForm(FlaskForm):
     diffuser = StringField("Diffuseur du livre")
     editor = StringField("Éditeur du livre")
     genre = StringField("Genre du livre")
-    publication_year = StringField("Année de publication du livre")
-    pages = StringField("Nombre de pages du livre")
+    publication_year = IntegerField(
+        "Année de publication du livre",
+        validators=[Optional(), NumberRange(min=1000, max=2100)],
+        render_kw={"min": "1000", "max": "2100"}
+    )
+    pages = IntegerField(
+        "Nombre de pages du livre",
+        validators=[Optional(), NumberRange(min=1)],
+        render_kw={"min": "1"}
+    )
 
 
 class KeyValueForm(FlaskForm):

@@ -250,7 +250,7 @@ class OrderRepository(BaseRepository):
 
         try:
             self.session.commit()
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             self.session.rollback()
             raise RuntimeError(
                 f"Erreur lors de l'annulation de la commande : {exc}"
@@ -448,7 +448,7 @@ class OrderRepository(BaseRepository):
         try:
             self.session.commit()
             return line_id
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             self.session.rollback()
             message = f"Erreur lors de la suppression de la ligne de commande : {exc}"
             raise RuntimeError(message) from exc

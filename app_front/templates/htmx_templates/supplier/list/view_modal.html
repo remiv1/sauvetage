@@ -41,7 +41,17 @@
                 </div>
                 <div class="info-group">
                     <span class="info-label">Site web</span>
-                    <span class="info-value">{{ supplier.web_site or '—' }}</span>
+                    <span class="info-value">
+                        {% if supplier.web_site %}
+                            {% set url = supplier.web_site %}
+                            {% if not url.startswith('http://') and not url.startswith('https://') %}
+                                {% set url = 'https://' ~ url %}
+                            {% endif %}
+                            <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ supplier.web_site }}</a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Statut</span>
@@ -65,7 +75,21 @@
                 </div>
                 <div class="info-group">
                     <span class="info-label">Jours de collecte</span>
-                    <span class="info-value">{{ supplier.collect_days or '—' }}</span>
+                        <span class="info-value">
+                            {% set days_map = {'1':'Lun','2':'Mar','3':'Mer','4':'Jeu','5':'Ven','6':'Sam','7':'Dim'} %}
+
+                            {% if supplier.collect_days %}
+                                {% set mapped = [] %}
+                                {% for d in supplier.collect_days %}
+                                    {% if d in days_map %}
+                                        {% set _ = mapped.append(days_map[d]) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ mapped | join(', ') if mapped else '—' }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">Heure limite</span>

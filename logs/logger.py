@@ -308,9 +308,39 @@ class MongoForwardHandler(logging.Handler):
         )
 
 
+class FilterExtras(logging.Filter):
+    """
+    Génère un filtre pour ajouter les extras de log_type aux enregistrements de log.
+    """
+    def __init__(self, **extras: str):
+        super().__init__()
+        self.extras: dict[str, Any] = extras
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Ajouter le log_type aux extras du record de log"""
+        if not hasattr(record, "extra"):
+            setattr(record, "extra", {})
+        record.extra.setdefault("extra", {})    # type: ignore
+
+        for key, value in self.extras.items():
+            record.extra["extra"].setdefault(key, value)  # type: ignore
+
+        return True
+
 
 # Instance globale (singleton)
 _logger = None  # pylint: disable=invalid-name
+
+
+def setup_logging():
+    """Configure le logging pour l'application."""
+    root_logger = logging.getLogger()
+    # éviter les doublons si reload Uvicorn/Gunicorn
+    if any(isinstance(h, MongoForwardHandler) for h in root_logger.handlers):
+        return
+    handler = MongoForwardHandler(get_logger())
+    root_logger.setLevel(LOG_LEVEL)
+    root_logger.addHandler(handler)
 
 
 def get_logger() -> MongoDBLogger:

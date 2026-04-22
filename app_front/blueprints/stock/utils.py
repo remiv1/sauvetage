@@ -1,7 +1,9 @@
 """Module utils pour le blueprint stock"""
 
+import logging
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from sqlalchemy import select, distinct, text
+
 from app_front.config import db_conf
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
@@ -22,6 +24,8 @@ from db_models.repositories.stock import (
     )
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.tags import TagsRepository
+
+logger = logging.getLogger("stock_utils")
 
 VALUE_TYPE_NBR_MSG = "L'ID de la ligne doit être un nombre entier."
 
@@ -105,16 +109,9 @@ def cancel_supplier_order(
         order_id: L'identifiant de la commande à annuler.
         reservation: True pour supprimer une réservation (vérifie l'état brouillon).
     """
-    try:
-        stock_repo = StockRepository(db_conf.get_main_session())
-        stock_repo.cancel_supplier_order(order_id, reservation=reservation)
-        return True
-    except ValueError as exc:
-        msg = f"Erreur lors de l'annulation : {str(exc)}"
-        raise ValueError(msg) from exc
-    except Exception as exc:
-        msg = f"Erreur inattendue lors de l'annulation : {str(exc)}"
-        raise RuntimeError(msg) from exc
+    stock_repo = StockRepository(db_conf.get_main_session())
+    stock_repo.cancel_supplier_order(order_id, reservation=reservation)
+    return True
 
 
 def create_order_in_db(
@@ -132,7 +129,9 @@ def create_order_in_db(
     try:
         supplier_id = int(supplier_id)
     except ValueError as e:
-        raise ValueError("Le champ fournisseur doit être un nombre entier.") from e
+        msg = f"ID de fournisseur invalide : {form.supplier_id.data}"
+        logger.error(msg)
+        raise ValueError(msg) from e
     stock_repo = StockRepository(db_conf.get_main_session())
     order = OrderIn(
         order_ref="temp",
@@ -154,7 +153,10 @@ def get_order_by_id(order_id: int) -> OrderIn:
         ValueError: Si la commande n'existe pas.
     """
     stock_repo = StockRepository(db_conf.get_main_session())
-    return stock_repo.get_order_by_id(order_id)
+    order = stock_repo.get_order_by_id(order_id)
+    if order is None:
+        raise ValueError(f"Commande avec l'id {order_id} introuvable.")
+    return order
 
 
 def edit_order_in_line_db(
@@ -173,7 +175,9 @@ def edit_order_in_line_db(
     try:
         line_id = int(line_id)
     except ValueError as e:
-        raise ValueError(VALUE_TYPE_NBR_MSG) from e
+        msg = f"ID de ligne invalide : {line_id}"
+        logger.error(msg)
+        raise ValueError(msg) from e
     stock_repo = StockRepository(db_conf.get_main_session())
 
     # Gestion de la suppression d'une ligne de commande
@@ -259,9 +263,19 @@ def get_object_by_id(object_id: int) -> Optional[GeneralObjects]:
 
 
 def toggle_object_active(object_id: int) -> bool:
-    """Bascule le statut actif/inactif d'un objet. Retourne le nouveau statut."""
-    session = db_conf.get_main_session()
-    repo = ObjectsRepository(session)
+    """Bascule le statut actif/inactif d'un objet.
+
+    Args:
+        object_id: L'identifiant de l'objet à activer/désactiver.
+
+    Returns:
+        Le nouveau statut (True = actif, False = inactif).
+
+    Raises:
+        ValueError: si l'objet n'existe pas ou en cas d'erreur de bdd.
+        Le rollback est géré automatiquement par le middleware Flask.
+    """
+    repo = ObjectsRepository(db_conf.get_main_session())
     return repo.toggle_active(object_id)
 
 
@@ -271,14 +285,15 @@ def add_object_to_dilicom(object_id: int, gln13: str) -> Any:
     Returns:
         L'ID de la référence Dilicom créée.
     Raises:
-        ValueError: si l'objet n'existe pas ou n'a pas d'EAN13.
-        RuntimeError: en cas d'erreur lors du commit.
+        ValueError: si l'objet n'existe pas ou n'a pas d'EAN13, ou en cas d'erreur de bdd.
+        Le rollback est géré automatiquement par le middleware Flask.
     """
-    general_object_repo = ObjectsRepository(db_conf.get_main_session())
+    session = db_conf.get_main_session()
+    general_object_repo = ObjectsRepository(session)
     obj = general_object_repo.get_by_ref(object_id)
     if obj is None:
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
-    dilicom_repo = DilicomReferencialRepository(db_conf.get_main_session())
+    dilicom_repo = DilicomReferencialRepository(session)
     dilicom_ref = dilicom_repo.create_status(obj.ean13, gln13, movement="to_create")
     return dilicom_ref
 
@@ -289,14 +304,15 @@ def remove_object_from_dilicom(object_id: int) -> Any:
     Returns:
         L'ID de la référence Dilicom mise à jour.
     Raises:
-        ValueError: si l'objet ou sa référence Dilicom n'existe pas.
-        RuntimeError: en cas d'erreur lors du commit.
+        ValueError: si l'objet ou sa référence Dilicom n'existe pas, ou en cas d'erreur de bdd.
+        Le rollback est géré automatiquement par le middleware Flask.
     """
-    general_object_repo = ObjectsRepository(db_conf.get_main_session())
+    session = db_conf.get_main_session()
+    general_object_repo = ObjectsRepository(session)
     obj = general_object_repo.get_by_ref(object_id)
     if obj is None:
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
-    dilicom_repo = DilicomReferencialRepository(db_conf.get_main_session())
+    dilicom_repo = DilicomReferencialRepository(session)
     existing = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
     if existing is None:
         raise ValueError("Aucun référentiel Dilicom trouvé pour cet objet.")
@@ -313,22 +329,22 @@ def save_object_complete(
 
     Args:
         form: Le formulaire validé contenant les données de l'objet.
+        object_id: L'ID de l'objet à mettre à jour (None pour création).
 
     Returns:
-        L'objet GeneralObjects créé ou mis à jour.
+        L'ID de l'objet GeneralObjects créé ou mis à jour.
 
     Raises:
         ValueError: Si la création ou la mise à jour échoue.
     """
-    session = db_conf.get_main_session()
-    repo = ObjectsRepository(session)
+    repo = ObjectsRepository(db_conf.get_main_session())
+
     if object_id is None:
         obj_id = repo.save_from_form(form)
         return obj_id
 
     general_object = repo.get_by_ref(object_id)
     obj_id = repo.save_from_form(form, instance=general_object)
-
     return obj_id
 
 

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from jinja2 import TemplateError
 from flask import Flask, jsonify, session, request, redirect, url_for, make_response
 from flask.typing import ResponseReturnValue
+from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
 from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
@@ -15,7 +16,7 @@ from app_front.config.flask_conf import (
     BLUEPRINTS,
     setup_logging,
 )
-from app_front.config.db_conf import DATABASE_URL, MONGODB_URL
+from app_front.config.db_conf import DATABASE_URL, MONGODB_URL, _SessionMain
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -54,6 +55,29 @@ def before_request():
     # Sinon, rediriger vers la page de connexion
     print(f"page demandée : {request.path} --> redirection vers login")
     return redirect(url_for("user.login"))
+
+
+@app.teardown_appcontext
+def cleanup_session(exception=None):
+    """Centralise la gestion des sessions : commit/rollback automatique + fermeture"""
+    if exception is not None:
+        logger.error("Exception detected in request context: %s", str(exception))
+        try:
+            _SessionMain.rollback()
+        except SQLAlchemyError as e:
+            logger.error("Error during rollback: %s", str(e))
+    else:
+        # Pas d'erreur : faire le commit automatique
+        try:
+            _SessionMain.commit()
+        except SQLAlchemyError as e:
+            logger.error("Error during commit: %s", str(e))
+            try:
+                _SessionMain.rollback()
+            except SQLAlchemyError:
+                pass
+    # Fermer la session du contexte courant (fonctionne avec scoped_session)
+    _SessionMain.remove()
 
 
 @app.after_request

@@ -180,6 +180,10 @@ class SuppliersRepository(BaseRepository):
             self.session.commit()
         except IntegrityError as e:
             self.session.rollback()
+            logger.error(
+                "Erreur d'intégrité lors du commit en base de données : %s",
+                e.orig
+            )
             raise ValueError(
                 f"Erreur lors du commit en base de données : {e.orig}"
             ) from e

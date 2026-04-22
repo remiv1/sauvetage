@@ -29,3 +29,16 @@ def send_dilicom_order(archives: bool = False):
         return {"status": "success", "message": "Fichiers de retour traités avec succès."}
     except ValueError as e:
         return {"status": "error", "message": str(e)}
+
+@router.post("/post-referencial")
+def post_referencial_dilicom():
+    """
+    Route pour déclencher la création de référentiels Dilicom pour les objets à supprimer
+    ou à créer. C'est une route de test, destinée à être appelée manuellement pour les tests.
+    """
+    ds = DilicomService(session=config.get_main_session())
+    try:
+        ds.send_updates()
+        return {"status": "success", "message": "Référentiel Dilicom créé et déposé avec succès."}
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}

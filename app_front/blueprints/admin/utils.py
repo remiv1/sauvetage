@@ -21,130 +21,103 @@ def get_vat_rates_paginated(
 ) -> Dict[str, Any]:
     """Retourne la liste paginée des taux de TVA."""
     session = db_conf.get_main_session()
-    try:
-        stmt = select(VatRate)
-        if code is not None:
-            stmt = stmt.where(VatRate.code == code)
-        if active_only:
-            stmt = stmt.where(VatRate.date_end.is_(None))
+    stmt = select(VatRate)
+    if code is not None:
+        stmt = stmt.where(VatRate.code == code)
+    if active_only:
+        stmt = stmt.where(VatRate.date_end.is_(None))
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())  # pylint: disable=not-callable
-        total = session.execute(count_stmt).scalar_one()
+    count_stmt = select(func.count()).select_from(stmt.subquery())  # pylint: disable=not-callable
+    total = session.execute(count_stmt).scalar_one()
 
-        offset = (page - 1) * per_page
-        stmt = stmt.order_by(VatRate.code, VatRate.date_start.desc()).offset(offset).limit(per_page)
-        rates = session.execute(stmt).scalars().all()
+    offset = (page - 1) * per_page
+    stmt = stmt.order_by(VatRate.code, VatRate.date_start.desc()).offset(offset).limit(per_page)
+    rates = session.execute(stmt).scalars().all()
 
-        items = [
-            {
-                "id": r.id,
-                "code": r.code,
-                "rate": float(r.rate),
-                "label": r.label,
-                "date_start": r.date_start.strftime("%d/%m/%Y") if r.date_start else "",
-                "date_end": r.date_end.strftime("%d/%m/%Y") if r.date_end else None,
-                "is_active": r.date_end is None,
-            }
-            for r in rates
-        ]
-        return {"items": items, "total": total, "page": page, "per_page": per_page}
-    finally:
-        session.close()
+    items = [
+        {
+            "id": r.id,
+            "code": r.code,
+            "rate": float(r.rate),
+            "label": r.label,
+            "date_start": r.date_start.strftime("%d/%m/%Y") if r.date_start else "",
+            "date_end": r.date_end.strftime("%d/%m/%Y") if r.date_end else None,
+            "is_active": r.date_end is None,
+        }
+        for r in rates
+    ]
+    return {"items": items, "total": total, "page": page, "per_page": per_page}
 
 
 def get_vat_rate_by_id(vat_id: int) -> Optional[Dict[str, Any]]:
     """Retourne un taux de TVA par son identifiant."""
     session = db_conf.get_main_session()
-    try:
-        rate = session.get(VatRate, vat_id)
-        if rate is None:
-            return None
-        return {
-            "id": rate.id,
-            "code": rate.code,
-            "rate": float(rate.rate),
-            "label": rate.label,
-            "date_start": rate.date_start.isoformat() if rate.date_start else "",
-            "date_end": rate.date_end.isoformat() if rate.date_end else None,
-            "is_active": rate.date_end is None,
-        }
-    finally:
-        session.close()
+    rate = session.get(VatRate, vat_id)
+    if rate is None:
+        return None
+    return {
+        "id": rate.id,
+        "code": rate.code,
+        "rate": float(rate.rate),
+        "label": rate.label,
+        "date_start": rate.date_start.isoformat() if rate.date_start else "",
+        "date_end": rate.date_end.isoformat() if rate.date_end else None,
+        "is_active": rate.date_end is None,
+    }
 
 
 def create_vat_rate(data: Dict[str, Any]) -> Dict[str, Any]:
     """Crée un nouveau taux de TVA."""
     session = db_conf.get_main_session()
-    try:
-        # Convertir les datetimes locaux en timezone-aware (UTC)
-        date_start = data["date_start"]
-        if hasattr(date_start, 'replace') and date_start.tzinfo is None:
-            date_start = date_start.replace(tzinfo=timezone.utc)
-        date_end = data.get("date_end")
-        if date_end and hasattr(date_end, 'replace') and date_end.tzinfo is None:
-            date_end = date_end.replace(tzinfo=timezone.utc)
+    # Convertir les datetimes locaux en timezone-aware (UTC)
+    date_start = data["date_start"]
+    if hasattr(date_start, 'replace') and date_start.tzinfo is None:
+        date_start = date_start.replace(tzinfo=timezone.utc)
+    date_end = data.get("date_end")
+    if date_end and hasattr(date_end, 'replace') and date_end.tzinfo is None:
+        date_end = date_end.replace(tzinfo=timezone.utc)
 
-        rate = VatRate(
-            code=int(data["code"]),
-            rate=float(data["rate"]),
-            label=str(data["label"]),
-            date_start=date_start,
-            date_end=date_end,
-        )
-        session.add(rate)
-        session.commit()
-        return {"id": rate.id, "valid": True}
-    except Exception as exc:
-        session.rollback()
-        raise ValueError(str(exc)) from exc
-    finally:
-        session.close()
+    rate = VatRate(
+        code=int(data["code"]),
+        rate=float(data["rate"]),
+        label=str(data["label"]),
+        date_start=date_start,
+        date_end=date_end,
+    )
+    session.add(rate)
+    return {"id": rate.id, "valid": True}
 
 
 def update_vat_rate(vat_id: int, data: Dict[str, Any]) -> bool:
     """Met à jour un taux de TVA existant."""
     session = db_conf.get_main_session()
-    try:
-        rate = session.get(VatRate, vat_id)
-        if rate is None:
-            return False
-        # Convertir les datetimes locaux en timezone-aware (UTC)
-        date_start = data["date_start"]
-        if hasattr(date_start, 'replace') and date_start.tzinfo is None:
-            date_start = date_start.replace(tzinfo=timezone.utc)
-        date_end = data.get("date_end")
-        if date_end and hasattr(date_end, 'replace') and date_end.tzinfo is None:
-            date_end = date_end.replace(tzinfo=timezone.utc)
+    rate = session.get(VatRate, vat_id)
+    if rate is None:
+        return False
+    # Convertir les datetimes locaux en timezone-aware (UTC)
+    date_start = data["date_start"]
+    if hasattr(date_start, 'replace') and date_start.tzinfo is None:
+        date_start = date_start.replace(tzinfo=timezone.utc)
+    date_end = data.get("date_end")
+    if date_end and hasattr(date_end, 'replace') and date_end.tzinfo is None:
+        date_end = date_end.replace(tzinfo=timezone.utc)
 
-        rate.code = int(data["code"])
-        rate.rate = float(data["rate"])
-        rate.label = str(data["label"])
-        rate.date_start = date_start
-        rate.date_end = date_end
-        session.commit()
-        return True
-    except Exception as exc:
-        session.rollback()
-        raise ValueError(str(exc)) from exc
-    finally:
-        session.close()
+    rate.code = int(data["code"])
+    rate.rate = float(data["rate"])
+    rate.label = str(data["label"])
+    rate.date_start = date_start
+    rate.date_end = date_end
+    return True
 
 
 def close_vat_rate(vat_id: int) -> bool:
     """Ferme un taux de TVA en mettant sa date_end à maintenant."""
     session = db_conf.get_main_session()
-    try:
-        rate = session.get(VatRate, vat_id)
-        if rate is None:
-            return False
-        rate.date_end = datetime.now(timezone.utc)
-        session.commit()
-        return True
-    except Exception as exc:
-        session.rollback()
-        raise ValueError(str(exc)) from exc
-    finally:
-        session.close()
+    rate = session.get(VatRate, vat_id)
+    if rate is None:
+        return False
+    rate.date_end = datetime.now(timezone.utc)
+    return True
 
 
 # ── Utilisateurs — via API FastAPI ────────────────────────────────────────────
