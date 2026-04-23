@@ -1,19 +1,17 @@
-version: "3.9"
-
 services:
   db:
     image: mariadb:10.6
     container_name: wp_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wpuser
-      MYSQL_PASSWORD: wppassword
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
     volumes:
-      - db_data:/var/lib/mysql
+      - dbs_data:/var/lib/mysql
     networks:
-      - wpnet
+      - wps_net
 
   wordpress:
     image: wordpress:php8.2-fpm
@@ -22,16 +20,17 @@ services:
     depends_on:
       - db
     env_file:
-      - .env.wordpress
+      - .env
     environment:
-      WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_USER: wpuser
-      WORDPRESS_DB_PASSWORD: wppassword
-      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_HOST: ${WORDPRESS_DB_HOST}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
     volumes:
-      - wp_data:/var/www/html
+      - wp_buyer:/var/www/html/wp-content
+      - wp_core:/var/www/html
     networks:
-      - wpnet
+      - wps_net
 
   webserver:
     image: nginx:alpine
@@ -43,11 +42,14 @@ services:
       - "9080:80"
       - "9443:443"
     volumes:
-      - wp_data:/var/www/html
+      - wp_buyer:/var/www/html/wp-content
+      - type: volume
+        source: wp_core
+        target: /var/www/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:Z
       - ./ssl:/etc/nginx/ssl:Z
     networks:
-      - wpnet
+      - wps_net
 
   backup:
     build:
@@ -59,19 +61,20 @@ services:
       - db
       - wordpress
     env_file:
-      - .env.wordpress
+      - .env
     volumes:
-      - wp_data:/var/www/html:ro
+      - wp_buyer:/var/www/html/wp-content:ro
       - ./backups:/backups
       - ./backup_logs:/var/log/backup
-      - ./.env.wordpress:/etc/backup/.env.wordpress:ro
+      - ./.env:/etc/backup/.env:ro
       - ./ssh:/root/.ssh:ro
     networks:
-      - wpnet
+      - wps_net
 
 volumes:
-  db_data:
-  wp_data:
+  dbs_data:
+  wp_buyer:
+  wp_core:
 
 networks:
-  wpnet:
+  wps_net:
