@@ -34,7 +34,8 @@ database_url = (
 )
 
 # Définir l'URL de la base de données
-config.set_main_option("sqlalchemy.url", database_url)
+# Échapper les '%' présents (ex: dans les mots de passe encodés)
+config.set_main_option("sqlalchemy.url", database_url.replace('%', '%%'))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

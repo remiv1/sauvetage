@@ -7,3 +7,16 @@ http:
       rateLimit:
         average: 100
         burst: 50
+
+    # Bloque toutes les IPs réelles (255.255.255.255/32 n'est jamais une IP source)
+    # Utilisé pour retourner 403 sur les chemins de bots
+    bot-blocker:
+      ipAllowList:
+        sourceRange:
+          - "255.255.255.255/32"
+
+    # Indique aux indexeurs de ne pas référencer ce site
+    no-robots:
+      headers:
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow, noarchive, nosnippet"

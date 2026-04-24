@@ -110,6 +110,25 @@ def home():
     return render_page("home")
 
 
+@app.route("/robots.txt", methods=["GET"])
+def robots_txt():
+    """Indique aux indexeurs de ne pas référencer ce site"""
+    content = "User-agent: *\nDisallow: /\n"
+    response = make_response(content)
+    response.headers["Content-Type"] = "text/plain"
+    return response
+
+
+@app.route("/sitemap.xml", methods=["GET"])
+def sitemap_xml():
+    """Retourne un sitemap vide pour décourager l'indexation"""
+    content = '<?xml version="1.0" encoding="UTF-8"?>\n' + \
+              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n'
+    response = make_response(content)
+    response.headers["Content-Type"] = "application/xml"
+    return response
+
+
 @app.route("/health", methods=["GET"])
 def health():
     """Endpoint de santé pour load balancer"""

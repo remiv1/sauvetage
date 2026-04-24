@@ -42,3 +42,16 @@ def post_referencial_dilicom():
         return {"status": "success", "message": "Référentiel Dilicom créé et déposé avec succès."}
     except ValueError as e:
         return {"status": "error", "message": str(e)}
+
+@router.post("/fetch-returns")
+def fetch_returns_dilicom(archives: bool = False):
+    """
+    Route pour déclencher la récupération des fichiers de retour de Dilicom.
+    C'est une route de test, destinée à être appelée manuellement pour les tests.
+    """
+    ds = DilicomService(session=config.get_main_session())
+    try:
+        ds.fetch_returns(archives=archives)
+        return {"status": "success", "message": "Fichiers de retour récupérés avec succès."}
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}

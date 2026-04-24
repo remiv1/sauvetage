@@ -6,6 +6,8 @@ WHITE_LIST_PREFIXES = [
     "/ready",
     "/user/login",
     "/admin/first-user",
+    "/robots.txt",
+    "/sitemap.xml",
 ]
 WHITE_LIST_SUFFIXES = [
     "/login",
