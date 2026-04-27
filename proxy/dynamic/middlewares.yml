@@ -15,6 +15,13 @@ http:
         sourceRange:
           - "255.255.255.255/32"
 
+    # Limite les tentatives de connexion (5 req/min, burst 10)
+    login-rate-limit:
+      rateLimit:
+        average: 5
+        burst: 10
+        period: 10m
+
     # Indique aux indexeurs de ne pas référencer ce site
     no-robots:
       headers:

@@ -21,7 +21,7 @@ sh /usr/local/bin/generate-certs.sh "$PKI_DIR" server "*.internal,app.internal,a
 echo "[ENTRYPOINT] Verifying certificates..."
 if [ -f "$PKI_DIR/server-cert.pem" ]; then
     echo "[ENTRYPOINT] Certificate found"
-    openssl x509 -in "$PKI_DIR/server-cert.pem" -noout -subject -issuer -dates 2>/dev/null | grep -E "Subject:|Issuer:|Not" || echo "[ENTRYPOINT] Could not read certificate"
+    openssl x509 -in "$PKI_DIR/server-cert.pem" -noout -subject -issuer -dates 2>/dev/null | grep -iE "subject[=:]|issuer[=:]|not(before|after)" || echo "[ENTRYPOINT] Could not read certificate"
 else
     echo "[ENTRYPOINT] ERROR: Certificate not found at $PKI_DIR/server-cert.pem"
     ls -la "$PKI_DIR/"
