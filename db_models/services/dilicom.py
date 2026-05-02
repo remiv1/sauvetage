@@ -8,13 +8,21 @@ from os import getenv
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Sequence, Any, Optional
+from typing import Sequence, Any, Optional, cast
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from dilicom_parser.transport import Connector
 from dilicom_parser.classifier import FilesClassifier
 from dilicom_parser.models import DistributorData, DistributorLineData
 from db_models.objects.stocks import DilicomReferencial
+from db_models.repositories.suppliers import SuppliersRepository, Suppliers
+from onixlib import Notice
+from db_models.repositories.objects import (
+    ObjectsRepository,
+    GeneralObjects,
+    Books,
+    ObjMetadatas,
+)
 from db_models.repositories.suppliers import SuppliersRepository, Suppliers
 
 logger = logging.getLogger("app_back.services.dilicom")
@@ -29,6 +37,8 @@ class DilicomService:
         self.connect = Connector(env_path=".env.dilicom")
         self.classifier: FilesClassifier
         self.parser: list[Any] = []
+        self.objects_repo = ObjectsRepository(self.session)
+        self.supplier_repo = SuppliersRepository(self.session)
 
     def send_updates(self) -> None:
         """
@@ -72,16 +82,25 @@ class DilicomService:
             "Fichiers téléchargés de Dilicom: %s",
             [file.name for file in files_list]
             )
-        self.classifier = FilesClassifier(files_list)
+        self.classifier = FilesClassifier(files_list, streaming_option=True)
         objects_to_merge = self.classifier.classify().parse()
+        books_to_merge = self.classifier.heavy_files
+        total_by_type = self.classifier.count_by_type()
+        total_by_type["books"] = len(books_to_merge)
         logger.info(
             "objets trouvés après classification et parsing: %s",
-            self.classifier.count_by_type()
+            total_by_type.values()
         )
+        if not books_to_merge and not objects_to_merge:
+            message = "Aucun fichier de retour trouvé ou reconnu après classification."
+            logger.warning(message)
+            raise FileNotFoundError(message)
         if not objects_to_merge:
             message = "Aucun type de fichier reconnu dans les fichiers de retour."
             logger.warning(message)
-            raise ValueError(message)
+        elif not books_to_merge:
+            message = "Aucun fichier de type 'books' trouvé dans les fichiers de retour."
+            logger.warning(message)
 
         if "distributor" in objects_to_merge:
             self._update_distributors(objects_to_merge["distributor"])
@@ -89,6 +108,8 @@ class DilicomService:
             self._update_services(objects_to_merge["eancom"])
         if "gencod" in objects_to_merge:
             self._update_services(objects_to_merge["gencod"])
+        if books_to_merge:
+            self._update_books(books_to_merge)
 
         # Suppression des fichiers locaux après traitement
         for file in files_list:
@@ -144,18 +165,73 @@ class DilicomService:
             message = f"Erreur lors de la construction du contenu REFEL: {e}"
             raise RuntimeError(message) from e
 
-    def _update_book_from_return(self, return_data):
+    def _update_books(self, books_list: list[Path]) -> None:
         """
-        Met à jour les informations d'un livre dans la base de données en fonction des données
-        extraites d'un fichier de retour. Cette méthode prend les données extraites du fichier
-        de retour, et met à jour les statuts des commandes, les quantités disponibles, ou toute
-        autre information pertinente dans la base de données.
+        Met à jour les informations des livres dans la base de données en fonction des
+        données extraites d'un fichier de retour de type "books". Cette méthode prend une
+        liste de données de livres, et met à jour les informations correspondantes dans la
+        base de données.
         
         param :
-            - return_data: Les données extraites du fichier de retour pour un livre spécifique.
+            - books_list: liste des données de livres extraites du fichier de retour.
         """
-        m = f"La méthode _update_book_from_return doit être implémentée pour {return_data}."
-        raise NotImplementedError(m)
+        def _deep_getattr(obj: object, attr_path: str, default: str="N/A") -> str | object:
+            for attr in attr_path.split("."):
+                try:
+                    obj = getattr(obj, attr)
+                except AttributeError:
+                    return default
+            return str(obj)
+
+
+        for book_file in books_list:
+            logger.debug(
+                "Traitement du fichier de livres: %s",
+                book_file.name
+            )
+            for product in Notice.parse_full(book_file, version="3.0").products:
+                isbn = _deep_getattr(product, "isbn")
+                title = _deep_getattr(product, "title")
+                supplier_gln = cast(str, _deep_getattr(product, "publisher.gln"))
+                editor_gln = cast(str, _deep_getattr(product, "editor.gln"))
+                description = _deep_getattr(product, "collateral.description")
+                price_ht = cast(float, _deep_getattr(product, "price.ht", default="0.0"))
+                vat_rate = cast(float, _deep_getattr(product, "price.vat_rate", default="0.0"))
+                authors = _deep_getattr(product, "authors")
+                authors = [a.full_name for a in authors if hasattr(a, "full_name")] \
+                                if isinstance(authors, list) \
+                                else []
+                authors_str = ", ".join(authors) if authors else ""
+                logger.debug("Mise à jour du livre avec ISBN %s et titre %s", isbn, title)
+                supplier_match = self.supplier_repo.get_by_gln13(supplier_gln)
+                editor_match = self.supplier_repo.get_by_gln13(editor_gln)
+                vat_rate_id = self.objects_repo.get_vat_rate_id(vat_rate)
+                if not supplier_match or not editor_match:
+                    logger.info("Création d'un nouveau fournisseur %s nécessaire.", supplier_gln)
+                    break
+                supplier_id = supplier_match.id
+                g_o = GeneralObjects(
+                    supplier_id=supplier_id,
+                    general_object_type="book",
+                    ean13=isbn,
+                    name=title,
+                    description=description,
+                    price=float(price_ht),
+                    purchase_price=None,
+                    vat_rate_id=vat_rate_id,
+                    )
+                b = Books(
+                    author=authors_str,
+                    diffuser=supplier_match.name,
+                    editor=editor_match.name,
+                    genre="",
+                    publication_year=None,
+                    pages=None,
+                )
+                metadatas: dict[str, str] = {}
+
+                self.objects_repo.save_or_update_from_object(g_o, b)
+
 
     def _update_distributors(self, distributor_list: list[DistributorData]) -> None:
         """

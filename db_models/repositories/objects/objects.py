@@ -5,11 +5,19 @@ Module pour les dépôts des objets vendus par la librairie. Contient les classe
 """
 
 from typing import Any, Sequence, Optional
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects import GeneralObjects, ObjectTags
+from db_models.objects import (
+    GeneralObjects,
+    Books,
+    OtherObjects,
+    ObjMetadatas,
+    ObjectTags,
+    MediaFiles
+)
+from db_models.objects.vat import VatRate
 
 
 class ObjectsRepository(BaseRepository):
@@ -31,11 +39,11 @@ class ObjectsRepository(BaseRepository):
         self.model = GeneralObjects
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
         # Importations locales pour casser l'import circulaire
-        from .books import BooksRepository  # pylint: disable=import-outside-toplevel
-        from .other_objects import OtherObjectsRepository  # pylint: disable=import-outside-toplevel
-        from .obj_metadatas import ObjMetadatasRepository  # pylint: disable=import-outside-toplevel
-        from .object_tags import ObjectTagsRepository  # pylint: disable=import-outside-toplevel
-        from .media import MediaRepository  # pylint: disable=import-outside-toplevel
+        from .books import BooksRepository
+        from .other_objects import OtherObjectsRepository
+        from .obj_metadatas import ObjMetadatasRepository
+        from .object_tags import ObjectTagsRepository
+        from .media import MediaRepository
 
         self.book_repo = BooksRepository(self.session)
         self.other_object_repo = OtherObjectsRepository(self.session)
@@ -103,6 +111,14 @@ class ObjectsRepository(BaseRepository):
         obj = self.session.execute(stmt).unique().scalar_one_or_none()
         if obj and obj.vat_rate:
             return obj.vat_rate.rate
+        return None
+
+    def get_vat_rate_id(self, vat_rate: float) -> Optional[int]:
+        """Récupère l'id d'un taux de TVA à partir de son taux."""
+        stmt = select(VatRate).where(and_(VatRate.rate == vat_rate, VatRate.date_end == None))  # pylint: disable=singleton-comparison
+        vat_rate_obj = self.session.execute(stmt).scalar_one_or_none()
+        if vat_rate_obj:
+            return vat_rate_obj.id
         return None
 
     def commit_object(self) -> None:
@@ -192,4 +208,53 @@ class ObjectsRepository(BaseRepository):
             parent_instance=instance,
         )
         self.commit_object()
+        return instance.id
+
+    def save_or_update_from_object(
+            self,
+            general_object: GeneralObjects,
+            other_object: Optional[OtherObjects] = None,
+            book: Optional[Books] = None,
+            obj_metadatas: Optional[ObjMetadatas] = None,
+            object_tags: Optional[ObjectTags] = None,
+            media_files: Optional[MediaFiles] = None,
+            ) -> int:
+        """
+        Sauvegarde un objet à partir d'une instance de GeneralObjects complète.
+        Si l'objet a un id, met à jour l'objet existant, sinon en crée un nouveau.
+        """
+        # 1. Récupération éventuelle de l'objet existant
+        instance = self.get_by_ref(general_object.ean13)
+
+        if instance is None:
+            # 2. Création
+            instance = general_object
+            self.session.add(instance)
+        else:
+            # 3. Mise à jour : on copie les champs utiles
+            # (évite merge() qui peut être piégeux)
+            for attr, value in vars(general_object).items():
+                if attr not in ("id", "_sa_instance_state"):
+                    setattr(instance, attr, value)
+
+        # 4. Flush pour obtenir instance.id si nouvel objet
+        self.session.flush()
+
+        # 5. Assignation des relations (SQLAlchemy gère les FK)
+        if book:
+            instance.book = book
+
+        if other_object:
+            instance.other_object = other_object
+
+        if obj_metadatas:
+            instance.obj_metadatas = obj_metadatas
+
+        if object_tags:
+            instance.object_tags = object_tags
+
+        if media_files:
+            instance.media_files = media_files
+
+        # 6. Retour verse l'appelant (id de l'objet créé ou mis à jour)
         return instance.id

@@ -47,6 +47,17 @@ class SuppliersRepository(BaseRepository):
         stmt = select(Suppliers).where(Suppliers.gln13 == gln13)
         return self.session.execute(stmt).scalar_one_or_none()
 
+    def get_by_name(self, name: str) -> "Suppliers | None":
+        """Récupère un fournisseur par son nom.
+        Args:
+            name (str): Le nom du fournisseur à récupérer.
+        Returns:
+            Suppliers | None: Le fournisseur correspondant au nom,
+                             ou None s'il n'existe pas.
+        """
+        stmt = select(Suppliers).where(Suppliers.name == name)
+        return self.session.execute(stmt).scalar_one_or_none()
+
     def search_paginated(
         self,
         *,
