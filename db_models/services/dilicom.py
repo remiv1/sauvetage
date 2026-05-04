@@ -4,28 +4,60 @@ Ce module inclut:
 - La classe `DilicomService` qui encapsule les opérations SFTP avec le serveur de Dilicom.
 """
 
+import re
 from os import getenv
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Sequence, Any, Optional, cast
+from typing import Any, Optional, cast
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from onixlib import Notice, Product
+from onixlib.models.generated.v3_0 import (
+    Extent,
+    Language,
+    Subject,
+    List23,
+    List24,
+    List74,
+)
 from dilicom_parser.transport import Connector
 from dilicom_parser.classifier import FilesClassifier
 from dilicom_parser.models import DistributorData, DistributorLineData
 from db_models.objects.stocks import DilicomReferencial
+from db_models.services.models import Book
 from db_models.repositories.suppliers import SuppliersRepository, Suppliers
-from onixlib import Notice
 from db_models.repositories.objects import (
     ObjectsRepository,
     GeneralObjects,
     Books,
     ObjMetadatas,
 )
-from db_models.repositories.suppliers import SuppliersRepository, Suppliers
+from db_models.repositories.stock.dilicom import DilicomReferencialRepository
 
 logger = logging.getLogger("app_back.services.dilicom")
+
+def _deep_getattr(obj: object, attr_path: str, default: str="N/A") -> str | object:
+    for attr in attr_path.split("."):
+        try:
+            obj = getattr(obj, attr)
+        except AttributeError:
+            return default
+    if isinstance(obj, str):
+        return str(obj).strip()
+    else:
+        return obj
+
+def _build_label_map(enum_cls: type[Any]) -> dict[str, str]:
+    doc = enum_cls.__doc__ or ""
+    pattern = r":cvar\s+([A-Z0-9_]+):\s+(.+)"
+    matches = re.findall(pattern, doc)
+    return {
+        (code.split("_", 1)[1] if code.startswith("VALUE_") else code): label.strip()
+        for code, label in matches
+    }
+
+LANGUAGE_LABEL_MAP = _build_label_map(List74)
 
 class DilicomService:
     """
@@ -39,6 +71,7 @@ class DilicomService:
         self.parser: list[Any] = []
         self.objects_repo = ObjectsRepository(self.session)
         self.supplier_repo = SuppliersRepository(self.session)
+        self.dilicom_referencial_repo = DilicomReferencialRepository(self.session)
 
     def send_updates(self) -> None:
         """
@@ -59,7 +92,7 @@ class DilicomService:
             "Envoi du fichier de mise à jour (REFEL) au serveur de Dilicom avec le nom: %s",
             filename
         )
-        remote_path = str(Path('/I') / filename)
+        remote_path = str(Path('I') / filename)
         with self.connect as server:
             server.upload_from_memory(byte_content, remote_path=remote_path)
             logger.info(
@@ -119,7 +152,7 @@ class DilicomService:
             except (FileNotFoundError, RuntimeError) as e:
                 logger.error("Erreur lors de la suppression du fichier %s: %s", file, e)
 
-    def _update_synced(self, references: Sequence[DilicomReferencial]):
+    def _update_synced(self, references: list[str]) -> None:
         """
         Met à jour le statut de synchronisation des références dans la base de données.
         Cette méthode prend une liste de références, et met à jour leur champ `dilicom_synced`
@@ -129,7 +162,7 @@ class DilicomService:
             - references: La liste des références à mettre à jour.
         """
         for ref in references:
-            ref.dilicom_synced = True
+            self.dilicom_referencial_repo.update_status(ean13=ref)
         self.session.commit()
 
     def _build_refel_content(self, to_file: bool = False) -> str | bool:
@@ -155,7 +188,7 @@ class DilicomService:
                 value_to_return = True
             else:
                 value_to_return = txt_content
-            self._update_synced(unsynced_refs)
+            self._update_synced([ref.ean13 for ref in unsynced_refs])
             logger.info(
                 "Contenu du fichier REFEL construit avec succès. Nombre de références incluses: %d",
                 len(unsynced_refs)
@@ -164,6 +197,101 @@ class DilicomService:
         except Exception as e:
             message = f"Erreur lors de la construction du contenu REFEL: {e}"
             raise RuntimeError(message) from e
+
+    def _get_metadatas_from_onix(self, onix_product: Product) -> dict[str, Optional[str]]:
+        """
+        Extrait les métadonnées pertinentes d'un objet `Product` ONIX pour un produit.
+        Cette méthode prend un objet `Product` représentant un produit ONIX, et extrait les
+        métadonnées nécessaires pour la mise à jour des livres dans la base de données.
+        
+        param :
+            - onix_product: L'objet `Product` ONIX à partir duquel extraire les métadonnées.
+        """
+        metadatas: dict[str, Optional[str]] = {}
+        subjects = cast(list[Subject], _deep_getattr(onix_product, "descriptive.subjects"))
+        s: dict[str, str] = {}
+        l: dict[str, str] = {}
+        for subject in subjects:
+            if not subject:
+                continue
+            k, v = cast(tuple[str, str], subject)
+            s[k] = v
+        metadatas["sujet"] = s.get("20", None)
+        languages = cast(list[Language], _deep_getattr(onix_product, "descriptive.languages"))
+        for language in languages:
+            if not language:
+                continue
+            k, v = cast(tuple[str, str], language)
+            l[k] = v
+        language_code = l.get("01", None)
+        if language_code:
+            metadatas["langue"] = LANGUAGE_LABEL_MAP.get(language_code, language_code)
+        return metadatas
+
+
+    def _get_values_from_onix(self, onix_product: Product) -> Optional[dict[str, Any]]:
+        """
+        Extrait les valeurs pertinentes d'un objet `Notice` ONIX pour un produit.
+        Cette méthode prend un objet `Notice` représentant un produit ONIX, et extrait les
+        informations nécessaires pour la mise à jour des livres dans la base de données.
+        
+        param :
+            - onix_product: L'objet `Notice` ONIX à partir duquel extraire les valeurs.
+        """
+        book = Book(title=cast(str, _deep_getattr(onix_product, "title")))
+        book.isbn = cast(str, _deep_getattr(onix_product, "isbn"))
+        book.title = cast(str, _deep_getattr(onix_product, "title"))
+        book.supplier_gln = cast(str, _deep_getattr(onix_product, "publisher.gln"))
+        book.editor_gln = cast(str, _deep_getattr(onix_product, "editor.gln"))
+        book.description = cast(str, _deep_getattr(onix_product, "collateral.description"))
+        book.price_ht = cast(float, _deep_getattr(onix_product, "price.ht", default="0.0"))
+        book.vat_rate = cast(float, _deep_getattr(onix_product, "price.vat_rate", default="0.0"))
+        authors = _deep_getattr(onix_product, "authors")
+        authors = [a.full_name for a in authors if hasattr(a, "full_name")] \
+                        if isinstance(authors, list) \
+                        else []
+        book.authors = ", ".join(authors) if authors else ""
+        logger.debug("Mise à jour du livre avec ISBN %s et titre %s", book.isbn, book.title)
+        book.supplier = self.supplier_repo.get_by_gln13(book.supplier_gln)
+        book.editor = self.supplier_repo.get_by_gln13(book.editor_gln)
+        book.vat_rate_id = self.objects_repo.get_vat_rate_id(book.vat_rate)
+        book.year = cast(str,_deep_getattr(onix_product, "publishing.publication_date"))[:4]
+        extents = cast(list[Extent], _deep_getattr(onix_product, "_raw.descriptive_detail.extent"))
+        for extent in extents:
+            if extent.extent_type == List23.VALUE_00 and extent.extent_unit == List24.VALUE_03:
+                book.pages = cast(int, _deep_getattr(extent, "extent_value"))
+                break
+        if not book.supplier:
+            logger.info("Création d'un nouveau fournisseur %s nécessaire.", book.supplier_gln)
+            return None
+        if not book.editor:
+            book.editor_name = cast(str, _deep_getattr(onix_product, "editor.name"))
+        supplier_id = book.supplier.id
+        book.supplier_name = book.supplier.name
+        g_o = GeneralObjects(
+            supplier_id=supplier_id,
+            general_object_type="book",
+            ean13=book.isbn,
+            name=book.title,
+            description=book.description,
+            price=float(book.price_ht),
+            vat_rate_id=book.vat_rate_id,
+            )
+        b = Books(
+            author=book.authors,
+            diffuser=book.supplier_name,
+            publication_year=book.year,
+        )
+        if book.pages:
+            b.pages = cast(int, book.pages)
+        if book.editor:
+            b.editor = book.editor.name
+        metadatas = ObjMetadatas(
+            semistructured_data=self._get_metadatas_from_onix(onix_product)
+        )
+
+        return {"general_object": g_o, "book": b, "obj_metadatas": metadatas}
+
 
     def _update_books(self, books_list: list[Path]) -> None:
         """
@@ -175,62 +303,31 @@ class DilicomService:
         param :
             - books_list: liste des données de livres extraites du fichier de retour.
         """
-        def _deep_getattr(obj: object, attr_path: str, default: str="N/A") -> str | object:
-            for attr in attr_path.split("."):
-                try:
-                    obj = getattr(obj, attr)
-                except AttributeError:
-                    return default
-            return str(obj)
-
-
         for book_file in books_list:
             logger.debug(
                 "Traitement du fichier de livres: %s",
                 book_file.name
             )
-            for product in Notice.parse_full(book_file, version="3.0").products:
-                isbn = _deep_getattr(product, "isbn")
-                title = _deep_getattr(product, "title")
-                supplier_gln = cast(str, _deep_getattr(product, "publisher.gln"))
-                editor_gln = cast(str, _deep_getattr(product, "editor.gln"))
-                description = _deep_getattr(product, "collateral.description")
-                price_ht = cast(float, _deep_getattr(product, "price.ht", default="0.0"))
-                vat_rate = cast(float, _deep_getattr(product, "price.vat_rate", default="0.0"))
-                authors = _deep_getattr(product, "authors")
-                authors = [a.full_name for a in authors if hasattr(a, "full_name")] \
-                                if isinstance(authors, list) \
-                                else []
-                authors_str = ", ".join(authors) if authors else ""
-                logger.debug("Mise à jour du livre avec ISBN %s et titre %s", isbn, title)
-                supplier_match = self.supplier_repo.get_by_gln13(supplier_gln)
-                editor_match = self.supplier_repo.get_by_gln13(editor_gln)
-                vat_rate_id = self.objects_repo.get_vat_rate_id(vat_rate)
-                if not supplier_match or not editor_match:
-                    logger.info("Création d'un nouveau fournisseur %s nécessaire.", supplier_gln)
-                    break
-                supplier_id = supplier_match.id
-                g_o = GeneralObjects(
-                    supplier_id=supplier_id,
-                    general_object_type="book",
-                    ean13=isbn,
-                    name=title,
-                    description=description,
-                    price=float(price_ht),
-                    purchase_price=None,
-                    vat_rate_id=vat_rate_id,
-                    )
-                b = Books(
-                    author=authors_str,
-                    diffuser=supplier_match.name,
-                    editor=editor_match.name,
-                    genre="",
-                    publication_year=None,
-                    pages=None,
+            list_ean13: list[str] = []
+            for i, product in enumerate(Notice.parse_full(book_file, version="3.0").products):
+                values = self._get_values_from_onix(product)
+                if values:
+                    g_o = values["general_object"]
+                    b = values["book"]
+                    m = values["obj_metadatas"]
+                else:
+                    logger.warning(
+                        "Eléments manquants pour le livre %s avec les données ONIX du fichier %s,",
+                        i, book_file.name)
+                    continue
+                self.objects_repo.save_or_update_from_object(
+                    general_object=g_o,
+                    book=b,
+                    obj_metadatas=m
                 )
-                metadatas: dict[str, str] = {}
-
-                self.objects_repo.save_or_update_from_object(g_o, b)
+                list_ean13.append(g_o.ean13)
+            self.objects_repo.commit_object()
+            self._update_synced(list_ean13)
 
 
     def _update_distributors(self, distributor_list: list[DistributorData]) -> None:

@@ -232,7 +232,6 @@ class ObjectsRepository(BaseRepository):
             self.session.add(instance)
         else:
             # 3. Mise à jour : on copie les champs utiles
-            # (évite merge() qui peut être piégeux)
             for attr, value in vars(general_object).items():
                 if attr not in ("id", "_sa_instance_state"):
                     setattr(instance, attr, value)

@@ -284,7 +284,20 @@ class MongoForwardHandler(logging.Handler):
     def __init__(self, mongo_logger):
         super().__init__()
         self.mongo_logger = mongo_logger
-        self.setLevel(logging.INFO)
+        level = os.getenv("LOG_LEVEL", "INFO").upper()
+        if level == "DEBUG":
+            self.log_level = logging.DEBUG
+        elif level == "INFO":
+            self.log_level = logging.INFO
+        elif level == "WARNING":
+            self.log_level = logging.WARNING
+        elif level == "ERROR":
+            self.log_level = logging.ERROR
+        elif level == "CRITICAL":
+            self.log_level = logging.CRITICAL
+        else:
+            self.log_level = logging.INFO
+        self.setLevel(self.log_level)
 
     def emit(self, record: logging.LogRecord) -> None:
         """Rediriger le log vers MongoDBLogger"""

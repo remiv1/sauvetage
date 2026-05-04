@@ -251,7 +251,7 @@ def get_dilicom_referencial(
         return None, None
 
     dilicom_repo = DilicomReferencialRepository(session)
-    dilicom_ref = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
+    dilicom_ref = dilicom_repo.get_last_by_ean13(obj.ean13) if obj.ean13 else None
     return dilicom_ref, obj
 
 
@@ -313,7 +313,7 @@ def remove_object_from_dilicom(object_id: int) -> Any:
     if obj is None:
         raise ValueError(f"Objet avec l'id {object_id} introuvable.")
     dilicom_repo = DilicomReferencialRepository(session)
-    existing = dilicom_repo.get_one_by_ean13(obj.ean13) if obj.ean13 else None
+    existing = dilicom_repo.get_last_by_ean13(obj.ean13) if obj.ean13 else None
     if existing is None:
         raise ValueError("Aucun référentiel Dilicom trouvé pour cet objet.")
     dilicom_ref = dilicom_repo.create_status(

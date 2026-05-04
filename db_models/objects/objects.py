@@ -182,14 +182,14 @@ class Books(WorkingBase, QueryMixin):
     )
 
     # Données spécifiques aux livres
-    author: Mapped[str] = mapped_column(String, comment="Auteur du livre")
-    diffuser: Mapped[str] = mapped_column(String, comment="Diffuseur du livre")
-    editor: Mapped[str] = mapped_column(String, comment="Éditeur du livre")
-    genre: Mapped[str] = mapped_column(String, comment="Genre du livre")
+    author: Mapped[str] = mapped_column(String, nullable=True, comment="Auteur du livre")
+    diffuser: Mapped[str] = mapped_column(String, nullable=True, comment="Diffuseur du livre")
+    editor: Mapped[str] = mapped_column(String, nullable=True, comment="Éditeur du livre")
+    genre: Mapped[str] = mapped_column(String, nullable=True, comment="Genre du livre")
     publication_year: Mapped[int] = mapped_column(
-        Integer, comment="Année de publication du livre"
+        Integer, nullable=True, comment="Année de publication du livre"
     )
-    pages: Mapped[int] = mapped_column(Integer, comment="Nombre de pages du livre")
+    pages: Mapped[int] = mapped_column(Integer, nullable=True, comment="Nombre de pages du livre")
 
     # Meta-données de suivi
     created_at: Mapped[datetime] = mapped_column(

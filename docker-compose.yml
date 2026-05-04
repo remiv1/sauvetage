@@ -32,7 +32,6 @@ services:
       - ./app_back/.env.fast
       - ./app_back/.env.dilicom
     volumes:
-      - sauv-documents-back:/home/root/app/documents
       - sauv-dilicom-in:${DILICOM_IN_DIR}:rw,z
       - sauv-dilicom-out:${DILICOM_OUT_DIR}:rw,z
     networks:

@@ -1,8 +1,8 @@
 """first_migration
 
-Revision ID: 3312b31d6cf2
+Revision ID: 8b5c7006b603
 Revises: 
-Create Date: 2026-04-22 05:37:48.174252
+Create Date: 2026-05-04 14:48:32.070180
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3312b31d6cf2'
+revision: str = '8b5c7006b603'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -198,7 +198,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='Identifiant unique du livre'),
     sa.Column('general_object_id', sa.Integer(), nullable=False, comment='Identifiant objet associé'),
     sa.Column('author', sa.String(), nullable=False, comment='Auteur du livre'),
-    sa.Column('diffuser', sa.String(), nullable=False, comment='Diffuseur du livre'),
+    sa.Column('diffuser', sa.String(), nullable=True, comment='Diffuseur du livre'),
     sa.Column('editor', sa.String(), nullable=False, comment='Éditeur du livre'),
     sa.Column('genre', sa.String(), nullable=False, comment='Genre du livre'),
     sa.Column('publication_year', sa.Integer(), nullable=False, comment='Année de publication du livre'),

@@ -9,12 +9,15 @@ Ce module contient toute la logique métier :
     (distributeurs, livres, etc.)
 """
 
+import logging
+from pathlib import Path
 from fastapi import APIRouter
 from app_back.db_connection import config
 from db_models.services.dilicom import DilicomService
 
 
 router = APIRouter(prefix="/background", tags=["dilicom", "background"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/parse-returns")
@@ -53,5 +56,23 @@ def fetch_returns_dilicom(archives: bool = False):
     try:
         ds.fetch_returns(archives=archives)
         return {"status": "success", "message": "Fichiers de retour récupérés avec succès."}
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}
+
+@router.post("/test-book-processing")
+def test_book_processing():
+    """
+    Route pour tester le traitement d'un livre à partir d'un fichier ONIX.
+    C'est une route de test, destinée à être appelée manuellement pour les tests.
+    """
+    ds = DilicomService(session=config.get_main_session())
+    try:
+        # Simuler le traitement d'un livre à partir d'un fichier ONIX
+        ds._update_books([Path("/home/root/app/dilicom_in/489084922.xml")]) # pylint: disable=protected-access
+
+        return {
+            "status": "success",
+            "message": "Traitement du livre testé avec succès.",
+            }
     except ValueError as e:
         return {"status": "error", "message": str(e)}
