@@ -100,6 +100,35 @@ class DilicomService:
                 remote_path,
             )
 
+    def _books_target_path(self, list_path: list[Path]) -> list[Path]:
+        """
+        Génère le chemin de destination pour les fichiers de livres à partir du chemin local.
+        Cette méthode prend un chemin local, et génère le chemin de destination correspondant
+        pour les fichiers de livres à envoyer au serveur de Dilicom.
+        
+        param :
+        path: Le chemin local du fichier de livres.
+        """
+        target_files: list[Path] = []
+        # 1. Nom de base sans axtensions multiples
+        for f in list_path:
+            base = f.name.split(".")[0]
+
+            # 2. Extraction du code numérique
+            m = re.search(r'(\d+)$', base)
+            if not m:
+                raise ValueError(f"Aucun code numérique trouvé dans le nom du fichier: {f.name}")
+            code = m.group(1)
+
+            # 3. Répertoire cible
+            target_dir = f.parent / base
+
+            # 4. Fichier xml final
+            target_file = target_dir / f"{code}.xml"
+            target_files.append(target_file)
+
+        return target_files
+
     def fetch_returns(self, archives: bool = False) -> None:
         """
         Récupère les fichiers de retour du serveur de Dilicom.
@@ -122,8 +151,10 @@ class DilicomService:
         total_by_type["books"] = len(books_to_merge)
         logger.info(
             "objets trouvés après classification et parsing: %s",
-            total_by_type.values()
+            total_by_type
         )
+        # Suppression des extensions de fichiers sur les `books_to_merge` qui ont été extraits
+        books_to_merge = self._books_target_path(books_to_merge)
         if not books_to_merge and not objects_to_merge:
             message = "Aucun fichier de retour trouvé ou reconnu après classification."
             logger.warning(message)
@@ -136,12 +167,28 @@ class DilicomService:
             logger.warning(message)
 
         if "distributor" in objects_to_merge:
+            logger.info(
+                "Mise à jour des distributeurs avec %d entrées à traiter.",
+                len(objects_to_merge["distributor"])
+            )
             self._update_distributors(objects_to_merge["distributor"])
         if "eancom" in objects_to_merge:
+            logger.info(
+                "Mise à jour des services avec %d entrées à traiter.",
+                len(objects_to_merge["eancom"])
+            )
             self._update_services(objects_to_merge["eancom"])
         if "gencod" in objects_to_merge:
+            logger.info(
+                "Mise à jour des services avec %d entrées à traiter.",
+                len(objects_to_merge["gencod"])
+            )
             self._update_services(objects_to_merge["gencod"])
         if books_to_merge:
+            logger.info(
+                "Mise à jour des livres avec %d entrées à traiter.",
+                len(books_to_merge)
+            )
             self._update_books(books_to_merge)
 
         # Suppression des fichiers locaux après traitement

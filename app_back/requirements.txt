@@ -10,3 +10,4 @@ jinja2==3.1.6
 apscheduler==3.11.2
 paramiko==4.0.0
 dilicom-parser>=0.2.8
+onixlib>=0.1.3
