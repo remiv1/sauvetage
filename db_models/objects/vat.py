@@ -30,6 +30,12 @@ class VatRate(WorkingBase, QueryMixin):
         autoincrement=True,
         comment="Identifiant unique du taux de TVA",
     )
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant du taux de TVA dans WooCommerce (si synchronisé)",
+    )
     code: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -64,6 +70,18 @@ class VatRate(WorkingBase, QueryMixin):
             f"<VatRate(id={self.id}, code={self.code}, "
             f"rate={self.rate}%, label={self.label!r})>"
         )
+
+    def to_dict(self) -> dict:
+        """Convertit l'instance en dictionnaire pour une utilisation facile."""
+        return {
+            "id": self.id,
+            "wpwc_id": self.wpwc_id,
+            "code": self.code,
+            "rate": float(self.rate),
+            "label": self.label,
+            "date_start": self.date_start.isoformat(),
+            "date_end": self.date_end.isoformat() if self.date_end else None,
+        }
 
     def is_current(self, at: Optional[datetime] = None) -> bool:
         """Retourne True si ce taux est en vigueur à la date donnée (défaut : maintenant)."""
