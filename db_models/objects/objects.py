@@ -16,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
+from db_models.services.utils import slugify
 
 CASCADE_OPTIONS = "all, delete-orphan"
 GENERAL_OBJECT_PK = "app_schema.general_objects.id"
@@ -32,6 +33,12 @@ class GeneralObjects(WorkingBase, QueryMixin):
         primary_key=True,
         autoincrement=True,
         comment="Identifiant unique de l'objet",
+    )
+    id_wpwc: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant de l'objet dans WooCommerce (si synchronisé)",
     )
 
     # Données de base
@@ -136,25 +143,40 @@ class GeneralObjects(WorkingBase, QueryMixin):
             f"name={self.name}, price={self.price})>"
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire."""
-        return {
-            "id": self.id,
-            "supplier_id": self.supplier_id,
-            "general_object_type": self.general_object_type,
-            "ean13": self.ean13,
-            "name": self.name,
-            "description": self.description,
-            "price": self.price,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "last_inventory_timestamp": (
-                self.last_inventory_timestamp.isoformat()
-                if self.last_inventory_timestamp
-                else None
-            ),
-            "is_active": self.is_active,
-        }
+        if is_woo_commerce:
+            # TODO
+            value_dict: dict[str, Any] = {
+                "name": self.name,
+                "slug": slugify(self.name),
+                "type": "simple",
+                "status": "publish" if self.is_active else "draft",
+                "sku": self.id,
+                "description": self.description,
+                "global_unique_id": self.ean13,
+                "regular_price": str(self.price),
+                "sale_price": str(self.price) if self.price > 0 else None,
+            }
+        else:
+            value_dict = {
+                "id": self.id,
+                "supplier_id": self.supplier_id,
+                "general_object_type": self.general_object_type,
+                "ean13": self.ean13,
+                "name": self.name,
+                "description": self.description,
+                "price": self.price,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+                "last_inventory_timestamp": (
+                    self.last_inventory_timestamp.isoformat()
+                    if self.last_inventory_timestamp
+                    else None
+                ),
+                "is_active": self.is_active,
+            }
+        return value_dict
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GeneralObjects":
@@ -298,6 +320,12 @@ class Tags(WorkingBase, QueryMixin):
         primary_key=True,
         autoincrement=True,
         comment="Identifiant unique du tag",
+    )
+    id_wpwc: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant du tag dans WooCommerce (si synchronisé)",
     )
     name: Mapped[str] = mapped_column(
         String, nullable=False, unique=True, comment="Nom du tag"
@@ -482,6 +510,12 @@ class MediaFiles(WorkingBase, QueryMixin):
         primary_key=True,
         autoincrement=True,
         comment="Identifiant unique du fichier média",
+    )
+    id_wpwc: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant du fichier média dans WooCommerce (si synchronisé)",
     )
     general_object_id: Mapped[int] = mapped_column(
         Integer,

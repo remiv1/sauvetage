@@ -68,7 +68,7 @@ class ObjectsRepository(BaseRepository):
             )
         )
 
-    def get_all(self) -> Sequence["GeneralObjects"]:
+    def get_all(self, only_actives: bool = False) -> Sequence["GeneralObjects"]:
         """
         Récupère tous les objets actifs avec tous les éléments liés :
         (supplier, book, other_object, inventory_movements, obj_metadata, object_tags).
@@ -76,7 +76,8 @@ class ObjectsRepository(BaseRepository):
             List[GeneralObjects]: Une liste de tous les objets actifs avec leurs éléments liés.
         """
         stmt = self._get_global_select()
-
+        if only_actives:
+            stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
         return self.session.execute(stmt).unique().scalars().all()
 
     def get_by_ref(self, reference: str | int) -> "GeneralObjects":
