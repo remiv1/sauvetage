@@ -146,17 +146,17 @@ class GeneralObjects(WorkingBase, QueryMixin):
     def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire."""
         if is_woo_commerce:
-            # TODO
             value_dict: dict[str, Any] = {
                 "name": self.name,
                 "slug": slugify(self.name),
                 "type": "simple",
                 "status": "publish" if self.is_active else "draft",
-                "sku": self.id,
                 "description": self.description,
+                "sku": self.id,
                 "global_unique_id": self.ean13,
                 "regular_price": str(self.price),
                 "sale_price": str(self.price) if self.price > 0 else None,
+                "tax_class": self.vat_rate.name if self.vat_rate else None,
             }
         else:
             value_dict = {
@@ -294,14 +294,18 @@ class OtherObjects(WorkingBase, QueryMixin):
     def __repr__(self) -> str:
         return f"<OtherObject(id={self.id})>"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
         """Convertit l'objet OtherObject en dictionnaire."""
-        return {
-            "id": self.id,
-            "general_object_id": self.general_object_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+        if is_woo_commerce:
+            value_dict = {}
+        else:
+            value_dict = {
+                "id": self.id,
+                "general_object_id": self.general_object_id,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            }
+        return value_dict
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "OtherObjects":
@@ -355,15 +359,21 @@ class Tags(WorkingBase, QueryMixin):
     def __repr__(self) -> str:
         return f"<Tag(id={self.id}, name={self.name})>"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
         """Convertit l'objet Tag en dictionnaire."""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+        if is_woo_commerce:
+            value_dict = {
+                "id": self.id_wpwc,
+            }
+        else:
+            value_dict = {
+                "id": self.id,
+                "name": self.name,
+                "description": self.description,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            }
+        return value_dict
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Tags":
@@ -421,15 +431,21 @@ class ObjectTags(WorkingBase, QueryMixin):
             f"tag_id={self.tag_id})>"
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
         """Convertit l'objet ObjectTag en dictionnaire."""
-        return {
-            "id": self.id,
-            "general_object_id": self.general_object_id,
-            "tag_id": self.tag_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+        if is_woo_commerce:
+            value_dict = {
+                "id": self.tag.id_wpwc,
+            }
+        else:
+            value_dict = {
+                "id": self.id,
+                "general_object_id": self.general_object_id,
+                "tag_id": self.tag_id,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            }
+        return value_dict
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjectTags":
@@ -483,15 +499,21 @@ class ObjMetadatas(WorkingBase, QueryMixin):
             f"<ObjMetadata(id={self.id}, general_object_id={self.general_object_id})>"
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, is_woo_commerce: bool = False) -> Optional[dict[str, Any]]:
         """Convertit l'objet ObjMetadata en dictionnaire."""
-        return {
-            "id": self.id,
-            "general_object_id": self.general_object_id,
-            "semistructured_data": self.semistructured_data,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+        if is_woo_commerce:
+            value_dict = {
+                "meta_data": [{k: v} for k, v in self.semistructured_data.items()]
+                } if self.semistructured_data else None
+        else:
+            value_dict = {
+                "id": self.id,
+                "general_object_id": self.general_object_id,
+                "semistructured_data": self.semistructured_data,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            }
+        return value_dict
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjMetadatas":
@@ -576,3 +598,78 @@ class MediaFiles(WorkingBase, QueryMixin):
     def from_dict(cls, data: Dict[str, Any]) -> "MediaFiles":
         """Crée un objet MediaFile à partir d'un dictionnaire."""
         return cls(**data)
+
+
+class ObjectSyncLog(WorkingBase):
+    """Journal de synchronisation WooCommerce pour les objets, tags, images et TVA."""
+
+    __tablename__ = "object_sync_logs"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Type d'entité synchronisée
+    entity_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Type d'entité : object, tag, picture, vat_rate",
+    )
+    # ID local de l'entité dans la base (nullable pour flexibilité)
+    entity_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="ID local de l'entité dans la base de données",
+    )
+    # ID WooCommerce de l'entité (peut être absent en cas d'erreur)
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="ID de l'entité dans WooCommerce",
+    )
+
+    # Opération effectuée
+    operation: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Opération : create, update, delete",
+    )
+
+    # Résultat de la synchronisation
+    sync_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Statut : success, error",
+    )
+    error_message: Mapped[Optional[str]] = mapped_column(
+        String,
+        nullable=True,
+        comment="Message d'erreur en cas d'échec",
+    )
+
+    # Horodatage
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date et heure de la synchronisation",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ObjectSyncLog(id={self.id}, entity_type={self.entity_type}, "
+            f"entity_id={self.entity_id}, operation={self.operation}, "
+            f"sync_status={self.sync_status})>"
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet ObjectSyncLog en dictionnaire."""
+        return {
+            "id": self.id,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "wpwc_id": self.wpwc_id,
+            "operation": self.operation,
+            "sync_status": self.sync_status,
+            "error_message": self.error_message,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+        }

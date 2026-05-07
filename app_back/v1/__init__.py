@@ -4,3 +4,4 @@ from .user import router as user_router  # type: ignore
 from .inventory import router as inventory_router  # type: ignore
 from .dilicom import dilicom_router  # type: ignore
 from .documents import router as documents_router  # type: ignore
+from .woocommerce import router as woo_commerce_router  # type: ignore

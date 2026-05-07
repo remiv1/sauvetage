@@ -13,6 +13,7 @@ services:
     networks:
       - sauv-network
       - sauv-secure
+      - sauv-wpwc
     depends_on:
       - proxy
       - db-main
@@ -31,12 +32,14 @@ services:
       - ./databases/logs/.env.db_logs
       - ./app_back/.env.fast
       - ./app_back/.env.dilicom
+      - ./app_back/.env.woo
     volumes:
       - sauv-dilicom-in:${DILICOM_IN_DIR}:rw,z
       - sauv-dilicom-out:${DILICOM_OUT_DIR}:rw,z
     networks:
       - sauv-secure
       - sauv-migrations
+      - sauv-wpwc
     depends_on:
       - proxy
       - db-logs
@@ -54,6 +57,7 @@ services:
       - "8443:443"
     networks:
       - sauv-network
+      - sauv-wpwc
     volumes:
       - sauv-traefik-pki:/app/pki:Z
       - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro,Z
@@ -145,3 +149,5 @@ networks:
     driver: bridge
   sauv-migrations:
     driver: bridge
+  sauv-wpwc:
+    external: true
