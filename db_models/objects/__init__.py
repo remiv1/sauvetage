@@ -27,6 +27,7 @@ from .objects import (
     ObjectTags,
     ObjMetadatas,
     MediaFiles,
+    ObjectSyncLog,
 )
 from .vat import VatRate
 from .suppliers import Suppliers
