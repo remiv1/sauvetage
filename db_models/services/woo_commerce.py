@@ -51,33 +51,33 @@ class WCService:
     def __init__(self, session: Session, separated_keys: bool = False):
         self.session = session
         if separated_keys:
-            self.config_read: WooCommerceConfig = load_woocommerce_config(direction="r")
-            self.config_write: WooCommerceConfig = load_woocommerce_config(direction="w")
+            config_read: WooCommerceConfig = load_woocommerce_config(direction="r")
+            config_write: WooCommerceConfig = load_woocommerce_config(direction="w")
             self.api_read: API = API(
-                url=self.config_read.base_url,
-                consumer_key=self.config_read.consumer_key,
-                consumer_secret=self.config_read.consumer_secret,
-                wp_api=self.config_read.wp_api,
-                verify_ssl=self.config_read.verify_ssl,
-                version=self.config_read.version
+                url=config_read.base_url,
+                consumer_key=config_read.consumer_key,
+                consumer_secret=config_read.consumer_secret,
+                wp_api=config_read.wp_api,
+                verify_ssl=config_read.verify_ssl,
+                version=config_read.version
             )
             self.api_write: API = API(
-                url=self.config_write.base_url,
-                consumer_key=self.config_write.consumer_key,
-                consumer_secret=self.config_write.consumer_secret,
-                wp_api=self.config_write.wp_api,
-                verify_ssl=self.config_write.verify_ssl,
-                version=self.config_write.version
+                url=config_write.base_url,
+                consumer_key=config_write.consumer_key,
+                consumer_secret=config_write.consumer_secret,
+                wp_api=config_write.wp_api,
+                verify_ssl=config_write.verify_ssl,
+                version=config_write.version
             )
         else:
-            self.config: WooCommerceConfig = load_woocommerce_config(direction="rw")
+            config: WooCommerceConfig = load_woocommerce_config(direction="rw")
             self.api_read: API = API(
-                url=self.config.base_url,
-                consumer_key=self.config.consumer_key,
-                consumer_secret=self.config.consumer_secret,
-                wp_api=self.config.wp_api,
-                verify_ssl=self.config.verify_ssl,
-                version=self.config.version
+                url=config.base_url,
+                consumer_key=config.consumer_key,
+                consumer_secret=config.consumer_secret,
+                wp_api=config.wp_api,
+                verify_ssl=config.verify_ssl,
+                version=config.version
             )
             self.api_write = self.api_read
         self.object_repo = ObjectsRepository(self.session)

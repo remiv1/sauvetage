@@ -6,6 +6,7 @@ from .other_objects import OtherObjectsRepository  # type: ignore
 from .obj_metadatas import ObjMetadatasRepository  # type: ignore
 from .object_tags import ObjectTagsRepository  # type: ignore
 from .media import MediaRepository  # type: ignore
+from .media_access_token import MediaAccessTokenRepository  # type: ignore
 from db_models.objects import (
     GeneralObjects,
     Books,
@@ -13,4 +14,5 @@ from db_models.objects import (
     ObjMetadatas,
     ObjectTags,
     MediaFiles,
+    MediaAccessToken,
 )

@@ -2,7 +2,8 @@
 
 import logging
 import json
-from flask import Blueprint, make_response, render_template, request, flash
+import os
+from flask import Blueprint, make_response, render_template, request, flash, send_from_directory, abort
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
 )
@@ -28,6 +29,8 @@ bp_stock_htmx_search = Blueprint(
     template_folder="htmx_templates/stock",
 )
 
+logger = logging.getLogger(__name__)
+
 TOGGLE_ACTIVE_MODAL = "htmx_templates/stock/search/toggle_active_modal.html"
 SEARCH_TABLE = "htmx_templates/stock/search/table.html"
 DILICOM_MODAL = "htmx_templates/stock/search/dilicom_modal.html"
@@ -37,6 +40,16 @@ OBJECT_COMPLEMENT = "htmx_templates/stock/search/object_complement.html"
 AUTOCOMPLETE_DROPDOWN = "htmx_templates/stock/search/autocomplete_dropdown.html"
 TAG_AUTOCOMPLETE = "htmx_templates/stock/search/tag_autocomplete_dropdown.html"
 TAG_SELECTED = "htmx_templates/stock/search/tag_selected.html"
+
+_MEDIA_UPLOAD_DIR = os.environ.get("MEDIA_UPLOAD_DIR", "")
+
+
+@bp_stock_htmx_search.get("/media/<path:filename>")
+def serve_media(filename: str):
+    """Sert un fichier média stocké dans le volume partagé."""
+    if not _MEDIA_UPLOAD_DIR:
+        abort(503)
+    return send_from_directory(_MEDIA_UPLOAD_DIR, filename)
 
 
 @bp_stock_htmx_search.get("/cleared")

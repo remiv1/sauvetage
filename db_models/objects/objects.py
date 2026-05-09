@@ -10,7 +10,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     JSON,
-    LargeBinary,
     Boolean,
 )
 from sqlalchemy.orm import relationship, mapped_column, Mapped
@@ -554,11 +553,13 @@ class MediaFiles(WorkingBase, QueryMixin):
     alt_text: Mapped[str] = mapped_column(
         String, nullable=True, comment="Texte alternatif pour le fichier média"
     )
-    file_data: Mapped[bytes] = mapped_column(
-        LargeBinary, nullable=True, comment="Données brutes du fichier média"
-    )
     file_link: Mapped[str] = mapped_column(
-        String, nullable=True, comment="Lien vers le fichier média ext."
+        String,
+        nullable=True,
+        comment="Lien vers le fichier média (URL externe ou nom de fichier local)"
+    )
+    is_local: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="Indique si le fichier est stocké localement sur le volume"
     )
 
     # Meta-données de suivi
@@ -673,3 +674,51 @@ class ObjectSyncLog(WorkingBase):
             "error_message": self.error_message,
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
         }
+
+
+class MediaAccessToken(WorkingBase):
+    """Jeton d'accès temporaire permettant à WooCommerce de télécharger une image.
+
+    Chaque jeton est à usage unique et expire 1 heure après sa création.
+    Le champ ``token`` est le nom du fichier (UUID.webp) stocké sur le volume,
+    ce qui permet à WooCommerce de l'enregistrer sous ce même nom.
+    """
+
+    __tablename__ = "media_access_tokens"
+    __table_args__ = {"schema": "app_schema"}
+
+    token: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        comment="Nom du fichier image (UUID.webp) — sert d'identifiant de jeton",
+    )
+    valid_from: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de création du jeton",
+    )
+    valid_until: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        comment="Date d'expiration du jeton (valid_from + 1 heure)",
+    )
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        comment="Date de consommation du jeton (None = pas encore utilisé)",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<MediaAccessToken(token={self.token}, valid_until={self.valid_until}, "
+            f"used_at={self.used_at})>"
+        )
+
+    def is_valid(self) -> bool:
+        """Retourne True si le jeton est utilisable : non consommé et non expiré."""
+        now = datetime.now(timezone.utc)
+        valid_until = self.valid_until
+        if valid_until.tzinfo is None:
+            valid_until = valid_until.replace(tzinfo=timezone.utc)
+        return self.used_at is None and now <= valid_until
