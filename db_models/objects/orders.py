@@ -1,9 +1,9 @@
 """Module des modèles de données pour les commandes."""
 
-from typing import Any
+from typing import Any, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
+from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
@@ -82,6 +82,7 @@ class Order(WorkingBase, QueryMixin):
     shipments = relationship(
         "Shipment", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
+    sync_logs = relationship("OrderSyncLog", back_populates="order", uselist=True)
 
     def __repr__(self) -> str:
         return (
@@ -114,7 +115,13 @@ class Order(WorkingBase, QueryMixin):
 
 
 class OrderLine(WorkingBase, QueryMixin):
-    """Modèle de données pour une ligne de commande."""
+    """
+    Modèle de données pour une ligne de commande.
+    Chaque ligne de commande correspond à un objet général (livre ou autre) avec une quantité,
+    un prix unitaire, une remise éventuelle et un taux de TVA.
+    Le champ "status" permet de suivre l'état de la ligne : brouillon, partiellement facturée,
+    facturée, partiellement expédiée, expédiée, annulée, retournée.
+    """
 
     __tablename__ = "order_lines"
     __table_args__ = {"schema": "app_schema"}
@@ -218,3 +225,83 @@ def _prevent_non_draft_order_line_delete(
 ) -> None:
     if target.status != "draft":
         raise ValueError("Seules les lignes en brouillon peuvent être supprimées.")
+
+
+class OrderSyncLog(WorkingBase):
+    """Journal de synchronisation WooCommerce pour les commandes."""
+
+    __tablename__ = "order_sync_logs"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    order_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.orders.id"),
+        nullable=False,
+        comment="Commande associée",
+    )
+
+    # Système externe et direction
+    external_id: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="ID de la commande dans le système externe",
+    )
+    external_system: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Système externe : wpwc, …",
+    )
+    sync_direction: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Direction : inbound, outbound",
+    )
+    operation: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Opération : create, update, delete",
+    )
+
+    # Résultat
+    sync_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Statut : success, failed, pending",
+    )
+    error_message: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Message d'erreur en cas d'échec",
+    )
+
+    # Horodatage
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date et heure de la synchronisation",
+    )
+
+    order = relationship("Order", back_populates="sync_logs")
+
+    def __repr__(self) -> str:
+        return (
+            f"<OrderSyncLog(id={self.id}, order_id={self.order_id}, "
+            f"external_system={self.external_system}, operation={self.operation}, "
+            f"sync_status={self.sync_status})>"
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet OrderSyncLog en dictionnaire."""
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "external_id": self.external_id,
+            "external_system": self.external_system,
+            "sync_direction": self.sync_direction,
+            "operation": self.operation,
+            "sync_status": self.sync_status,
+            "error_message": self.error_message,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+        }

@@ -35,6 +35,7 @@ from app_back.v1.schems.inventory import (
 )
 from app_back.db_connection import config
 from db_models.objects import GeneralObjects, InventoryMovements
+from db_models.repositories.stocks.stock import StockRepository
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -134,54 +135,8 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
 
     stock = last inventory + Σ in − Σ out
     """
-
-    def _sum_by_type(mvt_type: str, since: str) -> int:
-        val = session.execute(
-            select(func.coalesce(func.sum(InventoryMovements.quantity), 0)).where(
-                InventoryMovements.general_object_id == general_object_id,
-                InventoryMovements.movement_type == mvt_type,
-                InventoryMovements.movement_timestamp > since,
-            )
-        ).scalar_one()
-        return int(val)
-
-    def _last_inventory() -> int:
-        val = (
-            session.execute(
-                select(InventoryMovements.quantity)
-                .where(
-                    InventoryMovements.general_object_id == general_object_id,
-                    InventoryMovements.movement_type == "inventory",
-                )
-                .order_by(InventoryMovements.movement_timestamp.desc())
-                .limit(1)
-            )
-            .scalars()
-            .first()
-        )
-        return int(val) if val is not None else 0
-
-    def _last_inventory_date() -> str:
-        last = (
-            session.execute(
-                select(InventoryMovements.movement_timestamp)
-                .where(
-                    InventoryMovements.general_object_id == general_object_id,
-                    InventoryMovements.movement_type == "inventory",
-                )
-                .order_by(InventoryMovements.movement_timestamp.desc())
-                .limit(1)
-            )
-            .scalars()
-            .first()
-        )
-        return last.isoformat() if last is not None else "1970-01-01T00:00:00Z"
-
-    inventory_init = _last_inventory()
-    since = _last_inventory_date()
-    entrants = _sum_by_type("in", since=since)
-    sortants = _sum_by_type("out", since=since)
-    return inventory_init + entrants - sortants
+    repo = StockRepository(session)
+    return repo.get_qty_by_id(general_object_id, theorical=True)
 
 
 @router.post(

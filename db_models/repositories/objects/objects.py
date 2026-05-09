@@ -80,7 +80,7 @@ class ObjectsRepository(BaseRepository):
             stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
         return self.session.execute(stmt).unique().scalars().all()
 
-    def get_by_ref(self, reference: str | int) -> "GeneralObjects":
+    def get_by_ref(self, reference: str | int, only_actives: bool = False) -> "GeneralObjects":
         """Récupère un objet par une référence (id ou ean13)."""
         if isinstance(reference, str) and not reference.isdigit():
             stmt = self._get_global_select().where(self.model.ean13 == reference)
@@ -90,6 +90,8 @@ class ObjectsRepository(BaseRepository):
             stmt = self._get_global_select().where(self.model.id == int(reference))
         else:
             raise ValueError("Reference must be an integer id or a string ean13.")
+        if only_actives:
+            stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
     def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
