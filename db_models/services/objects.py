@@ -8,7 +8,6 @@ SQLAlchemy persistants en base de données.
 """
 
 from typing import Any, Iterable, Type
-from sqlalchemy import LargeBinary
 from db_models.objects import GeneralObjects
 
 
@@ -42,10 +41,8 @@ def sync_collection(
             collection.append(obj)
 
         for name, field in entry._fields.items():
-            if name not in ("id", "csrf_token"):
-                value = field.data
-                value = _binary_gestion(value, model_class, name)
-                setattr(obj, name, value)
+            if name not in ("id", "csrf_token", "file_data"):
+                setattr(obj, name, field.data)
 
     # 2. Suppression des objets non retournés
     for obj_id, obj in existing.items():
@@ -53,20 +50,3 @@ def sync_collection(
             collection.remove(obj)
             session.delete(obj)
 
-
-def _binary_gestion(value: Any, model_class: Type[Any], name: str) -> Any:
-    """
-    Gère la conversion d'une valeur de champ de formulaire en données binaires pour les
-    champs de type LargeBinary.
-    - Si value est un objet avec une méthode read() (ex: FileStorage), lit son contenu.
-    - Si value est une chaîne vide, retourne None (pour les champs de fichier vides).
-    - Sinon, retourne la valeur encodée en bytes si c'est une chaîne, ou la valeur telle quelle.
-    """
-    if hasattr(value, "read"):
-        content = value.read()
-        return content if content else None
-    elif isinstance(value, str):
-        col = model_class.__table__.columns.get(name)
-        if col is not None and isinstance(col.type, LargeBinary):
-            value = value.encode("utf-8") if value else None
-    return value

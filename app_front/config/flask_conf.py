@@ -33,6 +33,7 @@ from app_front.blueprints import (
     bp_admin_users,
     bp_admin_logs,
     bp_user,
+    bp_woocommerce,
 )
 from logs.logger import MongoForwardHandler, logging, LOG_LEVEL, get_logger
 
@@ -66,6 +67,7 @@ BLUEPRINTS: List[Blueprint] = [
     bp_admin_users,
     bp_admin_logs,
     bp_user,
+    bp_woocommerce,
 ]
 def setup_logging():
     """Configure le logging pour l'application Flask."""

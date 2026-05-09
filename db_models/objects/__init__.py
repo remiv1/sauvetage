@@ -28,6 +28,7 @@ from .objects import (
     ObjMetadatas,
     MediaFiles,
     ObjectSyncLog,
+    MediaAccessToken,
 )
 from .vat import VatRate
 from .suppliers import Suppliers
