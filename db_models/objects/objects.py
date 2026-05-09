@@ -621,18 +621,30 @@ class ObjectSyncLog(WorkingBase):
         nullable=True,
         comment="ID local de l'entité dans la base de données",
     )
-    # ID WooCommerce de l'entité (peut être absent en cas d'erreur)
-    wpwc_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
+    # ID de l'entité dans le système externe (peut être absent en cas d'erreur)
+    external_id: Mapped[Optional[str]] = mapped_column(
+        String(100),
         nullable=True,
-        comment="ID de l'entité dans WooCommerce",
+        comment="ID de l'entité dans le système externe (ex : WooCommerce)",
+    )
+    # Système externe concerné
+    external_system: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Système externe : wpwc, henrri, …",
+    )
+    # Direction de la synchronisation
+    sync_direction: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Direction : inbound, outbound",
     )
 
     # Opération effectuée
     operation: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        comment="Opération : create, update, delete",
+        comment="Opération : create, update, delete, batch",
     )
 
     # Résultat de la synchronisation
@@ -658,8 +670,8 @@ class ObjectSyncLog(WorkingBase):
     def __repr__(self) -> str:
         return (
             f"<ObjectSyncLog(id={self.id}, entity_type={self.entity_type}, "
-            f"entity_id={self.entity_id}, operation={self.operation}, "
-            f"sync_status={self.sync_status})>"
+            f"entity_id={self.entity_id}, external_system={self.external_system}, "
+            f"operation={self.operation}, sync_status={self.sync_status})>"
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -668,7 +680,9 @@ class ObjectSyncLog(WorkingBase):
             "id": self.id,
             "entity_type": self.entity_type,
             "entity_id": self.entity_id,
-            "wpwc_id": self.wpwc_id,
+            "external_id": self.external_id,
+            "external_system": self.external_system,
+            "sync_direction": self.sync_direction,
             "operation": self.operation,
             "sync_status": self.sync_status,
             "error_message": self.error_message,

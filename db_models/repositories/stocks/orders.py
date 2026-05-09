@@ -14,7 +14,9 @@ from db_models.objects import (
 )
 from db_models.repositories.base_repo import BaseRepository
 
-Order = namedtuple("Order", ["price", "vat_rate", "source", "destination", "movement_type", "notes"])
+Order = namedtuple(
+    "Order", ["price", "vat_rate", "source", "destination", "movement_type", "notes"]
+    )
 
 class OrderRepository(BaseRepository):
     """Dépôt pour le CRUD et le workflow des commandes fournisseurs."""

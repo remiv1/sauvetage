@@ -559,13 +559,18 @@ class CustomerSyncLog(WorkingBase):
     )
 
     # Synchronization details
-    sync_source: Mapped[str] = mapped_column(String(50), nullable=False)  # wpwc, henrri
+    external_system: Mapped[str] = mapped_column(
+        String(50), nullable=False, comment="Système externe : wpwc, henrri, …"
+    )
     sync_direction: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # in/out bound, 2dir
+        String(20), nullable=False, comment="Direction : inbound, outbound"
+    )
     sync_status: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # success, failed, pending
+        String(20), nullable=False, comment="Statut : success, failed, pending"
+    )
+    operation: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment="Opération : create, update, delete"
+    )
 
     # External system info
     external_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -592,7 +597,8 @@ class CustomerSyncLog(WorkingBase):
     def __repr__(self) -> str:
         return (
             f"<CustomerSyncLog(id={self.id}, customer_id={self.customer_id}, "
-            + f"sync_source={self.sync_source}, sync_status={self.sync_status})>"
+            + f"external_system={self.external_system}, operation={self.operation}, "
+            + f"sync_status={self.sync_status})>"
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -600,11 +606,11 @@ class CustomerSyncLog(WorkingBase):
         return {
             "id": self.id,
             "customer_id": self.customer_id,
-            "sync_source": self.sync_source,
+            "external_system": self.external_system,
             "sync_direction": self.sync_direction,
+            "operation": self.operation,
             "sync_status": self.sync_status,
             "external_id": self.external_id,
-            "external_system": self.external_system,
             "fields_synced": self.fields_synced,
             "error_message": self.error_message,
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
@@ -616,11 +622,11 @@ class CustomerSyncLog(WorkingBase):
         """Crée un objet CustomerSyncLog à partir d'un dictionnaire."""
         return cls(
             customer_id=data.get("customer_id", 0),
-            sync_source=data.get("sync_source", ""),
+            external_system=data.get("external_system", ""),
             sync_direction=data.get("sync_direction", "inbound"),
+            operation=data.get("operation", "create"),
             sync_status=data.get("sync_status", "pending"),
             external_id=data.get("external_id"),
-            external_system=data.get("external_system", ""),
             fields_synced=data.get("fields_synced"),
             error_message=data.get("error_message"),
         )
