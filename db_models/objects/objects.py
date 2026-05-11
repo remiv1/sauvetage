@@ -574,7 +574,21 @@ class ObjMetadatas(WorkingBase, QueryMixin):
 
 
 class MediaFiles(WorkingBase, QueryMixin):
-    """Modèle pour les fichiers médias associés aux métadonnées."""
+    """
+    Modèle pour les fichiers médias associés aux métadonnées.
+    Attributs :
+    - id : Identifiant unique du fichier média (clé primaire)
+    - id_wpwc : Identifiant du fichier média dans WooCommerce (nullable, unique)
+    - general_object_id : Identifiant de la métadonnée associée
+    - file_name : Nom du fichier média
+    - file_type : Type du fichier média (ex: image/jpeg)
+    - alt_text : Texte alternatif pour le fichier média
+    - file_link : Lien vers le fichier média (URL externe ou nom de fichier local)
+    - is_local : Indique si le fichier est stocké localement sur le volume
+    - uploaded_at : Date de téléchargement du fichier média
+    - is_principal : Indique si c'est l'image principale
+    - general_object : Relation vers l'objet général associé (relation avec GeneralObjects)
+    """
 
     __tablename__ = "media_files"
     __table_args__ = {"schema": "app_schema"}
