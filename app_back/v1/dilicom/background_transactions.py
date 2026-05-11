@@ -11,7 +11,9 @@ Ce module contient toute la logique métier :
 
 import logging
 from pathlib import Path
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from typing import Annotated
 from app_back.db_connection import config
 from db_models.services.dilicom import DilicomService
 
@@ -21,52 +23,62 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/parse-returns")
-def send_dilicom_order(archives: bool = False):
+def send_dilicom_order(
+    session: Annotated[Session, Depends(config.get_main_session)],
+    archives: bool = False,
+):
     """
     Route pour déclencher la récupération et le traitement des fichiers de retour de Dilicom.
     C'est une route de test, destinée à être appelée manuellement pour les tests.
     """
-    ds = DilicomService(session=config.get_main_session())
     try:
+        ds = DilicomService(session=session)
         ds.fetch_returns(archives=archives)
         return {"status": "success", "message": "Fichiers de retour traités avec succès."}
     except ValueError as e:
         return {"status": "error", "message": str(e)}
 
 @router.post("/post-referencial")
-def post_referencial_dilicom():
+def post_referencial_dilicom(
+    session: Annotated[Session, Depends(config.get_main_session)],
+):
     """
     Route pour déclencher la création de référentiels Dilicom pour les objets à supprimer
     ou à créer. C'est une route de test, destinée à être appelée manuellement pour les tests.
     """
-    ds = DilicomService(session=config.get_main_session())
     try:
+        ds = DilicomService(session=session)
         ds.send_updates()
         return {"status": "success", "message": "Référentiel Dilicom créé et déposé avec succès."}
     except ValueError as e:
         return {"status": "error", "message": str(e)}
 
 @router.post("/fetch-returns")
-def fetch_returns_dilicom(archives: bool = False):
+def fetch_returns_dilicom(
+    session: Annotated[Session, Depends(config.get_main_session)],
+    archives: bool = False,
+):
     """
     Route pour déclencher la récupération des fichiers de retour de Dilicom.
     C'est une route de test, destinée à être appelée manuellement pour les tests.
     """
-    ds = DilicomService(session=config.get_main_session())
     try:
+        ds = DilicomService(session=session)
         ds.fetch_returns(archives=archives)
         return {"status": "success", "message": "Fichiers de retour récupérés avec succès."}
     except ValueError as e:
         return {"status": "error", "message": str(e)}
 
 @router.post("/test-book-processing")
-def test_book_processing():
+def test_book_processing(
+    session: Annotated[Session, Depends(config.get_main_session)],
+):
     """
     Route pour tester le traitement d'un livre à partir d'un fichier ONIX.
     C'est une route de test, destinée à être appelée manuellement pour les tests.
     """
-    ds = DilicomService(session=config.get_main_session())
     try:
+        ds = DilicomService(session=session)
         # Simuler le traitement d'un livre à partir d'un fichier ONIX
         ds._update_books([Path("/home/root/app/dilicom_in/489084922.xml")]) # pylint: disable=protected-access
 

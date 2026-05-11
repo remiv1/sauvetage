@@ -16,8 +16,6 @@ def verify_admin_access() -> bool:
     Vérification d'accès administrateur pour les endpoints sensibles.
     À améliorer avec un vrai système d'authentification (JWT, OAuth, etc.)
     """
-    # Pour l'instant, cette vérification est minimale puisque l'authentification
-    # est gérée côté Flask. Cette fonction peut être améliorée avec un système de token.
     return True
 
 router = APIRouter(
@@ -27,9 +25,11 @@ router = APIRouter(
 
 
 @router.get("/search/{username}")
-def read_users(username: str):
+def read_users(
+    username: str,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
     """Recherche d'un utilisateur par le username."""
-    session = config.get_secure_session()
     stmt = select(Users).where(Users.username == username)
     user = session.execute(stmt).scalar_one_or_none()
     return_dict: Dict[str, Any] = {
@@ -45,9 +45,11 @@ def read_users(username: str):
 
 
 @router.post("/login")
-async def log_user(request: Request,
-                   session: Annotated[Session, Depends(config.get_secure_session)]):
-    """Recherche d'un utilisateur par le username."""
+async def log_user(
+    request: Request,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
+    """Authentification d'un utilisateur par le username."""
     data = await request.json()
     username = data.get("username")
     clear_password = data.get("password")
@@ -76,34 +78,34 @@ async def log_user(request: Request,
 
 
 @router.get("/no-user")
-def exists_first():
+def exists_first(
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
     """Vérifie s'il n'existe aucun utilisateur dans la base de données."""
-    user_obj = UsersRepository(config.get_secure_session())
+    user_obj = UsersRepository(session)
     no_user = user_obj.no_users_exists()
     return {"exists": no_user}
 
 
 @router.post("/create")
-async def create_user(request: Request):
+async def create_user(
+    request: Request,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
     """Création d'un nouvel utilisateur."""
-    # Récupération de la session sécurisée
-    session = config.get_secure_session()
     user_obj = UsersRepository(session)
 
-    # Récupération des données du formulaire
     data = await request.json()
     username = data.get("username")
     email = data.get("email")
     password = data.get("password")
     permissions = data.get("permissions")
 
-    # Vérification de l'existence d'un utilisateur avec le même username
     stmt = select(Users).where(Users.username == username)
     existing_user = session.execute(stmt).scalar_one_or_none()
     if existing_user:
         return {"valid": False, "error": "L'utilisateur existe déjà."}
 
-    # Création du nouvel utilisateur et de son mot de passe
     try:
         new_user = Users(username=username, email=email, permissions=permissions)
         session.add(new_user)
@@ -114,7 +116,6 @@ async def create_user(request: Request):
         del hash_pwd
         session.add(new_password)
         session.commit()
-    # Rollback en cas d'erreur (ex: violation de contrainte) et retour d'une erreur claire
     except (ValueError, TypeError, SQLAlchemyError) as e:
         session.rollback()
         return {
@@ -125,14 +126,17 @@ async def create_user(request: Request):
 
 
 @router.post("/change-password")
-async def change_password(request: Request):
+async def change_password(
+    request: Request,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
     """Change le mot de passe d'un utilisateur spécifique."""
     data = await request.json()
     username = data.get("username")
     old_password = data.get("old_password")
     new_password = data.get("new_password")
 
-    user_obj = UsersRepository(config.get_secure_session())
+    user_obj = UsersRepository(session)
     user = user_obj.get_by_username(username)
     if not user:
         raise ValueError(f"Utilisateur non trouvé : {username}")
@@ -151,14 +155,18 @@ async def change_password(request: Request):
 
 
 @router.post("/modify/{username}")
-async def modify_user(username: str, request: Request):
+async def modify_user(
+    username: str,
+    request: Request,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
     """Modifie les informations d'un utilisateur spécifique."""
     data = await request.json()
     username = unquote(username)
     email = data.get("email")
     permissions = data.get("permissions")
 
-    user_obj = UsersRepository(config.get_secure_session())
+    user_obj = UsersRepository(session)
     user = user_obj.get_by_username(username)
     if not user:
         raise ValueError(f"Utilisateur non trouvé : {username}")
@@ -179,6 +187,7 @@ async def modify_user(username: str, request: Request):
 @router.get("/list")
 def list_users(
     _admin: Annotated[bool, Depends(verify_admin_access)],
+    session: Annotated[Session, Depends(config.get_secure_session)],
     username: Annotated[Optional[str], Query()] = None,
     email: Annotated[Optional[str], Query()] = None,
     permissions: Annotated[Optional[str], Query()] = None,
@@ -188,43 +197,39 @@ def list_users(
     per_page: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
     """Liste paginée des utilisateurs avec filtres."""
-    session = config.get_secure_session()
-    try:
-        stmt = select(Users)
-        if username:
-            stmt = stmt.where(Users.username.ilike(f"%{username}%"))
-        if email:
-            stmt = stmt.where(Users.email.ilike(f"%{email}%"))
-        if permissions:
-            stmt = stmt.where(Users.permissions.contains(permissions))
-        if is_active is not None:
-            stmt = stmt.where(Users.is_active == is_active)
-        if is_locked is not None:
-            stmt = stmt.where(Users.is_locked == is_locked)
+    stmt = select(Users)
+    if username:
+        stmt = stmt.where(Users.username.ilike(f"%{username}%"))
+    if email:
+        stmt = stmt.where(Users.email.ilike(f"%{email}%"))
+    if permissions:
+        stmt = stmt.where(Users.permissions.contains(permissions))
+    if is_active is not None:
+        stmt = stmt.where(Users.is_active == is_active)
+    if is_locked is not None:
+        stmt = stmt.where(Users.is_locked == is_locked)
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())  # pylint: disable=not-callable
-        total = session.execute(count_stmt).scalar_one()
+    count_stmt = select(func.count()).select_from(stmt.subquery())  # pylint: disable=not-callable
+    total = session.execute(count_stmt).scalar_one()
 
-        offset = (page - 1) * per_page
-        stmt = stmt.order_by(Users.username).offset(offset).limit(per_page)
-        users = session.execute(stmt).scalars().all()
+    offset = (page - 1) * per_page
+    stmt = stmt.order_by(Users.username).offset(offset).limit(per_page)
+    users = session.execute(stmt).scalars().all()
 
-        items = [
-            {
-                "id": u.id,
-                "username": u.username,
-                "email": u.email,
-                "permissions": u.permissions,
-                "is_active": u.is_active,
-                "is_locked": u.is_locked,
-                "nb_failed_logins": u.nb_failed_logins,
-                "created_at": u.created_at.isoformat() if u.created_at else None,
-            }
-            for u in users
-        ]
-        return {"items": items, "total": total, "page": page, "per_page": per_page}
-    finally:
-        session.close()
+    items = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "permissions": u.permissions,
+            "is_active": u.is_active,
+            "is_locked": u.is_locked,
+            "nb_failed_logins": u.nb_failed_logins,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        }
+        for u in users
+    ]
+    return {"items": items, "total": total, "page": page, "per_page": per_page}
 
 
 @router.post("/toggle-lock/{username}",
@@ -233,10 +238,13 @@ def list_users(
                  404: {"description": "Utilisateur non trouvé"},
                  400: {"description": "Erreur lors de la modification du verrouillage"},
              })
-def toggle_lock(username: str, _admin=Annotated[bool, Depends(verify_admin_access)]):
+def toggle_lock(
+    username: str,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+    _admin: Annotated[bool, Depends(verify_admin_access)] = True,
+):
     """Bascule le statut de verrouillage d'un utilisateur et réinitialise les tentatives."""
     username = unquote(username)
-    session = config.get_secure_session()
     try:
         user_obj = UsersRepository(session)
         user = user_obj.get_by_username(username)
@@ -252,11 +260,11 @@ def toggle_lock(username: str, _admin=Annotated[bool, Depends(verify_admin_acces
             "is_locked": user.is_locked,
         }
     except (ValueError, TypeError, SQLAlchemyError) as e:
-        message = f"Erreur lors de la modification du verrouillage : {str(e)}"
         session.rollback()
-        raise HTTPException(status_code=400, detail=message) from e
-    finally:
-        session.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Erreur lors de la modification du verrouillage : {str(e)}",
+        ) from e
 
 
 @router.post("/toggle-active/{username}",
@@ -265,10 +273,13 @@ def toggle_lock(username: str, _admin=Annotated[bool, Depends(verify_admin_acces
                  404: {"description": "Utilisateur non trouvé"},
                  400: {"description": "Erreur lors de la modification du statut actif"},
              })
-def toggle_active(username: str, _admin=Annotated[bool, Depends(verify_admin_access)]):
+def toggle_active(
+    username: str,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+    _admin: Annotated[bool, Depends(verify_admin_access)] = True,
+):
     """Bascule le statut actif/inactif d'un utilisateur."""
     username = unquote(username)
-    session = config.get_secure_session()
     try:
         user_obj = UsersRepository(session)
         user = user_obj.get_by_username(username)
@@ -282,8 +293,8 @@ def toggle_active(username: str, _admin=Annotated[bool, Depends(verify_admin_acc
             "is_active": user.is_active,
         }
     except (ValueError, TypeError, SQLAlchemyError) as e:
-        message = f"Erreur lors de la modification du statut actif : {str(e)}"
         session.rollback()
-        raise HTTPException(status_code=400, detail=message) from e
-    finally:
-        session.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Erreur lors de la modification du statut actif : {str(e)}",
+        ) from e
