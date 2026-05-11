@@ -3,7 +3,15 @@
 import logging
 import json
 import os
-from flask import Blueprint, make_response, render_template, request, flash, send_from_directory, abort
+from flask import (
+    Blueprint,
+    make_response,
+    render_template,
+    request,
+    flash,
+    send_from_directory,
+    abort,
+)
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
 )
