@@ -22,7 +22,25 @@ GENERAL_OBJECT_PK = "app_schema.general_objects.id"
 
 
 class GeneralObjects(WorkingBase, QueryMixin):
-    """Modèle pour les objets généraux mis en vente."""
+    """
+    Modèle pour les objets généraux mis en vente.
+    
+    Attributs :
+    - id : Identifiant unique de l'objet (clé primaire)
+    - id_wpwc : Identifiant de l'objet dans WooCommerce (nullable, unique)
+    - supplier_id : Identifiant du fournisseur de l'objet (clé étrangère vers suppliers.id)
+    - general_object_type : Type d'objet (ex: book, other)
+    - ean13 : Code EAN13 de l'objet (unique, non nullable)
+    - name : Nom de l'objet (non nullable)
+    - description : Description de l'objet (nullable)
+    - price : Prix de l'objet (non nullable, valeur par défaut = 0.0)
+    - purchase_price : Prix d'achat de l'objet (nullable, valeur par défaut = 0.0)
+    - vat_rate_id : Code TVA associé à l'objet (nullable, référence la table vat_rates)
+    - created_at : Date de création de l'objet
+    - updated_at : Date de dernière mise à jour de l'objet
+    - last_inventory_timestamp : Dernier inventaire
+    - is_active : Indique si l'objet est actif pour la vente
+    """
 
     __tablename__ = "general_objects"
     __table_args__ = {"schema": "app_schema"}
@@ -184,7 +202,20 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
 
 class Books(WorkingBase, QueryMixin):
-    """Modèle pour les livres mis en vente."""
+    """
+    Modèle pour les livres mis en vente.
+    Attributs :
+    - id : Identifiant unique du livre (clé primaire)
+    - general_object_id : Identifiant de l'objet général associé
+    - author : Auteur du livre
+    - diffuser : Distributeur du livre
+    - editor : Éditeur du livre
+    - genre : Genre du livre
+    - publication_year : Année de publication du livre
+    - pages : Nombre de pages du livre
+    - created_at : Date de création du livre
+    - updated_at : Date de dernière mise à jour du livre
+    """
 
     __tablename__ = "books"
     __table_args__ = {"schema": "app_schema"}
@@ -255,7 +286,14 @@ class Books(WorkingBase, QueryMixin):
 
 
 class OtherObjects(WorkingBase, QueryMixin):
-    """Modèle pour les autres objets mis en vente."""
+    """
+    Modèle pour les autres objets mis en vente.
+    Attributs :
+    - id : Identifiant unique de l'autre objet (clé primaire)
+    - general_object_id : Identifiant de l'objet général associé
+    - created_at : Date de création de l'objet autre
+    - updated_at : Date de dernière mise à jour de l'objet autre
+    """
 
     __tablename__ = "other_objects"
     __table_args__ = {"schema": "app_schema"}
@@ -313,7 +351,22 @@ class OtherObjects(WorkingBase, QueryMixin):
 
 
 class Tags(WorkingBase, QueryMixin):
-    """Modèle pour les tags associés aux objets."""
+    """
+    Modèle pour les tags associés aux objets.
+    Un tag peut être associé à plusieurs objets, et un objet peut avoir plusieurs tags.
+    
+    Attributs :
+    - id : Identifiant unique du tag (clé primaire)
+    - id_wpwc : Identifiant du tag dans WooCommerce (nullable, unique)
+    - name : Nom du tag (unique, non nullable)
+    - description : Description du tag (nullable)
+    - created_at : Date de création du tag (non nullable, valeur par défaut = date actuelle)
+    - updated_at : Date de dernière mise à jour du tag (non nullable,
+                    valeur par défaut = date actuelle,
+                    mise à jour automatique à chaque modification)
+    - object_tags : Relation vers les associations entre objets et tags
+                    (relation bidirectionnelle avec ObjectTags)
+    """
 
     __tablename__ = "tags"
     __table_args__ = {"schema": "app_schema"}
