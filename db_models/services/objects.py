@@ -49,4 +49,3 @@ def sync_collection(
         if obj_id not in received_ids:
             collection.remove(obj)
             session.delete(obj)
-
