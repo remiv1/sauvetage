@@ -3,8 +3,6 @@ Module de services pour l'intégration avec WooCommerce.
 La base de données locale est source unique de vérité pour les produits,
 et WooCommerce est utilisé pour exposer ces produits à l'extérieur.
 
-TODO : implémenter les méthodes.
-
 Le schéma métier est le suivant :
 - Export des produits (dernière version) vers WooCommerce en cas de changements.
 - Récupération des commandes depuis WooCommerce pour traitement dans l'outil local.
@@ -13,21 +11,19 @@ Le schéma métier est le suivant :
 
 import logging
 from typing import Any, Optional, Sequence
-from woocommerce import API
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from db_models.objects.vat import VatRate
-from db_models.objects.objects import MediaFiles
-from db_models.config.woocommerce import WooCommerceConfig, load_woocommerce_config
 from db_models.repositories.objects import ObjectsRepository, GeneralObjects
 from db_models.repositories.tags import TagsRepository, Tags
-from db_models.repositories.sync_log import SyncLogRepository
+from db_models.repositories.objects.media import MediaRepository, MediaFiles
 from db_models.services.utils import slugify
+from db_models.services.woo_commerce.base import WCBase
 
 logger = logging.getLogger(__name__)
 
-class WCService:
+class WCProductsService(WCBase):
     """
     Service pour interagir avec l'API de WooCommerce.
     Ce service gère la connexion à l'API, l'export des produits, la récupération des commandes,
@@ -57,88 +53,18 @@ class WCService:
                 - Session SQLAlchemy pour les opérations de base de données.
             separated_keys (bool):
                 - Indique si des clés séparées sont utilisées pour la lecture et l'écriture.
-                    - Avantages des clés séparées :
-                        - Permet de limiter les permissions de chaque clé.
-                        - Facilite la rotation des clés sans interruption de service.
-                        - Améliore la sécurité en cas de compromission d'une clé.
-                    - Inconvénients des clés séparées :
-                        - Nécessite une configuration plus complexe.
-                        - Peut compliquer le développement et les tests.
         Attributs:
             api_read (API): Instance de l'API WooCommerce pour les opérations de lecture.
             api_write (API): Instance de l'API WooCommerce pour les opérations d'écriture.
             object_repo (ObjectsRepository): Repo pour accéder aux objets locaux.
             tag_repo (TagsRepository): Repo pour accéder aux tags locaux.
+            media_repo (MediaRepository): Repo pour accéder aux médias locaux.
             sync_log_repo (SyncLogRepository): Repo pour enregistrer les logs de synchronisation.
         """
-        self.session = session
-        if separated_keys:
-            config_read: WooCommerceConfig = load_woocommerce_config(direction="r")
-            config_write: WooCommerceConfig = load_woocommerce_config(direction="w")
-            self.api_read: API = API(
-                url=config_read.base_url,
-                consumer_key=config_read.consumer_key,
-                consumer_secret=config_read.consumer_secret,
-                wp_api=config_read.wp_api,
-                verify_ssl=config_read.verify_ssl,
-                version=config_read.version
-            )
-            self.api_write: API = API(
-                url=config_write.base_url,
-                consumer_key=config_write.consumer_key,
-                consumer_secret=config_write.consumer_secret,
-                wp_api=config_write.wp_api,
-                verify_ssl=config_write.verify_ssl,
-                version=config_write.version
-            )
-        else:
-            config: WooCommerceConfig = load_woocommerce_config(direction="rw")
-            self.api_read: API = API(
-                url=config.base_url,
-                consumer_key=config.consumer_key,
-                consumer_secret=config.consumer_secret,
-                wp_api=config.wp_api,
-                verify_ssl=config.verify_ssl,
-                version=config.version
-            )
-            self.api_write = self.api_read
+        super().__init__(session, separated_keys)
         self.object_repo = ObjectsRepository(self.session)
         self.tag_repo = TagsRepository(self.session)
-        self.sync_log_repo = SyncLogRepository(self.session)
-
-    def _log_sync(
-        self,
-        entity_type: str,
-        entity_id: Optional[int],
-        wpwc_id: Optional[int],
-        operation: str,
-        sync_status: str,
-        error_message: Optional[str] = None,
-    ) -> None:
-        """
-        Enregistre une entrée dans le journal de synchronisation WooCommerce.
-        
-        Args:
-            entity_type (str): Type de l'entité synchronisée (wpwc, henrri, ...).
-            entity_id (Optional[int]): ID local de l'entité.
-            wpwc_id (Optional[int]): ID externe WooCommerce de l'entité.
-            operation (str): Type d'opération (create, update, delete).
-            sync_status (str): Statut de la synchronisation (success, failure).
-            error_message (Optional[str]): Message d'erreur en cas d'échec.
-
-        Returns:
-            None
-        """
-        self.sync_log_repo.log_object(
-            entity_type=entity_type,
-            entity_id=entity_id,
-            external_id=str(wpwc_id) if wpwc_id is not None else None,
-            external_system="wpwc",
-            sync_direction="outbound",
-            operation=operation,
-            sync_status=sync_status,
-            error_message=error_message,
-        )
+        self.media_repo = MediaRepository(self.session)
 
     def _build_product_payload(self, product: GeneralObjects) -> dict[str, Any]:
         """
@@ -314,6 +240,51 @@ class WCService:
                 sync_status="success"
             )
 
+    def _apply_picture_returns(
+        self,
+        returns: dict[str, list[dict[str, Any]]],
+        pictures: Sequence[MediaFiles],
+    ) -> None:
+        """Traite les retours batch WooCommerce pour les images."""
+        for item in returns.get("create", []):
+            matching = next(
+                (p for p in pictures if p.file_name == item.get("name")), None
+            )
+            if matching:
+                matching.id_wpwc = int(item["id"])
+            self._log_sync(
+                entity_type="media",
+                entity_id=matching.id if matching else None,
+                wpwc_id=int(item["id"]),
+                operation="create",
+                sync_status="success"
+            )
+        for item in returns.get("update", []):
+            wpwc_id = int(item["id"])
+            matching = next((p for p in pictures if p.id_wpwc == wpwc_id), None)
+            self._log_sync(
+                entity_type="media",
+                entity_id=matching.id if matching else None,
+                wpwc_id=wpwc_id,
+                operation="update",
+                sync_status="success"
+            )
+        for item in returns.get("delete", []):
+            wpwc_id = int(item["id"])
+            local_media = self.session.execute(
+                select(MediaFiles).where(MediaFiles.id_wpwc == wpwc_id)
+            ).scalar_one_or_none()
+            if local_media:
+                local_media.id_wpwc = None
+            self._log_sync(
+                entity_type="media",
+                entity_id=local_media.id if local_media else None,
+                wpwc_id=wpwc_id,
+                operation="delete",
+                sync_status="success"
+            )
+        self.session.commit()
+
     def update_product(self, product_id: int):
         """
         Met à jour ou crée un produit spécifique dans WooCommerce.
@@ -350,7 +321,7 @@ class WCService:
 
         # Gestion des exceptions
         except (RequestException, ValueError) as exc:
-            logger.error(
+            logger.exception(
                 "Erreur lors de la mise à jour du produit %d vers WooCommerce : %s",
                 product_id,
                 exc
@@ -392,7 +363,7 @@ class WCService:
                 self.api_write.post("products/batch", data=data).json()
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.error("Erreur lors de l'export des produits vers WooCommerce : %s", exc)
+            logger.exception("Erreur lors de l'export des produits vers WooCommerce : %s", exc)
             for p in products:
                 self._log_sync(
                     entity_type="object",
@@ -413,21 +384,6 @@ class WCService:
             len(returns.get("delete", [])),
         )
 
-    def get_orders(self):
-        """Récupère les commandes depuis WooCommerce."""
-        # Implémenter la logique pour récupérer les commandes depuis WooCommerce
-        raise NotImplementedError("Méthode get_orders non implémentée")
-
-    def get_customer_info(self, customer_id):
-        """Récupère les informations d'un client depuis WooCommerce."""
-        # Implémenter la logique pour récupérer les informations d'un client depuis WooCommerce
-        raise NotImplementedError("Méthode get_customer_info non implémentée")
-
-    def update_order(self, order_id, status):
-        """Met à jour le statut d'une commande dans WooCommerce."""
-        # Implémenter la logique pour mettre à jour le statut d'une commande dans WooCommerce
-        raise NotImplementedError("Méthode update_order non implémentée")
-
     def export_tags(self) -> None:
         """
         Exporte les tags vers WooCommerce.
@@ -446,7 +402,7 @@ class WCService:
                 self.api_write.post("products/tags/batch", data=data).json()
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.error("Erreur lors de l'export des tags vers WooCommerce : %s", exc)
+            logger.exception("Erreur lors de l'export des tags vers WooCommerce : %s", exc)
             for t in tags:
                 self._log_sync("tag", t.id, t.id_wpwc, "batch", "error", str(exc))
             self.session.commit()
@@ -461,9 +417,36 @@ class WCService:
         )
 
     def export_pictures(self):
-        """Exporte les images vers WooCommerce."""
-        # Implémenter la logique pour exporter les images vers WooCommerce
-        raise NotImplementedError("Méthode export_pictures non implémentée")
+        """
+        Exporte les images vers WooCommerce.
+        - Créations : stocke l'id_wpwc retourné sur l'image locale + trace dans ObjectSyncLog.
+        - Mises à jour : trace uniquement dans ObjectSyncLog.
+        - Suppressions : efface id_wpwc sur l'image locale + trace dans ObjectSyncLog.
+        """
+        pictures = self.media_repo.get_all()
+        if not pictures:
+            logger.info("Aucune image à exporter vers WooCommerce.")
+            return
+        wpwc_pictures: list[dict[str, Any]] = self.api_read.get("media").json()
+        data = self.__diff_pictures(pictures, wpwc_pictures)
+        try:
+            returns: dict[str, list[dict[str, Any]]] = (
+                self.api_write.post("media/batch", data=data).json()
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception("Erreur lors de l'export des images vers WooCommerce : %s", exc)
+            for p in pictures:
+                self._log_sync("media", p.id, p.id_wpwc, "batch", "error", str(exc))
+            self.session.commit()
+            return
+        self._apply_picture_returns(returns, pictures)
+        self.session.commit()
+        logger.info(
+            "Export images terminé. Créés: %d, Mis à jour: %d, Supprimés: %d",
+            len(returns.get("create", [])),
+            len(returns.get("update", [])),
+            len(returns.get("delete", [])),
+        )
 
     def __diff_tags(
             self,
@@ -617,7 +600,7 @@ class WCService:
                 self.api_write.post("taxes/batch", data=data).json()
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.error("Erreur lors de l'export des taux de TVA vers WooCommerce : %s", exc)
+            logger.exception("Erreur lors de l'export des taux de TVA vers WooCommerce : %s", exc)
             for v in vat_rates:
                 self._log_sync(
                     entity_type="vat_rate",

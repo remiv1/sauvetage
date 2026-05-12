@@ -11,7 +11,34 @@ _ALL_DELETE_ORPHAN = "all, delete-orphan"
 
 
 class Order(WorkingBase, QueryMixin):
-    """Modèle de données pour une commande."""
+    """
+    Modèle de données pour une commande.
+    
+    Attr :
+    - id (int) : Identifiant unique de la commande.
+    - reference (str) :
+        Référence de la commande, format "CMD-<YYMM>-00001" ou "RET-<YYMM>-00001".
+    - customer_id (int) : ID du client associé à la commande.
+    - invoice_address_id (int | None) : ID de l'adresse de facturation.
+    - delivery_address_id (int | None) : ID de l'adresse de livraison.
+    - status (str) :
+        Statut de la commande (draft, partial_invoiced, invoiced, partial_shipped,
+        shipped, canceled, returned).
+    - create_source (str) : Source de création de la commande.
+    - created_at (datetime) : Date de création de la commande.
+    - update_source (str | None) : Source de la dernière mise à jour de la commande.
+    - updated_at (datetime) : Date de la dernière mise à jour de la commande.
+    - last_synced_at (datetime | None) :
+        Date de la dernière synchronisation avec un système externe.
+    Relations :
+    - customer : Relation vers le client associé à la commande.
+    - invoice_address : Relation vers l'adresse de facturation.
+    - delivery_address : Relation vers l'adresse de livraison.
+    - order_lines : Relation vers les lignes de commande associées.
+    - invoices : Relation vers les factures associées à la commande.
+    - shipments : Relation vers les expéditions associées à la commande.
+    - sync_logs : Relation vers les logs de synchronisation de la commande.
+    """
 
     __tablename__ = "orders"
     __table_args__ = {"schema": "app_schema"}
@@ -28,7 +55,7 @@ class Order(WorkingBase, QueryMixin):
         Integer,
         ForeignKey("app_schema.customer_addresses.id"),
         nullable=True,
-        comment="Adresse de facturat°",
+        comment="Adresse de facturation",
     )
     delivery_address_id: Mapped[int | None] = mapped_column(
         Integer,
@@ -117,10 +144,24 @@ class Order(WorkingBase, QueryMixin):
 class OrderLine(WorkingBase, QueryMixin):
     """
     Modèle de données pour une ligne de commande.
-    Chaque ligne de commande correspond à un objet général (livre ou autre) avec une quantité,
-    un prix unitaire, une remise éventuelle et un taux de TVA.
-    Le champ "status" permet de suivre l'état de la ligne : brouillon, partiellement facturée,
-    facturée, partiellement expédiée, expédiée, annulée, retournée.
+    Attr :
+    - id (int) : Identifiant unique de la ligne de commande.
+    - order_id (int) : ID de la commande associée.
+    - general_object_id (int) : ID de l'objet général associé à la ligne de commande.
+    - quantity (int) : Quantité commandée.
+    - status (str) : Statut de la ligne de commande (draft, invoiced, shipped, canceled, returned).
+    - unit_price (float) : Prix unitaire HT en euros.
+    - discount (float) : Remise en pourcentage.
+    - vat_rate (float) : Taux de TVA en pourcentage.
+    - create_source (str) : Source de la ligne de commande.
+    - created_at (datetime) : Date de création de la ligne de commande.
+    - update_source (str | None) : Source last MaJ de la ligne de commande.
+    - updated_at (datetime) : Date last MaJ de la ligne de commande.
+    Relations :
+    - order : Relation vers la commande associée à la ligne de commande.
+    - general_object : Relation vers l'objet général associé à la ligne de commande.
+    - invoice_lines : Relation vers les lignes de facture associées à la ligne de commande.
+    - shipment_lines : Relation vers les lignes d'expédition associées à la ligne de commande.
     """
 
     __tablename__ = "order_lines"

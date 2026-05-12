@@ -1,12 +1,15 @@
 """Module de gestion des médias d'objets."""
 
 import os
-from typing import Any, Dict, Optional, List
+import logging
+from typing import Any, Dict, Optional, List, Sequence
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import MediaFiles
 from db_models.services.pictures import read_upload_from_entry, save_picture_to_disk
 
+logger = logging.getLogger(__name__)
 
 class MediaRepository(BaseRepository):
     """
@@ -17,6 +20,13 @@ class MediaRepository(BaseRepository):
         super().__init__(*args, **kwargs)
         self.model = MediaFiles
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
+
+    def get_all(self, general_object_id: Optional[int] = None) -> Sequence[MediaFiles]:
+        """Récupère tous les médias, ou ceux liés à un objet général spécifique."""
+        stmt = select(MediaFiles)
+        if general_object_id is not None:
+            stmt = stmt.filter_by(general_object_id=general_object_id)
+        return self.session.execute(stmt).scalars().all()
 
     def create(self, media_data: Dict[str, Any]) -> MediaFiles:
         """Création d'un objet média à partir des données fournies."""
@@ -189,8 +199,19 @@ class MediaRepository(BaseRepository):
     def _delete_removed(
         self, existing: Dict[str, Any], received_ids: set, collection: Any
     ) -> None:
-        """Supprime les médias présents en base mais absents du formulaire."""
+        """Supprime les médias présents en base mais absents du formulaire.
+
+        Si le média est stocké localement (is_local=True), le fichier physique
+        est également supprimé du volume partagé.
+        """
+        upload_dir = os.environ.get("MEDIA_UPLOAD_DIR", "")
         for obj_id, obj in existing.items():
             if obj_id not in received_ids:
+                if obj.is_local and obj.file_link and upload_dir:
+                    file_path = os.path.join(upload_dir, obj.file_link)
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        logger.warning("Impossible de supprimer le fichier local : %s", file_path)
                 collection.remove(obj)
                 self.session.delete(obj)

@@ -1,6 +1,6 @@
 """Repository pour les opérations sur les clients."""
 
-from typing import Tuple, Sequence, Optional
+from typing import Tuple, Sequence, Optional, Any
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.sql import Select, and_
@@ -13,7 +13,12 @@ from db_models.objects import (
     CustomerMails,
     CustomerPhones,
 )
+from db_models.models.woo.customer.customer_get import WooCustomerGet
 
+UPDATE_FIELDS = {
+    "part": ("civil_title", "first_name", "last_name", "date_of_birth"),
+    "pro": ("company_name", "siret_number", "vat_number"),
+}
 
 class CustomersRepository(BaseRepository):
     """Repository pour les opérations sur les clients."""
@@ -88,6 +93,24 @@ class CustomersRepository(BaseRepository):
 
         return self.session.execute(stmt).scalars().first()
 
+    def get_by_wpwc_id(self, wpwc_customer_id: int, complete: bool = True) -> Customers | None:
+        """Récupère un client en fonction de son ID WooCommerce.
+        Args:
+            wpwc_customer_id (int): L'ID WooCommerce du client à rechercher.
+        Returns:
+            Customers | None: Le client correspondant à l'ID WooCommerce ou None s'il n'existe pas.
+        """
+        if complete:
+            stmt = self._get_complete_query().where(
+                Customers.wpwc_customer_id == wpwc_customer_id
+            )
+        else:
+            stmt = select(Customers).where(
+                Customers.wpwc_customer_id == wpwc_customer_id
+            )
+
+        return self.session.execute(stmt).scalars().first()
+
     def _get_complete_query(self) -> Select[Tuple[Customers]]:
         """
         Récupère un client avec toutes ses relations (emails, phones, etc.) en fonction de son ID.
@@ -104,38 +127,43 @@ class CustomersRepository(BaseRepository):
             selectinload(Customers.phones),
         )
 
+    def _apply_updates(self, target, data, allowed_fields):
+        for field in allowed_fields:
+            if field in data:
+                setattr(target, field, data[field])
+
+
     def update_info(self, customer_id: int, data: dict) -> Customers:
-        """Met à jour les informations principales d'un client (part ou pro).
+        """Met à jour les informations d'un client.
+        Cette méthode permet de mettre à jour les informations d'un client en fonction de son ID.
         Args:
             customer_id (int): L'ID du client à mettre à jour.
-            data (dict): Dictionnaire contenant les champs à modifier.
-                Pour un particulier : civil_title, first_name, last_name, date_of_birth.
-                Pour un professionnel : company_name, siret_number, vat_number.
+            data (dict): Un dictionnaire avec les champs à mettre à jour et leurs nv valeurs.
         Returns:
             Customers: Le client mis à jour.
         Raises:
-            ValueError: Si le client n'existe pas.
+            ValueError: Si le client n'existe pas ou si une erreur survient lors de la mise à jour.
         """
         customer = self.get_by_id(customer_id, complete=True)
         if not customer:
             raise ValueError(f"Client #{customer_id} introuvable.")
 
-        if customer.customer_type == "part" and customer.part:
-            part_fields = ("civil_title", "first_name", "last_name", "date_of_birth")
-            for field in part_fields:
-                if field in data:
-                    setattr(customer.part, field, data[field])
-        elif customer.customer_type == "pro" and customer.pro:
-            pro_fields = ("company_name", "siret_number", "vat_number")
-            for field in pro_fields:
-                if field in data:
-                    setattr(customer.pro, field, data[field])
+        customer_type = customer.customer_type
+        target = getattr(customer, customer_type, None)
+
+        if not target:
+            raise ValueError(f"Le client #{customer_id} n'a pas de données '{customer_type}'.")
+
+        self._apply_updates(target, data, UPDATE_FIELDS[customer_type])
+
         try:
             self.session.commit()
         except Exception as exc:
             self.session.rollback()
             raise ValueError(str(exc)) from exc
+
         return customer
+
 
     def create(self, customer_data: dict) -> Customers:
         """Crée un nouveau client à partir d'un dictionnaire de données.
@@ -172,6 +200,40 @@ class CustomersRepository(BaseRepository):
             raise ValueError(str(exc)) from exc
         return new_customer
 
+    def create_from_woo_commerce(self, wpwc_customer_data: Optional[dict[str, Any]]) -> Customers:
+        """Crée un client à partir des données d'un client WooCommerce.
+        Args:
+            wpwc_customer_data (dict): Un dictionnaire contenant les données du client WooCommerce.
+        Returns:
+            Customers: Le client nouvellement créé.
+        """
+        if not wpwc_customer_data:
+            raise ValueError("Données du client WooCommerce manquantes.")
+        # Création des objets liés en fonction des données WooCommerce
+        woo_customer = WooCustomerGet(**wpwc_customer_data).to_dict_for_erp()
+        cust = Customers(**woo_customer.get("customer", {}))
+        cust_part = CustomerParts(**woo_customer.get("customer_part", {}).values())
+        cust_pro = CustomerPros(**woo_customer.get("customer_pro", {}).values())
+        ad = []
+        for address in woo_customer.get("customer_address", []):
+            ad.append(CustomerAddresses(**address))
+        ph = CustomerPhones(**woo_customer.get("customer_phone", {}))
+        mail = CustomerMails(**woo_customer.get("customer_mail", {}))
+
+        # Association des objets liés au client
+        cust.part = cust_part
+        cust.pro = cust_pro
+        cust.addresses = ad
+        if ph:
+            cust.phones = [ph]
+        cust.emails = [mail]
+        self.session.add(cust)
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
+        return cust
 
 class CustomerAddressesRepository(BaseRepository):
     """Repository pour les opérations sur les adresses des clients."""
