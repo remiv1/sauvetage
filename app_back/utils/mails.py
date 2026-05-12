@@ -10,7 +10,7 @@ from email import encoders
 import smtplib
 from jinja2 import Environment, FileSystemLoader
 from app_back.config.mails import MailConfig
-from . import TEMPLATES_DIR
+from .documents import TEMPLATES_DIR
 
 def send_mail(
     to: List[str],

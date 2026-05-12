@@ -17,7 +17,8 @@ def update_vat_rates(specific: bool = False, specific_name: Optional[str] = None
     Route pour déclencher la mise à jour de tous les taux de TVA ou d'un taux de TVA
     spécifique en fonction du nom fourni.
     """
-    wc_service = WCProductsService(config.get_main_session(),separated_keys=True)
+    session = next(config.get_main_session())
+    wc_service = WCProductsService(session, separated_keys=True)
     if specific and specific_name:
         wc_service.export_vat_rates(name=specific_name)
     else:

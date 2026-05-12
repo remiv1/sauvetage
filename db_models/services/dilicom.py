@@ -197,7 +197,7 @@ class DilicomService:
                 file.unlink()
                 logger.info("Fichier %s supprimé avec succès après traitement.", file.name)
             except (FileNotFoundError, RuntimeError) as e:
-                logger.error("Erreur lors de la suppression du fichier %s: %s", file, e)
+                logger.exception("Erreur lors de la suppression du fichier %s: %s", file, e)
 
     def _update_synced(self, references: list[str]) -> None:
         """
@@ -420,7 +420,7 @@ class DilicomService:
                             directory
                         )
                     except (FileNotFoundError, RuntimeError) as e:
-                        logger.error(
+                        logger.exception(
                             "Erreur lors de la suppression du fichier %s dans le répertoire %s: %s",
                             file.name,
                             directory,

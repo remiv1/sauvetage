@@ -27,7 +27,7 @@ def create_access_token(
     Retourne l'URL publique à communiquer à WooCommerce ainsi que la date
     d'expiration du jeton.
     """
-    session = config.get_main_session()
+    session = next(config.get_main_session())
     repo = MediaAccessTokenRepository(session)
 
     existing = repo.get(filename)
@@ -37,7 +37,7 @@ def create_access_token(
         try:
             token = repo.create(filename)
         except ValueError as exc:
-            logger.error("Erreur création jeton pour %s : %s", filename, exc)
+            logger.exception("Erreur création jeton pour %s : %s", filename, exc)
             raise HTTPException(
                 status_code=500,
                 detail="Erreur interne lors de la création du jeton."
