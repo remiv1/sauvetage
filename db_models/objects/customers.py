@@ -8,15 +8,34 @@ from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
 CUSTOMER_PK = "app_schema.customers.id"
-
+_CASCADE_ALL = "all, delete-orphan"
 
 class Customers(WorkingBase, QueryMixin):
-    """Modèle de base de données pour la table client.
+    """
+    Modèle de base de données pour la table client.
 
     Cette base de données est source unique de vérité.
     Synchronisé avec deux systèmes externes :
     - WordPress/WooCommerce (e-commerce)
     - Henrri (Facturation/Comptabilité)
+
+    Attributs :
+    - id (int) : Identifiant unique du client.
+    - wpwc_id (str | None) : Identifiant du client dans WooCommerce.
+    - henrri_id (str | None) : Identifiant du client dans Henrri.
+    - customer_type (str) : Type de client ("part" ou "pro").
+    - is_active (bool) : Indique si le client est actif ou inactif.
+    - created_at (datetime) : Date de création du client.
+    - updated_at (datetime) : Date de la dernière mise à jour du client.
+    - last_synced_at (datetime | None) : Date de dernière synchronisation avec un système externe.
+    Relations :
+    - part : Relation vers les données spécifiques aux clients particuliers.
+    - pro : Relation vers les données spécifiques aux clients professionnels.
+    - addresses : Relation vers les adresses associées au client.
+    - emails : Relation vers les emails associés au client.
+    - phones : Relation vers les téléphones associés au client.
+    - sync_logs : Relation vers les logs de synchronisation du client.
+    - orders : Relation vers les commandes associées au client.
     """
 
     __tablename__ = "customers"
@@ -64,15 +83,48 @@ class Customers(WorkingBase, QueryMixin):
     )
 
     # Relations avec d'autres tables
-    part = relationship("CustomerParts", back_populates="customer", uselist=False)
-    pro = relationship("CustomerPros", back_populates="customer", uselist=False)
+    part = relationship(
+        "CustomerParts",
+        back_populates="customer",
+        uselist=False,
+        cascade=_CASCADE_ALL,
+        )
+    pro = relationship(
+        "CustomerPros",
+        back_populates="customer",
+        uselist=False,
+        cascade=_CASCADE_ALL,
+        )
     addresses = relationship(
-        "CustomerAddresses", back_populates="customer", uselist=True
+        "CustomerAddresses",
+        back_populates="customer",
+        uselist=True,
+        cascade=_CASCADE_ALL
     )
-    emails = relationship("CustomerMails", back_populates="customer", uselist=True)
-    phones = relationship("CustomerPhones", back_populates="customer", uselist=True)
-    sync_logs = relationship("CustomerSyncLog", back_populates="customer", uselist=True)
-    orders = relationship("Order", back_populates="customer", uselist=True)
+    emails = relationship(
+        "CustomerMails",
+        back_populates="customer",
+        uselist=True,
+        cascade=_CASCADE_ALL
+    )
+    phones = relationship(
+        "CustomerPhones",
+        back_populates="customer",
+        uselist=True,
+        cascade=_CASCADE_ALL
+    )
+    sync_logs = relationship(
+        "CustomerSyncLog",
+        back_populates="customer",
+        uselist=True,
+        cascade=_CASCADE_ALL
+    )
+    orders = relationship(
+        "Order",
+        back_populates="customer",
+        uselist=True,
+        cascade=_CASCADE_ALL
+    )
 
     def __repr__(self) -> str:
         """
@@ -149,7 +201,16 @@ class Customers(WorkingBase, QueryMixin):
 
 
 class CustomerParts(WorkingBase, QueryMixin):
-    """Database model for Customer Parts table."""
+    """
+    Database model for Customer Parts table.
+    Attributs :
+    - id (int) : Identifiant unique de la partie client.
+    - customer_id (int) : Identifiant du client associé.
+    - civil_title (str | None) : Civilité (ex: M., Mme, Dr).
+    - first_name (str) : Prénom du client.
+    - last_name (str) : Nom du client.
+    - date_of_birth (datetime | None) : Date de naissance du client.
+    """
 
     __tablename__ = "customer_parts"
     __table_args__ = {"schema": "app_schema"}
@@ -352,6 +413,32 @@ class CustomerAddresses(WorkingBase, QueryMixin):
             + f"address_name={self.address_name}, "
             + f"address_line1={self.address_line1}, address_line2={self.address_line2}, "
             + f"city={self.city}, country={self.country})>"
+        )
+
+    def __hash__(self) -> int:
+        return hash((
+            self.customer_id,
+            self.address_name,
+            self.address_line1,
+            self.address_line2,
+            self.city,
+            self.state,
+            self.postal_code,
+            self.country,
+        ))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CustomerAddresses):
+            return False
+        return (
+            self.customer_id == other.customer_id
+            and self.address_name == other.address_name
+            and self.address_line1 == other.address_line1
+            and self.address_line2 == other.address_line2
+            and self.city == other.city
+            and self.state == other.state
+            and self.postal_code == other.postal_code
+            and self.country == other.country
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -559,19 +646,21 @@ class CustomerSyncLog(WorkingBase):
     )
 
     # Synchronization details
-    sync_source: Mapped[str] = mapped_column(String(50), nullable=False)  # wpwc, henrri
     sync_direction: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # in/out bound, 2dir
+        String(20), nullable=False, comment="Direction : inbound, outbound"
+    )
     sync_status: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # success, failed, pending
+        String(20), nullable=False, comment="Statut : success, failed, pending"
+    )
+    operation: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment="Opération : create, update, delete"
+    )
 
     # External system info
     external_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     external_system: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )  # wordpress, henrri
+        String(50), nullable=False, comment="Système externe : wpwc, henrri, …"
+    )
 
     # Sync details
     fields_synced: Mapped[str | None] = mapped_column(
@@ -592,7 +681,8 @@ class CustomerSyncLog(WorkingBase):
     def __repr__(self) -> str:
         return (
             f"<CustomerSyncLog(id={self.id}, customer_id={self.customer_id}, "
-            + f"sync_source={self.sync_source}, sync_status={self.sync_status})>"
+            + f"external_system={self.external_system}, operation={self.operation}, "
+            + f"sync_status={self.sync_status})>"
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -600,11 +690,11 @@ class CustomerSyncLog(WorkingBase):
         return {
             "id": self.id,
             "customer_id": self.customer_id,
-            "sync_source": self.sync_source,
+            "external_system": self.external_system,
             "sync_direction": self.sync_direction,
+            "operation": self.operation,
             "sync_status": self.sync_status,
             "external_id": self.external_id,
-            "external_system": self.external_system,
             "fields_synced": self.fields_synced,
             "error_message": self.error_message,
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
@@ -616,11 +706,11 @@ class CustomerSyncLog(WorkingBase):
         """Crée un objet CustomerSyncLog à partir d'un dictionnaire."""
         return cls(
             customer_id=data.get("customer_id", 0),
-            sync_source=data.get("sync_source", ""),
+            external_system=data.get("external_system", ""),
             sync_direction=data.get("sync_direction", "inbound"),
+            operation=data.get("operation", "create"),
             sync_status=data.get("sync_status", "pending"),
             external_id=data.get("external_id"),
-            external_system=data.get("external_system", ""),
             fields_synced=data.get("fields_synced"),
             error_message=data.get("error_message"),
         )

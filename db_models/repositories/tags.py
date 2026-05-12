@@ -1,6 +1,7 @@
 """Module de gestion des tags associés aux objets ou non"""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import Tags
@@ -14,6 +15,13 @@ class TagsRepository(BaseRepository):
         self.model = Tags
         # Récupération dynamique des colonnes du modèle
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
+
+    def get_all(self, only_actives: bool = False) -> Sequence[Tags]:
+        """Récupère tous les tags, avec une option pour ne récupérer que les actifs."""
+        stmt = select(Tags)
+        if only_actives:
+            stmt = stmt.where(Tags.active == True)  # pylint: disable=singleton-comparison
+        return self.session.execute(stmt).scalars().all()
 
     def create(self, data: Dict[str, Any]) -> Tags:
         """Créer un tag"""

@@ -2,6 +2,7 @@
 Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilisées par les
 routes du blueprint stock.
 """
+from datetime import datetime, timezone
 from sqlalchemy import select, func
 from db_models.objects import InventoryMovements
 from db_models.objects.objects import GeneralObjects
@@ -11,7 +12,8 @@ from db_models.repositories.base_repo import BaseRepository
 
 
 class StockRepository(BaseRepository):
-    """Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilisées par les
+    """
+    Dépôt de fonctions de gestion des stocks (commandes, mouvements, etc.) utilisées par les
     routes du blueprint stock.
     """
     def get_zero_price_items(self) -> list[dict]:
@@ -62,8 +64,61 @@ class StockRepository(BaseRepository):
         ]
 
 
+    def get_qty_by_id(self, general_object_id: int, theorical: bool = False) -> int:
+        """
+        Récupère la quantité en stock d'un article à partir de son ID.
+        """
+        def _last_inventory() -> tuple[int, datetime]:
+            """
+            Récupère la quantité et le timestamp du dernier mouvement d'inventaire pour l'article.
+            Si aucun mouvement d'inventaire n'existe, retourne (0, epoch).
+            """
+            stmt = (
+                select(
+                    InventoryMovements
+                ).where(
+                    InventoryMovements.general_object_id == general_object_id,
+                    InventoryMovements.movement_type == "inventory",
+                ).order_by(InventoryMovements.movement_timestamp.desc())
+                .limit(1)
+            )
+            result = self.session.execute(stmt).scalar_one_or_none()
+            if result is None:
+                return 0, datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+            return result.quantity, result.movement_timestamp
+
+        def _sum_by_type(movement_type: str, since: datetime) -> int:
+            """
+            Calcule la somme des quantités pour un type de mouvement donné depuis une date.
+            arguments:
+                movement_type: "in", "out" ou "reserved"
+                since: datetime à partir duquel calculer la somme
+            retourne:
+                Somme des quantités pour le type de mouvement depuis la date donnée
+            """
+            stmt = (
+                select(
+                    func.coalesce(func.sum(InventoryMovements.quantity), 0)
+                ).where(
+                    InventoryMovements.general_object_id == general_object_id,
+                    InventoryMovements.movement_type == movement_type,
+                    InventoryMovements.movement_timestamp >= since,
+                )
+            )
+            return self.session.execute(stmt).scalar_one()
+
+        qty, timestamp = _last_inventory()
+        qty += _sum_by_type("in", timestamp)
+        qty -= _sum_by_type("out", timestamp)
+        if not theorical:
+            qty -= _sum_by_type("reserved", timestamp)
+
+        return qty
+
+
     def update_movement_price(self, movement_id: int, price: float) -> int:
-        """Crée un nouveau mouvement d'inventaire en dupliquant le mouvement
+        """
+        Crée un nouveau mouvement d'inventaire en dupliquant le mouvement
         d'origine et en y appliquant le nouveau prix de revient.
 
         Le mouvement original reste inchangé (traçabilité).

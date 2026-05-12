@@ -33,7 +33,7 @@ from db_models.repositories.objects import (
     Books,
     ObjMetadatas,
 )
-from db_models.repositories.stock.dilicom import DilicomReferencialRepository
+from db_models.repositories.stocks.dilicom import DilicomReferencialRepository
 
 logger = logging.getLogger("app_back.services.dilicom")
 

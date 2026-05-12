@@ -103,7 +103,8 @@ def run_startup_tasks(timeout: int = 300) -> None:
             print(f"[migrations] Migration users terminée (code={ret_users[0]})")
 
             # Initialisation des données de référence (TVA, etc.)
-            ensure_vat(db_config.get_main_session())
+            with db_config.main_session_ctx() as session:
+                ensure_vat(session)
             print("[migrations] Données de référence initialisées")
 
             # Libération explicite du lock
@@ -124,7 +125,8 @@ def run_startup_tasks(timeout: int = 300) -> None:
         print("[migrations] Fallback — tentative de migration sans verrou")
         _run_alembic(MAIN["command"], timeout=timeout)
         _run_alembic(SECURE["command"], timeout=timeout)
-        ensure_vat(db_config.get_main_session())
+        with db_config.main_session_ctx() as session:
+            ensure_vat(session)
     finally:
         if conn:
             conn.close()

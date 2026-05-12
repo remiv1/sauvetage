@@ -15,9 +15,11 @@ import re
 import threading
 from datetime import datetime, timezone
 from typing import Dict, List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+from typing import Annotated
 from app_back.v1.schems.inventory import (
     ParseRequest,
     ParseResponse,
@@ -33,6 +35,7 @@ from app_back.v1.schems.inventory import (
 )
 from app_back.db_connection import config
 from db_models.objects import GeneralObjects, InventoryMovements
+from db_models.repositories.stocks.stock import StockRepository
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -87,7 +90,10 @@ def _unique_preserve_order(items: List[str]) -> List[str]:
         500: {"description": "Erreur serveur lors de la récupération des EAN13 connus"},
     },
 )
-def parse_ean13(payload: ParseRequest) -> ParseResponse:
+def parse_ean13(
+    payload: ParseRequest,
+    session: Annotated[Session, Depends(config.get_main_session)],
+) -> ParseResponse:
     """
     Normalise le texte brut et classifie chaque EAN13 en connu/inconnu.
     """
@@ -99,20 +105,9 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
     if inventory_type == "partial" and not category:
         message = "category est requise pour un inventaire partiel"
         raise HTTPException(status_code=400, detail=message)
-    inventory_type = payload.inventory_type
-    category = payload.category
-    if inventory_type not in {"complete", "partial", "single"}:
-        message = "inventory_type doit être 'complete', 'partial' ou 'single'"
-        raise HTTPException(status_code=400, detail=message)
-    if inventory_type == "partial" and not category:
-        message = "category est requise pour un inventaire partiel"
-        raise HTTPException(status_code=400, detail=message)
     eans = _normalize_ean13(payload.raw)
     unique_eans = _unique_preserve_order(eans)
 
-    # Récupération des EAN13 connus en base selon le type d'inventaire
-    # Récupération des EAN13 connus en base selon le type d'inventaire
-    session = config.get_main_session()
     if inventory_type in {"partial", "single"}:
         stmt = select(GeneralObjects.ean13).where(GeneralObjects.ean13.in_(unique_eans))
     else:
@@ -122,17 +117,7 @@ def parse_ean13(payload: ParseRequest) -> ParseResponse:
     except Exception as exc:
         message = f"Erreur lors de la récupération des EAN13 connus : {exc}"
         raise RuntimeError(message) from exc
-    if inventory_type in {"partial", "single"}:
-        stmt = select(GeneralObjects.ean13).where(GeneralObjects.ean13.in_(unique_eans))
-    else:
-        stmt = select(GeneralObjects.ean13)
-    try:
-        known_eans = set(session.execute(stmt).scalars().all())
-    finally:
-        session.close()
 
-    known = [ean for ean in unique_eans if ean in known_eans]
-    unknown = [ean for ean in unique_eans if ean not in known_eans]
     known = [ean for ean in unique_eans if ean in known_eans]
     unknown = [ean for ean in unique_eans if ean not in known_eans]
     return ParseResponse(ean13=eans, unknown=unknown, known=known)
@@ -150,54 +135,8 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
 
     stock = last inventory + Σ in − Σ out
     """
-
-    def _sum_by_type(mvt_type: str, since: str) -> int:
-        val = session.execute(
-            select(func.coalesce(func.sum(InventoryMovements.quantity), 0)).where(
-                InventoryMovements.general_object_id == general_object_id,
-                InventoryMovements.movement_type == mvt_type,
-                InventoryMovements.movement_timestamp > since,
-            )
-        ).scalar_one()
-        return int(val)
-
-    def _last_inventory() -> int:
-        val = (
-            session.execute(
-                select(InventoryMovements.quantity)
-                .where(
-                    InventoryMovements.general_object_id == general_object_id,
-                    InventoryMovements.movement_type == "inventory",
-                )
-                .order_by(InventoryMovements.movement_timestamp.desc())
-                .limit(1)
-            )
-            .scalars()
-            .first()
-        )
-        return int(val) if val is not None else 0
-
-    def _last_inventory_date() -> str:
-        last = (
-            session.execute(
-                select(InventoryMovements.movement_timestamp)
-                .where(
-                    InventoryMovements.general_object_id == general_object_id,
-                    InventoryMovements.movement_type == "inventory",
-                )
-                .order_by(InventoryMovements.movement_timestamp.desc())
-                .limit(1)
-            )
-            .scalars()
-            .first()
-        )
-        return last.isoformat() if last is not None else "1970-01-01T00:00:00Z"
-
-    inventory_init = _last_inventory()
-    since = _last_inventory_date()
-    entrants = _sum_by_type("in", since=since)
-    sortants = _sum_by_type("out", since=since)
-    return inventory_init + entrants - sortants
+    repo = StockRepository(session)
+    return repo.get_qty_by_id(general_object_id, theorical=True)
 
 
 @router.post(
@@ -206,7 +145,10 @@ def _compute_theoretical_stock(session, general_object_id: int) -> int:
     summary="Préparer l'inventaire",
     description="Calcule, pour chaque EAN13 unique, le stock théorique vs réel.",
 )
-def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
+def prepare_inventory(
+    payload: PrepareRequest,
+    session: Annotated[Session, Depends(config.get_main_session)],
+) -> List[ReconciliationLine]:
     """Calcule, pour chaque EAN13 unique, le stock théorique vs réel."""
     # Compter les occurrences (le nombre de fois scanné = stock réel)
     counts: Dict[str, int] = {}
@@ -215,7 +157,6 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
     for ean in set_eans:
         counts[ean] = payload.ean13.count(ean)
 
-    session = config.get_main_session()
     results: List[ReconciliationLine] = []
     if inventory_type == "complete":
         # Pour un inventaire complet, on doit aussi inclure les produits non scannés
@@ -231,25 +172,21 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
             go_by_ean.keys()
         )  # inclure les EAN13 non scannés pour le calcul
 
-    try:
-        for ean in set_eans:
-            real_count = counts.get(ean, 0)
-            go = go_by_ean.get(ean)
-            title = go.name if go else "(inconnu)"
-            stock_th = _compute_theoretical_stock(session, go.id) if go else 0
-            diff = real_count - stock_th
-            results.append(
-                ReconciliationLine(
-                    ean13=ean,
-                    title=title,
-                    stock_theorique=stock_th,
-                    stock_reel=real_count,
-                    difference=diff,
-                )
+    for ean in set_eans:
+        real_count = counts.get(ean, 0)
+        go = go_by_ean.get(ean)
+        title = go.name if go else "(inconnu)"
+        stock_th = _compute_theoretical_stock(session, go.id) if go else 0
+        diff = real_count - stock_th
+        results.append(
+            ReconciliationLine(
+                ean13=ean,
+                title=title,
+                stock_theorique=stock_th,
+                stock_reel=real_count,
+                difference=diff,
             )
-    finally:
-        session.close()
-
+        )
     return results
 
 
@@ -269,67 +206,61 @@ def prepare_inventory(payload: PrepareRequest) -> List[ReconciliationLine]:
         500: {"description": "Erreur serveur lors de la validation"},
     },
 )
-def validate_inventory(payload: ValidatePayload) -> ValidateResponse:
+def validate_inventory(
+    payload: ValidatePayload,
+    session: Annotated[Session, Depends(config.get_main_session)],
+) -> ValidateResponse:
     """Prépare les mouvements de stock pour chaque ligne validée."""
     planned: List[PlannedMovement] = []
     lines = payload.lines
-    session = config.get_main_session()
-    try:
-        eans = {line.ean13 for line in lines}
-        objects = (
-            session.execute(
-                select(GeneralObjects).where(GeneralObjects.ean13.in_(eans))
-            )
-            .scalars()
-            .all()
+    eans = {line.ean13 for line in lines}
+    objects = (
+        session.execute(
+            select(GeneralObjects).where(GeneralObjects.ean13.in_(eans))
         )
-        go_by_ean: Dict[str, GeneralObjects] = {g.ean13: g for g in objects}
+        .scalars()
+        .all()
+    )
+    go_by_ean: Dict[str, GeneralObjects] = {g.ean13: g for g in objects}
 
-        for line in lines:
-            go = go_by_ean.get(line.ean13)
-            if not go:
-                raise HTTPException(
-                    status_code=404, detail=f"Produit {line.ean13} introuvable"
-                )
-            delta = line.stock_reel - line.stock_theorique
-            if delta == 0:
-                continue  # Pas d'écart → pas de mouvement à planifier
-            movement_type = "in" if delta > 0 else "out"
-            planned.append(
-                PlannedMovement(
-                    general_object_id=go.id,
-                    ean13=line.ean13,
-                    quantity=abs(delta),
-                    movement_type=movement_type,
-                    motifs=line.motifs,
-                    commentaire=line.commentaire,
-                )
+    for line in lines:
+        go = go_by_ean.get(line.ean13)
+        if not go:
+            raise HTTPException(
+                status_code=404, detail=f"Produit {line.ean13} introuvable"
             )
-        for line in lines:
-            go = go_by_ean.get(line.ean13)
-            if not go:
-                raise HTTPException(
-                    status_code=404, detail=f"Produit {line.ean13} introuvable"
-                )
-            planned.append(
-                PlannedMovement(
-                    general_object_id=go.id,
-                    ean13=line.ean13,
-                    quantity=line.stock_reel,
-                    movement_type="inventory",
-                    motifs=line.motifs,
-                    commentaire=line.commentaire,
-                )
+        delta = line.stock_reel - line.stock_theorique
+        if delta == 0:
+            continue  # Pas d'écart → pas de mouvement à planifier
+        movement_type = "in" if delta > 0 else "out"
+        planned.append(
+            PlannedMovement(
+                general_object_id=go.id,
+                ean13=line.ean13,
+                quantity=abs(delta),
+                movement_type=movement_type,
+                motifs=line.motifs,
+                commentaire=line.commentaire,
             )
-    finally:
-        session.close()
+        )
+    for line in lines:
+        go = go_by_ean.get(line.ean13)
+        if not go:
+            raise HTTPException(
+                status_code=404, detail=f"Produit {line.ean13} introuvable"
+            )
+        planned.append(
+            PlannedMovement(
+                general_object_id=go.id,
+                ean13=line.ean13,
+                quantity=line.stock_reel,
+                movement_type="inventory",
+                motifs=line.motifs,
+                commentaire=line.commentaire,
+            )
+        )
 
     return ValidateResponse(planned=planned)
-
-
-# =========================================================================== #
-#  Étape 7 – Commit asynchrone                                               #
-# =========================================================================== #
 
 
 def _write_status(data: Dict) -> None:
@@ -371,8 +302,7 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
     if not objects_id:
         return []
 
-    session = config.get_main_session()
-    try:
+    with config.main_session_ctx() as session:
         results: List[ObjectPrice] = []
         # travailler sur l'ensemble dédupliqué d'ids
         for oid in set(objects_id):
@@ -412,8 +342,6 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
             )
 
         return results
-    finally:
-        session.close()
 
 
 def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> None:
@@ -437,8 +365,8 @@ def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> No
             }
         )
         total = len(planned)
-        session = config.get_main_session()
-        try:
+        with config.main_session_ctx() as session:
+         try:
             for idx, mvt in enumerate(planned, start=1):
                 movement = InventoryMovements(
                     general_object_id=mvt["general_object_id"],
@@ -468,19 +396,18 @@ def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> No
                     }
                 )
             session.commit()
-        except SQLAlchemyError as exc:
-            session.rollback()
-            raise RuntimeError(f"Erreur lors de l'application des mouvements : {exc}") from exc
-        except Exception as exc:
-            session.rollback()
-            raise RuntimeError(f"Erreur lors du commit : {exc}") from exc
-        finally:
-            session.close()
-            # Succès → supprimer le fichier d'état
-            try:
-                os.remove(STATUS_FILE)
-            except FileNotFoundError:
-                pass
+         except SQLAlchemyError as exc:
+             session.rollback()
+             raise RuntimeError(f"Erreur lors de l'application des mouvements : {exc}") from exc
+         except Exception as exc:
+             session.rollback()
+             raise RuntimeError(f"Erreur lors du commit : {exc}") from exc
+         finally:
+             # Succès → supprimer le fichier d'état
+             try:
+                 os.remove(STATUS_FILE)
+             except FileNotFoundError:
+                 pass
     except (ValueError, TypeError, OSError, RuntimeError) as exc:
         _write_status(
             {

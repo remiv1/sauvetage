@@ -1,9 +1,9 @@
 """Module de données pour les factures."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
+from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
@@ -61,6 +61,7 @@ class Invoice(WorkingBase, QueryMixin):
     lines = relationship(
         "InvoiceLine", back_populates="invoice", cascade="all, delete-orphan"
     )
+    sync_logs = relationship("InvoiceSyncLog", back_populates="invoice", uselist=True)
 
     def __repr__(self) -> str:
         return (
@@ -146,3 +147,83 @@ def _prevent_invoice_delete(
     _mapper: Any, _connection: Any, _target: "Invoice"  # type: ignore
 ) -> None:
     raise ValueError("Une suppression de facture est interdite.")
+
+
+class InvoiceSyncLog(WorkingBase):
+    """Journal de synchronisation Henrri pour les factures."""
+
+    __tablename__ = "invoice_sync_logs"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    invoice_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.invoices.id"),
+        nullable=False,
+        comment="Facture associée",
+    )
+
+    # Système externe et direction
+    external_id: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="ID de la facture dans le système externe (ex : ID Henrri)",
+    )
+    external_system: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Système externe : henrri, …",
+    )
+    sync_direction: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Direction : inbound, outbound",
+    )
+    operation: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Opération : create, update, delete",
+    )
+
+    # Résultat
+    sync_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Statut : success, failed, pending",
+    )
+    error_message: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Message d'erreur en cas d'échec",
+    )
+
+    # Horodatage
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date et heure de la synchronisation",
+    )
+
+    invoice = relationship("Invoice", back_populates="sync_logs")
+
+    def __repr__(self) -> str:
+        return (
+            f"<InvoiceSyncLog(id={self.id}, invoice_id={self.invoice_id}, "
+            f"external_system={self.external_system}, operation={self.operation}, "
+            f"sync_status={self.sync_status})>"
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet InvoiceSyncLog en dictionnaire."""
+        return {
+            "id": self.id,
+            "invoice_id": self.invoice_id,
+            "external_id": self.external_id,
+            "external_system": self.external_system,
+            "sync_direction": self.sync_direction,
+            "operation": self.operation,
+            "sync_status": self.sync_status,
+            "error_message": self.error_message,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+        }

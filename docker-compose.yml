@@ -10,9 +10,11 @@ services:
       - ./app_front/.env.flask
     volumes:
       - sauv-documents-front:/home/root/app/documents
+      - sauv-pictures:/home/root/app/documents/shared/pictures
     networks:
       - sauv-network
       - sauv-secure
+      - sauv-wpwc
     depends_on:
       - proxy
       - db-main
@@ -31,12 +33,15 @@ services:
       - ./databases/logs/.env.db_logs
       - ./app_back/.env.fast
       - ./app_back/.env.dilicom
+      - ./app_back/.env.woo
     volumes:
       - sauv-dilicom-in:${DILICOM_IN_DIR}:rw,z
       - sauv-dilicom-out:${DILICOM_OUT_DIR}:rw,z
+      - sauv-pictures:/home/root/app/documents/shared/pictures
     networks:
       - sauv-secure
       - sauv-migrations
+      - sauv-wpwc
     depends_on:
       - proxy
       - db-logs
@@ -54,6 +59,7 @@ services:
       - "8443:443"
     networks:
       - sauv-network
+      - sauv-wpwc
     volumes:
       - sauv-traefik-pki:/app/pki:Z
       - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro,Z
@@ -114,6 +120,13 @@ volumes:
       device: ./documents/front
       o: bind
 
+  sauv-pictures:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./documents/shared/pictures
+      o: bind
+
   sauv-documents-back:
     driver: local
     driver_opts:
@@ -145,3 +158,5 @@ networks:
     driver: bridge
   sauv-migrations:
     driver: bridge
+  sauv-wpwc:
+    external: true

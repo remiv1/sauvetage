@@ -198,6 +198,26 @@ class OrdersRepository(BaseRepository):
                 f"Erreur lors de la création de la commande : {e.orig}"
             ) from e
 
+    def create_from_woo_commerce(self, wc_order: dict, customer_id: int) -> Order:
+        """Crée une commande à partir des données d'une commande WooCommerce.
+        Args:
+            wc_order: Dictionnaire contenant les données de la commande WooCommerce.
+            customer_id: Identifiant du client local associé à la commande.
+        Returns:
+            Order: La commande créée dans la base de données locale.
+        """
+        order = Order()
+        
+        try:
+            self.session.add(order)
+            self.session.commit()
+            return order
+        except IntegrityError as e:
+            self.session.rollback()
+            raise ValueError(
+                f"Erreur lors de la création de la commande depuis WooCommerce : {e.orig}"
+            ) from e
+
     def update_delivery_address(
         self,
         order: Order,

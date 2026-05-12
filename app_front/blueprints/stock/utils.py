@@ -18,7 +18,7 @@ from db_models.objects import (
     GeneralObjects,
     VatRate,
 )
-from db_models.repositories.stock import (
+from db_models.repositories.stocks import (
     StockRepository,
     DilicomReferencialRepository,
     )

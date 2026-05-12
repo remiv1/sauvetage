@@ -29,8 +29,10 @@ services:
     volumes:
       - wp_buyer:/var/www/html/wp-content
       - wp_core:/var/www/html
+    # Réseau temporaire pour communiquer avec les conteneurs métiers
     networks:
       - wps_net
+      - sauv-wpwc
 
   webserver:
     image: nginx:alpine
@@ -50,6 +52,8 @@ services:
       - ./ssl:/etc/nginx/ssl:Z
     networks:
       - wps_net
+      # Réseau temporaire pour communiquer avec les conteneurs métiers
+      - sauv-wpwc
 
   backup:
     build:
@@ -70,6 +74,8 @@ services:
       - ./ssh:/root/.ssh:ro
     networks:
       - wps_net
+      # Réseau temporaire pour communiquer avec les conteneurs métiers
+      - sauv-wpwc
 
 volumes:
   dbs_data:
@@ -78,3 +84,6 @@ volumes:
 
 networks:
   wps_net:
+    driver: bridge
+  sauv-wpwc:
+    external: true

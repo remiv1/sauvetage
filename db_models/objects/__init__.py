@@ -13,10 +13,10 @@ from .customers import (
     CustomerParts,
     CustomerPros,
 )
-from .orders import Order, OrderLine
+from .orders import Order, OrderLine, OrderSyncLog
 from .stocks import OrderIn, OrderInLine, DilicomReferencial
 from .inventory import InventoryMovements
-from .invoices import Invoice, InvoiceLine
+from .invoices import Invoice, InvoiceLine, InvoiceSyncLog
 from .shipments import Shipment, ShipmentLine
 from .users import Users, UsersPasswords
 from .objects import (
@@ -27,6 +27,8 @@ from .objects import (
     ObjectTags,
     ObjMetadatas,
     MediaFiles,
+    ObjectSyncLog,
+    MediaAccessToken,
 )
 from .vat import VatRate
 from .suppliers import Suppliers

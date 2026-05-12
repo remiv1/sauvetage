@@ -12,16 +12,16 @@ from alembic import context
 sys.path.insert(0, "/app")
 
 # Import main base model après avoir chargé les variables
-from db_models import WorkingBase  # pylint: disable=wrong-import-position
-from db_models.objects.customers import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.orders import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.invoices import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.shipments import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.suppliers import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.objects import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.inventory import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.stocks import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
-from db_models.objects.vat import *  # pylint: disable=wrong-import-position,wildcard-import,unused-wildcard-import # type: ignore
+from db_models import WorkingBase
+from db_models.objects.customers import *   #pylint: disable=unused-wildcard-import
+from db_models.objects.orders import *  #pylint: disable=unused-wildcard-import
+from db_models.objects.invoices import *    #pylint: disable=unused-wildcard-import
+from db_models.objects.shipments import *   #pylint: disable=unused-wildcard-import
+from db_models.objects.suppliers import *   #pylint: disable=unused-wildcard-import
+from db_models.objects.objects import * #pylint: disable=unused-wildcard-import
+from db_models.objects.inventory import *   #pylint: disable=unused-wildcard-import
+from db_models.objects.stocks import *  #pylint: disable=unused-wildcard-import
+from db_models.objects.vat import * #pylint: disable=unused-wildcard-import
 
 # this is the Alembic Config object, which provides access to the values within
 # the .ini file in use, as well as the Python logging config.

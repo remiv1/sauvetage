@@ -11,15 +11,21 @@ def start_dilicom_scheduler():
     """
     Démarre le scheduler pour les opérations Dilicom.
     """
-    session = config.get_main_session()
-    service = DilicomService(session=session)
     scheduler = BackgroundScheduler(
         job_defaults={"coalesce": False, "max_instances": 1}
     )
 
+    def _send_updates():
+        with config.main_session_ctx() as session:
+            DilicomService(session=session).send_updates()
+
+    def _fetch_returns():
+        with config.main_session_ctx() as session:
+            DilicomService(session=session).fetch_returns()
+
     # Planification de l'envoie des référentiels à Dilicom tous les jours à 2h du matin
     scheduler.add_job(
-        service.send_updates,
+        _send_updates,
         "cron",
         hour=2,
         minute=0,
@@ -29,7 +35,7 @@ def start_dilicom_scheduler():
     # Vérification des retours de Dilicom tous les jours à partir de 6h jusqu'à 12h,
     # toutes les heures sauf à avoir reçu des retours
     scheduler.add_job(
-        service.fetch_returns,
+        _fetch_returns,
         "cron",
         hour="6-12",
         minute=0,

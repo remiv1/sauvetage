@@ -25,3 +25,4 @@ from .supplier.routes import bp_supplier  # type: ignore
 from .supplier.routes_htmx import bp_supplier_htmx  # type: ignore
 from .supplier.routes_htmx_list import bp_supplier_htmx_list  # type: ignore
 from .user.routes import bp_user  # type: ignore
+from .woocommerce.routes import bp_woocommerce  # type: ignore

@@ -1,9 +1,9 @@
 """Module des modèles de données pour les commandes."""
 
-from typing import Any
+from typing import Any, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, event
+from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
@@ -11,7 +11,34 @@ _ALL_DELETE_ORPHAN = "all, delete-orphan"
 
 
 class Order(WorkingBase, QueryMixin):
-    """Modèle de données pour une commande."""
+    """
+    Modèle de données pour une commande.
+    
+    Attr :
+    - id (int) : Identifiant unique de la commande.
+    - reference (str) :
+        Référence de la commande, format "CMD-<YYMM>-00001" ou "RET-<YYMM>-00001".
+    - customer_id (int) : ID du client associé à la commande.
+    - invoice_address_id (int | None) : ID de l'adresse de facturation.
+    - delivery_address_id (int | None) : ID de l'adresse de livraison.
+    - status (str) :
+        Statut de la commande (draft, partial_invoiced, invoiced, partial_shipped,
+        shipped, canceled, returned).
+    - create_source (str) : Source de création de la commande.
+    - created_at (datetime) : Date de création de la commande.
+    - update_source (str | None) : Source de la dernière mise à jour de la commande.
+    - updated_at (datetime) : Date de la dernière mise à jour de la commande.
+    - last_synced_at (datetime | None) :
+        Date de la dernière synchronisation avec un système externe.
+    Relations :
+    - customer : Relation vers le client associé à la commande.
+    - invoice_address : Relation vers l'adresse de facturation.
+    - delivery_address : Relation vers l'adresse de livraison.
+    - order_lines : Relation vers les lignes de commande associées.
+    - invoices : Relation vers les factures associées à la commande.
+    - shipments : Relation vers les expéditions associées à la commande.
+    - sync_logs : Relation vers les logs de synchronisation de la commande.
+    """
 
     __tablename__ = "orders"
     __table_args__ = {"schema": "app_schema"}
@@ -28,7 +55,7 @@ class Order(WorkingBase, QueryMixin):
         Integer,
         ForeignKey("app_schema.customer_addresses.id"),
         nullable=True,
-        comment="Adresse de facturat°",
+        comment="Adresse de facturation",
     )
     delivery_address_id: Mapped[int | None] = mapped_column(
         Integer,
@@ -82,6 +109,7 @@ class Order(WorkingBase, QueryMixin):
     shipments = relationship(
         "Shipment", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
+    sync_logs = relationship("OrderSyncLog", back_populates="order", uselist=True)
 
     def __repr__(self) -> str:
         return (
@@ -114,7 +142,27 @@ class Order(WorkingBase, QueryMixin):
 
 
 class OrderLine(WorkingBase, QueryMixin):
-    """Modèle de données pour une ligne de commande."""
+    """
+    Modèle de données pour une ligne de commande.
+    Attr :
+    - id (int) : Identifiant unique de la ligne de commande.
+    - order_id (int) : ID de la commande associée.
+    - general_object_id (int) : ID de l'objet général associé à la ligne de commande.
+    - quantity (int) : Quantité commandée.
+    - status (str) : Statut de la ligne de commande (draft, invoiced, shipped, canceled, returned).
+    - unit_price (float) : Prix unitaire HT en euros.
+    - discount (float) : Remise en pourcentage.
+    - vat_rate (float) : Taux de TVA en pourcentage.
+    - create_source (str) : Source de la ligne de commande.
+    - created_at (datetime) : Date de création de la ligne de commande.
+    - update_source (str | None) : Source last MaJ de la ligne de commande.
+    - updated_at (datetime) : Date last MaJ de la ligne de commande.
+    Relations :
+    - order : Relation vers la commande associée à la ligne de commande.
+    - general_object : Relation vers l'objet général associé à la ligne de commande.
+    - invoice_lines : Relation vers les lignes de facture associées à la ligne de commande.
+    - shipment_lines : Relation vers les lignes d'expédition associées à la ligne de commande.
+    """
 
     __tablename__ = "order_lines"
     __table_args__ = {"schema": "app_schema"}
@@ -218,3 +266,83 @@ def _prevent_non_draft_order_line_delete(
 ) -> None:
     if target.status != "draft":
         raise ValueError("Seules les lignes en brouillon peuvent être supprimées.")
+
+
+class OrderSyncLog(WorkingBase):
+    """Journal de synchronisation WooCommerce pour les commandes."""
+
+    __tablename__ = "order_sync_logs"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    order_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.orders.id"),
+        nullable=False,
+        comment="Commande associée",
+    )
+
+    # Système externe et direction
+    external_id: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="ID de la commande dans le système externe",
+    )
+    external_system: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Système externe : wpwc, …",
+    )
+    sync_direction: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Direction : inbound, outbound",
+    )
+    operation: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Opération : create, update, delete",
+    )
+
+    # Résultat
+    sync_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="Statut : success, failed, pending",
+    )
+    error_message: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Message d'erreur en cas d'échec",
+    )
+
+    # Horodatage
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date et heure de la synchronisation",
+    )
+
+    order = relationship("Order", back_populates="sync_logs")
+
+    def __repr__(self) -> str:
+        return (
+            f"<OrderSyncLog(id={self.id}, order_id={self.order_id}, "
+            f"external_system={self.external_system}, operation={self.operation}, "
+            f"sync_status={self.sync_status})>"
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet OrderSyncLog en dictionnaire."""
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "external_id": self.external_id,
+            "external_system": self.external_system,
+            "sync_direction": self.sync_direction,
+            "operation": self.operation,
+            "sync_status": self.sync_status,
+            "error_message": self.error_message,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+        }

@@ -11,6 +11,7 @@ Ce module contient toute la logique métier :
 
 from typing import List, Annotated
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 from app_back.v1.schems.dilicom import DilicomReferencialSchema
 from app_back.db_connection import config
 from app_back.utils.decorators import access_control
@@ -33,13 +34,13 @@ def send_dilicom_order():
 
 @router.get("/send-referentials")
 async def send_dilicom_referentials(
-    _access: Annotated[bool, Depends(access_control(restrict_ip=True))]
+    _access: Annotated[bool, Depends(access_control(restrict_ip=True))],
+    session: Annotated[Session, Depends(config.get_main_session)],
     ):
     """Route pour envoyer les référentiels à Dilicom.
 
     Cette route déclenche l'envoi des référentiels à Dilicom en utilisant `DilicomService`.
     """
-    session = config.get_main_session()
     service = DilicomService(session=session)
     service.send_updates()
     return {"message": "Référentiels envoyés avec succès."}
@@ -47,13 +48,13 @@ async def send_dilicom_referentials(
 
 @router.get("/fetch-returns")
 async def fetch_dilicom_returns(
-    _access: Annotated[bool, Depends(access_control(restrict_ip=True))]
+    _access: Annotated[bool, Depends(access_control(restrict_ip=True))],
+    session: Annotated[Session, Depends(config.get_main_session)],
     ):
     """Route pour récupérer les retours de Dilicom.
 
     Cette route déclenche la récupération des retours de Dilicom en utilisant `DilicomService`.
     """
-    session = config.get_main_session()
     service = DilicomService(session=session)
     service.fetch_returns()
     return {"message": "Retours récupérés avec succès."}
