@@ -1,6 +1,8 @@
 """Database model for Customers table."""
 
-from typing import Any, Dict
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy import Integer, String, DateTime, Text, Boolean, ForeignKey
@@ -161,43 +163,122 @@ class Customers(WorkingBase, QueryMixin):
             ),
         }
 
-    @classmethod
-    def from_dict(cls, *, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_names(self) -> tuple[str | None, str | None]:
+        first_name = self.part.first_name if self.part else None
+        last_name = self.part.last_name if self.part else None
+        return first_name, last_name
+
+    def get_wpwc_mail(self) -> Optional[str]:
         """
-        Crée un dictionnaire d'objets Customer à partir d'un dictionnaire pur.
+        Récupère l'email du client à utiliser pour WooCommerce.
+        Priorise les emails avec "WooCommerce" dans le nom, puis les emails actifs.
+        """
+        return next((
+            e.email for e in self.emails if "WooCommerce" in e.email_name),
+            next((e.email for e in self.emails if e.is_active), None))
+
+    def get_wpwc_phone(self) -> Optional[str]:
+        """
+        Récupère le téléphone du client à utiliser pour WooCommerce.
+        Priorise les téléphones avec "WooCommerce" dans le nom, puis les téléphones actifs.
+        """
+        return next((
+            p.phone for p in self.phones if "WooCommerce" in p.phone_name),
+            next((p.phone for p in self.phones if p.is_active), None))
+
+    def get_wpwc_billing_address(self) -> Optional[CustomerAddresses]:
+        """
+        Récupère l'adresse de facturation du client à utiliser pour WooCommerce.
+        Priorise les adresses de facturation avec "WooCommerce" dans le nom,
+        puis les adresses de facturation actives.
+        """
+        return next((
+            a for a in self.addresses if a.is_billing and "WooCommerce" in a.address_name),
+            next((a for a in self.addresses if a.is_billing and a.is_active), None))
+
+    def get_wpwc_shipping_address(self) -> Optional[CustomerAddresses]:
+        """
+        Récupère l'adresse de livraison du client à utiliser pour WooCommerce.
+        Priorise les adresses de livraison avec "WooCommerce" dans le nom,
+        puis les adresses de livraison actives.
+        """
+        return next((
+            a for a in self.addresses if a.is_shipping and "WooCommerce" in a.address_name),
+            next((a for a in self.addresses if a.is_shipping and a.is_active), None))
+
+    def _wpwc_dispatch_addresses(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        first_name, last_name = self._get_names()
+        billing_address = self.get_wpwc_billing_address()
+        shipping_address = self.get_wpwc_shipping_address()
+        email = self.get_wpwc_mail()
+        if not email:
+            raise ValueError(f"Aucun email actif trouvé pour le client {self.id}")
+        phone = self.get_wpwc_phone()
+        billing = {
+            'first_name': first_name,
+            'last_name': last_name,
+            'address_1': billing_address.address_1 if billing_address else None,
+            'address_2': billing_address.address_2 if billing_address else None,
+            'city': billing_address.city if billing_address else None,
+            'state': billing_address.state if billing_address else None,
+            'postcode': billing_address.postal_code if billing_address else None,
+            'country': billing_address.country if billing_address else None,
+            'email': email,
+            'phone': phone,
+        }
+        shipping = {
+            'first_name': first_name,
+            'last_name': last_name,
+            'address_1': shipping_address.address_1 if shipping_address else None,
+            'address_2': shipping_address.address_2 if shipping_address else None,
+            'city': shipping_address.city if shipping_address else None,
+            'state': shipping_address.state if shipping_address else None,
+            'postcode': shipping_address.postal_code if shipping_address else None,
+            'country': shipping_address.country if shipping_address else None,
+        }
+        return billing, shipping
+
+    def to_dict_for_wpwc(self, update: bool = False) -> dict[str, Any]:
+        """
+        Convertit les données du client en un format structuré pour WooCommerce.
+        """
+        first_name, last_name = self._get_names()
+        billing, shipping = self._wpwc_dispatch_addresses()
+        meta_data = []
+        if self.customer_type == "pro":
+            meta_data.append({'key': 'billing_wooccm10', 'value': 'Professionnel'})
+            meta_data.append({'key': 'billing_wooccm11', 'value': self.pro.company_name})
+            meta_data.append({'key': 'billing_wooccm12', 'value': self.pro.siret_number})
+            username = self.pro.company_name
+        else:
+            meta_data.append({'key': 'billing_wooccm10', 'value': 'Particulier'})
+            username = f"{self.part.first_name} {self.part.last_name}"
+        final_dict =  {
+            "email": billing["email"],
+            "first_name": first_name,
+            "last_name": last_name,
+            "username": username,
+            "billing": billing,
+            "shipping": shipping,
+            "meta_data": meta_data,
+        }
+        if update:
+            # Ne pas envoyer les champs vides pour éviter d'écraser
+            final_dict = {k: v for k, v in final_dict.items() if v}
+            final_dict["date_modified_gmt"] = self.sync_logs[-1].created_at.isoformat() \
+                if self.sync_logs else None
+        return final_dict
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Customers':
+        """
+        Crée un objets Customer à partir d'un dictionnaire pur.
         Args:
             data (Dict[str, Any]): Dictionnaire contenant les données du client.
         Returns:
-            Dict[str, Any]: Dictionnaire avec les objets Customer, CustomerParts, CustomerPros
-                            et des listes d'objets CustomerAddresses, CustomerMails, CustomerPhones,
-                            CustomerSyncLog.
+            Customers: L'objet Customers créé à partir du dictionnaire.
         """
-        customer = cls(
-            wpwc_id=data.get("wpwc_id"),
-            henrri_id=data.get("henrri_id"),
-            customer_type=data.get("customer_type", "part"),
-            is_active=data.get("is_active", True),
-            last_synced_at=(
-                datetime.fromisoformat(data.get("last_synced_at", ""))
-                if data.get("last_synced_at")
-                else None
-            ),
-        )
-
-        part = CustomerParts.from_dict(data["part"]) if data.get("part") else None
-        pro = CustomerPros.from_dict(data["pro"]) if data.get("pro") else None
-
-        addresses = [CustomerAddresses.from_dict(a) for a in data.get("addresses", [])]
-
-        emails = [CustomerMails.from_dict(e) for e in data.get("emails", [])]
-
-        return {
-            "customer": customer,
-            "part": part,
-            "pro": pro,
-            "addresses": addresses,
-            "emails": emails,
-        }
+        return cls(**data)
 
 
 class CustomerParts(WorkingBase, QueryMixin):

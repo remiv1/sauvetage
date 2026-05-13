@@ -11,22 +11,9 @@ Le schéma métier est le suivant :
 
 from typing import Optional, Any
 import logging
-from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
-from db_models.repositories.customers import (
-    CustomersRepository,
-    CustomerAddressesRepository,
-    CustomerMailsRepository,
-    CustomerPhonesRepository,
-    Customers,
-    CustomerParts,
-    CustomerPros,
-    CustomerPhones,
-    CustomerMails,
-    CustomerAddresses,
-)
-from db_models.repositories.orders import OrdersRepository, Order, OrderLine
-from db_models.services.utils import slugify
+from db_models.repositories import CustomersRepository, OrdersRepository
+from db_models.objects import Order
 from db_models.services.woo_commerce.base import WCBase
 
 logger = logging.getLogger(__name__)
@@ -49,7 +36,8 @@ class WCOrdersService(WCBase):
     - WOOCOMMERCE_CONSUMER_SECRET : Secret API consommateur
     
     Args:
-        separated_keys (bool): Si True, utilise des clés séparées pour la lecture et l'écriture.
+    - session (Session): Session SQLAlchemy pour les opérations de base de données.
+    - separated_keys (bool): Si True, utilise des clés séparées pour la lecture et l'écriture.
                               Sinon, utilise une seule configuration pour les deux.
     """
 
@@ -64,14 +52,12 @@ class WCOrdersService(WCBase):
         Attributs:
             api_read (API): Instance de l'API WooCommerce pour les opérations de lecture.
             api_write (API): Instance de l'API WooCommerce pour les opérations d'écriture.
-            object_repo (ObjectsRepository): Repo pour accéder aux objets locaux.
-            tag_repo (TagsRepository): Repo pour accéder aux tags locaux.
-            media_repo (MediaRepository): Repo pour accéder aux médias locaux.
-            sync_log_repo (SyncLogRepository): Repo pour enregistrer les logs de synchronisation.
+            order_repo (OrdersRepository): Repo pour accéder aux commandes locales.
+            customer_repo (CustomersRepository): Repo pour accéder aux clients locaux.
         """
         super().__init__(session, separated_keys)
-        self.order_repo = OrdersRepository(session)
         self.customer_repo = CustomersRepository(session)
+        self.order_repo = OrdersRepository(session)
 
     def get_orders(self, status: Optional[list[str]] = None) -> list[Order]:
         """
@@ -96,3 +82,60 @@ class WCOrdersService(WCBase):
             order = self.order_repo.create_from_woo_commerce(wc_order, customer.id)
             orders.append(order)
         return orders
+
+    def update_order(self, order_id: int, data: dict[str, Any]) -> bool:
+        """
+        Met à jour une commande dans WooCommerce.
+        Args:
+            - order_id (int): ID de la commande dans WooCommerce.
+            - data (dict[str, Any]): Données à mettre à jour pour la commande.
+        Returns:
+            bool: True si la mise à jour a réussi, False sinon.
+        """
+        response = self.api_write.put(f'orders/{order_id}', data=data)
+        if response.status_code == 200:
+            logger.info("Commande %s mise à jour avec succès.", order_id)
+            return True
+        else:
+            logger.exception(
+                "Erreur lors de la mise à jour de la commande %s: %s",
+                order_id,
+                response.text
+            )
+            return False
+
+    def create_order(self, order: Order) -> Optional[Order]:
+        """
+        Crée une nouvelle commande dans WooCommerce.
+        Args:
+            - order (Order): Données de la commande à créer.
+            - customer (Customers): Données du client associé à la commande.
+        Returns:
+            Optional[Order]: La commande créée localement si la création a réussi, None sinon.
+        """
+        # Vérifier que le client existe dans WooCommerce, sinon le créer
+        # TODO: Vérifier avec mail
+        if not order.customer.wpwc_id:
+            self.api_read.get("customers", params={"email": order.customer.email}).json()
+        # Création de la donnée sous forme de dictionnaires pour l'API WooCommerce
+        data = order.to_dict_for_woo_commerce()
+
+        # Envoie de la requête de création de la commande à WooCommerce
+        response = self.api_write.post('orders', data=data)
+
+        # Traitement du retour de l'API pour lier la commande localement
+        if response.status_code == 201:
+            # Récupération de la commande créée depuis WooCommerce pour obtenir les données complètes
+            wc_order = response.json()
+            wpwc_customer_id = wc_order.get('customer_id')
+            customer = self.customer_repo.get_by_wpwc_id(wpwc_customer_id)
+            if not customer:
+                order.customer.wpwc_id = wpwc_customer_id
+            order_wpwc = self.order_repo.create_from_woo_commerce(wc_order, customer.id)
+            logger.info("Commande créée avec succès dans WooCommerce et localement.")
+            return order
+        logger.exception(
+            "Erreur lors de la création de la commande dans WooCommerce: %s",
+            response.text
+        )
+        return None

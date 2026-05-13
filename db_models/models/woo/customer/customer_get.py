@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
 
@@ -67,7 +67,7 @@ class FieldLinks(BaseModel):
     collection: list[CollectionItem]
 
 
-class WooCustomerGet(BaseModel):
+class WCCustomerGet(BaseModel):
     """
     Modèle de données pour la réponse de l'API WooCommerce lors de la récupération d'un client.
     Ce modèle inclut les informations de base du client, les adresses de facturation et
@@ -141,39 +141,58 @@ class WooCustomerGet(BaseModel):
 
         return all(b[f] == s[f] for f in fields)
 
-
-    def to_dict_for_erp(self) -> dict[str, Any]:
-        """Convertit les données du client en un format structuré pour l'ERP.
-        Cette méthode organise les données du client en sections distinctes pour faciliter
-        l'intégration avec l'ERP, en séparant les informations de base, les données spécifiques
-        aux clients professionnels, les données spécifiques aux clients particuliers, les
-        informations de contact, et les adresses. Elle prend également en compte les cas où
-        les adresses de facturation et de livraison sont identiques pour éviter les redondances.
+    def to_dict_customer_for_erp(self) -> dict[str, Any]:
         """
-        customer = {
+        Convertit les données de base du client en un format structuré pour l'ERP.
+        """
+        return {
             'wpwc_id': self.id,
             'customer_type': self.get_customer_type(),
         }
+
+    def to_dict_customer_part_pro_for_erp(
+            self
+        ) -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]]]:
+        """
+        Convertit les données de base du client en un format structuré pour l'ERP,
+        """
         if self.get_customer_type() == 'professionnel':
+            part = None
             pro = {
                 'company_name': self.get_company_name(),
                 'siret_number': self.get_siret_number()
             }
-            part = {}
         else:
             part = {
                 'first_name': self.first_name,
                 'last_name': self.last_name,
             }
-            pro = {}
-        mail = {
+            pro = None
+        return part, pro
+
+    def to_dict_customer_mail_for_erp(self) -> dict[str, Any]:
+        """
+        Convertit les données mail du client en un format structuré pour l'ERP.
+        """
+        return {
             'email_name': 'Email WooCommerce',
             'email': self.email,
         }
-        phone = {
+
+    def to_dict_customer_phone_for_erp(self) -> dict[str, Any]:
+        """
+        Convertit les données de téléphone du client en un format structuré pour l'ERP.
+        """
+        return {
             'phone_name': 'Téléphone WooCommerce',
             'phone': self.billing.phone,
         }
+
+    def to_dict_customer_address_for_erp(self) -> list[dict[str, Any]]:
+        """
+        Convertit les données d'adresse du client en un format structuré pour l'ERP, en gérant les
+        cas où les adresses de facturation et de livraison sont identiques ou différentes.
+        """
         if self.same_address(self.billing, self.shipping):
             address = [{
                 'address_name': 'Adresse de facturation et livraison WooCommerce',
@@ -210,11 +229,4 @@ class WooCustomerGet(BaseModel):
                 'is_shipping': True,
             }
             address = [address_billing, address_shipping]
-        return {
-            "customer": customer,
-            "customer_part": part,
-            "customer_pro": pro,
-            "customer_mail": mail,
-            "customer_phone": phone,
-            "customer_address": address,
-        }
+        return address

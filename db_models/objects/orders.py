@@ -16,6 +16,7 @@ class Order(WorkingBase, QueryMixin):
     
     Attr :
     - id (int) : Identifiant unique de la commande.
+    - wpwc_id (int | None) : ID de la commande dans WooCommerce, null si non synchronisée.
     - reference (str) :
         Référence de la commande, format "CMD-<YYMM>-00001" ou "RET-<YYMM>-00001".
     - customer_id (int) : ID du client associé à la commande.
@@ -44,6 +45,9 @@ class Order(WorkingBase, QueryMixin):
     __table_args__ = {"schema": "app_schema"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, unique=True, comment="ID de la commande dans WooCommerce"
+    )
     # Format de référence :
     # - "CMD-<YYMM>-00001" pour les commandes
     # - "RET-<YYMM>-00001" pour les retours
@@ -129,11 +133,66 @@ class Order(WorkingBase, QueryMixin):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
+    def _get_wc_metadata(self) -> dict[str, Any]:
+        """Récupère les métadonnées spécifiques à WooCommerce pour la commande."""
+        customer_type = 'Particulier' if self.customer.customer_type == 'part' else 'Professionnel'
+        rs = self.customer.pro.company_name if self.customer.pro else ''
+        siret = self.customer.pro.siret if self.customer.pro else ''
+        return {
+            '_billing_wooccm10': customer_type,
+            '_billing_wooccm11': rs,
+            '_billing_wooccm12': siret,
+        }
+
+    def to_dict_for_woo_commerce(self) -> dict[str, Any]:
+        """Convertit l'objet Order en dictionnaire au format attendu par WooCommerce."""
+        billing = {
+            "first_name": self.customer.first_name,
+            "last_name": self.customer.last_name,
+            "address_1": self.invoice_address.address_line1 if self.invoice_address else "",
+            "address_2": self.invoice_address.address_line2 if self.invoice_address else "",
+            "city": self.invoice_address.city if self.invoice_address else "",
+            "state": self.invoice_address.state if self.invoice_address else "",
+            "postcode": self.invoice_address.postal_code if self.invoice_address else "",
+            "country": self.invoice_address.country if self.invoice_address else "",
+            "email": next(e.email for e in self.customer.emails if "WooCommerce" in e.name) \
+                if self.customer.emails else "",
+            "phone": next(p.phone_number for p in self.customer.phones if "WooCommerce" in p.name) \
+                if self.customer.phones else "",
+        }
+        shipping = {
+            "first_name": self.customer.first_name,
+            "last_name": self.customer.last_name,
+            "address_1": self.delivery_address.address_line1 if self.delivery_address else "",
+            "address_2": self.delivery_address.address_line2 if self.delivery_address else "",
+            "city": self.delivery_address.city if self.delivery_address else "",
+            "state": self.delivery_address.state if self.delivery_address else "",
+            "postcode": self.delivery_address.postal_code if self.delivery_address else "",
+            "country": self.delivery_address.country if self.delivery_address else "",
+        }
+        metadata = self._get_wc_metadata()
+        line_items = []
+        for line in self.order_lines:
+            line_items.append({
+                "product_id": line.general_object.wpwc_id,
+                "quantity": line.quantity,
+            })
+        return {
+            "payment_method": "bacs",
+            "payment_method_title": "Direct Bank Transfer",
+            "set_paid": False,
+            "billing": billing,
+            "shipping": shipping,
+            "line_items": line_items,
+            "metadata": metadata,
+        }
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Order":
         """Crée un objet Order à partir d'un dictionnaire."""
         return cls(
             reference=data.get("reference", ""),
+            wpwc_id=data.get("wpwc_id"),
             customer_id=data.get("customer_id"),
             invoice_address_id=data.get("invoice_address_id"),
             delivery_address_id=data.get("delivery_address_id"),
@@ -146,6 +205,7 @@ class OrderLine(WorkingBase, QueryMixin):
     Modèle de données pour une ligne de commande.
     Attr :
     - id (int) : Identifiant unique de la ligne de commande.
+    - wpwc_id (int | None) : ID de la ligne de commande dans WooCommerce, null si non synchronisée.
     - order_id (int) : ID de la commande associée.
     - general_object_id (int) : ID de l'objet général associé à la ligne de commande.
     - quantity (int) : Quantité commandée.
@@ -172,6 +232,12 @@ class OrderLine(WorkingBase, QueryMixin):
         primary_key=True,
         autoincrement=True,
         comment="Identifiant unique de la ligne de commande",
+    )
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="ID de la ligne de commande dans WooCommerce",
     )
     order_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("app_schema.orders.id"), nullable=False
@@ -235,6 +301,7 @@ class OrderLine(WorkingBase, QueryMixin):
         """Convertit l'objet OrderLine en dictionnaire."""
         return {
             "id": self.id,
+            "wpwc_id": self.wpwc_id,
             "order_id": self.order_id,
             "general_object_id": self.general_object_id,
             "quantity": self.quantity,

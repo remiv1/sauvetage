@@ -94,6 +94,11 @@ class ObjectsRepository(BaseRepository):
             stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
+    def get_by_wpwc_id(self, wpwc_id: int) -> Optional["GeneralObjects"]:
+        """Récupère un objet par son ID WooCommerce."""
+        stmt = self._get_global_select().where(self.model.wpwc_id == wpwc_id)
+        return self.session.execute(stmt).unique().scalar_one_or_none()
+
     def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
         """Récupère une liste d'objets dont le nom correspond à la recherche."""
         stmt = (

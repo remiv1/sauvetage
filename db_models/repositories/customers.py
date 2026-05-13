@@ -13,7 +13,7 @@ from db_models.objects import (
     CustomerMails,
     CustomerPhones,
 )
-from db_models.models.woo.customer.customer_get import WooCustomerGet
+from db_models.models.woo import WCCustomerGet
 
 UPDATE_FIELDS = {
     "part": ("civil_title", "first_name", "last_name", "date_of_birth"),
@@ -93,20 +93,24 @@ class CustomersRepository(BaseRepository):
 
         return self.session.execute(stmt).scalars().first()
 
-    def get_by_wpwc_id(self, wpwc_customer_id: int, complete: bool = True) -> Customers | None:
+    def get_by_wpwc_id(
+            self,
+            wpwc_customer_id: int | str,
+            complete: bool = True
+        ) -> Customers | None:
         """Récupère un client en fonction de son ID WooCommerce.
         Args:
-            wpwc_customer_id (int): L'ID WooCommerce du client à rechercher.
+            wpwc_customer_id (int | str): L'ID WooCommerce du client à rechercher.
         Returns:
             Customers | None: Le client correspondant à l'ID WooCommerce ou None s'il n'existe pas.
         """
         if complete:
             stmt = self._get_complete_query().where(
-                Customers.wpwc_customer_id == wpwc_customer_id
+                Customers.wpwc_customer_id == str(wpwc_customer_id)
             )
         else:
             stmt = select(Customers).where(
-                Customers.wpwc_customer_id == wpwc_customer_id
+                Customers.wpwc_customer_id == str(wpwc_customer_id)
             )
 
         return self.session.execute(stmt).scalars().first()
@@ -210,15 +214,17 @@ class CustomersRepository(BaseRepository):
         if not wpwc_customer_data:
             raise ValueError("Données du client WooCommerce manquantes.")
         # Création des objets liés en fonction des données WooCommerce
-        woo_customer = WooCustomerGet(**wpwc_customer_data).to_dict_for_erp()
-        cust = Customers(**woo_customer.get("customer", {}))
-        cust_part = CustomerParts(**woo_customer.get("customer_part", {}).values())
-        cust_pro = CustomerPros(**woo_customer.get("customer_pro", {}).values())
-        ad = []
-        for address in woo_customer.get("customer_address", []):
-            ad.append(CustomerAddresses(**address))
-        ph = CustomerPhones(**woo_customer.get("customer_phone", {}))
-        mail = CustomerMails(**woo_customer.get("customer_mail", {}))
+        woo_customer = WCCustomerGet(**wpwc_customer_data)
+        cust: Customers = Customers().from_dict(woo_customer.to_dict_customer_for_erp())
+        c_part, c_pro = woo_customer.to_dict_customer_part_pro_for_erp()
+        cust_part = CustomerParts().from_dict(c_part if c_part else {})
+        cust_pro = CustomerPros().from_dict(c_pro if c_pro else {})
+        ad = [CustomerAddresses().from_dict(addr) \
+              for addr in woo_customer.to_dict_customer_address_for_erp()]
+        for address in woo_customer.to_dict_customer_address_for_erp():
+            ad.append(CustomerAddresses().from_dict(address))
+        ph = CustomerPhones().from_dict(woo_customer.to_dict_customer_phone_for_erp())
+        mail = CustomerMails().from_dict(woo_customer.to_dict_customer_mail_for_erp())
 
         # Association des objets liés au client
         cust.part = cust_part
@@ -237,6 +243,64 @@ class CustomersRepository(BaseRepository):
 
 class CustomerAddressesRepository(BaseRepository):
     """Repository pour les opérations sur les adresses des clients."""
+
+    def get_by_id(self, address_id: int) -> CustomerAddresses | None:
+        """Récupère une adresse de client en fonction de son ID.
+        Args:
+            address_id (int): L'ID de l'adresse à rechercher.
+        Returns:
+            CustomerAddresses | None: L'adresse correspondant à l'ID ou None s'il n'existe pas.
+        """
+        return self.session.get(CustomerAddresses, address_id)
+
+    def get_by_customer_id(
+            self,
+            customer_id: int,
+            is_active: Optional[bool] = None
+        ) -> Sequence[CustomerAddresses]:
+        """Récupère toutes les adresses d'un client en fonction de son ID.
+        Args:
+            customer_id (int): L'ID du client dont on veut récupérer les adresses.
+            is_active (bool, optional): Filtre par statut actif/inactif.
+        Returns:
+            list[CustomerAddresses]: Une liste d'adresses correspondant au client.
+        """
+        stmt = select(CustomerAddresses).where(CustomerAddresses.customer_id == customer_id)
+        if is_active is not None:
+            stmt = stmt.where(CustomerAddresses.is_active == is_active)
+        return self.session.execute(stmt).scalars().all()
+
+    def get_billing_address(self, customer_id: int) -> Optional[CustomerAddresses]:
+        """Récupère l'adresse de facturation d'un client.
+        Args:
+            customer_id (int): L'ID du client dont on veut récupérer l'adresse de facturation.
+        Returns:
+            Optional[CustomerAddresses]: L'adresse de facturation du client ou None s'il n'en a pas
+        """
+        stmt = select(CustomerAddresses).where(
+            and_(
+                CustomerAddresses.customer_id == customer_id,
+                CustomerAddresses.is_billing == True,  # pylint: disable=singleton-comparison
+                CustomerAddresses.is_active == True  # pylint: disable=singleton-comparison
+            )
+        )
+        return self.session.execute(stmt).scalars().first()
+
+    def get_shipping_address(self, customer_id: int) -> Optional[CustomerAddresses]:
+        """Récupère l'adresse de livraison d'un client.
+        Args:
+            customer_id (int): L'ID du client dont on veut récupérer l'adresse de livraison.
+        Returns:
+            Optional[CustomerAddresses]: L'adresse de livraison du client ou None s'il n'en a pas.
+        """
+        stmt = select(CustomerAddresses).where(
+            and_(
+                CustomerAddresses.customer_id == customer_id,
+                CustomerAddresses.is_shipping == True,  # pylint: disable=singleton-comparison
+                CustomerAddresses.is_active == True  # pylint: disable=singleton-comparison
+            )
+        )
+        return self.session.execute(stmt).scalars().first()
 
     def add_address(self, address_data: dict) -> CustomerAddresses:
         """Ajoute une nouvelle adresse à un client.

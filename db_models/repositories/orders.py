@@ -5,12 +5,17 @@ mise à jour, la suppression et la récupération des commandes.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Sequence, Optional
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.sql import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from db_models.repositories.base_repo import BaseRepository
+from db_models.repositories import (
+    CustomersRepository,
+    ObjectsRepository,
+    CustomerAddressesRepository,
+)
 from db_models.objects import (
     Order,
     OrderLine,
@@ -19,12 +24,19 @@ from db_models.objects import (
     CustomerPros,
     CustomerAddresses,
 )
+from db_models.models.woo.order import WCOrderGet
 
 
 class OrdersRepository(BaseRepository):
     """Dépôt de données pour les commandes. Contient les méthodes pour interagir avec les
     données des commandes, notamment la création, la mise à jour, la suppression et la
     récupération des commandes."""
+
+    def __init__(self, session):
+        super().__init__(session)
+        self.customer_repo = CustomersRepository(self.session)
+        self.object_repo = ObjectsRepository(self.session)
+        self.customer_address_repo = CustomerAddressesRepository(self.session)
 
     # ── Lecture ──────────────────────────────────────────────
 
@@ -139,7 +151,7 @@ class OrdersRepository(BaseRepository):
 
     # ── Écriture ─────────────────────────────────────────────
 
-    def generate_reference(self, prefix: str = "CMD") -> str:
+    def generate_reference(self, order: Order, prefix: str = "CMD") -> str:
         """Génère une référence unique au format <PREFIX>-YYMM-00001.
         Args:
             prefix: Préfixe de la référence (CMD ou RET).
@@ -148,21 +160,7 @@ class OrdersRepository(BaseRepository):
         """
         now = datetime.now(timezone.utc)
         yymm = now.strftime("%y%m")
-        pattern = f"{prefix}-{yymm}-%"
-
-        last_ref = self.session.execute(
-            select(Order.reference)
-            .where(Order.reference.like(pattern))
-            .order_by(Order.reference.desc())
-            .limit(1)
-        ).scalar()
-
-        if last_ref:
-            last_num = int(last_ref.split("-")[-1])
-            next_num = last_num + 1
-        else:
-            next_num = 1
-
+        next_num = order.id if order.id else 0
         return f"{prefix}-{yymm}-{next_num:05d}"
 
     def create_order(
@@ -181,15 +179,16 @@ class OrdersRepository(BaseRepository):
             Order: La commande créée.
         """
         order = Order(
-            reference=self.generate_reference("CMD"),
             customer_id=customer_id,
             invoice_address_id=invoice_address_id,
             delivery_address_id=delivery_address_id,
             status="draft",
             create_source=create_source,
         )
+        self.session.add(order)
+        self.session.flush()
+        order.reference = self.generate_reference(order, "CMD")
         try:
-            self.session.add(order)
             self.session.commit()
             return order
         except IntegrityError as e:
@@ -206,10 +205,55 @@ class OrdersRepository(BaseRepository):
         Returns:
             Order: La commande créée dans la base de données locale.
         """
-        order = Order()
-        
+        def _dispatch_address(
+                addresses: Sequence[CustomerAddresses]
+            ) -> tuple[Optional[int], Optional[int]]:
+            billing_address_id = None
+            shipping_address_id = None
+            for addr in addresses:
+                if addr.is_billing and "WooCommerce" in (addr.address_name or ""):
+                    billing_address_id = addr.id
+                elif addr.is_shipping and "WooCommerce" in (addr.address_name or ""):
+                    shipping_address_id = addr.id
+            return billing_address_id, shipping_address_id
+
+        # Convertion du dictionnaire en objet
+        wpwc_order_model = WCOrderGet(**wc_order)
+
+        # Conversion de l'objet en dictionnaire adapté pour l'ERP
+        wpwc_order_dict = wpwc_order_model.to_dict_for_erp_order()
+
+        # Conversion du dictionnaire en objet Order local
+        wpwc_order_dict["customer_id"] = customer_id
+        order = Order().from_dict(wpwc_order_dict)
+
+        # Gestion des addresses de facturation et de livraison
+        local_addresses = self.customer_address_repo.get_by_customer_id(customer_id)
+        if not local_addresses:
+            raise ValueError(f"Aucune adresse trouvée pour le client ID {customer_id}.")
+        billing_address_id, shipping_address_id = _dispatch_address(local_addresses)
+        order.invoice_address_id = billing_address_id
+        order.delivery_address_id = shipping_address_id
+
+        # Gestion de lignes de la commande
+        for line in wpwc_order_model.line_items:
+
+            # Récupération du produit en local à partir de l'ID WooCommerce
+            local_product = self.object_repo.get_by_wpwc_id(int(line.product_id))
+            if not local_product:
+                raise ValueError(
+                    f"Produit avec ID WooCommerce {line.product_id} introuvable."
+                )
+
+            # Création de la ligne de commande locale en passant par un dictionnaire intermédiaire
+            line_dict = wpwc_order_model.to_dict_for_erp_orderline(line)
+            line_object = OrderLine().from_dict(line_dict)
+            line_object.general_object = local_product
+            order.order_lines.append(line_object)
+        self.session.add(order)
+        self.session.flush()
+        order.reference = self.generate_reference(order, "CMD")
         try:
-            self.session.add(order)
             self.session.commit()
             return order
         except IntegrityError as e:
