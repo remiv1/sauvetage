@@ -379,11 +379,13 @@ def variations_list(object_id: int):
         return UNKNOWN_OBJECT, 404
     variations = get_variations(object_id)
     vat_rates = get_vat_rates()
+    form_state = request.args.get('form_state', 'view')
     return render_template(
         VARIATIONS_TABLE,
         obj=obj,
         variations=variations,
         vat_rates=vat_rates,
+        form_state=form_state,
     )
 
 
@@ -466,6 +468,7 @@ def variation_create(object_id: int):
         obj=obj,
         variations=variations,
         vat_rates=get_vat_rates(),
+        form_state='edit',
     )
 
 
@@ -498,6 +501,7 @@ def variation_edit(object_id: int, variation_id: int):
         obj=obj,
         variations=variations,
         vat_rates=get_vat_rates(),
+        form_state='edit',
     )
 
 
@@ -516,4 +520,5 @@ def variation_delete(object_id: int, variation_id: int):
         obj=obj,
         variations=variations,
         vat_rates=get_vat_rates(),
+        form_state='edit',
     )

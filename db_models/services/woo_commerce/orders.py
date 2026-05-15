@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from db_models.repositories import CustomersRepository, OrdersRepository
 from db_models.objects import Order
 from db_models.services.woo_commerce.base import WCBase
+from db_models.services.woo_commerce.customers import WCCustomersService
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class WCOrdersService(WCBase):
         super().__init__(session, separated_keys)
         self.customer_repo = CustomersRepository(session)
         self.order_repo = OrdersRepository(session)
+        self.customer_service = WCCustomersService(session, separated_keys)
 
     def get_orders(self, status: Optional[list[str]] = None) -> list[Order]:
         """
@@ -114,9 +116,19 @@ class WCOrdersService(WCBase):
             Optional[Order]: La commande créée localement si la création a réussi, None sinon.
         """
         # Vérifier que le client existe dans WooCommerce, sinon le créer
-        # TODO: Vérifier avec mail
+        # TODO: Vérifier avec mail. Refaire la méthode ci-dessous et factoriser.
         if not order.customer.wpwc_id:
-            self.api_read.get("customers", params={"email": order.customer.email}).json()
+            mail = order.customer.email
+            if not self.customer_service.exists_wpwc_customer(mail):
+                created_customer = self.customer_service.create_wpwc_customer(order.customer)
+                if created_customer is None:
+                    logger.exception("Création du client impossible, création commande annulée.")
+                    return None
+                order.customer = created_customer
+            else:
+                wc_customer = self.api_read.get("customers", params={"email": mail}).json()
+                if wc_customer:
+                    order.customer.wpwc_id = wc_customer[0].get('id')
         # Création de la donnée sous forme de dictionnaires pour l'API WooCommerce
         data = order.to_dict_for_woo_commerce()
 

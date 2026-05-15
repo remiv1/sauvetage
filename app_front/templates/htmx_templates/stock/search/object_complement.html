@@ -7,15 +7,27 @@
     {# ── Navigation onglets ──────────────────────────────────────────────── #}
     <nav class="tab-nav">
         {% if object_type == 'book' %}
-        <button type="button" class="tab-btn active" data-tab="tab-book">Livre</button>
+        <button type="button" class="tab-btn active" data-tab="tab-book">
+            Livre
+        </button>
         {% endif %}
         {% if form_state in ['view', 'edit'] and obj %}
-        <button type="button" class="tab-btn" data-tab="tab-variations">Variations</button>
-        {% endif %}
         <button type="button" class="tab-btn {{ '' if object_type == 'book' else 'active' }}"
-                data-tab="tab-tags">Mots-clés</button>
-        <button type="button" class="tab-btn" data-tab="tab-metadata">Métadonnées</button>
-        <button type="button" class="tab-btn" data-tab="tab-media">Images</button>
+                data-tab="tab-variations">
+            Variations
+        </button>
+        {% endif %}
+        <button type="button"
+                class="tab-btn {{ 'active' if object_type != 'book' and form_state not in ['view', 'edit'] else '' }}"
+                data-tab="tab-tags">
+            Mots-clés
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-metadata">
+            Métadonnées
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-media">
+            Images
+        </button>
     </nav>
 
     {# ── Contenu des onglets ─────────────────────────────────────────────── #}
@@ -104,7 +116,7 @@
         {% endif %}
 
         {# ── Onglet Mots-clés ───────────────────────────────────────────── #}
-        <div class="tab-panel {{ 'active' if object_type != 'book' else '' }}" id="tab-tags">
+        <div class="tab-panel" id="tab-tags">
             <div id="tags-list" class="dynamic-list">
                 {% if form_state == 'view' and obj and obj.object_tags %}
                     {% for ot in obj.object_tags %}
@@ -304,8 +316,9 @@
 
         {# ── Onglet Variations ───────────────────────────────────────────── #}
         {% if form_state in ['view', 'edit'] and obj %}
-        <div class="tab-panel" id="tab-variations"
-             hx-get="/stock/htmx/search/object/{{ obj.id }}/variations"
+        <div class="tab-panel {{ 'active' if object_type != 'book' else '' }}"
+             id="tab-variations"
+             hx-get="/stock/htmx/search/object/{{ obj.id }}/variations?form_state={{ form_state }}"
              hx-trigger="intersect once"
              hx-target="#tab-variations"
              hx-swap="innerHTML">
