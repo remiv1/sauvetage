@@ -14,6 +14,7 @@ from flask import (
 )
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
+    VariationForm,
 )
 from app_front.blueprints.stock.utils import (
     search_stock_global,
@@ -28,6 +29,10 @@ from app_front.blueprints.stock.utils import (
     add_object_to_dilicom,
     remove_object_from_dilicom,
     get_vat_rates,
+    get_variations,
+    create_variation_for_object,
+    update_variation_for_object,
+    delete_variation_for_object,
 )
 
 bp_stock_htmx_search = Blueprint(
@@ -48,6 +53,8 @@ OBJECT_COMPLEMENT = "htmx_templates/stock/search/object_complement.html"
 AUTOCOMPLETE_DROPDOWN = "htmx_templates/stock/search/autocomplete_dropdown.html"
 TAG_AUTOCOMPLETE = "htmx_templates/stock/search/tag_autocomplete_dropdown.html"
 TAG_SELECTED = "htmx_templates/stock/search/tag_selected.html"
+VARIATIONS_TABLE = "htmx_templates/stock/search/variations_table.html"
+VARIATION_FORM = "htmx_templates/stock/search/variation_form.html"
 
 _MEDIA_UPLOAD_DIR = os.environ.get("MEDIA_UPLOAD_DIR", "")
 
@@ -357,3 +364,156 @@ def dilicom_remove(object_id: int):
     )
     resp.headers["HX-Trigger"] = "refreshTable"
     return resp
+
+
+# ============================================================================
+# Routes HTMX — Variations
+# ============================================================================
+
+
+@bp_stock_htmx_search.get("/object/<int:object_id>/variations")
+def variations_list(object_id: int):
+    """Retourne le fragment tableau des variations de l'objet."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    variations = get_variations(object_id)
+    vat_rates = get_vat_rates()
+    return render_template(
+        VARIATIONS_TABLE,
+        obj=obj,
+        variations=variations,
+        vat_rates=vat_rates,
+    )
+
+
+@bp_stock_htmx_search.get("/object/<int:object_id>/variation/form")
+def variation_create_form(object_id: int):
+    """Retourne le formulaire de création d'une nouvelle variation."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    form = VariationForm()
+    vat_rates = get_vat_rates()
+    form.vat_rate_id.choices = vat_rates
+    # Pré-remplir prix depuis l'objet parent
+    form.price.data = str(obj.price) if obj.price is not None else ""
+    form.purchase_price.data = str(obj.purchase_price) if obj.purchase_price is not None else ""
+    if obj.vat_rate_id is not None:
+        form.vat_rate_id.data = str(obj.vat_rate_id)
+    return render_template(
+        VARIATION_FORM,
+        form=form,
+        obj=obj,
+        variation=None,
+        action_url=f"/stock/htmx/search/object/{object_id}/variation/create",
+    )
+
+
+@bp_stock_htmx_search.get("/object/<int:object_id>/variation/<int:variation_id>/form")
+def variation_edit_form(object_id: int, variation_id: int):
+    """Retourne le formulaire d'édition d'une variation existante."""
+    obj = get_object_by_id(object_id)
+    if obj is None:
+        return UNKNOWN_OBJECT, 404
+    variations = get_variations(object_id)
+    variation = next((v for v in variations if v.id == variation_id), None)
+    if variation is None:
+        return "<p>Variation introuvable.</p>", 404
+    form = VariationForm()
+    vat_rates = get_vat_rates()
+    form.vat_rate_id.choices = vat_rates
+    form.id.data = str(variation.id)
+    form.name.data = variation.name or ""
+    form.description.data = variation.description or ""
+    form.price.data = str(variation.price) if variation.price is not None else ""
+    form.purchase_price.data = str(variation.purchase_price) \
+        if variation.purchase_price is not None else ""
+    form.vat_rate_id.data = str(variation.vat_rate_id) if variation.vat_rate_id is not None else ""
+    form.is_active.data = variation.is_active
+    return render_template(
+        VARIATION_FORM,
+        form=form,
+        obj=obj,
+        variation=variation,
+        action_url=f"/stock/htmx/search/object/{object_id}/variation/{variation_id}/edit",
+    )
+
+
+@bp_stock_htmx_search.post("/object/<int:object_id>/variation/create")
+def variation_create(object_id: int):
+    """Crée une nouvelle variation et retourne le tableau mis à jour."""
+    form = VariationForm()
+    form.vat_rate_id.choices = get_vat_rates()
+    if not form.validate_on_submit():
+        logger.warning("Formulaire variation invalide : %s", form.errors)
+        return render_template(
+            VARIATION_FORM,
+            form=form,
+            obj=get_object_by_id(object_id),
+            variation=None,
+            action_url=f"/stock/htmx/search/object/{object_id}/variation/create",
+        ), 422
+    try:
+        create_variation_for_object(object_id, form)
+    except ValueError as exc:
+        logger.exception("Erreur création variation : %s", exc)
+        return f"<p class='text-danger'>{exc}</p>", 422
+    variations = get_variations(object_id)
+    obj = get_object_by_id(object_id)
+    return render_template(
+        VARIATIONS_TABLE,
+        obj=obj,
+        variations=variations,
+        vat_rates=get_vat_rates(),
+    )
+
+
+@bp_stock_htmx_search.post("/object/<int:object_id>/variation/<int:variation_id>/edit")
+def variation_edit(object_id: int, variation_id: int):
+    """Met à jour une variation et retourne le tableau mis à jour."""
+    form = VariationForm()
+    form.vat_rate_id.choices = get_vat_rates()
+    if not form.validate_on_submit():
+        logger.warning("Formulaire variation invalide : %s", form.errors)
+        obj = get_object_by_id(object_id)
+        variations = get_variations(object_id)
+        variation = next((v for v in variations if v.id == variation_id), None)
+        return render_template(
+            VARIATION_FORM,
+            form=form,
+            obj=obj,
+            variation=variation,
+            action_url=f"/stock/htmx/search/object/{object_id}/variation/{variation_id}/edit",
+        ), 422
+    try:
+        update_variation_for_object(variation_id, object_id, form)
+    except ValueError as exc:
+        logger.exception("Erreur mise à jour variation : %s", exc)
+        return f"<p class='text-danger'>{exc}</p>", 422
+    variations = get_variations(object_id)
+    obj = get_object_by_id(object_id)
+    return render_template(
+        VARIATIONS_TABLE,
+        obj=obj,
+        variations=variations,
+        vat_rates=get_vat_rates(),
+    )
+
+
+@bp_stock_htmx_search.post("/object/<int:object_id>/variation/<int:variation_id>/delete")
+def variation_delete(object_id: int, variation_id: int):
+    """Supprime logiquement une variation et retourne le tableau mis à jour."""
+    try:
+        delete_variation_for_object(variation_id)
+    except ValueError as exc:
+        logger.exception("Erreur suppression variation : %s", exc)
+        return f"<p class='text-danger'>{exc}</p>", 422
+    variations = get_variations(object_id)
+    obj = get_object_by_id(object_id)
+    return render_template(
+        VARIATIONS_TABLE,
+        obj=obj,
+        variations=variations,
+        vat_rates=get_vat_rates(),
+    )

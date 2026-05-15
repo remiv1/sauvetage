@@ -1,7 +1,7 @@
 """Module contenant les modèles pour les objets mise en vente."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from typing import Optional
 from sqlalchemy import (
     Integer,
@@ -19,6 +19,7 @@ from db_models.services.utils import slugify
 
 CASCADE_OPTIONS = "all, delete-orphan"
 GENERAL_OBJECT_PK = "app_schema.general_objects.id"
+DESCRIPTION_FK = "Identifiant de l'objet général associé"
 
 
 class GeneralObjects(WorkingBase, QueryMixin):
@@ -140,6 +141,9 @@ class GeneralObjects(WorkingBase, QueryMixin):
     media_files = relationship(
         "MediaFiles", back_populates="general_object", cascade=CASCADE_OPTIONS
     )
+    object_variations = relationship(
+        "ObjectVariations", back_populates="general_object", cascade=CASCADE_OPTIONS
+    )
     order_lines = relationship(
         "OrderLine", back_populates="general_object", cascade=CASCADE_OPTIONS
     )
@@ -198,6 +202,132 @@ class GeneralObjects(WorkingBase, QueryMixin):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GeneralObjects":
         """Crée un objet GeneralObject à partir d'un dictionnaire."""
+        return cls(**data)
+
+
+class ObjectVariations(WorkingBase, QueryMixin):
+    """
+    Modèle pour les variations d'un objet général.
+    Une variation partage les tags, images et métadonnées de son parent (GeneralObjects).
+    La gestion des stocks se fait uniquement sur l'objet parent.
+
+    Attributs :
+    - id : Identifiant unique de la variation (clé primaire)
+    - id_wpwc : Identifiant de la variation dans WooCommerce (nullable, unique)
+    - general_object_id : FK vers l'objet parent (general_objects.id)
+    - name : Nom de la variation
+    - description : Description spécifique à la variation (nullable)
+    - price : Prix de la variation
+    - purchase_price : Prix d'achat de la variation (nullable)
+    - vat_rate_id : Taux de TVA de la variation (nullable)
+    - created_at : Date de création
+    - updated_at : Date de dernière mise à jour
+    - is_active : Indique si la variation est active pour la vente
+    """
+
+    __tablename__ = "object_variations"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Identifiant unique de la variation d'objet",
+    )
+    id_wpwc: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant de l'objet dans WooCommerce (si synchronisé)",
+    )
+    general_object_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey(GENERAL_OBJECT_PK),
+        nullable=False,
+        comment=DESCRIPTION_FK,
+    )
+
+    # Données de base
+    name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom de l'objet")
+    description: Mapped[str] = mapped_column(String, comment="Description de l'objet")
+    price: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False, default=0.0,
+        comment="Prix de l'objet"
+    )
+    purchase_price: Mapped[Optional[float]] = mapped_column(
+        Numeric(10, 2), nullable=True, default=0.0,
+        comment="Prix d'achat de l'objet"
+    )
+    vat_rate_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.vat_rates.id"),
+        nullable=True,
+        comment="Code TVA associé à l'objet (référence la table vat_rates)",
+    )
+
+    # Méta-données de suivi
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de création de l'objet",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        comment="Date de dernière mise à jour de l'objet",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, comment="Indique si l'objet est actif pour la vente"
+    )
+
+    # Relations
+    general_object = relationship(
+        "GeneralObjects",
+        back_populates="object_variations",
+        uselist=False,
+    )
+    vat_rate = relationship("VatRate")
+
+    def __repr__(self) -> str:
+        return (
+            f"<ObjectVariations(id={self.id}, g_o_id={self.general_object_id}, "
+            f"name={self.name}, price={self.price})>"
+        )
+
+    def to_dict(self, is_woo_commerce: bool = False) -> dict[str, Any]:
+        """Convertit l'objet ObjectVariations en dictionnaire."""
+        if is_woo_commerce:
+            value_dict: dict[str, Any] = {
+                "status": "publish" if self.is_active else "draft",
+                "description": self.description,
+                "sku": self.id,
+                "regular_price": str(self.price),
+                "sale_price": str(self.price) if self.price > 0 else None,
+                "tax_class": self.vat_rate.name if self.vat_rate else None,
+                "manage_stock": "parent",
+                "backorders": "notify",
+            }
+        else:
+            value_dict = {
+                "id": self.id,
+                "general_object_id": self.general_object_id,
+                "name": self.name,
+                "description": self.description,
+                "price": self.price,
+                "purchase_price": self.purchase_price,
+                "vat_rate_id": self.vat_rate_id,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+                "is_active": self.is_active,
+            }
+        return value_dict
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ObjectVariations":
+        """Crée un objet ObjectVariations à partir d'un dictionnaire."""
         return cls(**data)
 
 
@@ -449,7 +579,7 @@ class ObjectTags(WorkingBase, QueryMixin):
         Integer,
         ForeignKey(GENERAL_OBJECT_PK),
         nullable=False,
-        comment="Identifiant de l'objet général associé",
+        comment=DESCRIPTION_FK,
     )
     tag_id: Mapped[int] = mapped_column(
         Integer,
@@ -520,7 +650,7 @@ class ObjMetadatas(WorkingBase, QueryMixin):
     general_object_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey(GENERAL_OBJECT_PK),
-        comment="Identifiant de l'objet général associé",
+        comment=DESCRIPTION_FK,
     )
 
     # Données semi-structurées au format JSON

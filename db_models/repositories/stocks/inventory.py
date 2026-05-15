@@ -9,7 +9,7 @@ from db_models.objects import (
     DilicomReferencial,
     Suppliers,
 )
-from db_models.repositories import BaseRepository
+from db_models.repositories.base_repo import BaseRepository
 
 
 class InventoryRepository(BaseRepository):

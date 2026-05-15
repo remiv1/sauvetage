@@ -9,6 +9,9 @@
         {% if object_type == 'book' %}
         <button type="button" class="tab-btn active" data-tab="tab-book">Livre</button>
         {% endif %}
+        {% if form_state in ['view', 'edit'] and obj %}
+        <button type="button" class="tab-btn" data-tab="tab-variations">Variations</button>
+        {% endif %}
         <button type="button" class="tab-btn {{ '' if object_type == 'book' else 'active' }}"
                 data-tab="tab-tags">Mots-clés</button>
         <button type="button" class="tab-btn" data-tab="tab-metadata">Métadonnées</button>
@@ -298,6 +301,17 @@
             </button>
             {% endif %}
         </div>
+
+        {# ── Onglet Variations ───────────────────────────────────────────── #}
+        {% if form_state in ['view', 'edit'] and obj %}
+        <div class="tab-panel" id="tab-variations"
+             hx-get="/stock/htmx/search/object/{{ obj.id }}/variations"
+             hx-trigger="intersect once"
+             hx-target="#tab-variations"
+             hx-swap="innerHTML">
+            <p class="text-muted">Chargement des variations…</p>
+        </div>
+        {% endif %}
 
     </div>
 </div>

@@ -125,7 +125,7 @@ class WCOrdersService(WCBase):
 
         # Traitement du retour de l'API pour lier la commande localement
         if response.status_code == 201:
-            # Récupération de la commande créée depuis WooCommerce pour obtenir les données complètes
+            # Récupération de la commande créée depuis WooCommerce pour obtenir les données
             wc_order = response.json()
             wpwc_customer_id = wc_order.get('customer_id')
             customer = self.customer_repo.get_by_wpwc_id(wpwc_customer_id)

@@ -39,17 +39,19 @@ class ObjectsRepository(BaseRepository):
         self.model = GeneralObjects
         self._kwargs = tuple(column.name for column in self.model.__table__.columns)
         # Importations locales pour casser l'import circulaire
-        from .books import BooksRepository
-        from .other_objects import OtherObjectsRepository
-        from .obj_metadatas import ObjMetadatasRepository
-        from .object_tags import ObjectTagsRepository
-        from .media import MediaRepository
+        from .books import BooksRepository  # pylint: disable=import-outside-toplevel
+        from .other_objects import OtherObjectsRepository  # pylint: disable=import-outside-toplevel
+        from .obj_metadatas import ObjMetadatasRepository  # pylint: disable=import-outside-toplevel
+        from .object_tags import ObjectTagsRepository  # pylint: disable=import-outside-toplevel
+        from .media import MediaRepository  # pylint: disable=import-outside-toplevel
+        from .variations import VariationsRepository  # pylint: disable=import-outside-toplevel
 
         self.book_repo = BooksRepository(self.session)
         self.other_object_repo = OtherObjectsRepository(self.session)
         self.obj_metadata_repo = ObjMetadatasRepository(self.session)
         self.object_tags_repo = ObjectTagsRepository(self.session)
         self.media_repo = MediaRepository(self.session)
+        self.variation_repo = VariationsRepository(self.session)
 
     def _get_global_select(self):
         """Retourne une requête de base pour les objets, avec tous les éléments liés."""
@@ -64,6 +66,7 @@ class ObjectsRepository(BaseRepository):
                 joinedload(self.model.obj_metadatas),
                 joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
                 joinedload(self.model.media_files),
+                joinedload(self.model.object_variations),
                 joinedload(self.model.vat_rate),
             )
         )

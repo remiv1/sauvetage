@@ -9,6 +9,7 @@ from app_front.blueprints.stock.forms import (
     CreateObjectForm,
     OrderInCreateForm,
     OrderInLineForm,
+    VariationForm,
 )
 from db_models.objects import (
     Books,
@@ -16,6 +17,7 @@ from db_models.objects import (
     OrderIn,
     OrderInLine,
     GeneralObjects,
+    ObjectVariations,
     VatRate,
 )
 from db_models.repositories.stocks import (
@@ -23,6 +25,7 @@ from db_models.repositories.stocks import (
     DilicomReferencialRepository,
     )
 from db_models.repositories.objects.objects import ObjectsRepository
+from db_models.repositories.objects.variations import VariationsRepository
 from db_models.repositories.tags import TagsRepository
 
 logger = logging.getLogger("stock_utils")
@@ -477,3 +480,69 @@ def return_reservation(order_id: int) -> None:
     """Retourne (clôture) une réservation."""
     stock_repo = StockRepository(db_conf.get_main_session())
     stock_repo.return_reservation(order_id)
+
+
+# ============================================================================
+# Gestion des variations d'objet
+# ============================================================================
+
+
+def get_variations(general_object_id: int) -> List[ObjectVariations]:
+    """Retourne toutes les variations actives d'un objet général."""
+    session = db_conf.get_main_session()
+    repo = VariationsRepository(session)
+    return list(repo.get_all(general_object_id))
+
+
+def create_variation_for_object(
+    general_object_id: int, form: "VariationForm"
+) -> int:
+    """Crée une nouvelle variation pour l'objet donné.
+
+    Returns:
+        L'ID de la variation créée.
+    """
+    session = db_conf.get_main_session()
+    repo = VariationsRepository(session)
+    variation = repo.save_from_form(form, general_object_id=general_object_id)
+    return variation.id
+
+
+def update_variation_for_object(
+    variation_id: int, general_object_id: int, form: "VariationForm"
+) -> int:
+    """Met à jour une variation existante.
+
+    Returns:
+        L'ID de la variation mise à jour.
+
+    Raises:
+        ValueError: Si la variation n'appartient pas à l'objet général donné.
+    """
+    session = db_conf.get_main_session()
+    repo = VariationsRepository(session)
+    variation = repo.get_by_id(variation_id)
+    if variation is None or variation.general_object_id != general_object_id:
+        raise ValueError(
+            f"Variation {variation_id} introuvable pour l'objet {general_object_id}."
+        )
+    repo.save_from_form(form, general_object_id=general_object_id, instance=variation)
+    return variation.id
+
+
+def delete_variation_for_object(variation_id: int) -> bool:
+    """Effectue une suppression logique d'une variation (is_active = False).
+
+    Returns:
+        True si la variation a bien été désactivée.
+
+    Raises:
+        ValueError: Si la variation n'existe pas.
+    """
+    session = db_conf.get_main_session()
+    repo = VariationsRepository(session)
+    variation = repo.get_by_id(variation_id)
+    if variation is None:
+        raise ValueError(f"Variation {variation_id} introuvable.")
+    repo.delete(variation_id)
+    return True

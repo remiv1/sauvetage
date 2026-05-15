@@ -6,6 +6,7 @@ from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
     IntegerField,
+    BooleanField,
     FieldList,
     FormField,
     SubmitField,
@@ -18,6 +19,7 @@ from wtforms.validators import DataRequired, Optional, NumberRange
 
 
 OrderTuple = namedtuple("Order", ["id", "general_object_id", "qty", "pu", "vat_rate"])
+VAT_RATE = "Taux de TVA"
 
 class OrderInCreateForm(FlaskForm):
     """Formulaire de création de commande fournisseur (étape 1)."""
@@ -37,7 +39,7 @@ class OrderInLineForm(FlaskForm):
     general_object_id = HiddenField("ID objet", validators=[DataRequired()])
     quantity = StringField("Quantité", validators=[DataRequired()])
     unit_price = StringField("Prix unitaire", validators=[DataRequired()])
-    vat_rate = StringField("Taux de TVA", validators=[DataRequired()])
+    vat_rate = StringField(VAT_RATE, validators=[DataRequired()])
     submit = SubmitField("Ajouter à la commande")
 
     def validate_form_data(self, reservation: bool = False) -> OrderTuple:
@@ -166,6 +168,28 @@ class MediaFileForm(FlaskForm):
     file_link = StringField("URL du fichier média (si type lien)")
 
 
+class VariationForm(FlaskForm):
+    """Formulaire de création/édition d'une variation d'objet."""
+
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+
+        csrf = False
+
+    id = HiddenField("ID de la variation")
+    name = StringField("Nom de la variation", validators=[DataRequired()])
+    description = TextAreaField("Description", render_kw={"rows": 3})
+    price = StringField("Prix de vente", validators=[DataRequired()])
+    purchase_price = StringField("Prix d'achat")
+    vat_rate_id = SelectField(
+        VAT_RATE,
+        coerce=str,
+        choices=[("" , "— Aucun —")],
+        validate_choice=False,
+    )
+    is_active = BooleanField("Active", default=True)
+
+
 class CreateObjectForm(FlaskForm):
     """Formulaire de création d'objet (étape 1)."""
 
@@ -192,7 +216,7 @@ class CreateObjectForm(FlaskForm):
     price = StringField("Prix de vente", validators=[DataRequired()])
     purchase_price = StringField("Prix d'achat")
     vat_rate_id = SelectField(
-        "Taux de TVA",
+        VAT_RATE,
         coerce=str,
         choices=[("", "— Aucun —")],
         validate_choice=False,

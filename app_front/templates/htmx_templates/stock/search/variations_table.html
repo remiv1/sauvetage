@@ -1,0 +1,65 @@
+{# Fragment HTMX — Tableau des variations d'un objet général #}
+
+<div id="variations-panel">
+    {% if variations %}
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nom</th>
+                <th>Prix TTC</th>
+                <th>TVA</th>
+                <th>Active</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in variations %}
+            <tr>
+                <td>{{ v.id }}</td>
+                <td>{{ v.name }}</td>
+                <td>{{ "%.2f"|format(v.price) if v.price is not none else "—" }} €</td>
+                <td>
+                    {% for rate_id, rate_label in vat_rates %}
+                        {% if rate_id == (v.vat_rate_id | string) %}{{ rate_label }}{% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if v.is_active %}
+                    <span class="badge badge-success">Oui</span>
+                    {% else %}
+                    <span class="badge badge-secondary">Non</span>
+                    {% endif %}
+                </td>
+                <td class="text-nowrap">
+                    <button type="button" class="btn btn-xs btn-outline-primary"
+                            hx-get="/stock/htmx/search/object/{{ obj.id }}/variation/{{ v.id }}/form"
+                            hx-target="#variation-form-container"
+                            hx-swap="innerHTML">
+                        Éditer
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-danger"
+                            hx-post="/stock/htmx/search/object/{{ obj.id }}/variation/{{ v.id }}/delete"
+                            hx-target="#variations-panel"
+                            hx-swap="outerHTML"
+                            hx-confirm="Supprimer cette variation ?">
+                        Supprimer
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">Aucune variation pour cet objet.</p>
+    {% endif %}
+
+    <button type="button" class="btn btn-sm btn-primary mt-2"
+            hx-get="/stock/htmx/search/object/{{ obj.id }}/variation/form"
+            hx-target="#variation-form-container"
+            hx-swap="innerHTML">
+        + Ajouter une variation
+    </button>
+
+    <div id="variation-form-container" class="mt-3"></div>
+</div>

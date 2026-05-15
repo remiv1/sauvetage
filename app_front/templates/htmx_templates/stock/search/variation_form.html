@@ -1,0 +1,65 @@
+{# Fragment HTMX — Formulaire création/édition d'une variation #}
+
+<div id="variation-form-wrapper" class="card mt-2 p-3">
+    <h5 class="mb-3">{{ "Modifier la variation" if variation else "Nouvelle variation" }}</h5>
+
+    <form hx-post="{{ action_url }}"
+          hx-target="#variations-panel"
+          hx-swap="outerHTML">
+
+        {{ form.hidden_tag() if form.hidden_tag is defined }}
+        {{ form.id() }}
+
+        <div class="form-group">
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control", placeholder="Nom de la variation…") }}
+            {% for err in form.name.errors %}
+            <span class="text-danger small">{{ err }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control", rows=3, placeholder="Description optionnelle…") }}
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col">
+                {{ form.price.label(class="form-label") }}
+                {{ form.price(class="form-control", placeholder="0.00") }}
+                {% for err in form.price.errors %}
+                <span class="text-danger small">{{ err }}</span>
+                {% endfor %}
+            </div>
+            <div class="form-group col">
+                {{ form.purchase_price.label(class="form-label") }}
+                {{ form.purchase_price(class="form-control", placeholder="0.00") }}
+            </div>
+            <div class="form-group col">
+                {{ form.vat_rate_id.label(class="form-label") }}
+                {{ form.vat_rate_id(class="form-control") }}
+            </div>
+        </div>
+
+        <div class="form-group form-check">
+            {{ form.is_active(class="form-check-input") }}
+            {{ form.is_active.label(class="form-check-label") }}
+        </div>
+
+        {# Infos héritées du parent (lecture seule) #}
+        <div class="alert alert-info mt-2 p-2 small">
+            <strong>Héritées de l'objet parent :</strong>
+            images, mots-clés et métadonnées de « {{ obj.name }} ».
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+            <button type="button" class="btn btn-secondary btn-sm"
+                    hx-get="/stock/htmx/search/object/{{ obj.id }}/variations"
+                    hx-target="#variations-panel"
+                    hx-swap="outerHTML">
+                Annuler
+            </button>
+        </div>
+    </form>
+</div>
