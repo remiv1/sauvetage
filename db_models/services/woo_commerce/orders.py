@@ -129,9 +129,12 @@ class WCOrdersService(WCBase):
             wc_order = response.json()
             wpwc_customer_id = wc_order.get('customer_id')
             customer = self.customer_repo.get_by_wpwc_id(wpwc_customer_id)
-            if not customer:
+            if customer is None:
                 order.customer.wpwc_id = wpwc_customer_id
-            order_wpwc = self.order_repo.create_from_woo_commerce(wc_order, customer.id)
+                customer_id = order.customer.id
+            else:
+                customer_id = customer.id
+            order_wpwc = self.order_repo.create_from_woo_commerce(wc_order, customer_id)
             logger.info("Commande créée avec succès dans WooCommerce et localement.")
             return order
         logger.exception(
