@@ -116,19 +116,23 @@ class WCOrdersService(WCBase):
             Optional[Order]: La commande créée localement si la création a réussi, None sinon.
         """
         # Vérifier que le client existe dans WooCommerce, sinon le créer
+        mail = order.customer.email
+        wpwc_customer = self.customer_service.get_by_mail(mail)
+        exists_customer_wpwc = wpwc_customer is not None
+        exists_reference_local = order.customer.wpwc_id is not None
         # TODO: Vérifier avec mail. Refaire la méthode ci-dessous et factoriser.
-        if not order.customer.wpwc_id:
-            mail = order.customer.email
-            if not self.customer_service.exists_wpwc_customer(mail):
-                created_customer = self.customer_service.create_wpwc_customer(order.customer)
-                if created_customer is None:
-                    logger.exception("Création du client impossible, création commande annulée.")
-                    return None
-                order.customer = created_customer
-            else:
-                wc_customer = self.api_read.get("customers", params={"email": mail}).json()
-                if wc_customer:
-                    order.customer.wpwc_id = wc_customer[0].get('id')
+        if not exists_reference_local and exists_customer_wpwc:
+            created_customer = self.customer_service.create_wpwc_customer(order.customer)
+            if created_customer is None:
+                logger.exception("Création du client impossible, création commande annulée.")
+                raise RuntimeError("Création du client impossible, création commande annulée.")
+            order.customer = created_customer
+        else:
+            wc_customer = self.customer_service.get_by_mail(mail)
+            updated_customer = self.customer_service.diff_customer(order.customer, wc_customer)
+            self.customer_service.update_wpwc_customer(wpwc_customer.get('id'), updated_customer)
+            if wpwc_customer:
+                order.customer.wpwc_id = wpwc_customer.get('id')
         # Création de la donnée sous forme de dictionnaires pour l'API WooCommerce
         data = order.to_dict_for_woo_commerce()
 

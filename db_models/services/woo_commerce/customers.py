@@ -54,6 +54,21 @@ class WCCustomersService(WCBase):
         self.order_repo = OrdersRepository(session)
         self.customer_repo = CustomersRepository(session)
 
+    def get_by_mail(self, email: str) -> Optional[Customers]:
+        """
+        Récupère un client local à partir de son email.
+        Args:
+            email (str): L'email du client à récupérer.
+        Returns:
+            Optional[Customers]: L'objet Customers correspondant à l'email, ou None sinon.
+        """
+        response = self.api_read.get("customers", params={"email": email})
+        if response.status_code == 200:
+            customers = response.json()
+            if customers:
+                return self.customer_repo.get_by_wpwc_id(customers[0].get('id'))
+        return None
+
     def exists_wpwc_customer(self, email: str) -> bool:
         """
         Vérifie si un client avec l'email donné existe dans WooCommerce.
@@ -169,3 +184,23 @@ class WCCustomersService(WCBase):
             elif local_value != remote_value:
                 diff[key] = local_value
         return diff
+
+    def update_wpwc_customer(self, wc_customer_id: int, data: dict[str, Any]) -> bool:
+        """
+        Met à jour un client dans WooCommerce.
+        Args:
+            wc_customer_id (int): ID du client dans WooCommerce.
+            data (dict[str, Any]): Données à mettre à jour pour le client.
+        Returns:
+            bool: True si la mise à jour a réussi, False sinon.
+        """
+        response = self.api_write.put(f'customers/{wc_customer_id}', data=data)
+        if response.status_code == 200:
+            logger.info("Client %s mis à jour avec succès.", wc_customer_id)
+            return True
+        logger.exception(
+            "Erreur lors de la mise à jour du client %s: %s",
+            wc_customer_id,
+            response.text
+        )
+        return False
