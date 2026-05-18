@@ -1,6 +1,123 @@
 # Rapport qualitatif -- Projet Sauvetage
 
-Date : 31 mars 2026
+Date : 18 mai 2026
+
+Resume : rapport qualitatif complet couvrant l'etat du code, les decisions architecturales et structurelles, et la qualite globale depuis le debut du projet. Ce rapport integre une mise a jour couvrant 74 commits supplementaires deposes entre le 01/04/2026 et le 18/05/2026 sur les branches `administration_sprint`, `customer_order_sprint`, `dilicom_sprint` et `woocommerce_sprint` (325 fichiers, +32 036 / -2 184 lignes).
+
+---
+
+## Mise a jour -- Sprint du 01/04/2026 au 18/05/2026
+
+### Vue d'ensemble de la periode
+
+| Indicateur | Valeur |
+| --- | --- |
+| Commits (branche courante) | 74 |
+| Fichiers modifies | 325 |
+| Insertions | +32 036 |
+| Suppressions | -2 184 |
+| Branches mergees | 3 (`administration_sprint`, `customer_order_sprint`, `dilicom_sprint`) |
+| Branche en cours | `woocommerce_sprint` |
+| Fichiers Python (projet) | ~26 700 lignes |
+| Templates HTML | 193 |
+| Fichiers SCSS | 25 |
+| Fonctions de test | 72 (64 front + 8 db_objects) |
+
+### Sprint administration (merge 01/04/2026)
+
+Livraison de l'interface d'administration complete :
+
+- **Gestion des utilisateurs** (`routes_htmx_users.py`, 193 lignes) : creation, modification, desactivation des comptes depuis l'interface admin.
+- **Gestion des TVA** (`routes_htmx_vat.py`, 142 lignes) : CRUD des taux de TVA via HTMX.
+- **Consultation des logs** (`routes_htmx_logs.py`, 62 lignes) : lecture des logs MongoDB directement dans l'interface.
+- `admin/utils.py` (253 lignes) : logique applicative centralisee pour le blueprint admin.
+- Configuration TOML ajoutee pour les pages admin (`admin.toml`, `admin/logs.toml`, `admin/users.toml`, `admin/vat.toml`).
+- **Pages d'erreur** (`4xx.html`, `5xx.html`) avec illustrations dediees.
+- Amelioration des rollbacks SQLAlchemy : ajout de blocs `try/except` manquants dans plusieurs routes.
+
+### Sprint customer_order (merge 10/04/2026)
+
+Livraison complete de la gestion des commandes clients :
+
+- **Blueprint `order`** : creation, edition, liste des commandes avec selection d'adresse (`routes_htmx_create.py` 298 lignes, `order/utils.py` 649 lignes).
+- **Factures et expeditions** : gestion du cycle de vie complet depuis la creation jusqu'a l'expedition.
+- **Templates PDF** : `customer_order_slip.html` (277 lignes) et `supplier_order_slip.html` (158 lignes) pour les bons de commande.
+- **Securite app_back** : decorateurs de controle d'acces ajoutes sur FastAPI (`app_back/config/security.py`).
+- **Arret propre du backend** : gestionnaire de signal `SIGTERM` ajoute dans `bootstrap.py` pour eviter les connexions orphelines en production.
+- **Configuration SMTP** integree dans le script `setup-env.sh`.
+- **Service systemd** : fichiers de configuration pour le deploiement en production (`systemd/sauvetage.service`, `systemd/README.md`).
+- **Correctif sessions SQLAlchemy** : `_SessionMain.remove()` enregistre via `@app.teardown_appcontext` dans `app_front/main.py` -- **item roadmap court terme accompli**.
+- Refactoring des modales HTML : remplacement des `<button>` par des elements `<dialog>` natifs.
+
+### Sprint dilicom (merge 22/04/2026)
+
+Livraison de l'integration Dilicom SFTP et de la chaine ONIX :
+
+- **`db_models/services/dilicom.py`** (580 lignes) : `DilicomService` complet avec `send_updates()` (envoi des referentiels au format FEL) et `fetch_returns()` (recuperation et ingestion des fiches). L'endpoint `app_back/v1/dilicom/orders.py` est desormais partiellement implemente avec les routes `send-referentials` et `fetch-returns` -- **item roadmap long terme partiellement accompli**.
+- **`app_back/scheduler/dilicom_scheduler.py`** (52 lignes) : planificateur pour les taches Dilicom recurrentes.
+- **`app_back/v1/dilicom/background_transactions.py`** (90 lignes) : transactions asynchrones Dilicom.
+- **SFTP** : connexion, depot de fichiers et lecture des dossiers distants valides par test Jupyter concluant.
+- **Bibliotheque `onixlib`** : creation d'une bibliotheque separee pour le parsing des fichiers ONIX (25/04/2026). Definitions des produits ONIX et routage SEO.
+- Amelioration du modele fournisseur (champs supplementaires) et du formulaire (annee de publication et pages en `IntegerField` avec validation).
+- Nettoyage : suppression des notebooks de test Dilicom obsoletes.
+- Documentation technique ajoutee : `DOC TECH REVENDEUR - REF-FEL.pdf`, `Guide pratique ONIX - V07.pdf`, description des tests.
+- **Sous-module `datas`** rattache et reference correctement.
+
+### Sprint woocommerce (en cours, 05/05 -- 18/05/2026)
+
+Demarrage de l'integration e-commerce avec WooCommerce :
+
+- **Package `db_models/services/woo_commerce/`** :
+  - `products.py` (757 lignes) : export des produits, taux de TVA, tags.
+  - `customers.py` (281 lignes) : synchronisation des clients par email.
+  - `orders.py` (208 lignes) : gestion des commandes WooCommerce.
+  - `base.py` (124 lignes) : classe de base pour les services WooCommerce.
+- **`db_models/repositories/sync_log.py`** (227 lignes) : repository de journal de synchronisation.
+- **`db_models/repositories/stocks/stock.py`** (268 lignes) : nouveau repository de gestion du stock.
+- **`db_models/repositories/objects/variations.py`** (154 lignes) : gestion des variations d'objets.
+- **`db_models/config/woocommerce.py`** (43 lignes) : configuration de l'integration WooCommerce.
+- **`app_back/v1/woocommerce/`** : module avec transactions en arriere-plan (`background_transactions.py`) et gestion des medias (`media.py`).
+- **Migration** `integration_woocommerce_wordpress.py` (174 lignes) : schema base de donnees pour WooCommerce.
+- **Gestion des tokens d'acces** WooCommerce.
+- **Blueprint `app_front/blueprints/woocommerce/`** : interface front pour la gestion WooCommerce.
+- Descriptions detaillees ajoutees sur les modeles `MediaFiles` et objets.
+
+### Infrastructure buyer (WordPress e-commerce)
+
+- **SSL** : script `generate-certs.sh` (64 lignes) pour la generation de certificats TLS.
+- **Outils de sauvegarde WordPress** :
+  - `buyer/backup/` : service Docker dedie (`Dockerfile`, `entrypoint.sh`, `README.md` 299 lignes).
+  - `buyer/tools/backup_wp.py` (177 lignes), `restore_wp.py` (127 lignes), `bkpctl.py` (173 lignes, outil CLI), `functions.py` (218 lignes).
+- `buyer/docker-compose.yml` significativement enrichi (+76 lignes).
+
+### Securite et infrastructure
+
+- **Rate limiting login** : middleware Traefik `login-rate-limit` (5 req/10 min, burst 10) sur `/user/login` -- **item roadmap court terme accompli**.
+- **Blocage de bots** : regles Traefik bloquant les chemins d'attaque courants (`wp-*`, `.env`, `.git`, `.htaccess`, `.php`, `/actuator`, etc.) avec retour 403.
+- **`X-Robots-Tag: noindex`** : en-tete ajoute pour empecher l'indexation.
+- Servicedsystemd pour un deploiement production stable.
+
+### Evolution de la dette technique
+
+| Item roadmap | Statut |
+| --- | --- |
+| `_SessionMain.remove()` via `teardown_appcontext` | ✅ Accompli |
+| Rate limiting login | ✅ Accompli (Traefik) |
+| Blocage bots Traefik | ✅ Accompli |
+| DilicomService implemente | ✅ Accompli partiellement |
+| Pages d'erreur 4xx/5xx | ✅ Accompli |
+| Service systemd production | ✅ Accompli |
+| `print()` de debug (routes_htmx_search.py, routes_htmx.py supplier) | ❌ Toujours present |
+| `USER appuser` dans Dockerfiles | ❌ Non traite |
+| 3 TODO dashboard (endpoints stubs) | ❌ Toujours presents |
+| Pipeline CI/CD (GitHub Actions) | ❌ Non retabli |
+| `pytest-cov` / seuil de couverture | ❌ Non configure |
+| En-tetes HTTP CSP, HSTS, X-Frame-Options | ❌ Non configures |
+| `except Exception` trop larges dans les repositories | ❌ Toujours presents |
+
+---
+
+## Ancienne version du rapport (31 mars 2026)
 
 Resume : rapport qualitatif complet couvrant l'etat du code, les decisions architecturales et structurelles, et la qualite globale suite aux 93 commits deposes entre le 21/02/2026 et le 31/03/2026 (373 fichiers, +30 501 / -3 927 lignes).
 
@@ -74,14 +191,15 @@ L'usage de HTMX pour les fragments (recherche fournisseur, formulaires de lignes
 
 ### 3.1 Metriques de base
 
-| Indicateur | Valeur |
-| --- | --- |
-| Fichiers Python | 159 |
-| Lignes Python totales | ~16 600 |
-| Templates HTML | 97 |
-| Fichiers SCSS | 22 |
-| Tests collectes | 93 |
-| Fonctions avec type hints | ~114 / 289 (39 %) |
+*Valeurs au 31/03/2026 -- voir section mise a jour pour les valeurs actuelles.*
+
+| Indicateur | Valeur (31/03/2026) | Valeur (18/05/2026) |
+| --- | --- | --- |
+| Fichiers Python | 159 | ~220 |
+| Lignes Python totales | ~16 600 | ~26 700 |
+| Templates HTML | 97 | 193 |
+| Fichiers SCSS | 22 | 25 |
+| Fonctions de test | 93 | 72 (fonctions, 14 fichiers) |
 
 ### 3.2 Points positifs
 
@@ -182,29 +300,31 @@ Ces `print()` polluent les logs Gunicorn et peuvent exposer des informations sen
 
 ## 7. Roadmap qualite (actions concretes prioritaires)
 
-### Court terme (1-2 semaines)
+### Court terme (1-2 semaines) -- mise a jour 18/05/2026
 
-1. **Supprimer les `print()` de debug** dans `routes_htmx_search.py`, `routes_htmx.py` (supplier), `orders.py`, `dilicom.py` --> les remplacer par `get_logger()`.
-2. **Enregistrer `_SessionMain.remove()`** via `@app.teardown_appcontext` dans `app_front/main.py` pour eviter les fuites de connexion en production.
-3. **Ajouter `USER appuser`** dans `Dockerfile.flask` et `Dockerfile.fast` (creer un utilisateur non-root).
-4. **Implementer les 3 TODO du dashboard** (`routes_data.py`) pour que les widgets affichent des donnees reelles.
+1. **Supprimer les `print()` de debug** dans `routes_htmx_search.py` (2 occurrences) et `routes_htmx.py` (supplier) --> les remplacer par `get_logger()`. *Non traite depuis le rapport precedent.*
+2. **Ajouter `USER appuser`** dans `Dockerfile.flask` et `Dockerfile.fast` (creer un utilisateur non-root). *Non traite depuis le rapport precedent.*
+3. **Implementer les 3 TODO du dashboard** (`routes_data.py`) pour que les widgets affichent des donnees reelles. *Non traite depuis le rapport precedent.*
+4. **Finaliser l'endpoint `send_dilicom_order`** (`app_back/v1/dilicom/orders.py`) qui retourne encore `pass`.
+5. **Tests WooCommerce** : la branche `woocommerce_sprint` ne dispose d'aucun test couvrant les nouveaux services et repositories WooCommerce.
 
 ### Moyen terme (2-6 semaines)
 
-1. **Retablir un pipeline CI** (GitHub Actions) : lint ruff/pylint --> tests pytest --> build image.
+1. **Retablir un pipeline CI** (GitHub Actions) : lint ruff/pylint --> tests pytest --> build image. *Toujours absent.*
 2. **Ajouter la compilation SCSS** dans le pipeline CI et dans un hook pre-commit.
 3. **Ajouter `pytest-cov`** et viser un seuil minimal de 60 % de couverture.
-4. **En-tetes de securite HTTP** : configurer CSP, HSTS, X-Frame-Options dans Traefik (`dynamic/`) ou Flask middleware.
+4. **En-tetes de securite HTTP** : configurer CSP, HSTS, X-Frame-Options dans Traefik (`dynamic/middlewares.yml`). Les regles de blocage de bots et le rate limiting sont en place, mais les en-tetes de protection des navigateurs manquent encore.
 5. **Remplacer les `except Exception`** dans les repositories par `except SQLAlchemyError`.
 6. **Scanner les dependances** : integrer `pip-audit` dans le CI.
+7. **Monitorer la synchronisation WooCommerce** : le repository `sync_log` est cree mais les alertes sur echecs de synchronisation ne sont pas implementees.
 
 ### Long terme (1-3 mois)
 
 1. Monitoring applicatif : exposer `/health` et `/metrics` pour Prometheus.
 2. Tests API back-end : implementer `tests/back/` avec des tests FastAPI (`TestClient`).
-3. Implementer l'integration Dilicom (`app_back/v1/dilicom/orders.py` est vide).
-4. Documentation d'architecture (`docs/architecture.md`) decrivant les flux, les services et les decisions de conception.
+3. Documentation d'architecture (`docs/architecture.md`) decrivant les flux, les services et les decisions de conception -- d'autant plus necessaire avec l'ajout des services WooCommerce et Dilicom.
+4. **Separation des responsabilites WooCommerce** : `db_models/services/woo_commerce/products.py` (757 lignes) commence a atteindre une complexite elevee, a surveiller.
 
 ---
 
-**Derniere mise a jour** : 31 mars 2026
+**Derniere mise a jour** : 18 mai 2026 *(rapport initial : 31 mars 2026)*
