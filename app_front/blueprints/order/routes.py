@@ -1,8 +1,8 @@
 """Blueprint pour les fonctionnalités des commandes clients"""
 
-from flask import Blueprint, send_file, url_for
+from flask import Blueprint, make_response, send_file, url_for
 from app_front.utils.pages import render_page
-from app_front.blueprints.order.utils import get_order_by_id
+from app_front.blueprints.order.utils import get_order_by_id, push_order_wc
 from app_front.utils.documents import build_qrcode_data_uri, create_pdf_from_template
 
 bp_order = Blueprint("order", __name__, url_prefix="/order")
@@ -22,6 +22,15 @@ def order_view(order_id: int):
         return ORDER_NOT_FOUND, 404
     # Redirection vers la page complète (pas une modale)
     return render_page("order_view", order=order)
+
+
+@bp_order.post("/view/<int:order_id>/wc-push")
+def order_wc_push(order_id: int):
+    """Pousse la commande vers WooCommerce, puis redirige vers la page de détail."""
+    push_order_wc(order_id)  # succès ou échec sont logés dans OrderSyncLog
+    resp = make_response("", 204)
+    resp.headers["HX-Redirect"] = url_for("order.order_view", order_id=order_id)
+    return resp
 
 
 def _format_address(address: dict | None) -> str:

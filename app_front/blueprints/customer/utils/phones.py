@@ -52,7 +52,7 @@ def update_phone(
     """
     repo = CustomerPhonesRepository(db_conf.get_main_session())
     try:
-        phone = repo.update_phone(customer_id, phone_id, phone_data)
+        phone = repo.update_phone(customer_id, phone_id, phone_data, only_active=False)
         return phone.to_dict()
     except ValueError as e:
         raise ValueError(f"Téléphone #{phone_id} introuvable.") from e

@@ -286,6 +286,25 @@
         }
     }
 
+    .header-top {
+        display: flex;
+        align-items: flex-start;
+        gap: variables.$space-sm;
+    }
+
+    .header-title-group {
+        display: flex;
+        flex-direction: column;
+        gap: variables.$space-xs;
+    }
+
+    .header-badges {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: variables.$space-xs;
+    }
+
     h2 {
         color: variables.$primary-color;
         margin: 0;
@@ -293,10 +312,34 @@
     }
 }
 
+/* Bouton Site Internet — violet, pill shape */
+.btn-site-internet {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: variables.$space-xs variables.$space-lg;
+    border-radius: 9999px;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: #6d28d9;
+    }
+
+    &:disabled,
+    &[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
 /* Points d'état pour email / téléphone et largeur des colonnes */
 .status-dot {
-    display: inline-block;
-    width: 10px;
     height: 10px;
     border-radius: 50%;
     margin: 0 0.4rem;

@@ -6,6 +6,7 @@ Ce module contient la classe `ObjMetadatasRepository` qui fournit des méthodes 
 
 import json
 from typing import Any, Dict, Optional, List
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import ObjMetadatas
@@ -74,9 +75,8 @@ class ObjMetadatasRepository(BaseRepository):
         if obj_metadata_id is None and obj_metadata is None:
             raise ValueError("Fournir un identifiant ou un objet pour la mise à jour.")
         if obj_metadata is None:
-            obj_metadata = (
-                self.session.query(self.model).filter_by(id=obj_metadata_id).first()
-            )
+            stmt = select(self.model).where(self.model.id == obj_metadata_id)
+            obj_metadata = self.session.execute(stmt).scalars().first()
             if not obj_metadata:
                 raise ValueError(f"Métadonnée avec id {obj_metadata_id} non trouvée.")
 

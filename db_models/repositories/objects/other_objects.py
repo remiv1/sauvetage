@@ -1,6 +1,7 @@
 """Modules de gestion des sous-objets Autres objets liés aux objets généraux de la librairie."""
 
 from typing import Any, Dict, Optional
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import OtherObjects
@@ -61,9 +62,8 @@ class OtherObjectsRepository(BaseRepository):
                 "Fournir un objet ou un identifiant d'objet pour la mise à jour."
             )
         if not other_object:
-            other_object = (
-                self.session.query(OtherObjects).filter_by(id=other_object_id).first()
-            )
+            stmt = select(OtherObjects).where(OtherObjects.id == other_object_id)
+            other_object = self.session.execute(stmt).scalars().first()
             if not other_object:
                 raise ValueError(f"Autre objet avec id {other_object_id} non trouvé.")
 

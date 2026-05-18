@@ -88,7 +88,7 @@ class WCCustomersService(WCBase):
         )
         return False
 
-    def create_wpwc_customer(self, customer: Customers) -> Optional[Customers]:
+    def create_wpwc_customer_if_not_exists(self, customer: Customers) -> Customers:
         """
         Crée un client dans WooCommerce à partir des données fournies.
         Args:
@@ -102,13 +102,13 @@ class WCCustomersService(WCBase):
                 "Le client %s n'a pas d'email actif, impossible de le créer dans WooCommerce.",
                 customer.id
             )
-            return None
+            return customer
         if self.exists_wpwc_customer(email):
             logger.info(
                 "Le client avec l'email %s existe déjà dans WooCommerce.",
                 email
             )
-            return None
+            return customer
 
         # Convertir les données du client en format compatible avec l'API WooCommerce
         customer_data = customer.to_dict_for_wpwc()
@@ -128,7 +128,7 @@ class WCCustomersService(WCBase):
             response.status_code,
             response.text
         )
-        return None
+        return customer
 
     def diff_customer(
             self,
@@ -204,3 +204,78 @@ class WCCustomersService(WCBase):
             response.text
         )
         return False
+
+    def push_customer(self, customer: Customers) -> tuple[bool, str | None]:
+        """Pousse un client vers WooCommerce (création ou mise à jour).
+
+        Enregistre un CustomerSyncLog. Ne commite pas (le caller commite).
+
+        Returns:
+            (success, error_message)
+        """
+        from db_models.repositories.sync_log import SyncLogRepository  # pylint: disable=import-outside-toplevel
+        sync_repo = SyncLogRepository(self.session)
+        operation = "update" if customer.wpwc_id else "create"
+        try:
+            if customer.wpwc_id is None:
+                data = customer.to_dict_for_wpwc()
+                response = self.api_write.post("customers", data=data)
+                if response.status_code == 201:
+                    wc_data = response.json()
+                    customer.wpwc_id = str(wc_data.get("id"))
+                    sync_repo.log_customer(
+                        customer_id=customer.id,
+                        external_id=customer.wpwc_id,
+                        external_system="wpwc",
+                        sync_direction="outbound",
+                        operation=operation,
+                        sync_status="success",
+                    )
+                    return True, None
+                error_msg = f"HTTP {response.status_code} : {response.text}"
+                sync_repo.log_customer(
+                    customer_id=customer.id,
+                    external_id=None,
+                    external_system="wpwc",
+                    sync_direction="outbound",
+                    operation=operation,
+                    sync_status="failed",
+                    error_message=error_msg,
+                )
+                return False, error_msg
+            data = customer.to_dict_for_wpwc(update=True)
+            response = self.api_write.put(f"customers/{customer.wpwc_id}", data=data)
+            if response.status_code == 200:
+                sync_repo.log_customer(
+                    customer_id=customer.id,
+                    external_id=customer.wpwc_id,
+                    external_system="wpwc",
+                    sync_direction="outbound",
+                    operation=operation,
+                    sync_status="success",
+                )
+                return True, None
+            error_msg = f"HTTP {response.status_code} : {response.text}"
+            sync_repo.log_customer(
+                customer_id=customer.id,
+                external_id=customer.wpwc_id,
+                external_system="wpwc",
+                sync_direction="outbound",
+                operation=operation,
+                sync_status="failed",
+                error_message=error_msg,
+            )
+            return False, error_msg
+        except Exception as exc:  # pylint: disable=broad-except
+            error_msg = str(exc)
+            logger.exception("Erreur push client %d vers WC : %s", customer.id, exc)
+            sync_repo.log_customer(
+                customer_id=customer.id,
+                external_id=customer.wpwc_id,
+                external_system="wpwc",
+                sync_direction="outbound",
+                operation=operation,
+                sync_status="failed",
+                error_message=error_msg,
+            )
+            return False, error_msg

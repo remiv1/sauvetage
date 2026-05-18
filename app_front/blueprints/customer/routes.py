@@ -5,13 +5,14 @@ Routes (templates) :
     - /customer/<int:customer_id> : Affichage de la fiche client.
 """
 
-from flask import Blueprint, redirect, url_for, flash, request
+from flask import Blueprint, redirect, url_for, flash, request, make_response
 from app_front.blueprints.customer.forms import CustomerMainForm
 from app_front.utils.pages import render_page
 from app_front.blueprints.customer.utils.users import (
     form_to_dict,
     create_from_dict,
     get_customer,
+    push_customer_wc,
 )
 from app_front.utils.decorators import permission_required, COMMERCIAL, COMPTA, DIRECTION
 
@@ -57,3 +58,13 @@ def view(customer_id: int):
         return redirect(url_for("customer.index"))
 
     return render_page("customer_view", customer=customer)
+
+
+@bp_customer.post("/<int:customer_id>/wc-push")
+@permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
+def customer_wc_push(customer_id: int):
+    """Pousse un client vers WooCommerce (création ou mise à jour)."""
+    push_customer_wc(customer_id)
+    response = make_response("", 204)
+    response.headers["HX-Redirect"] = url_for("customer.view", customer_id=customer_id)
+    return response

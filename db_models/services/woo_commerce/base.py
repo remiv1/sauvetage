@@ -62,7 +62,8 @@ class WCBase:
                 consumer_secret=config_read.consumer_secret,
                 wp_api=config_read.wp_api,
                 verify_ssl=config_read.verify_ssl,
-                version=config_read.version
+                version=config_read.version,
+                timeout=60
             )
             self.api_write: API = API(
                 url=config_write.base_url,
@@ -70,7 +71,8 @@ class WCBase:
                 consumer_secret=config_write.consumer_secret,
                 wp_api=config_write.wp_api,
                 verify_ssl=config_write.verify_ssl,
-                version=config_write.version
+                version=config_write.version,
+                timeout=60
             )
         else:
             config: WooCommerceConfig = load_woocommerce_config(direction="rw")
@@ -80,7 +82,8 @@ class WCBase:
                 consumer_secret=config.consumer_secret,
                 wp_api=config.wp_api,
                 verify_ssl=config.verify_ssl,
-                version=config.version
+                version=config.version,
+                timeout=60
             )
             self.api_write = self.api_read
         self.sync_log_repo = SyncLogRepository(self.session)

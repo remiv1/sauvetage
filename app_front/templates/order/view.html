@@ -10,7 +10,45 @@
                title="Retour aux commandes">
                 {% include "svg/back.html" %}
             </a>
-            <h2>Commande {{ order.reference }}</h2>
+            <div class="header-title-group">
+                <h2>Commande {{ order.reference }}</h2>
+                <div class="header-badges">
+                    {# Badge statut local #}
+                    <span class="badge {{ order.status_badge }}" title="Statut local">
+                        {{ order.status_label }}
+                    </span>
+                    {# Badge WooCommerce #}
+                    {% if order.wpwc_id %}
+                        {% if order.wpwc_sync_status == 'success' %}
+                        <span class="badge badge-wc badge-wc--synced"
+                              title="Synchronisé WooCommerce le {{ order.wpwc_sync_at }} ({{ order.wpwc_sync_operation }})">
+                            WC #{{ order.wpwc_id }}
+                        </span>
+                        {% elif order.wpwc_sync_status == 'failed' %}
+                        <span class="badge badge-wc badge-wc--error"
+                              title="Erreur WooCommerce ({{ order.wpwc_sync_at }}) : {{ order.wpwc_sync_error }}">
+                            WC — Erreur
+                        </span>
+                        {% else %}
+                        <span class="badge badge-wc badge-wc--pending"
+                              title="Synchronisation WooCommerce en attente">
+                            WC #{{ order.wpwc_id }} — En attente
+                        </span>
+                        {% endif %}
+                    {% else %}
+                        {% if order.wpwc_sync_status == 'failed' %}
+                        <span class="badge badge-wc badge-wc--error"
+                              title="Dernier envoi WooCommerce en échec ({{ order.wpwc_sync_at }}) : {{ order.wpwc_sync_error }}">
+                            WC — Échec
+                        </span>
+                        {% else %}
+                        <span class="badge badge-wc badge-wc--none" title="Non envoyé sur WooCommerce">
+                            WC — Non envoyé
+                        </span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
@@ -23,12 +61,6 @@
         <div class="info-group">
             <span class="info-label">Client</span>
             <span class="info-value">{{ order.customer_name }}</span>
-        </div>
-        <div class="info-group">
-            <span class="info-label">Statut</span>
-            <span class="info-value">
-                <span class="badge {{ order.status_badge }}">{{ order.status_label }}</span>
-            </span>
         </div>
         <div class="info-group">
             <span class="info-label">Créée le</span>
@@ -54,6 +86,12 @@
             </span>
         </div>
         {% endif %}
+        {% if order.wpwc_sync_at %}
+        <div class="info-group">
+            <span class="info-label">Dernier sync WC</span>
+            <span class="info-value">{{ order.wpwc_sync_at }} ({{ order.wpwc_sync_operation }})</span>
+        </div>
+        {% endif %}
     </div>
 
     {# ── Boutons d'action ────────────────────────────────────────────────── #}
@@ -74,6 +112,11 @@
             Créer un envoi
         </button>
         {% endif %}
+        <button class="btn btn-site-internet"
+                hx-post="{{ url_for('order.order_wc_push', order_id=order.id) }}"
+                hx-disabled-elt="this">
+            {% if order.wpwc_id %}Resynchroniser sur le Site Internet{% else %}Envoyer sur le Site Internet{% endif %}
+        </button>
     </div>
 
     <div class="order-tabs">

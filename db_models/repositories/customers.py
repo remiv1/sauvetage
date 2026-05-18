@@ -316,9 +316,8 @@ class CustomerAddressesRepository(BaseRepository):
             raise ValueError(
                 "L'ID du client doit être fourni dans les données de l'adresse."
             )
-        customer = (
-            self.session.query(Customers).filter(Customers.id == customer_id).first()
-        )
+        stmt = select(Customers).where(Customers.id == customer_id)
+        customer = self.session.execute(stmt).scalars().first()
         if not customer:
             raise ValueError(f"Client #{customer_id} introuvable.")
 
@@ -332,7 +331,7 @@ class CustomerAddressesRepository(BaseRepository):
         return new_address
 
     def update_address(
-        self, customer_id: int, address_id: int, address_data: dict
+        self, customer_id: int, address_id: int, address_data: dict, only_active: bool = True
     ) -> CustomerAddresses:
         """Met à jour une adresse d'un client.
         Args:
@@ -344,17 +343,15 @@ class CustomerAddressesRepository(BaseRepository):
         Raises:
             ValueError: Si l'adresse n'existe pas.
         """
-        address = (
-            self.session.query(CustomerAddresses)
-            .filter(
-                and_(
-                    CustomerAddresses.id == address_id,
-                    CustomerAddresses.customer_id == customer_id,
-                    CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
-                )
+        stmt = select(CustomerAddresses).where(
+            and_(
+                CustomerAddresses.id == address_id,
+                CustomerAddresses.customer_id == customer_id,
             )
-            .first()
         )
+        if only_active:
+            stmt = stmt.where(CustomerAddresses.is_active == only_active)  # pylint: disable=singleton-comparison
+        address = self.session.execute(stmt).scalars().first()
         if not address:
             raise ValueError(f"Adresse #{address_id} introuvable.")
 
@@ -376,16 +373,8 @@ class CustomerAddressesRepository(BaseRepository):
         Raises:
             ValueError: Si l'adresse n'existe pas.
         """
-        address = (
-            self.session.query(CustomerAddresses)
-            .filter(
-                and_(
-                    CustomerAddresses.id == address_id,
-                    CustomerAddresses.is_active == True,  # pylint: disable=singleton-comparison
-                )
-            )
-            .first()
-        )
+        stmt = select(CustomerAddresses).where(CustomerAddresses.id == address_id)
+        address = self.session.execute(stmt).scalars().first()
         if not address:
             raise ValueError(f"Adresse #{address_id} introuvable.")
 
@@ -428,7 +417,7 @@ class CustomerMailsRepository(BaseRepository):
         return new_email
 
     def update_email(
-        self, customer_id: int, email_id: int, email_data: dict
+        self, customer_id: int, email_id: int, email_data: dict, only_active: bool = True
     ) -> CustomerMails:
         """Met à jour une adresse e-mail d'un client.
         Args:
@@ -440,17 +429,15 @@ class CustomerMailsRepository(BaseRepository):
         Raises:
             ValueError: Si l'e-mail n'existe pas.
         """
-        email = (
-            self.session.query(CustomerMails)
-            .filter(
-                and_(
-                    CustomerMails.id == email_id,
-                    CustomerMails.is_active == True,  # pylint: disable=singleton-comparison
-                    CustomerMails.customer_id == customer_id,
-                )
+        stmt = select(CustomerMails).where(
+            and_(
+                CustomerMails.id == email_id,
+                CustomerMails.customer_id == customer_id,
             )
-            .first()
         )
+        if only_active:
+            stmt = stmt.where(CustomerMails.is_active == only_active)  # pylint: disable=singleton-comparison
+        email = self.session.execute(stmt).scalars().first()
         if not email:
             raise ValueError(f"E-mail #{email_id} introuvable.")
 
@@ -472,16 +459,8 @@ class CustomerMailsRepository(BaseRepository):
         Raises:
             ValueError: Si l'e-mail n'existe pas.
         """
-        email = (
-            self.session.query(CustomerMails)
-            .filter(
-                and_(
-                    CustomerMails.id == email_id,
-                    CustomerMails.is_active == True  # pylint: disable=singleton-comparison
-                )
-            )
-            .first()
-        )
+        stmt = select(CustomerMails).where(CustomerMails.id == email_id)
+        email = self.session.execute(stmt).scalars().first()
         if not email:
             raise ValueError(f"E-mail #{email_id} introuvable.")
 
@@ -524,7 +503,11 @@ class CustomerPhonesRepository(BaseRepository):
         return new_phone
 
     def update_phone(
-        self, customer_id: int, phone_id: int, phone_data: dict
+        self,
+        customer_id: int,
+        phone_id: int,
+        phone_data: dict,
+        only_active: bool = True,
     ) -> CustomerPhones:
         """Met à jour un numéro de téléphone d'un client.
         Args:
@@ -536,17 +519,15 @@ class CustomerPhonesRepository(BaseRepository):
         Raises:
             ValueError: Si le téléphone n'existe pas.
         """
-        phone = (
-            self.session.query(CustomerPhones)
-            .filter(
-                and_(
-                    CustomerPhones.id == phone_id,
-                    CustomerPhones.customer_id == customer_id,
-                    CustomerPhones.is_active == True,  # pylint: disable=singleton-comparison
-                )
+        stmt = select(CustomerPhones).where(
+            and_(
+                CustomerPhones.id == phone_id,
+                CustomerPhones.customer_id == customer_id,
             )
-            .first()
         )
+        if only_active:
+            stmt = stmt.where(CustomerPhones.is_active == only_active)  # pylint: disable=singleton-comparison
+        phone = self.session.execute(stmt).scalars().first()
         if not phone:
             raise ValueError(f"Téléphone #{phone_id} introuvable.")
 
@@ -569,16 +550,8 @@ class CustomerPhonesRepository(BaseRepository):
         Raises:
             ValueError: Si le téléphone n'existe pas.
         """
-        phone = (
-            self.session.query(CustomerPhones)
-            .filter(
-                and_(
-                    CustomerPhones.id == phone_id,
-                    CustomerPhones.is_active == True  # pylint: disable=singleton-comparison
-                )
-            )
-            .first()
-        )
+        stmt = select(CustomerPhones).where(CustomerPhones.id == phone_id)
+        phone = self.session.execute(stmt).scalars().first()
         if not phone:
             raise ValueError(f"Téléphone #{phone_id} introuvable.")
 

@@ -57,7 +57,7 @@ def update_address(
         Dict[str, Any] | None: Les données des adresses du client mis à jour ou None si introuvable.
     """
     repo = CustomerAddressesRepository(db_conf.get_main_session())
-    address = repo.update_address(customer_id, address_id, address_data)
+    address = repo.update_address(customer_id, address_id, address_data, only_active=False)
     if not address:
         return None
 

@@ -2,7 +2,7 @@
 
 import logging
 from typing import Optional
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 from app_back.db_connection import config
 from db_models.services.woo_commerce.products import WCProductsService
 
@@ -23,3 +23,23 @@ def update_vat_rates(specific: bool = False, specific_name: Optional[str] = None
         wc_service.export_vat_rates(name=specific_name)
     else:
         wc_service.export_vat_rates()
+
+
+def _run_sync_catalog() -> None:
+    """Tâche exécutée en arrière-plan : synchronise le catalogue vers WooCommerce."""
+    session = next(config.get_main_session())
+    try:
+        wc_service = WCProductsService(session, separated_keys=True)
+        wc_service.export_all_products()
+    finally:
+        session.close()
+
+
+@router.post("/sync-catalog", status_code=202)
+def sync_catalog(background_tasks: BackgroundTasks):
+    """Déclenche la synchronisation du catalogue produits vers WooCommerce en arrière-plan.
+
+    Retourne immédiatement 202 Accepted pendant que la tâche s'exécute.
+    """
+    background_tasks.add_task(_run_sync_catalog)
+    return {"status": "synchronisation démarrée"}

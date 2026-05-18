@@ -183,8 +183,8 @@ class Customers(WorkingBase, QueryMixin):
         Priorise les téléphones avec "WooCommerce" dans le nom, puis les téléphones actifs.
         """
         return next((
-            p.phone for p in self.phones if "WooCommerce" in p.phone_name),
-            next((p.phone for p in self.phones if p.is_active), None))
+            p.phone_number for p in self.phones if "WooCommerce" in p.phone_name),
+            next((p.phone_number for p in self.phones if p.is_active), None))
 
     def get_wpwc_billing_address(self) -> Optional[CustomerAddresses]:
         """
@@ -217,8 +217,8 @@ class Customers(WorkingBase, QueryMixin):
         billing = {
             'first_name': first_name,
             'last_name': last_name,
-            'address_1': billing_address.address_1 if billing_address else None,
-            'address_2': billing_address.address_2 if billing_address else None,
+            'address_1': billing_address.address_line1 if billing_address else None,
+            'address_2': billing_address.address_line2 if billing_address else None,
             'city': billing_address.city if billing_address else None,
             'state': billing_address.state if billing_address else None,
             'postcode': billing_address.postal_code if billing_address else None,
@@ -229,8 +229,8 @@ class Customers(WorkingBase, QueryMixin):
         shipping = {
             'first_name': first_name,
             'last_name': last_name,
-            'address_1': shipping_address.address_1 if shipping_address else None,
-            'address_2': shipping_address.address_2 if shipping_address else None,
+            'address_1': shipping_address.address_line1 if shipping_address else None,
+            'address_2': shipping_address.address_line2 if shipping_address else None,
             'city': shipping_address.city if shipping_address else None,
             'state': shipping_address.state if shipping_address else None,
             'postcode': shipping_address.postal_code if shipping_address else None,

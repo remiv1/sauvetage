@@ -1,6 +1,6 @@
 """Blueprint pour les fonctionnalités de gestion des stocks"""
 
-from flask import Blueprint, flash, redirect, request, send_file, url_for
+from flask import Blueprint, flash, make_response, redirect, request, send_file, url_for
 from app_front.utils.pages import render_page
 from app_front.blueprints.stock.utils import (
     is_zero_price_items,
@@ -8,6 +8,7 @@ from app_front.blueprints.stock.utils import (
     get_supplier_orders,
     get_order_by_id,
     create_order_in_db,
+    trigger_catalog_wc_sync,
 )
 from app_front.blueprints.stock.forms import OrderInCreateForm
 from app_front.utils.documents import build_qrcode_data_uri, create_pdf_from_template
@@ -193,3 +194,12 @@ def reservation_download_slip(order_id: int):
 def search():
     """Page de recherche de stocks"""
     return render_page("stock_search")
+
+
+@bp_stock.post("/search/wc-sync-catalog")
+def wc_sync_catalog():
+    """Déclenche la synchronisation globale du catalogue vers le Site Internet via app-back."""
+    trigger_catalog_wc_sync()
+    response = make_response("", 204)
+    response.headers["HX-Trigger"] = "refreshTable"
+    return response

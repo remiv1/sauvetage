@@ -4,7 +4,11 @@
 # Paramètres
 [params]
 tab = "Clients"
-styles = ["css/customer/customer.css", "css/main.css"]
+styles = [
+    "css/customer/customer.css",
+    "css/main.css",
+    "css/order/list.css"
+]
 modules = ["js/customer/view.js", "js/main.js"]
 # Clées
 [meta]
@@ -26,3 +30,4 @@ extend_layout = "index.html"
 navbar = true
 searchbar = true
 userbar = true
+htmx = true

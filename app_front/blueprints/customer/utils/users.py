@@ -1,5 +1,6 @@
 """Utilitaires pour le module client --> clients uniquement."""
 
+import logging
 from typing import Dict, Any
 from sqlalchemy import select, or_
 from db_models.objects import (
@@ -11,9 +12,11 @@ from db_models.objects import (
     CustomerPros,
 )
 from db_models.repositories.customers import CustomersRepository
+from db_models.services.woo_commerce.customers import WCCustomersService
 from app_front.blueprints.customer.forms import CustomerMainForm
 from app_front.config import db_conf
 
+logger = logging.getLogger(__name__)
 
 def form_to_dict(form: CustomerMainForm) -> Dict[str, Any]:
     """Convertit un formulaire WTForms en dictionnaire de données."""
@@ -51,11 +54,54 @@ def get_customer(customer_id: int) -> Dict[str, Any] | None:
     Returns:
         Dict[str, Any] | None: Les données du client ou None s'il n'existe pas.
     """
-    repo = CustomersRepository(db_conf.get_main_session())
+    session = db_conf.get_main_session()
+    repo = CustomersRepository(session)
     customer = repo.get_by_id(customer_id, complete=True)
     if not customer:
         return None
-    return customer.to_dict()
+    data = customer.to_dict()
+    # Enrichissement avec les données de synchronisation WooCommerce
+    last_sync = None
+    if customer.sync_logs:
+        wpwc_logs = [log for log in customer.sync_logs if log.external_system == "wpwc"]
+        if wpwc_logs:
+            last_sync = max(wpwc_logs, key=lambda log: log.synced_at)
+    if last_sync:
+        data["wpwc_sync_status"] = last_sync.sync_status
+        data["wpwc_sync_operation"] = last_sync.operation
+        data["wpwc_sync_at"] = last_sync.synced_at.strftime("%d/%m/%Y %H:%M")
+        data["wpwc_sync_error"] = last_sync.error_message
+    else:
+        data["wpwc_sync_status"] = None
+        data["wpwc_sync_operation"] = None
+        data["wpwc_sync_at"] = None
+        data["wpwc_sync_error"] = None
+    return data
+
+
+def push_customer_wc(customer_id: int) -> tuple[bool, str | None]:
+    """Pousse un client vers WooCommerce (création ou mise à jour).
+
+    Enregistre un CustomerSyncLog et commite la session.
+
+    Returns:
+        (success, error_message)
+    """
+    session = db_conf.get_main_session()
+    repo = CustomersRepository(session)
+    customer = repo.get_by_id(customer_id, complete=True)
+    if customer is None:
+        logger.exception("Client #%d introuvable pour push WooCommerce.", customer_id)
+        return False, "Client introuvable"
+    svc = WCCustomersService(session)
+    success, error = svc.push_customer(customer)
+    try:
+        session.commit()
+    except Exception as exc:  # pylint: disable=broad-except
+        session.rollback()
+        logger.exception("Erreur commit après push WC (client %d) : %s", customer_id, exc)
+        return False, str(exc)
+    return success, error
 
 
 def update_customer_info(

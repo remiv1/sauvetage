@@ -27,6 +27,7 @@ from db_models.repositories.stocks import (
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.objects.variations import VariationsRepository
 from db_models.repositories.tags import TagsRepository
+from db_models.services.woo_commerce.products import WCProductsService
 
 logger = logging.getLogger("stock_utils")
 
@@ -546,3 +547,20 @@ def delete_variation_for_object(variation_id: int) -> bool:
         raise ValueError(f"Variation {variation_id} introuvable.")
     repo.delete(variation_id)
     return True
+
+
+def push_product_wc(object_id: int) -> None:
+    """Pousse un produit vers WooCommerce (création ou mise à jour).
+
+    Args:
+        object_id: Identifiant local du produit (GeneralObjects).
+    """
+    session = db_conf.get_main_session()
+    svc = WCProductsService(session)
+    svc.update_product(object_id)
+
+
+def trigger_catalog_wc_sync() -> None:
+    """Déclenche la synchronisation globale du catalogue vers WooCommerce via app-back."""
+    from app_front.config import post, WOO_COMMERCE # pylint: disable=import-outside-toplevel
+    post(WOO_COMMERCE["sync_catalog"], {})

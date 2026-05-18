@@ -55,7 +55,8 @@ class TagsRepository(BaseRepository):
         if not tag and not tag_id:
             raise ValueError("Fournir un identifiant ou un objet pour la mise à jour.")
         if not tag:
-            tag = self.session.query(self.model).filter_by(id=tag_id).first()
+            stmt = select(Tags).where(Tags.id == tag_id)
+            tag = self.session.execute(stmt).scalars().first()
             if not tag:
                 raise ValueError(f"Tag avec id {tag_id} non trouvé.")
 

@@ -144,25 +144,64 @@ class Order(WorkingBase, QueryMixin):
             '_billing_wooccm12': siret,
         }
 
+    def __get_customer_name_parts(self) -> tuple[str, str]:
+        """Récupère les parties prénom et nom du client pour la commande."""
+        if self.customer.customer_type == 'part' and self.customer.part:
+            return self.customer.part.first_name, self.customer.part.last_name
+        elif self.customer.customer_type == 'pro' and self.customer.pro:
+            return '', self.customer.pro.company_name
+        else:
+            return '', ''
+
+    def __get_customer_email(self) -> str:
+        """
+        Récupère l'email du client pour la commande, en privilégiant l'email marqué "WooCommerce".
+        """
+        if not self.customer.emails:
+            raise ValueError("Le client doit avoir au moins une adresse email pour un compte.")
+        wc_email = next(
+            (e.email for e in self.customer.emails if "WooCommerce" in e.email_name),
+            None
+        )
+        if wc_email:
+            return wc_email
+        return self.customer.emails[0].email
+
+    def __get_customer_phone(self) -> Optional[str]:
+        """
+        Récupère le numéro de téléphone du client pour la commande, en privilégiant le téléphone
+        marqué "WooCommerce".
+        """
+        if not self.customer.phones:
+            return None
+        wc_phone = next(
+            (p.phone_number for p in self.customer.phones if "WooCommerce" in p.phone_name),
+            None
+        )
+        if wc_phone:
+            return wc_phone
+        return self.customer.phones[0].phone_number if self.customer.phones else None
+
     def to_dict_for_woo_commerce(self) -> dict[str, Any]:
         """Convertit l'objet Order en dictionnaire au format attendu par WooCommerce."""
+        first_name, last_name = self.__get_customer_name_parts()
+        email = self.__get_customer_email()
+        phone = self.__get_customer_phone()
         billing = {
-            "first_name": self.customer.first_name,
-            "last_name": self.customer.last_name,
+            "first_name": first_name,
+            "last_name": last_name,
             "address_1": self.invoice_address.address_line1 if self.invoice_address else "",
             "address_2": self.invoice_address.address_line2 if self.invoice_address else "",
             "city": self.invoice_address.city if self.invoice_address else "",
             "state": self.invoice_address.state if self.invoice_address else "",
             "postcode": self.invoice_address.postal_code if self.invoice_address else "",
             "country": self.invoice_address.country if self.invoice_address else "",
-            "email": next(e.email for e in self.customer.emails if "WooCommerce" in e.name) \
-                if self.customer.emails else "",
-            "phone": next(p.phone_number for p in self.customer.phones if "WooCommerce" in p.name) \
-                if self.customer.phones else "",
+            "email": email,
+            "phone": phone,
         }
         shipping = {
-            "first_name": self.customer.first_name,
-            "last_name": self.customer.last_name,
+            "first_name": first_name,
+            "last_name": last_name,
             "address_1": self.delivery_address.address_line1 if self.delivery_address else "",
             "address_2": self.delivery_address.address_line2 if self.delivery_address else "",
             "city": self.delivery_address.city if self.delivery_address else "",
@@ -174,7 +213,7 @@ class Order(WorkingBase, QueryMixin):
         line_items = []
         for line in self.order_lines:
             line_items.append({
-                "product_id": line.general_object.wpwc_id,
+                "product_id": line.general_object.id_wpwc,
                 "quantity": line.quantity,
             })
         return {

@@ -12,7 +12,7 @@ Le schéma métier est le suivant :
 import logging
 from typing import Any, Optional, Sequence
 from requests.exceptions import RequestException
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import Session
 from db_models.objects.vat import VatRate
 from db_models.repositories.objects import ObjectsRepository, GeneralObjects
@@ -22,6 +22,15 @@ from db_models.services.utils import slugify
 from db_models.services.woo_commerce.base import WCBase
 
 logger = logging.getLogger(__name__)
+
+object_type_mapping = {
+    "book": [19],
+    "cd": [21, 22],
+    "dvd": [21, 23],
+    "games": [24, 25],
+    "spiritual_object": [24, 26],
+    "other": [24],
+}
 
 class WCProductsService(WCBase):
     """
@@ -76,26 +85,34 @@ class WCProductsService(WCBase):
         Returns:
             dict[str, Any]: Le dictionnaire WooCommerce représentant le produit.
         """
-        product_dict = product.to_dict(is_woo_commerce=True)
-        meta = product.obj_metadatas.to_dict(is_woo_commerce=True) \
-                        if product.obj_metadatas \
-                        else None
-        other_object = product.other_object.to_dict(is_woo_commerce=True) \
-                        if product.other_object \
-                        else None
-        book = product.book.to_dict(is_woo_commerce=True) \
-                        if product.book \
-                        else None
-        product_dict["meta_data"] |= meta["meta_data"] \
-                        if meta \
-                        else product_dict["meta_data"]
-        if other_object:
-            product_dict["meta_data"] |= other_object["meta_data"]
-        if book:
-            product_dict["meta_data"] |= book["meta_data"]
-        object_tags = [tag.to_dict(is_woo_commerce=True) for tag in product.object_tags]
-        if object_tags:
-            product_dict["tags"] = object_tags
+        categories = {
+            "categories": [
+                {"id": o} \
+                for o in object_type_mapping.get(
+                    product.general_object_type,
+                    [15]
+                )
+            ]
+        }
+        product_dict = product.to_dict_for_woo_commerce()
+        product_dict |= categories
+        if product.book:
+            product_dict |= product.book.to_dict_for_woo_commerce()
+        if product.other_object:
+            product_dict |= product.other_object.to_dict_for_woo_commerce()
+        if product.obj_metadatas:
+            metadata_wc = product.obj_metadatas.to_dict_for_woo_commerce()
+            if metadata_wc:
+                product_dict |= metadata_wc
+        if product.media_files:
+            product_dict["images"] = [
+                {
+                    "src": media.file_url,
+                    "name": media.file_name,
+                    "alt": f"{product.name} - {media.alt_text or media.file_name}"
+                }
+                for media in product.media_files
+            ]
         return product_dict
 
     def _apply_product_returns(
@@ -304,9 +321,6 @@ class WCProductsService(WCBase):
                 )
             return
 
-        # Création du payload pour WooCommerce
-        self._build_product_payload(product)
-
         # Récupération de la version actuelle du produit dans WooCommerce pour calculer des difs
         wpwc_product = self.api_read.get(
             f"products/{product.id_wpwc}"
@@ -314,10 +328,18 @@ class WCProductsService(WCBase):
         data = self.__diff_objects([product], [wpwc_product] if wpwc_product else [])
 
         # Envoi de la requête de mise à jour à WooCommerce et traitement des retours
+        returns: list[dict[str, list[dict[str, Any]]]] = []
         try:
-            returns: dict[str, list[dict[str, Any]]] = (
-                self.api_write.post("products/batch", data=data).json()
-            )
+            for d in data:
+                response = self.api_write.post("products/batch", data=d)
+                response.raise_for_status()
+                r = response.json()
+                logger.debug(
+                    "Retour de WooCommerce pour la mise à jour du produit %d : %s",
+                    product_id,
+                    r
+                )
+                returns.append(r)
 
         # Gestion des exceptions
         except (RequestException, ValueError) as exc:
@@ -338,12 +360,13 @@ class WCProductsService(WCBase):
             return
 
         # Application des retours de WooCommerce et enregistrement dans le log de synchronisation
-        self._apply_product_returns(returns, [product])
+        for r in returns:
+            self._apply_product_returns(returns=r, products=[product])
         self.session.commit()
         logger.info(
             "Mise à jour du produit %d vers WooCommerce terminée. Statut: %s",
             product_id,
-            "success" if returns.get("update") else "no change"
+            "success" if any(r.get("create") or r.get("update") for r in returns) else "no change"
         )
 
     def export_all_products(self):
@@ -354,14 +377,17 @@ class WCProductsService(WCBase):
         - Suppressions : efface id_wpwc sur l'objet local (désactivé) + trace dans ObjectSyncLog.
         """
         products = self.object_repo.get_all(only_actives=True)
+        logger.info("Export de %d produits vers WooCommerce...", len(products))
         for p in products:
             self._build_product_payload(p)
         wpwc_products = self.api_read.get("products").json()
         data = self.__diff_objects(products, wpwc_products)
+        returns: list[dict[str, list[dict[str, Any]]]] = []
         try:
-            returns: dict[str, list[dict[str, Any]]] = (
-                self.api_write.post("products/batch", data=data).json()
-            )
+            for d in data:
+                response = self.api_write.post("products/batch", data=d)
+                response.raise_for_status()
+                returns.append(response.json())
         except Exception as exc:  # pylint: disable=broad-except
             logger.exception("Erreur lors de l'export des produits vers WooCommerce : %s", exc)
             for p in products:
@@ -375,13 +401,14 @@ class WCProductsService(WCBase):
                 )
             self.session.commit()
             return
-        self._apply_product_returns(returns, products)
+        for r in returns:
+            self._apply_product_returns(r, products)
         self.session.commit()
         logger.info(
             "Export produits terminé. Créés: %d, Mis à jour: %d, Supprimés: %d",
-            len(returns.get("create", [])),
-            len(returns.get("update", [])),
-            len(returns.get("delete", [])),
+            sum(len(r.get("create", [])) for r in returns),
+            sum(len(r.get("update", [])) for r in returns),
+            sum(len(r.get("delete", [])) for r in returns),
         )
 
     def export_tags(self) -> None:
@@ -518,24 +545,53 @@ class WCProductsService(WCBase):
             self,
             objects: Sequence[GeneralObjects],
             wpwc_objects: list[dict[str, Any]]
-        ) -> dict[str, list[dict[str, Any]]]:
+        ) -> list[dict[str, list[dict[str, Any]]]]:
         """Calcule les différences entre les objets locaux et ceux de WooCommerce."""
-        data: dict[str, list[dict[str, Any]]] = {"create": [], "update": [], "delete": []}
+        data: list[dict[str, list[dict[str, Any]]]] = []
+        batch_data: dict[str, list[dict[str, Any]]] = {"create": [], "update": [], "delete": []}
         wpwc_object_ids = {int(obj["id"]) for obj in wpwc_objects}
-        for o in objects:
+        for i, o in enumerate(objects):
             matched = next(
                 (wpwc for wpwc in wpwc_objects if int(wpwc["id"]) == int(o.id_wpwc or 0)),
                 None
             )
+            logger.debug(
+                "Comparaison de l'objet local ID %d avec l'objet WooCommerce ID %s",
+                o.id,
+                str(matched["id"]) if matched else "None"
+            )
             if matched:
-                entry = o.to_dict(is_woo_commerce=True)
+                entry = self._build_product_payload(o)
                 entry["id"] = int(matched["id"])
-                data["update"].append(entry)
+                batch_data["update"].append(entry)
                 wpwc_object_ids.remove(int(entry["id"]))
+                logger.debug(
+                    "Objet local ID %d correspond à l'objet WooCommerce ID %d. Ajouté à la liste de mise à jour.",
+                    o.id,
+                    int(matched["id"])
+                )
             else:
-                data["create"].append(o.to_dict(is_woo_commerce=True))
+                batch_data["create"].append(self._build_product_payload(o))
+                logger.debug(
+                    "Objet local ID %d n'a pas de correspondance dans WooCommerce. Ajouté à la liste de création.",
+                    o.id
+                )
+            if (i + 1) % 100 == 0 or (i + 1) == len(objects):
+                data.append(batch_data)
+                batch_data = {"create": [], "update": [], "delete": []}
         for wpwc_id in wpwc_object_ids:
-            data["delete"].append({"id": wpwc_id})
+            batch_data["delete"].append({"id": wpwc_id})
+            if sum(len(lst) for lst in batch_data.values()) >= 100:
+                data.append(batch_data)
+                batch_data = {"create": [], "update": [], "delete": []}
+        if batch_data["create"] or batch_data["update"] or batch_data["delete"]:
+            data.append(batch_data)
+        logger.debug(
+            "Différence calculée entre les objets locaux et WooCommerce : %d à créer, %d à mettre à jour, %d à supprimer",
+            sum(len(d.get("create", [])) for d in data),
+            sum(len(d.get("update", [])) for d in data),
+            sum(len(d.get("delete", [])) for d in data)
+        )
         return data
 
     def __diff_vat_rates(
@@ -620,3 +676,82 @@ class WCProductsService(WCBase):
             len(returns.get("update", [])),
             len(returns.get("delete", [])),
         )
+
+    def ensure_vat_rates(self) -> None:
+        """
+        S'assure que les taux de TVA nécessaires sont présents dans WooCommerce.
+        Si un taux de TVA n'existe pas dans WooCommerce, il est créé à partir des données locales.
+        """
+        local_vat_rates = self.session.execute(
+            select(VatRate) \
+            .where(
+                and_(
+                    VatRate.wpwc_id == None,    # pylint: disable=singleton-comparison
+                    or_(
+                        VatRate.date_end == None,   # pylint: disable=singleton-comparison
+                        VatRate.date_end > func.now()   # pylint: disable=not-callable
+                    )))) \
+            .scalars().all()
+        wpwc_vat_rates: list[dict[str, Any]] = self.api_read.get("taxes").json()
+        for local_rate in local_vat_rates:
+            if not any(float(wpwc["rate"]) == float(local_rate.rate) for wpwc in wpwc_vat_rates):
+                logger.info(
+                    "Taux de TVA %s%% manquant dans WooCommerce. Création en cours.",
+                    local_rate.rate
+                )
+                self.export_vat_rates(name=local_rate.label)
+
+    def ensure_tags(self) -> None:
+        """
+        S'assure que les tags nécessaires sont présents dans WooCommerce.
+        Si un tag n'existe pas dans WooCommerce, il est créé à partir des données locales.
+        """
+        local_tags = self.session.execute(
+            select(Tags).where(Tags.id_wpwc == None)  # pylint: disable=singleton-comparison
+        ).scalars().all()
+        wpwc_tags: list[dict[str, Any]] = self.api_read.get("products/tags").json()
+        for local_tag in local_tags:
+            if not any(wpwc["name"] == local_tag.name for wpwc in wpwc_tags):
+                logger.info(
+                    "Tag '%s' manquant dans WooCommerce. Création en cours.",
+                    local_tag.name
+                )
+                self.export_tags()
+
+    def ensure_products(self) -> None:
+        """
+        S'assure que les produits locaux sont présents dans WooCommerce.
+        Si un produit local n'existe pas dans WooCommerce, il est créé.
+        """
+        local_products = self.object_repo.get_all(only_actives=True)
+        wpwc_products: list[dict[str, Any]] = self.api_read.get("products").json()
+        for local_product in local_products:
+            if not any(
+                int(wpwc["id"]) == int(local_product.id_wpwc or 0)
+                for wpwc in wpwc_products
+            ):
+                logger.info(
+                    "Produit '%s' (ID %d) manquant dans WooCommerce. Création en cours.",
+                    local_product.name,
+                    local_product.id
+                )
+                self.update_product(local_product.id)
+
+    def ensure_media(self) -> None:
+        """
+        S'assure que les médias locaux sont présents dans WooCommerce.
+        Si un média local n'existe pas dans WooCommerce, il est créé.
+        """
+        local_media = self.media_repo.get_all()
+        wpwc_media: list[dict[str, Any]] = self.api_read.get("media").json()
+        for local_file in local_media:
+            if not any(
+                int(wpwc["id"]) == int(local_file.id_wpwc or 0)
+                for wpwc in wpwc_media
+            ):
+                logger.info(
+                    "Média '%s' (ID %d) manquant dans WooCommerce. Création en cours.",
+                    local_file.file_name,
+                    local_file.id
+                )
+                self.export_pictures()

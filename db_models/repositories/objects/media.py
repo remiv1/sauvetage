@@ -65,7 +65,8 @@ class MediaRepository(BaseRepository):
         if media_id is None and media is None:
             raise ValueError("Fournir un identifiant ou un objet pour la mise à jour.")
         if media is None:
-            media = self.session.query(self.model).filter_by(id=media_id).first()
+            stmt = select(self.model).where(self.model.id == media_id)
+            media = self.session.execute(stmt).scalars().first()
             if not media:
                 raise ValueError(f"Média avec id {media_id} non trouvé.")
 

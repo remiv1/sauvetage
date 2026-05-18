@@ -1,8 +1,8 @@
 """Utilitaires pour les commandes, utilisés par les routes et tests."""
 
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence
-from sqlalchemy.exc import SQLAlchemyError
 from app_front.config import db_conf
 from db_models.objects import Order, OrderLine, CustomerAddresses
 from db_models.objects import InventoryMovements
@@ -11,6 +11,9 @@ from db_models.repositories.customers import CustomersRepository
 from db_models.repositories.invoices import InvoiceRepository, Invoice, InvoiceLine
 from db_models.repositories.shipments import ShipmentsRepository, ShipmentLine
 from db_models.repositories.objects.objects import ObjectsRepository, GeneralObjects
+from db_models.services.woo_commerce.orders import WCOrdersService
+
+logger = logging.getLogger(__name__)
 
 
 # ── Libellés statuts ──────────────────────────────────────────────────────
@@ -225,6 +228,31 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
     data["has_unshipped_invoiced_lines"] = any(
         l.status == "invoiced" for l in (order.order_lines or [])
     )
+
+    # Synchronisation WooCommerce
+    data |= _get_sync_data_for_order(order)
+    return data
+
+def _get_sync_data_for_order(order: Order) -> Dict[str, Any]:
+    """Extrait les données de synchronisation WooCommerce d'une commande."""
+    data: dict[str, Any] = {"wpwc_id": order.wpwc_id}
+    last_sync = None
+    if order.sync_logs:
+        wpwc_logs = [
+            log for log in order.sync_logs if log.external_system == "wpwc"
+        ]
+        if wpwc_logs:
+            last_sync = max(wpwc_logs, key=lambda log: log.synced_at)
+    if last_sync:
+        data["wpwc_sync_status"] = last_sync.sync_status       # success / failed / pending
+        data["wpwc_sync_operation"] = last_sync.operation      # create / update / delete
+        data["wpwc_sync_at"] = last_sync.synced_at.strftime("%d/%m/%Y %H:%M")
+        data["wpwc_sync_error"] = last_sync.error_message
+    else:
+        data["wpwc_sync_status"] = None
+        data["wpwc_sync_operation"] = None
+        data["wpwc_sync_at"] = None
+        data["wpwc_sync_error"] = None
     return data
 
 
@@ -593,3 +621,29 @@ def get_objects_by_name(name: str) -> Optional[Sequence[GeneralObjects]]:
     if results is None:
         return None
     return results
+
+
+# ── WooCommerce ───────────────────────────────────────────────────────────
+
+def push_order_wc(order_id: int) -> tuple[bool, str | None]:
+    """Pousse une commande vers WooCommerce (création ou mise à jour).
+
+    Enregistre un OrderSyncLog et commite la session.
+
+    Returns:
+        (success, error_message)
+    """
+    session = db_conf.get_main_session()
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        return False, "Commande introuvable"
+    svc = WCOrdersService(session)
+    success, error = svc.push_order(order)
+    try:
+        session.commit()
+    except Exception as exc:    # pylint: disable=broad-except
+        session.rollback()
+        logger.exception("Erreur commit après push WC (commande %d) : %s", order_id, exc)
+        return False, str(exc)
+    return success, error

@@ -1,6 +1,7 @@
 """Module de gestion de la liaison entre les objets généraux et les tags associés."""
 
 from typing import Any, Dict, Optional, List
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import ObjectTags, GeneralObjects
@@ -58,9 +59,8 @@ class ObjectTagsRepository(BaseRepository):
         if object_tag_id is None and object_tag is None:
             raise ValueError("Fournir un identifiant ou un objet pour la mise à jour.")
         if object_tag is None:
-            object_tag = (
-                self.session.query(self.model).filter_by(id=object_tag_id).first()
-            )
+            stmt = select(self.model).where(self.model.id == object_tag_id)
+            object_tag = self.session.execute(stmt).scalars().first()
         if not object_tag:
             raise ValueError(f"Liaison avec id {object_tag_id} non trouvée.")
         # Mise à jour des champs de la liaison

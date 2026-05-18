@@ -163,40 +163,45 @@ class GeneralObjects(WorkingBase, QueryMixin):
             f"name={self.name}, price={self.price})>"
         )
 
-    def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
+    def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
+        """Convertit l'objet GeneralObject en dictionnaire formaté pour WooCommerce."""
+        return {
+            "name": self.name,
+            "slug": slugify(self.name),
+            "type": "simple" if not self.object_variations else "variable",
+            "status": "publish" if self.is_active else "draft",
+            "description": self.description,
+            "short_description": self.description[:50] if self.description else "",
+            "sku": self.id,
+            "global_unique_id": self.ean13,
+            "regular_price": str(self.price),
+            "sale_price": str(self.price) if self.price > 0 else None,
+            "tax_class": self.vat_rate.label if self.vat_rate else None,
+            "manage_stock": True,
+            "stock_quantity": 0,    # Sera modifié dans le repository
+            "stock_status": "onbackorder",
+            "backorders": "notify",
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire."""
-        if is_woo_commerce:
-            value_dict: dict[str, Any] = {
-                "name": self.name,
-                "slug": slugify(self.name),
-                "type": "simple",
-                "status": "publish" if self.is_active else "draft",
-                "description": self.description,
-                "sku": self.id,
-                "global_unique_id": self.ean13,
-                "regular_price": str(self.price),
-                "sale_price": str(self.price) if self.price > 0 else None,
-                "tax_class": self.vat_rate.name if self.vat_rate else None,
-            }
-        else:
-            value_dict = {
-                "id": self.id,
-                "supplier_id": self.supplier_id,
-                "general_object_type": self.general_object_type,
-                "ean13": self.ean13,
-                "name": self.name,
-                "description": self.description,
-                "price": self.price,
-                "created_at": self.created_at.isoformat() if self.created_at else None,
-                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-                "last_inventory_timestamp": (
-                    self.last_inventory_timestamp.isoformat()
-                    if self.last_inventory_timestamp
-                    else None
-                ),
-                "is_active": self.is_active,
-            }
-        return value_dict
+        return {
+            "id": self.id,
+            "supplier_id": self.supplier_id,
+            "general_object_type": self.general_object_type,
+            "ean13": self.ean13,
+            "name": self.name,
+            "description": self.description,
+            "price": self.price,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "last_inventory_timestamp": (
+                self.last_inventory_timestamp.isoformat()
+                if self.last_inventory_timestamp
+                else None
+            ),
+            "is_active": self.is_active,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GeneralObjects":
@@ -296,33 +301,33 @@ class ObjectVariations(WorkingBase, QueryMixin):
             f"name={self.name}, price={self.price})>"
         )
 
-    def to_dict(self, is_woo_commerce: bool = False) -> dict[str, Any]:
+    def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
+        """Convertit l'objet ObjectVariations en dictionnaire formaté pour WooCommerce."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "sku": self.id,
+            "regular_price": str(self.price),
+            "sale_price": str(self.price) if self.price > 0 else None,
+            "tax_class": self.vat_rate.label if self.vat_rate else None,
+            "manage_stock": "parent",
+            "backorders": "notify",
+        }
+
+    def to_dict(self) -> dict[str, Any]:
         """Convertit l'objet ObjectVariations en dictionnaire."""
-        if is_woo_commerce:
-            value_dict: dict[str, Any] = {
-                "status": "publish" if self.is_active else "draft",
-                "description": self.description,
-                "sku": self.id,
-                "regular_price": str(self.price),
-                "sale_price": str(self.price) if self.price > 0 else None,
-                "tax_class": self.vat_rate.name if self.vat_rate else None,
-                "manage_stock": "parent",
-                "backorders": "notify",
-            }
-        else:
-            value_dict = {
-                "id": self.id,
-                "general_object_id": self.general_object_id,
-                "name": self.name,
-                "description": self.description,
-                "price": self.price,
-                "purchase_price": self.purchase_price,
-                "vat_rate_id": self.vat_rate_id,
-                "created_at": self.created_at.isoformat() if self.created_at else None,
-                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-                "is_active": self.is_active,
-            }
-        return value_dict
+        return {
+            "id": self.id,
+            "general_object_id": self.general_object_id,
+            "name": self.name,
+            "description": self.description,
+            "price": self.price,
+            "purchase_price": self.purchase_price,
+            "vat_rate_id": self.vat_rate_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "is_active": self.is_active,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjectVariations":
@@ -393,6 +398,49 @@ class Books(WorkingBase, QueryMixin):
     def __repr__(self) -> str:
         return f"<Book(id={self.id})>"
 
+    def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
+        """Convertit l'objet Book en dictionnaire formaté pour WooCommerce."""
+        value_dict = {
+            "attributes": [
+                {
+                    "name": "Auteur",
+                    "options": [self.author] if self.author else [],
+                    "visible": True,
+                    "position": 0,
+                    "slug": "auteur",
+                },
+                {
+                    "name": "Éditeur",
+                    "options": [self.editor] if self.editor else [],
+                    "visible": True,
+                    "position": 1,
+                    "slug": "editeur",
+                },
+                {
+                    "name": "Genre",
+                    "options": [self.genre] if self.genre else [],
+                    "visible": True,
+                    "position": 2,
+                    "slug": "genre",
+                },
+                {
+                    "name": "Année de publication",
+                    "options": [self.publication_year] if self.publication_year else [],
+                    "visible": True,
+                    "position": 3,
+                    "slug": "annee-de-publication",
+                },
+                {
+                    "name": "Nombre de pages",
+                    "options": [self.pages] if self.pages else [],
+                    "visible": True,
+                    "position": 4,
+                    "slug": "nombre-de-pages",
+                },
+            ]
+        }
+        return value_dict
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet Book en dictionnaire."""
         return {
@@ -459,6 +507,13 @@ class OtherObjects(WorkingBase, QueryMixin):
 
     def __repr__(self) -> str:
         return f"<OtherObject(id={self.id})>"
+
+    def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
+        """Convertit l'objet OtherObject en dictionnaire formaté pour WooCommerce."""
+        value_dict = {
+            "attributes": []  # Pas d'attributs spécifiques pour les autres objets pour le moment
+        }
+        return value_dict
 
     def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
         """Convertit l'objet OtherObject en dictionnaire."""
@@ -612,21 +667,22 @@ class ObjectTags(WorkingBase, QueryMixin):
             f"tag_id={self.tag_id})>"
         )
 
-    def to_dict(self, is_woo_commerce: bool = False) -> Dict[str, Any]:
-        """Convertit l'objet ObjectTag en dictionnaire."""
-        if is_woo_commerce:
-            value_dict = {
-                "id": self.tag.id_wpwc,
-            }
-        else:
-            value_dict = {
-                "id": self.id,
-                "general_object_id": self.general_object_id,
-                "tag_id": self.tag_id,
-                "created_at": self.created_at.isoformat() if self.created_at else None,
-                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            }
+    def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
+        """Convertit l'objet ObjectTag en dictionnaire formaté pour WooCommerce."""
+        value_dict = {
+            "id": self.tag.id_wpwc,
+        }
         return value_dict
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet ObjectTag en dictionnaire."""
+        return {
+            "id": self.id,
+            "general_object_id": self.general_object_id,
+            "tag_id": self.tag_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjectTags":
@@ -680,21 +736,24 @@ class ObjMetadatas(WorkingBase, QueryMixin):
             f"<ObjMetadata(id={self.id}, general_object_id={self.general_object_id})>"
         )
 
-    def to_dict(self, is_woo_commerce: bool = False) -> Optional[dict[str, Any]]:
-        """Convertit l'objet ObjMetadata en dictionnaire."""
-        if is_woo_commerce:
-            value_dict = {
-                "meta_data": [{k: v} for k, v in self.semistructured_data.items()]
-                } if self.semistructured_data else None
-        else:
-            value_dict = {
-                "id": self.id,
-                "general_object_id": self.general_object_id,
-                "semistructured_data": self.semistructured_data,
-                "created_at": self.created_at.isoformat() if self.created_at else None,
-                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            }
+    def to_dict_for_woo_commerce(self) -> Optional[dict[str, Any]]:
+        """Convertit l'objet ObjMetadata en dictionnaire formaté pour WooCommerce."""
+        if not self.semistructured_data:
+            return None
+        value_dict = {
+            "attributes": [{k: v} for k, v in self.semistructured_data.items()]
+        }
         return value_dict
+
+    def to_dict(self) -> Optional[dict[str, Any]]:
+        """Convertit l'objet ObjMetadata en dictionnaire."""
+        return {
+            "id": self.id,
+            "general_object_id": self.general_object_id,
+            "semistructured_data": self.semistructured_data,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ObjMetadatas":

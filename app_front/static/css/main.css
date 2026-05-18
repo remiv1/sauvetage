@@ -943,16 +943,53 @@ textarea {
   border-color: #00086f;
   background: rgba(0, 8, 111, 0.06);
 }
+.h2-header .header-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.h2-header .header-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.h2-header .header-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
 .h2-header h2 {
   color: #00086f;
   margin: 0;
   display: inline;
 }
 
+/* Bouton Site Internet — violet, pill shape */
+.btn-site-internet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 2rem;
+  border-radius: 9999px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-site-internet:hover {
+  background: #6d28d9;
+}
+.btn-site-internet:disabled, .btn-site-internet[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Points d'état pour email / téléphone et largeur des colonnes */
 .status-dot {
-  display: inline-block;
-  width: 10px;
   height: 10px;
   border-radius: 50%;
   margin: 0 0.4rem;

@@ -235,6 +235,7 @@ class InventoryRepository(BaseRepository):
                 go.general_object_type,
                 go.is_active,
                 go.price,
+                go.id_wpwc,
                 Suppliers.name.label("supplier_name"),
                 Suppliers.id.label("sid"),
                 qty_expr,
@@ -303,6 +304,7 @@ class InventoryRepository(BaseRepository):
                     "stock_qty": int(row.stock_qty) if row.stock_qty else 0,
                     "dilicom_status": dilicom_st,
                     "dilicom_id": row.dilicom_id,
+                    "id_wpwc": row.id_wpwc,
                 }
             )
 
@@ -358,12 +360,11 @@ class InventoryRepository(BaseRepository):
         """
         Récupère le dernier mouvement d'inventaire pour un objet donné.
         """
-        return (
-            self.session.query(InventoryMovements)
-            .filter_by(general_object_id=general_object_id)
-            .order_by(InventoryMovements.date.desc())
-            .first()
-        )
+        stmt = select(InventoryMovements).where(
+            InventoryMovements.general_object_id == general_object_id,
+            InventoryMovements.movement_type == "inventory"
+        ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
+        return self.session.execute(stmt).scalars().first()
 
     def get_average_price(self, general_object_id: int) -> float:
         """
@@ -379,13 +380,12 @@ class InventoryRepository(BaseRepository):
             costs_at_movement = last_movement.price_at_movement * qty_at_movement
             last_movement_date = last_movement.movement_timestamp
         avg_price = costs_at_movement / qty_at_movement if qty_at_movement > 0 else 0.0
-        all_ordered_since_last_movement = (
-            self.session.query(InventoryMovements)
-            .filter(InventoryMovements.general_object_id == general_object_id)
-            .filter(InventoryMovements.date >= last_movement_date)
-            .filter(InventoryMovements.movement_type == "in")
-            .all()
+        stmt = select(InventoryMovements).where(
+            InventoryMovements.general_object_id == general_object_id,
+            InventoryMovements.movement_timestamp >= last_movement_date,
+            InventoryMovements.movement_type == "in"
         )
+        all_ordered_since_last_movement = self.session.execute(stmt).scalars().all()
         if all_ordered_since_last_movement:
             total_qty = sum(m.quantity for m in all_ordered_since_last_movement)
             total_cost = sum(m.quantity * m.unit_price for m in all_ordered_since_last_movement)

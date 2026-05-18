@@ -37,6 +37,9 @@ MAILS: Dict[str, str] = {
 DOCUMENTS: Dict[str, str] = {
     "create": f"{API_URL}/documents/create",
 }
+WOO_COMMERCE: Dict[str, str] = {
+    "sync_catalog": f"{API_URL}/woo-commerce/background/sync-catalog",
+}
 
 def post(path: str, payload: Dict[str, Any] | List[Any]) -> Dict[str, Any]:
     """POST JSON vers le micro-service FastAPI (opérations lourdes uniquement)."""

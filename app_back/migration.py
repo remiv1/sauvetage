@@ -10,6 +10,7 @@ import subprocess
 from os import getenv
 from urllib.parse import quote
 import psycopg2
+from sqlalchemy import select
 from db_models.objects.vat import VatRate
 from app_back.db_connection import config as db_config
 
@@ -134,7 +135,8 @@ def run_startup_tasks(timeout: int = 300) -> None:
 def ensure_vat(session):
     """S'assure que les taux de TVA de base sont présents dans la base."""
 
-    existing_rates = session.query(VatRate).filter(VatRate.rate.in_([2.1, 5.5, 10.0, 20.0])).all()
+    stmt = select(VatRate).where(VatRate.rate.in_([2.1, 5.5, 10.0, 20.0]))
+    existing_rates = session.execute(stmt).scalars().all()
     existing_codes = {rate.code for rate in existing_rates}
 
     Rates = namedtuple("Rates", ["code", "rate", "label"])

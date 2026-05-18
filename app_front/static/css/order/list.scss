@@ -247,6 +247,32 @@ details[open] > .accordion-toggle {
   color: v.$color-danger;
 }
 
+/* Badges WooCommerce */
+.badge-wc {
+  font-size: 0.75rem;
+  cursor: default;
+
+  &--synced {
+    background: color.adjust(#d77dc5, $lightness: 40%);
+    color: #1a0015;
+  }
+
+  &--error {
+    background: color.adjust(v.$color-danger, $lightness: 35%);
+    color: v.$color-danger;
+  }
+
+  &--pending {
+    background: color.adjust(v.$color-warning, $lightness: 35%);
+    color: color.adjust(v.$color-warning, $lightness: -20%);
+  }
+
+  &--none {
+    background: v.$gray-100;
+    color: v.$gray-500;
+  }
+}
+
 /* ── Icônes d'action ─────────────────────────────────────────────────────── */
 .actions-cell {
   vertical-align: middle;

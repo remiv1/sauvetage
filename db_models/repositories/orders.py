@@ -179,6 +179,7 @@ class OrdersRepository(BaseRepository):
             Order: La commande créée.
         """
         order = Order(
+            reference="",  # Référence temporaire, sera mise à jour après flush
             customer_id=customer_id,
             invoice_address_id=invoice_address_id,
             delivery_address_id=delivery_address_id,

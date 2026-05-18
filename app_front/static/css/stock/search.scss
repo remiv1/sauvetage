@@ -410,6 +410,25 @@ details[open] > .accordion-toggle {
             background: rgba(variables.$secondary-color, 0.06);
         }
     }
+
+    &.action-wc {
+        .action-letter {
+            font-weight: 700;
+            font-size: 0.75rem;
+            font-family: variables.$font-primary;
+        }
+
+        &:hover {
+            color: #7c3aed;
+            border-color: #7c3aed;
+            background: rgba(#7c3aed, 0.06);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
 }
 
 /* ── État vide ───────────────────────────────────────────────────────────── */

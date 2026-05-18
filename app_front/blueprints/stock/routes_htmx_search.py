@@ -33,6 +33,7 @@ from app_front.blueprints.stock.utils import (
     create_variation_for_object,
     update_variation_for_object,
     delete_variation_for_object,
+    push_product_wc,
 )
 
 bp_stock_htmx_search = Blueprint(
@@ -522,3 +523,12 @@ def variation_delete(object_id: int, variation_id: int):
         vat_rates=get_vat_rates(),
         form_state='edit',
     )
+
+
+@bp_stock_htmx_search.post("/object/<int:object_id>/wc-push")
+def product_wc_push(object_id: int):
+    """Pousse un produit vers le Site Internet (WooCommerce) et demande un refresh du tableau."""
+    push_product_wc(object_id)
+    response = make_response("", 204)
+    response.headers["HX-Trigger"] = "refreshTable"
+    return response

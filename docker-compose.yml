@@ -8,6 +8,7 @@ services:
       - ./databases/main/.env.db_main
       - ./databases/logs/.env.db_logs
       - ./app_front/.env.flask
+      - ./app_front/.env.woo
     volumes:
       - sauv-documents-front:/home/root/app/documents
       - sauv-pictures:/home/root/app/documents/shared/pictures

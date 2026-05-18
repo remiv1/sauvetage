@@ -49,6 +49,51 @@
                     </div>
                 </div>
 
+                <div class="customer-detail-row">
+                    <div class="meta-item">
+                        {# Badge synchronisation Site Internet #}
+                        {% if customer.wpwc_id %}
+                            {% if customer.wpwc_sync_status == 'success' %}
+                            <strong>Identifiant Site Internet :</strong>
+                            <span class="badge badge-wc badge-wc--synced"
+                                  title="Synchronisé le {{ customer.wpwc_sync_at }} ({{ customer.wpwc_sync_operation }})">
+                                {{ customer.wpwc_id }}
+                            </span>
+                            {% elif customer.wpwc_sync_status == 'failed' %}
+                            <strong>Identifiant Site Internet :</strong>
+                            <span class="badge badge-wc badge-wc--error"
+                                  title="Erreur sync ({{ customer.wpwc_sync_at }}) : {{ customer.wpwc_sync_error }}">
+                                {{ customer.wpwc_id }} — Erreur
+                            </span>
+                            {% else %}
+                            <strong>Identifiant Site Internet :</strong>
+                            <span class="badge badge-wc badge-wc--pending"
+                                  title="Synchronisation en attente">
+                                {{ customer.wpwc_id }} — En attente
+                            </span>
+                            {% endif %}
+                        {% else %}
+                            {% if customer.wpwc_sync_status == 'failed' %}
+                            <span class="badge badge-wc badge-wc--error"
+                                  title="Dernier envoi en échec ({{ customer.wpwc_sync_at }}) : {{ customer.wpwc_sync_error }}">
+                                SI — Échec
+                            </span>
+                            {% else %}
+                            <span class="badge badge-wc badge-wc--none" title="Non envoyé sur le Site Internet">
+                                SI — Non envoyé
+                            </span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="meta-item">
+                        <button class="btn btn-site-internet"
+                                hx-post="{{ url_for('customer.customer_wc_push', customer_id=customer.id) }}"
+                                hx-disabled-elt="this">
+                            {% if customer.wpwc_id %}Resynchroniser sur le Site Internet{% else %}Envoyer sur le Site Internet{% endif %}
+                        </button>
+                    </div>
+                </div>
+
                 {% if customer.customer_type == 'part' and customer.part %}
                 <div class="customer-detail-row">
                     <span><strong>Civilité :</strong> {{ customer.part.civil_title | default('—') | capitalize }}</span>

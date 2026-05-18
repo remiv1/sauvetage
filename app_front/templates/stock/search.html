@@ -25,7 +25,7 @@
               hx-get="{{ url_for('stock_htmx_search.search_table') }}"
               hx-target="#stock-table-wrapper"
               hx-swap="innerHTML"
-              hx-trigger="submit"
+              hx-trigger="submit, refreshTable from:body"
               hx-include="#search-filters">
 
             <div class="filters-grid">
@@ -118,6 +118,13 @@
                 hx-target="#object-modal-container"
                 hx-swap="innerHTML">
             {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Ajouter un article
+        </button>
+        <button class="btn btn-site-internet"
+                title="Synchroniser l'intégralité du catalogue vers le Site Internet"
+                hx-post="{{ url_for('stock.wc_sync_catalog') }}"
+                hx-disabled-elt="this"
+                hx-swap="none">
+            Synchroniser le catalogue SI
         </button>
     </div>
 

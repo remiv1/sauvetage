@@ -9,6 +9,7 @@ Le schéma métier est le suivant :
 - Mise à jour du statut des commandes dans WooCommerce en fonction du traitement local.
 """
 
+from datetime import datetime, timezone
 from typing import Optional, Any
 import logging
 from sqlalchemy.orm import Session
@@ -98,41 +99,34 @@ class WCOrdersService(WCBase):
         if response.status_code == 200:
             logger.info("Commande %s mise à jour avec succès.", order_id)
             return True
-        else:
-            logger.exception(
-                "Erreur lors de la mise à jour de la commande %s: %s",
-                order_id,
-                response.text
-            )
-            return False
+        logger.exception(
+            "Erreur lors de la mise à jour de la commande %s: %s",
+            order_id,
+            response.text
+        )
+        return False
 
-    def create_order(self, order: Order) -> Optional[Order]:
+    def create_order(self, order: Order) -> Order:
         """
         Crée une nouvelle commande dans WooCommerce.
         Args:
             - order (Order): Données de la commande à créer.
             - customer (Customers): Données du client associé à la commande.
         Returns:
-            Optional[Order]: La commande créée localement si la création a réussi, None sinon.
+            Order: La commande créée localement.
         """
         # Vérifier que le client existe dans WooCommerce, sinon le créer
-        mail = order.customer.email
-        wpwc_customer = self.customer_service.get_by_mail(mail)
-        exists_customer_wpwc = wpwc_customer is not None
-        exists_reference_local = order.customer.wpwc_id is not None
-        # TODO: Vérifier avec mail. Refaire la méthode ci-dessous et factoriser.
-        if not exists_reference_local and exists_customer_wpwc:
-            created_customer = self.customer_service.create_wpwc_customer(order.customer)
-            if created_customer is None:
-                logger.exception("Création du client impossible, création commande annulée.")
-                raise RuntimeError("Création du client impossible, création commande annulée.")
-            order.customer = created_customer
+        wpwc_exists = self.customer_repo.get_by_email(order.customer.mail)
+        if wpwc_exists:
+            wc_customer = self.customer_service.get_by_mail(order.customer.mail)
+            self.customer_service.diff_customer(
+                local_customer=order.customer,
+                wc_customer=wc_customer,
+                from_local=True
+            )
         else:
-            wc_customer = self.customer_service.get_by_mail(mail)
-            updated_customer = self.customer_service.diff_customer(order.customer, wc_customer)
-            self.customer_service.update_wpwc_customer(wpwc_customer.get('id'), updated_customer)
-            if wpwc_customer:
-                order.customer.wpwc_id = wpwc_customer.get('id')
+            self.customer_service.create_wpwc_customer_if_not_exists(order.customer)
+
         # Création de la donnée sous forme de dictionnaires pour l'API WooCommerce
         data = order.to_dict_for_woo_commerce()
 
@@ -143,18 +137,72 @@ class WCOrdersService(WCBase):
         if response.status_code == 201:
             # Récupération de la commande créée depuis WooCommerce pour obtenir les données
             wc_order = response.json()
-            wpwc_customer_id = wc_order.get('customer_id')
-            customer = self.customer_repo.get_by_wpwc_id(wpwc_customer_id)
-            if customer is None:
-                order.customer.wpwc_id = wpwc_customer_id
-                customer_id = order.customer.id
-            else:
-                customer_id = customer.id
-            order_wpwc = self.order_repo.create_from_woo_commerce(wc_order, customer_id)
-            logger.info("Commande créée avec succès dans WooCommerce et localement.")
+            order_wpwc = self.order_repo.create_from_woo_commerce(wc_order, order.customer.id)
+            logger.info("Commande créée avec succès dans WooCommerce.")
+            order.wpwc_id = order_wpwc.wpwc_id
             return order
         logger.exception(
             "Erreur lors de la création de la commande dans WooCommerce: %s",
             response.text
         )
-        return None
+        return order
+
+    def push_order(self, order: Order) -> tuple[bool, str | None]:
+        """Pousse la commande vers WooCommerce (création ou mise à jour).
+
+        Enregistre un OrderSyncLog dans tous les cas. Ne commite pas.
+
+        Returns:
+            (success, error_message)
+        """
+        from db_models.repositories.sync_log import SyncLogRepository  # pylint: disable=import-outside-toplevel
+        sync_repo = SyncLogRepository(self.session)
+        operation = "update" if order.wpwc_id else "create"
+
+        try:
+            data = order.to_dict_for_woo_commerce()
+            if operation == "create":
+                response = self.api_write.post("orders", data=data)
+                ok = response.status_code == 201
+            else:
+                response = self.api_write.put(f"orders/{order.wpwc_id}", data=data)
+                ok = response.status_code == 200
+        except Exception as exc:  # pylint: disable=broad-except
+            error_msg = str(exc)[:500]
+            sync_repo.log_order(
+                order_id=order.id,
+                external_id=str(order.wpwc_id) if order.wpwc_id else None,
+                sync_direction="outbound",
+                operation=operation,
+                sync_status="failed",
+                error_message=error_msg,
+            )
+            logger.exception("Exception lors du push WooCommerce (commande %d)", order.id)
+            return False, error_msg
+
+        if ok:
+            wc_data = response.json()
+            if operation == "create":
+                order.wpwc_id = wc_data.get("id")
+            order.last_synced_at = datetime.now(timezone.utc)
+            sync_repo.log_order(
+                order_id=order.id,
+                external_id=str(order.wpwc_id),
+                sync_direction="outbound",
+                operation=operation,
+                sync_status="success",
+            )
+            logger.info("Commande %d poussée avec succès vers WooCommerce.", order.id)
+            return True, None
+
+        error_msg = response.text[:500]
+        sync_repo.log_order(
+            order_id=order.id,
+            external_id=str(order.wpwc_id) if order.wpwc_id else None,
+            sync_direction="outbound",
+            operation=operation,
+            sync_status="failed",
+            error_message=error_msg,
+        )
+        logger.warning("Erreur WooCommerce (commande %d) : %s", order.id, error_msg)
+        return False, error_msg

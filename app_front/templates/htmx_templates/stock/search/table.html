@@ -22,6 +22,7 @@
                 <th>EAN13</th>
                 <th class="text-center">Statut</th>
                 <th class="text-center">Dilicom</th>
+                <th class="text-center">SI</th>
                 <th class="text-center">Actions</th>
             </tr>
         </thead>
@@ -48,6 +49,17 @@
                         <span class="dilicom-dot dot-red" title="En cours de suppression"></span>
                     {% else %}
                         <span class="dilicom-dot dot-grey" title="Inactif / Non référencé"></span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if item.id_wpwc %}
+                        <span class="dilicom-dot dot-green"
+                              title="Synchronisé sur le Site Internet (ID WC : {{ item.id_wpwc }})">
+                        </span>
+                    {% else %}
+                        <span class="dilicom-dot dot-grey"
+                              title="Non publié sur le Site Internet">
+                        </span>
                     {% endif %}
                 </td>
                 <td>
@@ -83,6 +95,14 @@
                                 hx-target="#object-modal-container"
                                 hx-swap="innerHTML">
                             {% include "svg/del.html" %}
+                        </button>
+                        {# Bouton Site Internet (WooCommerce) #}
+                        <button class="action-icon action-wc"
+                                title="{{ 'Resynchroniser sur le Site Internet' if item.id_wpwc else 'Envoyer sur le Site Internet' }}"
+                                hx-post="{{ url_for('stock_htmx_search.product_wc_push', object_id=item.id) }}"
+                                hx-disabled-elt="this"
+                                hx-swap="none">
+                            <span class="action-letter">SI</span>
                         </button>
                     </div>
                 </td>

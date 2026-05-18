@@ -378,6 +378,20 @@ details[open] > .accordion-toggle {
   border-color: #002bff;
   background: rgba(0, 43, 255, 0.06);
 }
+.action-icon.action-wc .action-letter {
+  font-weight: 700;
+  font-size: 0.75rem;
+  font-family: "Asap", sans-serif;
+}
+.action-icon.action-wc:hover {
+  color: #7c3aed;
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.06);
+}
+.action-icon.action-wc:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ── État vide ───────────────────────────────────────────────────────────── */
 .no-results {
@@ -766,3 +780,5 @@ details[open] > .accordion-toggle {
   width: 100%;
   justify-content: center;
 }
+
+/*# sourceMappingURL=search.css.map */
