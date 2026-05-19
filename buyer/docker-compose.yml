@@ -29,6 +29,7 @@ services:
     volumes:
       - wp_buyer:/var/www/html/wp-content
       - wp_core:/var/www/html
+      - ./mu-plugins:/var/www/html/wp-content/mu-plugins:ro,z
     # Réseau temporaire pour communiquer avec les conteneurs métiers
     networks:
       - wps_net

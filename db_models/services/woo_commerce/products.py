@@ -131,8 +131,8 @@ class WCProductsService(WCBase):
 
         token_repo = MediaAccessTokenRepository(self.session)
         existing = token_repo.get(media.file_link)
-        if existing and existing.is_valid():
-            token = existing
+        if existing:
+            token = existing if existing.is_valid() else token_repo.renew(existing)
         else:
             token = token_repo.create(media.file_link)
 

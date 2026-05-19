@@ -8,6 +8,8 @@ WHITE_LIST_PREFIXES = [
     "/admin/first-user",
     "/robots.txt",
     "/sitemap.xml",
+    "/favicon.ico",
+    "/woocommerce/media/",
 ]
 WHITE_LIST_SUFFIXES = [
     "/login",

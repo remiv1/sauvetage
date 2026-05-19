@@ -128,6 +128,9 @@
         </button>
     </div>
 
+    {# ── Notification push WooCommerce ──────────────────────────────────── #}
+    <div id="wc-push-notification"></div>
+
     {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}
     <div id="stock-table-wrapper"
          hx-get="{{ url_for('stock_htmx_search.search_table') }}"

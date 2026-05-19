@@ -862,3 +862,14 @@ details[open] > .accordion-toggle {
         justify-content: center;
     }
 }
+
+/* ── Notification push WooCommerce ──────────────────────────────────────── */
+.wc-push-notif {
+    animation: wc-notif-fade 5s forwards;
+}
+
+@keyframes wc-notif-fade {
+    0%   { opacity: 1; }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+}

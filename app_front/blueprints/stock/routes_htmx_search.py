@@ -532,7 +532,23 @@ def variation_delete(object_id: int, variation_id: int):
 @bp_stock_htmx_search.post("/object/<int:object_id>/wc-push")
 def product_wc_push(object_id: int):
     """Pousse un produit vers le Site Internet (WooCommerce) et demande un refresh du tableau."""
-    push_product_wc(object_id)
-    response = make_response("", 204)
-    response.headers["HX-Trigger"] = "refreshTable"
-    return response
+    try:
+        push_product_wc(object_id)
+        notif = (
+            '<div id="wc-push-notification" hx-swap-oob="true">'
+            '<div class="alert alert-success wc-push-notif">'
+            'Produit synchronisé avec succès.'
+            '</div></div>'
+        )
+        response = make_response(notif, 200)
+        response.headers["HX-Trigger"] = "refreshTable"
+        return response
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Erreur push WooCommerce produit %d : %s", object_id, exc)
+        notif = (
+            f'<div id="wc-push-notification" hx-swap-oob="true">'
+            f'<div class="alert alert-danger wc-push-notif">'
+            f'Erreur lors de l\'envoi vers le Site Internet : {exc}'
+            f'</div></div>'
+        )
+        return make_response(notif, 200)

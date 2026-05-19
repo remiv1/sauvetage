@@ -29,6 +29,19 @@ class MediaAccessTokenRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(f"Erreur lors de la création du jeton : {exc}") from exc
 
+    def renew(self, record: MediaAccessToken) -> MediaAccessToken:
+        """Renouvelle la validité d'un jeton expiré ou consommé."""
+        now = datetime.now(timezone.utc)
+        record.valid_from = now
+        record.valid_until = now + timedelta(hours=_TOKEN_LIFETIME_HOURS)
+        record.used_at = None
+        try:
+            self.session.commit()
+            return record
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise ValueError(f"Erreur lors du renouvellement du jeton : {exc}") from exc
+
     def get(self, token: str) -> Optional[MediaAccessToken]:
         """Retourne le jeton ou None s'il est inexistant."""
         return self.session.get(MediaAccessToken, token)
