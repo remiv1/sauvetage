@@ -234,16 +234,14 @@
                         {% if mf.file_type == 'lnk' %}
                         <input type="text" class="form-control"
                                value="{{ mf.file_link }}" disabled placeholder="URL">
-                        <input type="text" class="form-control"
-                               value="{{ mf.file_name }}" disabled placeholder="Nom">
                         {% elif mf.file_type == 'img' %}
                         <input type="text" class="form-control"
-                               value="{{ mf.file_name }}" disabled placeholder="Fichier">
+                               value="{{ mf.file_link }}" disabled placeholder="Fichier">
                         <input type="text" class="form-control"
                                value="{{ mf.alt_text }}" disabled placeholder="Texte alt.">
                         {% else %}
                         <input type="text" class="form-control"
-                               value="{{ mf.file_name }}" disabled placeholder="Nom">
+                               value="{{ mf.file_link }}" disabled placeholder="Nom">
                         {% endif %}
                     </div>
                     {% endfor %}
@@ -272,9 +270,6 @@
                             <input type="text" class="form-control"
                                    name="media_files-{{ loop.index0 }}-file_link"
                                    value="{{ mf.file_link }}" placeholder="URL du lien">
-                            <input type="text" class="form-control"
-                                   name="media_files-{{ loop.index0 }}-file_name"
-                                   value="{{ mf.file_name }}" placeholder="Nom du lien">
                         </div>
                         {% elif mf.file_type == 'img' %}
                         <div class="media-fields">
@@ -285,17 +280,14 @@
                             <input type="text" class="form-control"
                                    name="media_files-{{ loop.index0 }}-alt_text"
                                    value="{{ mf.alt_text }}" placeholder="Texte alt.">
-                            <input type="text" class="form-control"
-                                   name="media_files-{{ loop.index0 }}-file_name"
-                                   value="{{ mf.file_name }}" placeholder="Nom du fichier">
                         </div>
                         {% else %}
                         <div class="media-fields">
                             <input type="hidden" value="{{ mf.id }}"
                                    name="media_files-{{ loop.index0 }}-id">
                             <input type="text" class="form-control"
-                                   name="media_files-{{ loop.index0 }}-file_name"
-                                   value="{{ mf.file_name }}" placeholder="Nom">
+                                   name="media_files-{{ loop.index0 }}-file_link"
+                                   value="{{ mf.file_link }}" placeholder="Nom">
                         </div>
                         {% endif %}
                         <button type="button"
@@ -596,14 +588,12 @@
                 var fields = div.querySelector('.media-fields');
                 var i = idx;
                 if (this.value === 'lnk') {
-                    fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_link" class="form-control" placeholder="URL du lien">'
-                                     + '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom du lien">';
+                    fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_link" class="form-control" placeholder="URL du lien">';
                 } else if (this.value === 'img') {
                     fields.innerHTML = '<input type="file" name="media_files-' + i + '-file_data" class="form-control" accept="image/*">'
-                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Texte alternatif">'
-                                     + '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom de l\'image">';
+                                     + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Texte alternatif">';
                 } else if (this.value === 'oth') {
-                    fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_name" class="form-control" placeholder="Nom du fichier">'
+                    fields.innerHTML = '<input type="text" name="media_files-' + i + '-file_link" class="form-control" placeholder="Lien ou référence">'
                                      + '<input type="file" name="media_files-' + i + '-file_data" class="form-control">'
                                      + '<input type="text" name="media_files-' + i + '-alt_text" class="form-control" placeholder="Description">';
                 } else {

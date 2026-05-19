@@ -39,4 +39,4 @@ def test_object_create_read_and_update(
     assert len(retrieved.object_tags) == 3  # type: ignore
     assert retrieved.obj_metadatas.semistructured_data == {"key": "value"}  # type: ignore
     assert len(retrieved.media_files) == 1  # type: ignore
-    assert retrieved.media_files[0].file_name == "test_image.jpg"  # type: ignore
+    assert retrieved.media_files[0].file_link == "http://example.com/test_image.jpg"  # type: ignore

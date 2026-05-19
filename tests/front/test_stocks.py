@@ -157,7 +157,6 @@ def test_create_object(client_all, supplier, tags):   # pylint: disable=redefine
             "obj_metadatas-items-0-value": "value1",
             "obj_metadatas-items-1-key": "key2",
             "obj_metadatas-items-1-value": "value2",
-            "media_files-0-file_name": "test_image.jpg",
             "media_files-0-file_type": "lnk",
             "media_files-0-alt_text": "An image showing a test object",
             "media_files-0-file_link": "http://example.com/test_image.jpg",

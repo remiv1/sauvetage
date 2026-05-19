@@ -134,7 +134,6 @@ class MediaFilesForm(FlaskForm):
     """Formulaire de gestion des fichiers médias (étape 6)."""
 
     general_object_id = HiddenField(GENERAL_OBJECT_STRING, validators=[DataRequired()])
-    file_name = StringField("Fichier", validators=[DataRequired(), Length(max=255)])
     file_type = SelectField(
         "Type de fichier",
         choices=[

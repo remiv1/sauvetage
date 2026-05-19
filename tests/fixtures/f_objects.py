@@ -72,7 +72,6 @@ def book_object(
     )
     media_dict: Dict[str, Any] = {
         "general_object_id": general_object.id,
-        "file_name": "test_image.jpg",
         "file_type": "image/jpeg",
         "alt_text": "An image showing a test object",
         "file_link": "http://example.com/test_image.jpg",

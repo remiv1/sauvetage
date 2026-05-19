@@ -768,7 +768,6 @@ class MediaFiles(WorkingBase, QueryMixin):
     - id : Identifiant unique du fichier média (clé primaire)
     - id_wpwc : Identifiant du fichier média dans WooCommerce (nullable, unique)
     - general_object_id : Identifiant de la métadonnée associée
-    - file_name : Nom du fichier média
     - file_type : Type du fichier média (ex: image/jpeg)
     - alt_text : Texte alternatif pour le fichier média
     - file_link : Lien vers le fichier média (URL externe ou nom de fichier local)
@@ -798,9 +797,6 @@ class MediaFiles(WorkingBase, QueryMixin):
         ForeignKey(GENERAL_OBJECT_PK),
         nullable=False,
         comment="Identifiant de la métadonnée associée",
-    )
-    file_name: Mapped[str] = mapped_column(
-        String, nullable=False, comment="Nom du fichier média"
     )
     file_type: Mapped[str] = mapped_column(
         String, nullable=False, comment="Type du fichier média (ex: image/jpeg)"
@@ -834,7 +830,7 @@ class MediaFiles(WorkingBase, QueryMixin):
     def __repr__(self) -> str:
         return (
             f"<MediaFile(id={self.id}, general_object_id={self.general_object_id}, "
-            f"file_name={self.file_name})>"
+            f"file_link={self.file_link}, is_principal={self.is_principal})>"
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -842,7 +838,6 @@ class MediaFiles(WorkingBase, QueryMixin):
         return {
             "id": self.id,
             "general_object_id": self.general_object_id,
-            "file_name": self.file_name,
             "file_type": self.file_type,
             "alt_text": self.alt_text,
             "file_link": self.file_link,

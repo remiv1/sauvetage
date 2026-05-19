@@ -192,7 +192,7 @@ Note: suppression interdite (événement `before_delete`).
 - **media_files**
   - id: Integer PK
   - general_object_id: FK -> app_schema.general_objects.id
-  - file_name, file_type, alt_text, file_data (LargeBinary), file_link
+  - file_type, alt_text, file_data (LargeBinary), file_link
   - uploaded_at, is_principal
 
 ---

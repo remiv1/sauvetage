@@ -153,7 +153,6 @@ class MediaFileForm(FlaskForm):
 
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
-    file_name = StringField("Nom du fichier média", validators=[DataRequired()])
     file_type = SelectField(
         "Type de fichier média",
         choices=[
@@ -288,7 +287,6 @@ class CreateObjectForm(FlaskForm):
             self.media_files.pop_entry()
         for mf in media_files:
             inner = self.media_files.append_entry().form  # type: ignore[attr-defined]
-            inner["file_name"].data = mf.file_name or ""
             inner["file_type"].data = mf.file_type or ""
             inner["alt_text"].data = mf.alt_text or ""
             inner["file_link"].data = mf.file_link or ""

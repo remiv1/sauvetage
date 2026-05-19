@@ -10,6 +10,7 @@ Le schéma métier est le suivant :
 """
 
 import logging
+import os
 from typing import Any, Optional, Sequence
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_, and_
@@ -18,8 +19,11 @@ from db_models.objects.vat import VatRate
 from db_models.repositories.objects import ObjectsRepository, GeneralObjects
 from db_models.repositories.tags import TagsRepository, Tags
 from db_models.repositories.objects.media import MediaRepository, MediaFiles
+from db_models.repositories.objects.media_access_token import MediaAccessTokenRepository
 from db_models.services.utils import slugify
 from db_models.services.woo_commerce.base import WCBase
+
+_FRONT_BASE_URL = os.environ.get("FRONT_BASE_URL", "")
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +111,32 @@ class WCProductsService(WCBase):
         if product.media_files:
             product_dict["images"] = [
                 {
-                    "src": media.file_url,
-                    "name": media.file_name,
-                    "alt": f"{product.name} - {media.alt_text or media.file_name}"
+                    "src": self._build_media_src(media),
+                    "name": media.file_link,
+                    "alt": f"{product.name} - {media.alt_text or media.file_link}"
                 }
                 for media in product.media_files
             ]
         return product_dict
+
+    def _build_media_src(self, media: MediaFiles) -> str:
+        """Construit l'URL source d'une image pour WooCommerce.
+
+        Pour les fichiers locaux (``is_local=True``), crée un jeton d'accès
+        à usage unique et retourne l'URL tokenisée via la route ``serve_media``.
+        Pour les fichiers externes, retourne directement ``file_link``.
+        """
+        if not media.is_local:
+            return media.file_link or ""
+
+        token_repo = MediaAccessTokenRepository(self.session)
+        existing = token_repo.get(media.file_link)
+        if existing and existing.is_valid():
+            token = existing
+        else:
+            token = token_repo.create(media.file_link)
+
+        return f"{_FRONT_BASE_URL}/woocommerce/media/{token.token}"
 
     def _apply_product_returns(
         self,
@@ -265,7 +288,7 @@ class WCProductsService(WCBase):
         """Traite les retours batch WooCommerce pour les images."""
         for item in returns.get("create", []):
             matching = next(
-                (p for p in pictures if p.file_name == item.get("name")), None
+                (p for p in pictures if p.file_link == item.get("name")), None
             )
             if matching:
                 matching.id_wpwc = int(item["id"])
@@ -524,7 +547,7 @@ class WCProductsService(WCBase):
             if matched:
                 entry = {
                     "id": int(matched["id"]),
-                    "name": p.file_name,
+                    "name": p.file_link,
                     "alt": p.alt_text or "",
                     "src": p.file_link or "",
                 }
@@ -532,7 +555,7 @@ class WCProductsService(WCBase):
                 wpwc_picture_ids.remove(int(entry["id"]))
             else:
                 entry = {
-                    "name": p.file_name,
+                    "name": p.file_link,
                     "alt": p.alt_text or "",
                     "src": p.file_link or "",
                 }
@@ -751,7 +774,7 @@ class WCProductsService(WCBase):
             ):
                 logger.info(
                     "Média '%s' (ID %d) manquant dans WooCommerce. Création en cours.",
-                    local_file.file_name,
+                    local_file.file_link,
                     local_file.id
                 )
                 self.export_pictures()

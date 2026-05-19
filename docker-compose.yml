@@ -10,8 +10,8 @@ services:
       - ./app_front/.env.flask
       - ./app_front/.env.woo
     volumes:
-      - sauv-documents-front:/home/root/app/documents
-      - sauv-pictures:/home/root/app/documents/shared/pictures
+      - sauv-documents-front:/home/root/app/documents/front:rw,z
+      - sauv-pictures:/home/root/app/documents/shared/pictures:rw,z
     networks:
       - sauv-network
       - sauv-secure
@@ -38,7 +38,7 @@ services:
     volumes:
       - sauv-dilicom-in:${DILICOM_IN_DIR}:rw,z
       - sauv-dilicom-out:${DILICOM_OUT_DIR}:rw,z
-      - sauv-pictures:/home/root/app/documents/shared/pictures
+      - sauv-pictures:/home/root/app/documents/shared/pictures:rw,z
     networks:
       - sauv-secure
       - sauv-migrations

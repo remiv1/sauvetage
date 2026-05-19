@@ -177,7 +177,6 @@ class MediaRepository(BaseRepository):
     @staticmethod
     def _apply_scalar_fields(obj: Any, entry: Any) -> None:
         """Copie les champs texte simples du formulaire vers l'objet."""
-        obj.file_name = entry._fields["file_name"].data or ""
         obj.file_type = entry._fields["file_type"].data or ""
         alt_field = entry._fields.get("alt_text")
         obj.alt_text = alt_field.data if alt_field else None

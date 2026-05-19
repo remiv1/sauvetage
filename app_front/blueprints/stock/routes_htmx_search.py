@@ -236,6 +236,8 @@ def create_object():
     form = CreateObjectForm()
     form.vat_rate_id.choices = vat_rates
     from_inventory = request.form.get("from_inventory", "")
+    if not form.validate_on_submit():
+        logger.warning("[create_object] Erreurs de validation : %s", form.errors)
     if form.validate_on_submit():
         try:
             new_obj_id = save_object_complete(form)
@@ -285,6 +287,8 @@ def edit_object(object_id: int):
     vat_rates = get_vat_rates()
     form = CreateObjectForm()
     form.vat_rate_id.choices = vat_rates
+    if not form.validate_on_submit():
+        logger.warning("[edit_object %s] Erreurs de validation : %s", object_id, form.errors)
     if form.validate_on_submit():
         try:
             updated_obj_id = save_object_complete(form, object_id=obj.id)

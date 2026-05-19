@@ -48,7 +48,9 @@
                         {% endif %}
                     hx-target="#object-modal-container"
                     hx-swap="innerHTML"
+                    hx-encoding="multipart/form-data"
                   {% endif %}
+                  enctype="multipart/form-data"
                   method="post">
                 {{ form.hidden_tag() }}
                 {% if from_inventory %}

@@ -58,7 +58,6 @@ erDiagram
     }
     MediaFiles {
         int id PK
-        string file_name
         string file_type
         string alt_text
         bytea file_data
