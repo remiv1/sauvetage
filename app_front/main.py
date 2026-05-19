@@ -65,13 +65,13 @@ def cleanup_session(exception=None):
         try:
             _SessionMain.rollback()
         except SQLAlchemyError as e:
-            logger.error("Error during rollback: %s", str(e))
+            logger.exception("Error during rollback: %s", str(e))
     else:
         # Pas d'erreur : faire le commit automatique
         try:
             _SessionMain.commit()
         except SQLAlchemyError as e:
-            logger.error("Error during commit: %s", str(e))
+            logger.exception("Error during commit: %s", str(e))
             try:
                 _SessionMain.rollback()
             except SQLAlchemyError:
