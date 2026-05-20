@@ -153,6 +153,7 @@ class MediaFileForm(FlaskForm):
 
         csrf = False  # Désactive CSRF pour ce formulaire imbriqué
 
+    id = HiddenField("ID du média")
     file_type = SelectField(
         "Type de fichier média",
         choices=[

@@ -302,6 +302,7 @@ class OrdersRepository(BaseRepository):
         unit_price: float,
         discount: float = 0,
         vat_rate: float,
+        object_variation_id: int | None = None,
         create_source: str = "web",
     ) -> OrderLine:
         """Ajoute une ligne à une commande.
@@ -325,6 +326,7 @@ class OrdersRepository(BaseRepository):
             vat_rate=vat_rate,
             status="draft",
             create_source=create_source,
+            object_variation_id=object_variation_id,
         )
         try:
             self.session.add(line)

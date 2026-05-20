@@ -149,7 +149,6 @@
                 </tr>
             </thead>
             <tbody>
-                {% set ns = namespace(total_ht=0) %}
                 {% for line in order.lines %}
                 <tr>
                     <td>{{ line.article_name }}</td>
@@ -159,14 +158,25 @@
                     <td>{{ "%.1f"|format(line.vat_rate) }} %</td>
                     <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
                     <td><span class="badge">{{ line.status_label }}</span></td>
-                    {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="5" class="text-right weight-600">Total HT</td>
-                    <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
+                    <td class="weight-600">{{ "%.2f"|format(order.total_ht) }} €</td>
+                    <td></td>
+                </tr>
+                {% for vat in order.vat_breakdown %}
+                <tr class="tfoot-vat">
+                    <td colspan="5" class="text-right">TVA {{ "%.1f"|format(vat.rate) }} %</td>
+                    <td>{{ "%.2f"|format(vat.amount) }} €</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+                <tr class="tfoot-ttc">
+                    <td colspan="5" class="text-right weight-600">Total TTC</td>
+                    <td class="weight-600">{{ "%.2f"|format(order.total_ttc) }} €</td>
                     <td></td>
                 </tr>
             </tfoot>

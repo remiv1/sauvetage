@@ -184,9 +184,18 @@ class MediaRepository(BaseRepository):
     def _apply_file_or_link(self, obj: Any, entry: Any, upload_dir: str) -> None:
         """Définit file_link et is_local selon le contenu uploadé ou l'URL saisie."""
         content, original_filename = read_upload_from_entry(entry)
-        if not original_filename:
+        if content and not original_filename:
             raise ValueError("Le champ de fichier doit avoir un nom de fichier original.")
         if content and upload_dir:
+            # En cas de remplacement, supprimer l'ancien fichier local pour éviter les orphelins.
+            if obj.is_local and obj.file_link:
+                old_path = os.path.join(upload_dir, obj.file_link)
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    logger.warning("Impossible de supprimer l'ancien fichier local : %s", old_path)
+            if original_filename is None:
+                raise ValueError("Le champ de fichier doit avoir un nom de fichier original.")
             obj.file_link = save_picture_to_disk(content, original_filename, upload_dir)
             obj.is_local = True
             return
@@ -195,6 +204,10 @@ class MediaRepository(BaseRepository):
         if link_value:
             obj.file_link = link_value
             obj.is_local = False
+            return
+        # En édition d'image sans nouveau fichier, on conserve le fichier existant.
+        if obj.file_type == "img":
+            return
 
     def _delete_removed(
         self, existing: Dict[str, Any], received_ids: set, collection: Any

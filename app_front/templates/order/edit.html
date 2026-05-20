@@ -87,6 +87,15 @@
                             <div id="article-dropdown" class="article-dropdown"></div>
                         </div>
 
+                        {# Variation (affichée dynamiquement si l'article a des variations) #}
+                        <div class="line-form-group full-width" id="variation-wrapper" style="display:none;">
+                            <label for="variation-select">Variation</label>
+                            <select id="variation-select" class="form-control">
+                                <option value="">— Aucune variation —</option>
+                            </select>
+                            <input type="hidden" id="variation_id" name="variation_id" value="">
+                        </div>
+
                         {# Quantité #}
                         <div class="line-form-group">
                             <label for="quantity">Quantité</label>
@@ -179,6 +188,45 @@ document.addEventListener('DOMContentLoaded', function() {
             if (price) document.getElementById('unit_price').value = price;
             var vat = item.dataset.articleVat;
             if (vat) document.getElementById('vat_rate').value = vat;
+
+            // Réinitialiser la variation
+            document.getElementById('variation_id').value = '';
+            var variationWrapper = document.getElementById('variation-wrapper');
+            var variationSelect = document.getElementById('variation-select');
+            variationSelect.innerHTML = '<option value="">— Aucune variation —</option>';
+            variationWrapper.style.display = 'none';
+
+            // Afficher le sélecteur si l'article a des variations
+            var rawVariations = item.dataset.variations;
+            if (rawVariations) {
+                var variations = JSON.parse(rawVariations);
+                if (variations && variations.length > 0) {
+                    variations.forEach(function(v) {
+                        var opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = v.name + ' — ' + parseFloat(v.price).toFixed(2) + ' €';
+                        opt.dataset.price = v.price;
+                        variationSelect.appendChild(opt);
+                    });
+                    variationWrapper.style.display = '';
+                    // Sélectionner automatiquement la première variation
+                    variationSelect.selectedIndex = 1;
+                    document.getElementById('variation_id').value = variations[0].id;
+                    document.getElementById('unit_price').value = parseFloat(variations[0].price).toFixed(2);
+                }
+            }
+        });
+    }
+
+    // Changement de variation → mettre à jour le prix et le champ hidden
+    var variationSelect = document.getElementById('variation-select');
+    if (variationSelect) {
+        variationSelect.addEventListener('change', function() {
+            var selected = this.options[this.selectedIndex];
+            document.getElementById('variation_id').value = selected.value || '';
+            if (selected.value && selected.dataset.price) {
+                document.getElementById('unit_price').value = parseFloat(selected.dataset.price).toFixed(2);
+            }
         });
     }
 });

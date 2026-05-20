@@ -18,3 +18,4 @@ dilicom-parser==0.2.8
 Pillow==12.2.0
 pydantic==2.12.5
 woocommerce==3.0.0
+tenacity>=9.1.4

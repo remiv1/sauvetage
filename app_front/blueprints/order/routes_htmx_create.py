@@ -113,6 +113,9 @@ def add_line(order_id: int):
     form = OrderLineForm()
     if form.validate_on_submit():
         try:
+            raw_variation = form.variation_id.data
+            variation_id = int(raw_variation) \
+                if raw_variation and str(raw_variation).strip() else None
             add_order_line(
                 order_id,
                 general_object_id=int(form.general_object_id.data),  # type: ignore[arg-type]
@@ -120,6 +123,7 @@ def add_line(order_id: int):
                 unit_price=float(form.unit_price.data or 0),
                 vat_rate=float(form.vat_rate.data or 0),
                 discount=float(form.discount.data or 0),
+                object_variation_id=variation_id,
             )
         except ValueError as exc:
             return f"<p class='error'>{exc}</p>", 422
@@ -286,12 +290,18 @@ def search_articles():
             results = []
         articles = []
         for a in results:
+            variations = [
+                {"id": v.id, "name": v.name, "price": float(v.price) if v.price else 0}
+                for v in a.object_variations
+                if v.is_active
+            ]
             articles.append({
                 "id": a.id,
                 "name": a.name,
                 "ean13": a.ean13 or "",
                 "price": float(a.price) if a.price else 0,
                 "vat_rate_id": a.vat_rate_id,
+                "variations": variations,
             })
         return render_template(ARTICLE_DROPDOWN, articles=articles, query=query)
     except ValueError as exc:

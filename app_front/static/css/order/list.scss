@@ -496,6 +496,20 @@ dialog.modal-overlay {
   tbody tr:hover {
     background: v.$gray-100;
   }
+
+  tfoot tr.tfoot-vat td {
+    font-size: 0.82rem;
+    color: v.$gray-600;
+    border-bottom: none;
+    padding-top: v.$space-xs * 0.5;
+    padding-bottom: v.$space-xs * 0.5;
+  }
+
+  tfoot tr.tfoot-ttc td {
+    font-size: 0.9rem;
+    border-top: 2px solid v.$gray-300;
+    padding-top: v.$space-sm;
+  }
 }
 
 /* ============================================================================ */

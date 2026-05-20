@@ -22,17 +22,18 @@ from db_models.repositories.objects.media import MediaRepository, MediaFiles
 from db_models.repositories.objects.media_access_token import MediaAccessTokenRepository
 from db_models.services.utils import slugify
 from db_models.services.woo_commerce.base import WCBase
+from db_models.services.woo_commerce.utils import _merge_attribute_lists
 
 _FRONT_BASE_URL = os.environ.get("FRONT_BASE_URL", "")
 
 logger = logging.getLogger(__name__)
 
 object_type_mapping = {
-    "book": [19],
+    "book": [20],
     "cd": [21, 22],
     "dvd": [21, 23],
-    "games": [24, 25],
-    "spiritual_object": [24, 26],
+    "games": [24, 26],
+    "spiritual_object": [24, 25],
     "other": [24],
 }
 
@@ -101,13 +102,23 @@ class WCProductsService(WCBase):
         product_dict = product.to_dict_for_woo_commerce()
         product_dict |= categories
         if product.book:
-            product_dict |= product.book.to_dict_for_woo_commerce()
+            book_attrs = product.book.to_dict_for_woo_commerce().get("attributes", [])
+            current_attrs = product_dict.get("attributes", [])
+            merged_attrs = _merge_attribute_lists(current_attrs, book_attrs) \
+                if isinstance(current_attrs, list) else book_attrs
+            product_dict["attributes"] = merged_attrs
         if product.other_object:
-            product_dict |= product.other_object.to_dict_for_woo_commerce()
+            other_attrs = product.other_object.to_dict_for_woo_commerce().get("attributes", [])
+            current_attrs = product_dict.get("attributes", [])
+            merged_attrs = _merge_attribute_lists(current_attrs, other_attrs) \
+                if isinstance(current_attrs, list) else other_attrs
+            product_dict["attributes"] = merged_attrs
         if product.obj_metadatas:
-            metadata_wc = product.obj_metadatas.to_dict_for_woo_commerce()
-            if metadata_wc:
-                product_dict |= metadata_wc
+            meta_attrs = product.obj_metadatas.to_dict_for_woo_commerce().get("attributes", [])
+            current_attrs = product_dict.get("attributes", [])
+            merged_attrs = _merge_attribute_lists(current_attrs, meta_attrs) \
+                if isinstance(current_attrs, list) else meta_attrs
+            product_dict["attributes"] = merged_attrs
         if product.media_files:
             product_dict["images"] = [
                 {
@@ -156,7 +167,7 @@ class WCProductsService(WCBase):
         for item in returns.get("create", []):
             sku = item.get("sku")
             matching = next(
-                (p for p in products if p.ean13 and str(p.ean13) == str(sku or "")),
+                (p for p in products if str(p.id) == str(sku or "")),
                 None,
             )
             if matching:
@@ -248,6 +259,7 @@ class WCProductsService(WCBase):
             )
             if matching:
                 matching.wpwc_id = int(item["id"])
+                matching.wpwc_slug = item.get("class") or ""
             self._log_sync(
                 entity_type="vat_rate",
                 entity_id=matching.id if matching else None,
@@ -258,6 +270,8 @@ class WCProductsService(WCBase):
         for item in returns.get("update", []):
             wpwc_id = int(item["id"])
             matching = next((v for v in vat_rates if v.wpwc_id == wpwc_id), None)
+            if matching and item.get("class") is not None:
+                matching.wpwc_slug = item.get("class") or ""
             self._log_sync(
                 entity_type="vat_rate",
                 entity_id=matching.id if matching else None,
@@ -589,14 +603,16 @@ class WCProductsService(WCBase):
                 batch_data["update"].append(entry)
                 wpwc_object_ids.remove(int(entry["id"]))
                 logger.debug(
-                    "Objet local ID %d correspond à l'objet WooCommerce ID %d. Ajouté à la liste de mise à jour.",
+                    "Objet local ID %d correspond à l'objet WooCommerce ID %d. " +
+                    "Ajouté à la liste de mise à jour.",
                     o.id,
                     int(matched["id"])
                 )
             else:
                 batch_data["create"].append(self._build_product_payload(o))
                 logger.debug(
-                    "Objet local ID %d n'a pas de correspondance dans WooCommerce. Ajouté à la liste de création.",
+                    "Objet local ID %d n'a pas de correspondance dans WooCommerce. " +
+                    "Ajouté à la liste de création.",
                     o.id
                 )
             if (i + 1) % 100 == 0 or (i + 1) == len(objects):
@@ -610,7 +626,8 @@ class WCProductsService(WCBase):
         if batch_data["create"] or batch_data["update"] or batch_data["delete"]:
             data.append(batch_data)
         logger.debug(
-            "Différence calculée entre les objets locaux et WooCommerce : %d à créer, %d à mettre à jour, %d à supprimer",
+            "Différence calculée entre les objets locaux et WooCommerce : " +
+            "%d à créer, %d à mettre à jour, %d à supprimer",
             sum(len(d.get("create", [])) for d in data),
             sum(len(d.get("update", [])) for d in data),
             sum(len(d.get("delete", [])) for d in data)
@@ -634,33 +651,73 @@ class WCProductsService(WCBase):
         data: dict[str, list[dict[str, Any]]] = {"create": [], "update": [], "delete": []}
         wpwc_vat_ids = {int(rate["id"]) for rate in wpwc_vat_rates}
         for v in vat_rates:
+            target_class = v.wpwc_slug or slugify(v.label)
+            # Appariement par classe de taxe (robuste), puis par wpwc_id (fallback)
             matched = next(
-                (wpwc for wpwc in wpwc_vat_rates if int(wpwc["id"]) == int(v.wpwc_id or 0)),
-                None
+                (wpwc for wpwc in wpwc_vat_rates if wpwc.get("class") == target_class),
+                None,
             )
+            if matched is None and v.wpwc_id:
+                matched = next(
+                    (wpwc for wpwc in wpwc_vat_rates if int(wpwc["id"]) == int(v.wpwc_id)),
+                    None,
+                )
             if matched:
                 t = {
                     "id": int(matched["id"]),
                     "rate": str(v.rate),
                     "name": v.label,
-                    "class": "standard" if v.code == 30 else "taux-reduit",
+                    "class": target_class,
                 }
                 data["update"].append(t)
-                wpwc_vat_ids.remove(int(t["id"]))
+                wpwc_vat_ids.discard(int(t["id"]))
             else:
                 t = {
                     "rate": str(v.rate),
                     "name": v.label,
-                    "class": "standard" if v.code == 30 else "taux-reduit",
+                    "class": target_class,
                 }
                 data["create"].append(t)
         for wpwc_id in wpwc_vat_ids:
             data["delete"].append({"id": wpwc_id})
         return data
 
+    def _ensure_wc_tax_classes(self, vat_rates: Sequence[VatRate]) -> None:
+        """Crée dans WooCommerce les classes de taxe manquantes (une par taux de TVA local)
+        et met à jour wpwc_slug en conséquence.
+        """
+        try:
+            wc_classes: list[dict[str, Any]] = self.api_read.get("taxes/classes").json()
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception("Erreur récupération classes de taxe WC : %s", exc)
+            return
+        wc_slug_map: dict[str, dict[str, Any]] = {cls["slug"]: cls for cls in wc_classes}
+        for v in vat_rates:
+            expected_slug = slugify(v.label)
+            if expected_slug in wc_slug_map:
+                if v.wpwc_slug != expected_slug:
+                    v.wpwc_slug = expected_slug
+            else:
+                try:
+                    resp = self.api_write.post("taxes/classes", data={"name": v.label})
+                    resp.raise_for_status()
+                    actual_slug = resp.json().get("slug") or expected_slug
+                    wc_slug_map[actual_slug] = resp.json()
+                    if v.wpwc_slug != actual_slug:
+                        v.wpwc_slug = actual_slug
+                    logger.info(
+                        "Classe de taxe WC créée : %r → slug=%r", v.label, actual_slug
+                    )
+                except Exception as exc:  # pylint: disable=broad-except
+                    logger.exception(
+                        "Erreur création classe de taxe WC pour %r : %s", v.label, exc
+                    )
+        self.session.flush()
+
     def export_vat_rates(self, name: Optional[str] = None) -> None:
         """
         Exporte les taux de TVA vers WooCommerce.
+        - Crée d'abord les classes de taxe WC manquantes (une par taux, slug dérivé du label).
         - Créations : stocke wpwc_id retourné sur le VatRate local + trace dans ObjectSyncLog.
         - Mises à jour : trace uniquement dans ObjectSyncLog.
         - Suppressions : efface wpwc_id sur le VatRate local + trace dans ObjectSyncLog.
@@ -672,6 +729,7 @@ class WCProductsService(WCBase):
         if name:
             stmt = stmt.where(VatRate.label == name)
         vat_rates = self.session.execute(stmt).scalars().all()
+        self._ensure_wc_tax_classes(vat_rates)
         wpwc_vat_rates: list[dict[str, Any]] = self.api_read.get("taxes").json()
         data = self.__diff_vat_rates(vat_rates, wpwc_vat_rates)
         try:
@@ -723,6 +781,48 @@ class WCProductsService(WCBase):
                     local_rate.rate
                 )
                 self.export_vat_rates(name=local_rate.label)
+
+    def import_vat_slugs(self) -> int:
+        """Lit les taux de TVA depuis WooCommerce et rétro-alimente wpwc_slug en local.
+
+        À appeler une fois après la migration, ou après un changement de configuration WC.
+
+        Returns:
+            Nombre de taux mis à jour.
+        """
+        wpwc_rates: list[dict[str, Any]] = self.api_read.get(
+            "taxes", params={"per_page": 100}
+        ).json()
+        local_rates = self.session.execute(select(VatRate)).scalars().all()
+        updated = 0
+        for wc_rate in wpwc_rates:
+            wc_id = wc_rate.get("id")
+            wc_slug = wc_rate.get("class") or ""
+            wc_rate_value = float(wc_rate.get("rate", 0))
+            # Appariement par taux (robuste), avec fallback sur wpwc_id
+            local = next(
+                (v for v in local_rates if round(float(v.rate), 3) == round(wc_rate_value, 3)),
+                None,
+            )
+            if local is None:
+                local = next((v for v in local_rates if v.wpwc_id == wc_id), None)
+            if local:
+                changed = False
+                if local.wpwc_id != wc_id:
+                    local.wpwc_id = wc_id
+                    changed = True
+                if local.wpwc_slug != wc_slug:
+                    local.wpwc_slug = wc_slug
+                    changed = True
+                if changed:
+                    updated += 1
+                    logger.info(
+                        "VatRate id=%d (rate=%.3f) : wpwc_id=%d, wpwc_slug=%r",
+                        local.id, float(local.rate), wc_id, wc_slug,
+                    )
+        self.session.commit()
+        logger.info("import_vat_slugs : %d taux mis à jour.", updated)
+        return updated
 
     def ensure_tags(self) -> None:
         """

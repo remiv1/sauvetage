@@ -7,6 +7,7 @@ from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, eve
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
+
 _ALL_DELETE_ORPHAN = "all, delete-orphan"
 
 
@@ -212,11 +213,16 @@ class Order(WorkingBase, QueryMixin):
         metadata = self._get_wc_metadata()
         line_items = []
         for line in self.order_lines:
-            line_items.append({
-                "product_id": line.general_object.id_wpwc,
-                "quantity": line.quantity,
-            })
+            if not line:
+                continue
+            if line.status == "canceled":
+                # Ligne annulée localement : demander à WooCommerce de la supprimer
+                if line.wpwc_id:
+                    line_items.append({"id": line.wpwc_id, "quantity": 0})
+            else:
+                line_items.append(line.to_dict_for_woo_commerce())
         return {
+            "customer_id": self.customer.wpwc_id,
             "payment_method": "bacs",
             "payment_method_title": "Direct Bank Transfer",
             "set_paid": False,
@@ -323,9 +329,17 @@ class OrderLine(WorkingBase, QueryMixin):
         comment="Date last MaJ de la ligne de commande",
     )
 
+    object_variation_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.object_variations.id"),
+        nullable=True,
+        comment="Variation de produit sélectionnée pour cette ligne",
+    )
+
     # Relations
     order = relationship("Order", back_populates="order_lines")
     general_object = relationship("GeneralObjects", back_populates="order_lines")
+    object_variation = relationship("ObjectVariations")
     invoice_lines = relationship("InvoiceLine", back_populates="order_line")
     shipment_lines = relationship("ShipmentLine", back_populates="order_line")
 
@@ -343,14 +357,41 @@ class OrderLine(WorkingBase, QueryMixin):
             "wpwc_id": self.wpwc_id,
             "order_id": self.order_id,
             "general_object_id": self.general_object_id,
+            "object_variation_id": self.object_variation_id,
             "quantity": self.quantity,
             "status": self.status,
-            "unit_price": float(self.unit_price),
-            "discount": float(self.discount),
-            "vat_rate": float(self.vat_rate),
+            "unit_price": self.unit_price,
+            "discount": self.discount,
+            "vat_rate": self.vat_rate,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+    def to_dict_for_woo_commerce(self) -> dict[str, Any]:
+        """Convertit l'objet OrderLine en dictionnaire au format attendu par WooCommerce."""
+        vat_rate_obj = self.general_object.vat_rate if self.general_object else None
+        subtotal_ht = round(float(self.unit_price) * self.quantity, 4)
+        discount_ratio = 1 - float(self.discount) / 100
+        total_ht = round(subtotal_ht * discount_ratio, 4)
+
+        value_dict: dict[str, Any] = {
+            "name": self.general_object.name if self.general_object else "Unknown Product",
+            "product_id": int(self.general_object.id_wpwc),
+            "quantity": self.quantity,
+            "subtotal": str(subtotal_ht),
+            "total": str(total_ht),
+        }
+
+        # Classe de taxe WooCommerce : WC recalcule les montants de taxe automatiquement
+        if vat_rate_obj and vat_rate_obj.wpwc_slug:
+            value_dict["tax_class"] = vat_rate_obj.wpwc_slug
+
+        # Inclure l'ID WooCommerce de la ligne pour que le PUT mette à jour au lieu de dupliquer
+        if self.wpwc_id:
+            value_dict["id"] = self.wpwc_id
+        if self.object_variation and self.object_variation.id_wpwc:
+            value_dict["variation_id"] = int(self.object_variation.id_wpwc)
+        return value_dict
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "OrderLine":

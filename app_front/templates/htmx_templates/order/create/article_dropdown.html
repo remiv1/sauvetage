@@ -5,14 +5,15 @@
          data-article-id="{{ a.id }}"
          data-article-name="{{ a.name }}"
          data-article-price="{{ a.price }}"
-         data-article-vat="">
+         data-article-vat=""
+         data-variations='{{ a.variations | tojson }}'>
         {{ a.name }}
-        {% if a.ean13 %}<small class="text-muted"> — EAN : {{ a.ean13 }}</small>{% endif %}
-        <small class="text-muted"> — {{ "%.2f"|format(a.price) }} €</small>
+        {% if a.ean13 %}<small class="text-muted"> &mdash; EAN : {{ a.ean13 }}</small>{% endif %}
+        <small class="text-muted"> &mdash; {{ "%.2f"|format(a.price) }} €</small>
     </div>
     {% endfor %}
 {% else %}
     <div class="dropdown-item text-muted">
-        Aucun article trouvé pour "{{ query }}".
+        Aucun article trouvé pour &laquo;&nbsp;{{ query }}&nbsp;&raquo;.
     </div>
 {% endif %}

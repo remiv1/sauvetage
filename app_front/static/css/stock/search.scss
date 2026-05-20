@@ -827,6 +827,32 @@ details[open] > .accordion-toggle {
         .form-control {
             flex: 1;
         }
+
+        .media-image-preview {
+            display: flex;
+            align-items: center;
+            gap: variables.$space-sm;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .media-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: variables.$radius-xs;
+            object-fit: cover;
+            border: 1px solid variables.$gray-300;
+            background: variables.$gray-100;
+            flex-shrink: 0;
+        }
+
+        .media-replace-input {
+            display: none;
+
+            &.is-visible {
+                display: block;
+            }
+        }
     }
     .media-type-badge {
         font-size: 0.75rem;

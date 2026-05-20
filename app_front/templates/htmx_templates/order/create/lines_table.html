@@ -5,6 +5,7 @@
     <thead>
         <tr>
             <th>Article</th>
+            <th>Variation</th>
             <th>Qté</th>
             <th>PU HT</th>
             <th>Remise</th>
@@ -21,6 +22,7 @@
         {% for line in order.lines %}
         <tr>
             <td>{{ line.article_name }}</td>
+            <td>{{ line.variation_name if line.variation_name else '—' }}</td>
             <td>{{ line.quantity }}</td>
             <td>{{ "%.2f"|format(line.unit_price) }} €</td>
             <td>{{ "%.2f"|format(line.discount) }} %</td>
@@ -46,7 +48,7 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="5" class="weight-600 text-right">Total HT</td>
+            <td colspan="6" class="weight-600 text-right">Total HT</td>
             <td class="weight-600">{{ "%.2f"|format(ns.total_ht) }} €</td>
             <td></td>
             {% if order.status == 'draft' %}<td></td>{% endif %}

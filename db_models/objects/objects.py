@@ -739,9 +739,11 @@ class ObjMetadatas(WorkingBase, QueryMixin):
     def to_dict_for_woo_commerce(self) -> Optional[dict[str, Any]]:
         """Convertit l'objet ObjMetadata en dictionnaire formaté pour WooCommerce."""
         if not self.semistructured_data:
-            return None
+            return {"attributes": []}
         value_dict = {
-            "attributes": [{k: v} for k, v in self.semistructured_data.items()]
+            "attributes": [
+                {"key": k, "value": v} for k, v in self.semistructured_data.items()
+            ]
         }
         return value_dict
 

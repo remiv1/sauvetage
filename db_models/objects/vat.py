@@ -36,6 +36,11 @@ class VatRate(WorkingBase, QueryMixin):
         unique=True,
         comment="Identifiant du taux de TVA dans WooCommerce (si synchronisé)",
     )
+    wpwc_slug: Mapped[Optional[str]] = mapped_column(
+        String,
+        nullable=True,
+        comment="Slug de la classe de taxe WooCommerce (ex: 'standard', 'taux-reduit')",
+    )
     code: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -76,6 +81,7 @@ class VatRate(WorkingBase, QueryMixin):
         return {
             "id": self.id,
             "wpwc_id": self.wpwc_id,
+            "wpwc_slug": self.wpwc_slug,
             "code": self.code,
             "rate": float(self.rate),
             "label": self.label,

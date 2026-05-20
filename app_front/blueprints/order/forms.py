@@ -20,6 +20,7 @@ class OrderLineForm(FlaskForm):
     """Formulaire d'ajout d'une ligne de commande."""
 
     general_object_id = HiddenField("Article", validators=[DataRequired()])
+    variation_id = HiddenField("Variation")
     quantity = IntegerField(
         "Quantité", validators=[DataRequired(), NumberRange(min=1)]
     )

@@ -275,8 +275,21 @@
                         <div class="media-fields">
                             <input type="hidden" value="{{ mf.id }}"
                                    name="media_files-{{ loop.index0 }}-id">
-                            <input type="file" name="media_files-{{ loop.index0 }}-file_data"
-                                   class="form-control" accept="image/*">
+                            <div class="media-image-preview">
+                                <img src="{% if mf.is_local %}{{ url_for('stock_htmx_search.serve_media', filename=mf.file_link) }}{% else %}{{ mf.file_link }}{% endif %}"
+                                      alt="{{ mf.alt_text or ('Aperçu média ' ~ loop.index) }}"
+                                  class="media-thumb">
+                                <button type="button"
+                                     class="btn btn-sm btn-secondary js-toggle-media-replace"
+                                     data-target="media-replace-input-{{ loop.index0 }}">
+                                 Remplacer
+                                </button>
+                            </div>
+                            <input type="file"
+                                id="media-replace-input-{{ loop.index0 }}"
+                                name="media_files-{{ loop.index0 }}-file_data"
+                                class="form-control media-replace-input"
+                                accept="image/*">
                             <input type="text" class="form-control"
                                    name="media_files-{{ loop.index0 }}-alt_text"
                                    value="{{ mf.alt_text }}" placeholder="Texte alt.">
@@ -602,6 +615,22 @@
             });
         });
     }
+
+    // Basculer le champ de remplacement d'image pour les médias existants
+    container.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('js-toggle-media-replace')) return;
+        var inputId = e.target.getAttribute('data-target');
+        if (!inputId) return;
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        input.classList.toggle('is-visible');
+        if (input.classList.contains('is-visible')) {
+            e.target.textContent = 'Annuler le remplacement';
+        } else {
+            input.value = '';
+            e.target.textContent = 'Remplacer';
+        }
+    });
 
     // Suppression d'un item dynamique
     container.addEventListener('click', function(e) {

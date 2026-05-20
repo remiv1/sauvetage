@@ -1,6 +1,7 @@
 <!-- template single_object_form.html -->
 {# Fragment HTMX — Formulaire de création / consultation d'un objet #}
 {% from 'common/macros.html' import render_field_errors %}
+{% from 'common/macros.html' import render_flash_messages %}
 
 {% set disabled = form_state == 'view' %}
 
@@ -17,6 +18,7 @@
             <button class="btn-close btn-close-modal" title="Fermer">&times;</button>
         </div>
         <div class="modal-body">
+            {{ render_flash_messages() }}
             {# Partie qui s'affiche une fois l'objet créé #}
             {% if form_state == 'created' %}
                 <div class="object-created-msg">

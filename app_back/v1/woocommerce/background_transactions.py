@@ -25,6 +25,15 @@ def update_vat_rates(specific: bool = False, specific_name: Optional[str] = None
         wc_service.export_vat_rates()
 
 
+@router.post("/import-vat-slugs")
+def import_vat_slugs():
+    """Lit les classes de taxe WooCommerce et met à jour wpwc_slug en local."""
+    session = next(config.get_main_session())
+    wc_service = WCProductsService(session, separated_keys=True)
+    updated = wc_service.import_vat_slugs()
+    return {"updated": updated}
+
+
 def _run_sync_catalog() -> None:
     """Tâche exécutée en arrière-plan : synchronise le catalogue vers WooCommerce."""
     session = next(config.get_main_session())

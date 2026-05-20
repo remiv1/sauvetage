@@ -167,6 +167,45 @@ def search_orders_paginated(    # pylint: disable=too-many-arguments
 
 # ── Lecture détail ───────────────────────────────────────────────────────
 
+def _build_order_line_dto(line: OrderLine) -> dict[str, Any]:
+    """Convertit une ligne ORM en dict de présentation."""
+    if line.general_object:
+        article_name = (
+            getattr(line.general_object, "name", None)
+            or f"Article #{line.general_object_id}"
+        )
+    else:
+        article_name = f"Article #{line.general_object_id}"
+    price = float(line.unit_price) * line.quantity
+    discount_amount = price * float(line.discount) / 100
+    ld = line.to_dict()
+    ld["article_name"] = article_name
+    ld["variation_name"] = line.object_variation.name if line.object_variation else None
+    ld["status_label"] = STATUS_LABELS.get(line.status, line.status)
+    ld["line_total_ht"] = round(price - discount_amount, 2)
+    return ld
+
+
+def _compute_order_totals(active_lines: list[dict[str, Any]]) -> dict[str, Any]:
+    """Calcule total HT, ventilation TVA par taux et total TTC."""
+    vat_accumulator: dict[float, float] = {}
+    total_ht = 0.0
+    for ld in active_lines:
+        ht = ld["line_total_ht"]
+        rate = round(float(ld.get("vat_rate") or 0), 2)
+        total_ht += ht
+        vat_accumulator[rate] = vat_accumulator.get(rate, 0.0) + ht * rate / 100
+    vat_breakdown = [
+        {"rate": rate, "amount": round(amount, 2)}
+        for rate, amount in sorted(vat_accumulator.items())
+    ]
+    return {
+        "total_ht": round(total_ht, 2),
+        "vat_breakdown": vat_breakdown,
+        "total_ttc": round(total_ht + sum(v["amount"] for v in vat_breakdown), 2),
+    }
+
+
 def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
     """Récupère une commande par son ID avec toutes ses relations.
 
@@ -174,12 +213,13 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
         Dict complet de la commande, ou None.
     """
     session = db_conf.get_main_session()
-    repo = OrdersRepository(session)
-    order = repo.get_by_id(order_id)
+    order = OrdersRepository(session).get_by_id(order_id)
     if order is None:
         return None
 
     data = _order_to_list_dict(order)
+
+    # Adresses
     data["invoice_address"] = (
         order.invoice_address.to_dict() if order.invoice_address else None
     )
@@ -188,46 +228,30 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
     )
     data["invoice_address_id"] = order.invoice_address_id
     data["delivery_address_id"] = order.delivery_address_id
-
     data["shipping_addresses"] = (
         _shipping_options_for_customer(order.customer) if order.customer else []
     )
 
-    # Lignes de commande (exclure les annulées pour le tableau principal)
-    data["lines"] = []
-    data["all_lines"] = []  # toutes les lignes y compris annulées
-    for line in (order.order_lines or []):
-        ld = line.to_dict()
-        if line.general_object:
-            ld["article_name"] = getattr(line.general_object, "name", None) \
-                                        or f"Article #{line.general_object_id}"
-        else:
-            ld["article_name"] = f"Article #{line.general_object_id}"
-        ld["status_label"] = STATUS_LABELS.get(line.status, line.status)
-        price = float(line.unit_price) * line.quantity
-        discount_amount = price * float(line.discount) / 100
-        ld["line_total_ht"] = round(price - discount_amount, 2)
-        data["all_lines"].append(ld)
-        if line.status != "canceled":
-            data["lines"].append(ld)
+    # Lignes (toutes + actives uniquement)
+    all_lines = [_build_order_line_dto(line) for line in (order.order_lines or [])]
+    data["all_lines"] = all_lines
+    data["lines"] = [ld for ld in all_lines if ld.get("status") != "canceled"]
+    data |= _compute_order_totals(data["lines"])
 
-    # Factures rattachées
-    inv_repo = InvoiceRepository(session)
-    invoices = inv_repo.get_by_order_id(order_id)
-    data["invoices"] = [inv.to_dict() for inv in invoices]
-
-    # Envois rattachés
-    ship_repo = ShipmentsRepository(session)
-    shipments = ship_repo.get_by_order_id(order_id)
-    data["shipments"] = [s.to_dict() for s in shipments]
+    # Documents liés
+    data["invoices"] = [
+        inv.to_dict()
+        for inv in InvoiceRepository(session).get_by_order_id(order_id)
+    ]
+    data["shipments"] = [
+        s.to_dict()
+        for s in ShipmentsRepository(session).get_by_order_id(order_id)
+    ]
 
     # Flags pour boutons facturer / expédier
-    data["has_uninvoiced_lines"] = any(
-        l.status == "draft" for l in (order.order_lines or [])
-    )
-    data["has_unshipped_invoiced_lines"] = any(
-        l.status == "invoiced" for l in (order.order_lines or [])
-    )
+    order_lines = order.order_lines or []
+    data["has_uninvoiced_lines"] = any(l.status == "draft" for l in order_lines)
+    data["has_unshipped_invoiced_lines"] = any(l.status == "invoiced" for l in order_lines)
 
     # Synchronisation WooCommerce
     data |= _get_sync_data_for_order(order)
@@ -351,6 +375,7 @@ def add_order_line(     # pylint: disable=too-many-arguments
     unit_price: float,
     discount: float = 0,
     vat_rate: float,
+    object_variation_id: int | None = None,
 ) -> Dict[str, Any]:
     """Ajoute une ligne à une commande existante et crée un mouvement de réservation.
 
@@ -369,6 +394,7 @@ def add_order_line(     # pylint: disable=too-many-arguments
         unit_price=unit_price,
         discount=discount,
         vat_rate=vat_rate,
+        object_variation_id=object_variation_id,
         create_source="backoffice",
     )
     # Créer un mouvement de réservation dans inventory_movements
