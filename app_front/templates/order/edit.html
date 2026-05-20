@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     variations.forEach(function(v) {
                         var opt = document.createElement('option');
                         opt.value = v.id;
-                        opt.textContent = v.name + ' — ' + parseFloat(v.price).toFixed(2) + ' €';
+                        opt.textContent = v.name + ' — ' + Number.parseFloat(v.price).toFixed(2) + ' €';
                         opt.dataset.price = v.price;
                         variationSelect.appendChild(opt);
                     });
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Sélectionner automatiquement la première variation
                     variationSelect.selectedIndex = 1;
                     document.getElementById('variation_id').value = variations[0].id;
-                    document.getElementById('unit_price').value = parseFloat(variations[0].price).toFixed(2);
+                    document.getElementById('unit_price').value = Number.parseFloat(variations[0].price).toFixed(2);
                 }
             }
         });
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var selected = this.options[this.selectedIndex];
             document.getElementById('variation_id').value = selected.value || '';
             if (selected.value && selected.dataset.price) {
-                document.getElementById('unit_price').value = parseFloat(selected.dataset.price).toFixed(2);
+                document.getElementById('unit_price').value = Number.parseFloat(selected.dataset.price).toFixed(2);
             }
         });
     }
