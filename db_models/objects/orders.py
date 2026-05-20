@@ -149,10 +149,9 @@ class Order(WorkingBase, QueryMixin):
         """Récupère les parties prénom et nom du client pour la commande."""
         if self.customer.customer_type == 'part' and self.customer.part:
             return self.customer.part.first_name, self.customer.part.last_name
-        elif self.customer.customer_type == 'pro' and self.customer.pro:
+        if self.customer.customer_type == 'pro' and self.customer.pro:
             return '', self.customer.pro.company_name
-        else:
-            return '', ''
+        return '', ''
 
     def __get_customer_email(self) -> str:
         """
@@ -183,6 +182,15 @@ class Order(WorkingBase, QueryMixin):
             return wc_phone
         return self.customer.phones[0].phone_number if self.customer.phones else None
 
+    def _get_if_parent_exists(
+            self,
+            obj: object,
+            attribute: str,
+            default: Any = ""
+        ) -> Optional[object]:
+        """Retourne l'objet enfant si le parent existe, sinon ""."""
+        return getattr(obj, attribute, default) if obj else default
+
     def to_dict_for_woo_commerce(self) -> dict[str, Any]:
         """Convertit l'objet Order en dictionnaire au format attendu par WooCommerce."""
         first_name, last_name = self.__get_customer_name_parts()
@@ -191,31 +199,31 @@ class Order(WorkingBase, QueryMixin):
         billing = {
             "first_name": first_name,
             "last_name": last_name,
-            "address_1": self.invoice_address.address_line1 if self.invoice_address else "",
-            "address_2": self.invoice_address.address_line2 if self.invoice_address else "",
-            "city": self.invoice_address.city if self.invoice_address else "",
-            "state": self.invoice_address.state if self.invoice_address else "",
-            "postcode": self.invoice_address.postal_code if self.invoice_address else "",
-            "country": self.invoice_address.country if self.invoice_address else "",
+            "address_1": self._get_if_parent_exists(self.invoice_address, "address_line1"),
+            "address_2": self._get_if_parent_exists(self.invoice_address, "address_line2"),
+            "city": self._get_if_parent_exists(self.invoice_address, "city"),
+            "state": self._get_if_parent_exists(self.invoice_address, "state"),
+            "postcode": self._get_if_parent_exists(self.invoice_address, "postal_code"),
+            "country": self._get_if_parent_exists(self.invoice_address, "country"),
             "email": email,
             "phone": phone,
         }
         shipping = {
             "first_name": first_name,
             "last_name": last_name,
-            "address_1": self.delivery_address.address_line1 if self.delivery_address else "",
-            "address_2": self.delivery_address.address_line2 if self.delivery_address else "",
-            "city": self.delivery_address.city if self.delivery_address else "",
-            "state": self.delivery_address.state if self.delivery_address else "",
-            "postcode": self.delivery_address.postal_code if self.delivery_address else "",
-            "country": self.delivery_address.country if self.delivery_address else "",
+            "address_1": self._get_if_parent_exists(self.delivery_address, "address_line1"),
+            "address_2": self._get_if_parent_exists(self.delivery_address, "address_line2"),
+            "city": self._get_if_parent_exists(self.delivery_address, "city"),
+            "state": self._get_if_parent_exists(self.delivery_address, "state"),
+            "postcode": self._get_if_parent_exists(self.delivery_address, "postal_code"),
+            "country": self._get_if_parent_exists(self.delivery_address, "country"),
         }
         metadata = self._get_wc_metadata()
         line_items = []
         for line in self.order_lines:
             if not line:
                 continue
-            if line.status == "canceled":
+            elif line.status == "canceled":
                 # Ligne annulée localement : demander à WooCommerce de la supprimer
                 if line.wpwc_id:
                     line_items.append({"id": line.wpwc_id, "quantity": 0})

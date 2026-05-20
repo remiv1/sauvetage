@@ -11,7 +11,8 @@ Le schéma métier est le suivant :
 
 import logging
 import os
-from typing import Any, Optional, Sequence
+from dataclasses import dataclass
+from typing import Any, Optional, Sequence, Callable
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import Session
@@ -36,6 +37,53 @@ object_type_mapping = {
     "spiritual_object": [24, 25],
     "other": [24],
 }
+
+
+@dataclass
+class WooReturnItem:
+    """Représente un item retourné par l'API WooCommerce batch."""
+    id: int
+    name: str | None = None
+    rate: float | None = None
+    class_: str | None = None
+    sku: str | None = None
+    file_link: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "WooReturnItem":
+        """Parse un dict WooCommerce en WooReturnItem."""
+        return cls(
+            id=int(data["id"]),
+            name=data.get("name"),
+            rate=float(data.get("rate", 0)) if data.get("rate") else None,
+            class_=data.get("class"),
+            sku=data.get("sku"),
+            file_link=data.get("name"),  # Pour images, c'est le "name" qui est le file_link
+        )
+
+
+class ReturnMatcher:
+    """Stratégie pour trouver un local matching un item WooCommerce."""
+    def match_create(self, locals_: Sequence[Any], item: WooReturnItem) -> Optional[Any]:
+        raise NotImplementedError
+
+    def match_update(self, locals_: Sequence[Any], item: WooReturnItem) -> Optional[Any]:
+        raise NotImplementedError
+
+    def match_delete(self, session: Session, item: WooReturnItem) -> Optional[Any]:
+        raise NotImplementedError
+
+
+class ReturnUpdater:
+    """Stratégie pour mettre à jour un local après un retour WooCommerce."""
+    def update_create(self, local: Any, item: WooReturnItem) -> None:
+        raise NotImplementedError
+
+    def update_update(self, local: Any, item: WooReturnItem) -> None:
+        raise NotImplementedError
+
+    def update_delete(self, local: Any, item: WooReturnItem) -> None:
+        raise NotImplementedError
 
 class WCProductsService(WCBase):
     """
@@ -149,60 +197,88 @@ class WCProductsService(WCBase):
 
         return f"{_FRONT_BASE_URL}/woocommerce/media/{token.token}"
 
+    def _process_returns_action(
+        self,
+        action: str,
+        items: list[dict[str, Any]],
+        locals_: Sequence[Any],
+        entity_type: str,
+        matcher: Optional[Callable[[Sequence[Any], dict[str, Any]], Optional[Any]]],
+        updater: Optional[Callable[[Any, int, dict[str, Any]], None]],
+        finder_by_wc_id: Optional[Callable[[int], Optional[Any]]] = None,
+    ) -> None:
+        """Traite une action (create/update/delete) pour une batch de retours."""
+        for item in items:
+            wc_id = int(item["id"])
+            # Chercher l'entité locale : d'abord par wc_id (delete), sinon par matcher
+            if finder_by_wc_id:
+                local = finder_by_wc_id(wc_id)
+            elif matcher:
+                local = matcher(locals_, item)
+            else:
+                local = None
+            if updater and local:
+                updater(local, wc_id, item)
+            self._log_sync(entity_type, local.id if local else None, wc_id, action, "success")
+
+    def _apply_returns_generic(
+        self,
+        returns: dict[str, list[dict[str, Any]]],
+        locals_: Sequence[Any],
+        entity_type: str,
+        matchers: dict[str, Callable[[Sequence[Any], dict[str, Any]], Optional[Any]]],
+        updaters: dict[str, Callable[[Any, int, dict[str, Any]], None]],
+        finder_by_wc_id: Optional[Callable[[int], Optional[Any]]] = None,
+    ) -> None:
+        """
+        Dispatcher générique pour traiter les retours batch WooCommerce.
+
+        Args:
+            returns: Dict avec clés "create"/"update"/"delete" contenant les items WC
+            locals_: Liste des entités locales de même type
+            entity_type: Nom du type pour le logging
+            matchers: Dict[action] → fonction de matching
+            updaters: Dict[action] → fonction de mise à jour
+            finder_by_wc_id: Optionnel, fonction pour retrouver local par wc_id (delete)
+        """
+        for action in ("create", "update", "delete"):
+            use_finder = action == "delete"
+            finder = finder_by_wc_id if use_finder else None
+            self._process_returns_action(
+                action,
+                returns.get(action, []),
+                locals_,
+                entity_type,
+                matchers.get(action),
+                updaters.get(action),
+                finder,
+            )
+
     def _apply_product_returns(
         self,
         returns: dict[str, list[dict[str, Any]]],
         products: Sequence[GeneralObjects],
     ) -> None:
-        """
-        Traite les retours batch WooCommerce pour les produits.
-        
-        Args:
-            returns (dict[str, list[dict[str, Any]]]): Les retours batch WooCommerce.
-            products (Sequence[GeneralObjects]): La liste des produits locaux.
-        
-        Returns:
-            None
-        """
-        for item in returns.get("create", []):
-            sku = item.get("sku")
-            matching = next(
-                (p for p in products if str(p.id) == str(sku or "")),
-                None,
-            )
-            if matching:
-                matching.id_wpwc = int(item["id"])
-            self._log_sync(
-                entity_type="object",
-                entity_id=matching.id if matching else None,
-                wpwc_id=int(item["id"]),
-                operation="create",
-                sync_status="success"
-                )
-        for item in returns.get("update", []):
-            wpwc_id = int(item["id"])
-            matching = next((p for p in products if p.id_wpwc == wpwc_id), None)
-            self._log_sync(
-                entity_type="object",
-                entity_id=matching.id if matching else None,
-                wpwc_id=wpwc_id,
-                operation="update",
-                sync_status="success"
-            )
-        for item in returns.get("delete", []):
-            wpwc_id = int(item["id"])
-            local_obj = self.session.execute(
-                select(GeneralObjects).where(GeneralObjects.id_wpwc == wpwc_id)
-            ).scalar_one_or_none()
-            if local_obj:
-                local_obj.id_wpwc = None
-            self._log_sync(
-                entity_type="object",
-                entity_id=local_obj.id if local_obj else None,
-                wpwc_id=wpwc_id,
-                operation="delete",
-                sync_status="success"
-            )
+        """Traite les retours batch WooCommerce pour les produits."""
+        matchers = {
+            "create": lambda prods, item: next(
+                (p for p in prods if str(p.id) == str(item.get("sku") or "")), None
+            ),
+            "update": lambda prods, item: next(
+                (p for p in prods if p.id_wpwc == int(item["id"])), None
+            ),
+        }
+        updaters = {
+            "create": lambda p, wc_id, _: setattr(p, "id_wpwc", wc_id),
+            "delete": lambda p, _, __: setattr(p, "id_wpwc", None),
+        }
+        finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
+            select(GeneralObjects).where(GeneralObjects.id_wpwc == wc_id)
+        ).scalar_one_or_none()
+
+        self._apply_returns_generic(
+            returns, products, "object", matchers, updaters, finder
+        )
 
     def _apply_tag_returns(
         self,
@@ -210,89 +286,25 @@ class WCProductsService(WCBase):
         tags: Sequence[Tags],
     ) -> None:
         """Traite les retours batch WooCommerce pour les tags."""
-        for item in returns.get("create", []):
-            matching = next((t for t in tags if t.name == item.get("name")), None)
-            if matching:
-                matching.id_wpwc = int(item["id"])
-            self._log_sync(
-                entity_type="tag",
-                entity_id=matching.id if matching else None,
-                wpwc_id=int(item["id"]),
-                operation="create",
-                sync_status="success"
-            )
-        for item in returns.get("update", []):
-            wpwc_id = int(item["id"])
-            matching = next((t for t in tags if t.id_wpwc == wpwc_id), None)
-            self._log_sync(
-                entity_type="tag",
-                entity_id=matching.id if matching else None,
-                wpwc_id=wpwc_id,
-                operation="update",
-                sync_status="success"
-            )
-        for item in returns.get("delete", []):
-            wpwc_id = int(item["id"])
-            local_tag = self.session.execute(
-                select(Tags).where(Tags.id_wpwc == wpwc_id)
-            ).scalar_one_or_none()
-            if local_tag:
-                local_tag.id_wpwc = None
-            self._log_sync(
-                entity_type="tag",
-                entity_id=local_tag.id if local_tag else None,
-                wpwc_id=wpwc_id,
-                operation="delete",
-                sync_status="success"
-            )
+        matchers = {
+            "create": lambda tgs, item: next(
+                (t for t in tgs if t.name == item.get("name")), None
+            ),
+            "update": lambda tgs, item: next(
+                (t for t in tgs if t.id_wpwc == int(item["id"])), None
+            ),
+        }
+        updaters = {
+            "create": lambda t, wc_id, _: setattr(t, "id_wpwc", wc_id),
+            "delete": lambda t, _, __: setattr(t, "id_wpwc", None),
+        }
+        finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
+            select(Tags).where(Tags.id_wpwc == wc_id)
+        ).scalar_one_or_none()
 
-    def _apply_vat_returns(
-        self,
-        returns: dict[str, list[dict[str, Any]]],
-        vat_rates: Sequence[VatRate],
-    ) -> None:
-        """Traite les retours batch WooCommerce pour les taux de TVA."""
-        for item in returns.get("create", []):
-            matching = next(
-                (v for v in vat_rates if float(v.rate) == float(item.get("rate", -1))),
-                None,
-            )
-            if matching:
-                matching.wpwc_id = int(item["id"])
-                matching.wpwc_slug = item.get("class") or ""
-            self._log_sync(
-                entity_type="vat_rate",
-                entity_id=matching.id if matching else None,
-                wpwc_id=int(item["id"]),
-                operation="create",
-                sync_status="success"
-            )
-        for item in returns.get("update", []):
-            wpwc_id = int(item["id"])
-            matching = next((v for v in vat_rates if v.wpwc_id == wpwc_id), None)
-            if matching and item.get("class") is not None:
-                matching.wpwc_slug = item.get("class") or ""
-            self._log_sync(
-                entity_type="vat_rate",
-                entity_id=matching.id if matching else None,
-                wpwc_id=wpwc_id,
-                operation="update",
-                sync_status="success"
-            )
-        for item in returns.get("delete", []):
-            wpwc_id = int(item["id"])
-            local_vat = self.session.execute(
-                select(VatRate).where(VatRate.wpwc_id == wpwc_id)
-            ).scalar_one_or_none()
-            if local_vat:
-                local_vat.wpwc_id = None
-            self._log_sync(
-                entity_type="vat_rate",
-                entity_id=local_vat.id if local_vat else None,
-                wpwc_id=wpwc_id,
-                operation="delete",
-                sync_status="success"
-            )
+        self._apply_returns_generic(
+            returns, tags, "tag", matchers, updaters, finder
+        )
 
     def _apply_picture_returns(
         self,
@@ -300,44 +312,62 @@ class WCProductsService(WCBase):
         pictures: Sequence[MediaFiles],
     ) -> None:
         """Traite les retours batch WooCommerce pour les images."""
-        for item in returns.get("create", []):
-            matching = next(
-                (p for p in pictures if p.file_link == item.get("name")), None
-            )
-            if matching:
-                matching.id_wpwc = int(item["id"])
-            self._log_sync(
-                entity_type="media",
-                entity_id=matching.id if matching else None,
-                wpwc_id=int(item["id"]),
-                operation="create",
-                sync_status="success"
-            )
-        for item in returns.get("update", []):
-            wpwc_id = int(item["id"])
-            matching = next((p for p in pictures if p.id_wpwc == wpwc_id), None)
-            self._log_sync(
-                entity_type="media",
-                entity_id=matching.id if matching else None,
-                wpwc_id=wpwc_id,
-                operation="update",
-                sync_status="success"
-            )
-        for item in returns.get("delete", []):
-            wpwc_id = int(item["id"])
-            local_media = self.session.execute(
-                select(MediaFiles).where(MediaFiles.id_wpwc == wpwc_id)
-            ).scalar_one_or_none()
-            if local_media:
-                local_media.id_wpwc = None
-            self._log_sync(
-                entity_type="media",
-                entity_id=local_media.id if local_media else None,
-                wpwc_id=wpwc_id,
-                operation="delete",
-                sync_status="success"
-            )
-        self.session.commit()
+        matchers = {
+            "create": lambda pics, item: next(
+                (p for p in pics if p.file_link == item.get("name")), None
+            ),
+            "update": lambda pics, item: next(
+                (p for p in pics if p.id_wpwc == int(item["id"])), None
+            ),
+        }
+        updaters = {
+            "create": lambda p, wc_id, _: setattr(p, "id_wpwc", wc_id),
+            "delete": lambda p, _, __: setattr(p, "id_wpwc", None),
+        }
+        finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
+            select(MediaFiles).where(MediaFiles.id_wpwc == wc_id)
+        ).scalar_one_or_none()
+
+        self._apply_returns_generic(
+            returns, pictures, "media", matchers, updaters, finder
+        )
+
+    def _apply_vat_returns(
+        self,
+        returns: dict[str, list[dict[str, Any]]],
+        vat_rates: Sequence[VatRate],
+    ) -> None:
+        """Traite les retours batch WooCommerce pour les taux de TVA."""
+
+        def updater_create(v: VatRate, wc_id: int, item: dict[str, Any]) -> None:
+            v.wpwc_id = wc_id
+            v.wpwc_slug = item.get("class") or ""
+
+        def updater_update(v: VatRate, _: int, item: dict[str, Any]) -> None:
+            if item.get("class") is not None:
+                v.wpwc_slug = item.get("class") or ""
+
+        matchers = {
+            "create": lambda vrs, item: next(
+                (v for v in vrs if float(v.rate) == float(item.get("rate", -1))),
+                None,
+            ),
+            "update": lambda vrs, item: next(
+                (v for v in vrs if v.wpwc_id == int(item["id"])), None
+            ),
+        }
+        updaters = {
+            "create": updater_create,
+            "update": updater_update,
+            "delete": lambda v, _, __: setattr(v, "wpwc_id", None),
+        }
+        finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
+            select(VatRate).where(VatRate.wpwc_id == wc_id)
+        ).scalar_one_or_none()
+
+        self._apply_returns_generic(
+            returns, vat_rates, "vat_rate", matchers, updaters, finder
+        )
 
     def update_product(self, product_id: int):
         """
