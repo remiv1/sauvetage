@@ -4,3 +4,6 @@
 [submodule "datas"]
 	path = datas
 	url = https://github.com/remiv1/sauvetage_datas.git
+[submodule "buyer"]
+	path = buyer
+	url = https://github.com/remiv1/sauvetage_shop.git
