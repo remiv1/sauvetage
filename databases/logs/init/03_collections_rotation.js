@@ -46,7 +46,7 @@ function rotateCollections() {
             
             print('✓ Collection ' + col.name + ' créée pour rotation');
         } catch (e) {
-            print('⚠ Collection ' + col.name + ' existe déjà');
+            print('⚠ Collection ' + col.name + ' existe déjà' + (e.message ? ': ' + e.message : ''));
         }
     });
 }
@@ -63,5 +63,5 @@ try {
     });
     print('✓ Configuration de rotation créée');
 } catch (e) {
-    print('⚠ Configuration de rotation existe déjà');
+    print('⚠ Configuration de rotation existe déjà' + (e.message ? ': ' + e.message : ''));
 }
