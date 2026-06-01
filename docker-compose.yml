@@ -15,7 +15,6 @@ services:
     networks:
       - sauv-network
       - sauv-secure
-      - sauv-wpwc
     depends_on:
       - proxy
       - db-main
@@ -42,7 +41,6 @@ services:
     networks:
       - sauv-secure
       - sauv-migrations
-      - sauv-wpwc
     depends_on:
       - proxy
       - db-logs
@@ -55,12 +53,14 @@ services:
       dockerfile: ./Dockerfile.traefik
     env_file:
       - ./proxy/.env.proxy
+    environment:
+      - LETSENCRYPT=true
+      - LETSENCRYPT_EMAIL=contact@editions-sauvetage.fr
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "80:80"
+      - "443:443"
     networks:
       - sauv-network
-      - sauv-wpwc
     volumes:
       - sauv-traefik-pki:/app/pki:Z
       - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro,Z
@@ -159,5 +159,3 @@ networks:
     driver: bridge
   sauv-migrations:
     driver: bridge
-  sauv-wpwc:
-    external: true

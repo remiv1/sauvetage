@@ -22,6 +22,14 @@ providers:
     directory: /etc/traefik/dynamic
     watch: true
 
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: contact@editions-sauvetage.fr
+      storage: /app/pki/acme.json
+      httpChallenge:
+        entryPoint: web
+
 tls:
   certificates:
     - certFile: /app/pki/server-cert.pem

@@ -27,7 +27,8 @@ http:
       middlewares:
         - bot-blocker
       service: noop
-      tls: {}
+      tls:
+        certResolver: letsencrypt
 
     # Limite les appels sur l'endpoint de login
     login-rate-limit:
@@ -39,7 +40,18 @@ http:
         - login-rate-limit
         - no-robots
       service: app-front
-      tls: {}
+      tls:
+        certResolver: letsencrypt
+
+    internal-editions-host:
+      rule: "Host(`internal.editions-sauvetage.fr`)"
+      entryPoints:
+        - websecure
+      service: app-front
+      middlewares:
+        - no-robots
+      tls:
+        certResolver: letsencrypt
 
     catch-all:
       rule: "PathPrefix(`/`)"
@@ -48,7 +60,8 @@ http:
       service: app-front
       middlewares:
         - no-robots
-      tls: {}
+      tls:
+        certResolver: letsencrypt
 
   middlewares:
     redirect-https:
