@@ -571,6 +571,11 @@ class Tags(WorkingBase, QueryMixin):
         String, nullable=False, unique=True, comment="Nom du tag"
     )
     description: Mapped[str] = mapped_column(String, comment="Description du tag")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        comment="Indique si le tag est actif"
+    )
 
     # Meta-données de suivi
     created_at: Mapped[datetime] = mapped_column(

@@ -31,11 +31,11 @@ logger = logging.getLogger(__name__)
 
 object_type_mapping = {
     "book": [20],
-    "cd": [21, 22],
-    "dvd": [21, 23],
-    "games": [24, 26],
-    "spiritual_object": [24, 25],
-    "other": [24],
+    "cd": [22, 23],
+    "dvd": [22, 24],
+    "games": [21, 26],
+    "spiritual_object": [21, 25],
+    "other": [15],
 }
 
 

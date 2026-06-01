@@ -22,3 +22,37 @@
   - [ ] Créer les formulaires htmx pour création de commandes et retours de commandes.
   - [ ] Créer les formulaires pour l'ajout de lignes de commandes et de retours de commandes.
   - [ ] Créer la logique d'ajout de formulaires dynamiques avec htmx.
+- [ ] Gérer les produits/clients sur Henrri lors de la création d'une facture client.
+- [ ] Gestion plus fine des sessions Flask pour les déconnexions, les expirations, etc.
+- [ ] Création du tableau de bord
+
+## Validation des cas d'usage
+
+- [ ] Création d'un client particulier
+  - [ ] Adresse
+  - [ ] Mail
+  - [ ] Téléphone
+- [ ] Création d'un client professionnel
+  - [ ] Adresse
+  - [ ] Mail
+  - [ ] Téléphone
+- [ ] Création de produits
+  - [ ] Création d'un livre
+  - [ ] Création d'un objet
+  - [ ] Synchronisation WooCommerce
+- [ ] Création d'une commande client
+  - [ ] Ajout de lignes de commandes
+  - [ ] Validation de la commande
+  - [ ] Facturation client Partielle
+  - [ ] Facturation client Totale
+  - [ ] Expédition de la commande
+  - [ ] Annulation de la commande
+  - [ ] Retour de la commande
+- [ ] Création d'une commande fournisseur
+  - [ ] Ajout de lignes de commandes
+  - [ ] Validation de la commande
+    - [ ] Réception DILICOM
+    - [ ] Réception message DILICOM
+  - [ ] Création d'une réservation de stock
+  - [ ] Retour de la réservation de stock
+- [ ] Gestion d'un inventaire
