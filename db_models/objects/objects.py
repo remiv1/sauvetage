@@ -183,6 +183,16 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "backorders": "notify",
         }
 
+    def to_dict_for_henrri(self) -> Dict[str, Any]:
+        """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "ean13": self.ean13,
+            "price": self.price,
+            "vat_rate": self.vat_rate.rate if self.vat_rate else None,
+        }
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire."""
         return {

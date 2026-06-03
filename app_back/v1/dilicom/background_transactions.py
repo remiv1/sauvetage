@@ -10,10 +10,10 @@ Ce module contient toute la logique métier :
 """
 
 import logging
+from typing import Annotated
 from pathlib import Path
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import Annotated
 from app_back.db_connection import config
 from db_models.services.dilicom import DilicomService
 

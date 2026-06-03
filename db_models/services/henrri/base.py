@@ -1,8 +1,6 @@
 """Modèles de services pour Henrri."""
 
-from typing import cast
-from henrri_connect import HenrriClient
-from henrri_connect.connect import _SyncHenrriClient
+from henrri_connect import SyncHenrriClient
 from .utils import HenrriConfig
 
 class HenrriService:
@@ -13,21 +11,6 @@ class HenrriService:
         secret = HenrriConfig().api_secret
         url = HenrriConfig().api_url
         if url:
-            self.client: _SyncHenrriClient = cast(
-                _SyncHenrriClient,
-                HenrriClient(
-                    key,
-                    secret,
-                    base_url=url,
-                    async_mode=False
-                )
-            )
+            self.client: SyncHenrriClient = SyncHenrriClient(key, secret, base_url=url)
         else:
-            self.client: _SyncHenrriClient = cast(
-                _SyncHenrriClient,
-                HenrriClient(
-                    key,
-                    secret,
-                    async_mode=False
-                )
-            )
+            self.client: SyncHenrriClient = SyncHenrriClient(key, secret)
