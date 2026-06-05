@@ -1,35 +1,93 @@
-"""Module de gestion des produits pour les échanges avec Henrri."""
+"""
+Module de gestion des produits pour les échanges avec Henrri.
 
-from typing import Any, Sequence
-from henrri_connect.models import Item
+Ce module fournit la classe de service pour la gestion des produits dans l'intégration
+avec Henrri.
+
+Classes:
+- ``HenrriProductsService``: Service de gestion des produits pour Henrri.
+"""
+
+from typing import Sequence
+from henrri_connect.models import Item, ItemsQuery
 from .base import HenrriService
 
 class HenrriProductsService(HenrriService):
-    """Service de gestion des produits pour Henrri."""
+    """
+    Service de gestion des produits pour Henrri.
+    
+    Arguments:
+    - None
 
-    def get_products(self) -> Sequence[Item]:
-        """Récupère la liste des produits depuis Henrri."""
+    Methodes:
+    - get_products(from_date, to_date, search): Récupère la liste des produits depuis Henrri.
+    - create_product(product): Crée un nouveau produit sur Henrri.
+    - create_products_batch(products): Crée plusieurs produits en une seule requête sur Henrri.
+    - update_product(product_id, updated_product): Met à jour un produit existant sur Henrri.
+    """
 
-        response = self.client.items.list_items()
+    def get_products(self, from_date: str, to_date: str, search: str) -> Sequence[Item]:
+        """
+        Récupère la liste des produits depuis Henrri.
+        
+        Arguments:
+        - from_date: Date de commencement de la recherche.
+        - to_date: Date de fin de la recherche.
+        - search: Chaine de recherche.
+
+        Returns:
+        - List[Item]: La liste des produits au format de la bibliothèque henrri-connect.
+        """
+        request: ItemsQuery = ItemsQuery(
+            min_id=1,
+            search=search,
+            from_date=from_date,
+            to_date=to_date
+        )
+        response = self.client.items.list_items(request=request)
         return response.elements or []
 
-    def create_product(self, product: Item) -> dict[str, Any]:
-        """Crée un nouveau produit sur Henrri."""
+    def create_product(self, product: Item) -> Item:
+        """
+        Crée un nouveau produit sur Henrri.
+        
+        Arguments:
+        - product (Item): Le produit à créer.
 
+        Returns:
+        - Item: Le produit créé au format de la bibliothèque henrri-connect.
+        """
         response = self.client.items.add(product)
-        return response.model_dump()
+        return response
 
-    def create_products_batch(self, products: Sequence[Item]) -> Sequence[dict[str, Any]]:
-        """Crée plusieurs produits en une seule requête sur Henrri."""
+    def create_products_batch(self, products: Sequence[Item]) -> Sequence[Item]:
+        """
+        Crée plusieurs produits en une seule requête sur Henrri.
+        
+        Arguments:
+        - products (Sequence[Item]): La liste des produits à créer.
+
+        Returns:
+        - Sequence[Item]: La liste des produits crées au format de la bibliothèque henrri-connect.
+        """
 
         responses = []
         for product in products:
             response = self.client.items.add(product)
-            responses.append(response.model_dump())
+            responses.append(response)
         return responses
 
     def update_product(self, product_id: str, updated_product: Item) -> Item:
-        """Met à jour un produit existant sur Henrri."""
+        """
+        Met à jour un produit existant sur Henrri.
+        
+        Arguments:
+        - product_id (str): L'identifiant du produit à mettre à jour.
+        - updated_product (Item): Le produit mis à jour.
+
+        Returns:
+        - Item: Le produit mis à jour au format de la bibliothèque henrri-connect.
+        """
         try:
             p_id = int(product_id)
         except ValueError as e:

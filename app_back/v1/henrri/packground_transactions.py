@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from app_back.db_connection import config
 from db_models.services.henrri import HenrriProductsService
 from db_models.objects.objects import GeneralObjects
-from henrri_connect.models import Item
 
 
 router = APIRouter(prefix="/background", tags=["henrri", "background"])
@@ -30,3 +29,10 @@ def update_henrri_product(
     C'est une route de test, destinée à être appelée manuellement pour les tests.
     """
     stmt = select(GeneralObjects).where(GeneralObjects.id == product_id)
+    product = session.execute(stmt).scalars().one()
+    try:
+        ps = HenrriProductsService()
+        ps.update_product(product_id=product_id, updated_product=product)
+        return {"status": "success", "message": "Produit mis à jour avec succès."}
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}

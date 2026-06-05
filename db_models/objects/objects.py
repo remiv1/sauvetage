@@ -185,6 +185,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
     def to_dict_for_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
+        # TODO: Ajouter les autres attributs
         return {
             "name": self.name,
             "description": self.description,
