@@ -26,7 +26,7 @@ MAIN = {
         "-c",
         getenv("ALEMBIC_CONFIG_MAIN", "/app/main/alembic.ini"),
         "upgrade",
-        "head",
+        "heads",
     ],
 }
 SECURE = {
@@ -36,7 +36,7 @@ SECURE = {
         "-c",
         getenv("ALEMBIC_CONFIG_SECURE", "/app/users/alembic.ini"),
         "upgrade",
-        "head",
+        "heads",
     ],
 }
 

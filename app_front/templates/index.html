@@ -11,8 +11,9 @@
     <meta name="direction" content="{{ meta.accessibility.direction | default('ltr') }}">
     <meta name="aria-role" content="{{ meta.accessibility.aria_role | default('') }}">
 
-    <!-- Titre de la page, injecté par les templates enfants -->
+    <!-- Titre de la page et icones, injecté par les templates enfants -->
     <title>{{ meta.title | default('Editions Sauvetage | Intranet') }}</title>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
 
     <!-- Injection des styles suivant la page -->
     {% for style in params.styles | default([]) %}
