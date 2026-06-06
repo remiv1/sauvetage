@@ -1016,4 +1016,220 @@ textarea {
   vertical-align: middle;
 }
 
+/* Modale HTML <dialog> natives — centrage et backdrop */
+dialog.modal-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 1rem;
+  border: none;
+  background: transparent;
+  z-index: 1000;
+  box-sizing: border-box;
+  /* Cachée par défaut (pas d'attribut open) */
+  display: none;
+  /* Affichée quand ouverte (avec showModal()) */
+}
+dialog.modal-dialog[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+dialog.modal-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.modal-dialog-inner {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  width: 100%;
+  max-width: 600px;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+.modal-header h3 {
+  margin: 0;
+  color: #00086f;
+  font-size: 1.5rem;
+  font-family: "Asap", sans-serif;
+  font-weight: 600;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #606060;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-close:hover {
+  background: #f5f5f5;
+  color: #00086f;
+}
+
+.modal-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* Listing de détail (dl) pour les logs */
+.log-detail-grid {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+.log-detail-grid dt {
+  font-weight: 600;
+  color: #00086f;
+  padding: 0.5rem 0;
+}
+.log-detail-grid dd {
+  margin: 0;
+  padding: 0.5rem 0;
+  word-break: break-word;
+}
+
+.log-detail-message {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: "Courier New", monospace;
+  font-size: 0.875rem;
+  background: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 5px;
+}
+
+.log-detail-meta {
+  background: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 5px;
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.badge-code {
+  background: #f5f5f5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  font-family: "Courier New", monospace;
+  font-size: 0.875rem;
+  color: #606060;
+}
+
+.log-level-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-info {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.badge-success {
+  background: #d1e7dd;
+  color: #0a3622;
+}
+
+.badge-warning {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.log-method-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.log-method-get {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.log-method-post {
+  background: #d1e7dd;
+  color: #0a3622;
+}
+
+.log-method-put,
+.log-method-patch {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.log-method-delete {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.log-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.log-status-2xx {
+  background: #d1e7dd;
+  color: #0a3622;
+}
+
+.log-status-3xx {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.log-status-4xx {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.log-status-5xx {
+  background: #f8d7da;
+  color: #842029;
+}
+
 /*# sourceMappingURL=main.css.map */

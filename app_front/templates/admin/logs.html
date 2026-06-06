@@ -113,4 +113,17 @@
         <div id="logs-table-wrapper"></div>
     </details>
 </div>
+
+{# Modale détail log #}
+<dialog id="log-detail-modal" class="modal-dialog">
+    <div class="modal-dialog-inner">
+        <div class="modal-header">
+            <h3>Détail du log</h3>
+            <button class="btn-close" onclick="document.getElementById('log-detail-modal').close()" title="Fermer">&times;</button>
+        </div>
+        <div id="log-detail-modal-body" class="modal-body">
+            {# Rempli par HTMX #}
+        </div>
+    </div>
+</dialog>
 {% endblock %}

@@ -5,7 +5,7 @@ Routes (templates) :
     - /customer/<int:customer_id> : Affichage de la fiche client.
 """
 
-from flask import Blueprint, redirect, url_for, flash, request, make_response
+from flask import Blueprint, redirect, url_for, flash, request, make_response, session
 from app_front.blueprints.customer.forms import CustomerMainForm
 from app_front.utils.pages import render_page
 from app_front.blueprints.customer.utils.users import (
@@ -15,6 +15,7 @@ from app_front.blueprints.customer.utils.users import (
     push_customer_wc,
 )
 from app_front.utils.decorators import permission_required, COMMERCIAL, COMPTA, DIRECTION
+from logs.log_actions import log_client_event
 
 bp_customer = Blueprint("customer", __name__, url_prefix="/customer")
 
@@ -41,6 +42,13 @@ def create():
     if form.validate_on_submit():
         customer_id = create_from_dict(form_to_dict(form))
         flash(f"Client n°{customer_id} créé avec succès.", "success")
+        log_client_event(
+            client_id=str(customer_id),
+            event="create",
+            user_id=session.get("username"),
+            ip_address=request.remote_addr,
+            status_code=200,
+        )
         return redirect(url_for("customer.view", customer_id=customer_id))
 
     if request.method == "POST":
@@ -65,6 +73,13 @@ def view(customer_id: int):
 def customer_wc_push(customer_id: int):
     """Pousse un client vers WooCommerce (création ou mise à jour)."""
     push_customer_wc(customer_id)
+    log_client_event(
+        client_id=str(customer_id),
+        event="wc_push",
+        user_id=session.get("username"),
+        ip_address=request.remote_addr,
+        status_code=204,
+    )
     response = make_response("", 204)
     response.headers["HX-Redirect"] = url_for("customer.view", customer_id=customer_id)
     return response

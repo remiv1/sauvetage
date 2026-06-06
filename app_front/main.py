@@ -4,7 +4,16 @@ from typing import Any
 import logging
 from datetime import datetime, timezone
 from jinja2 import TemplateError
-from flask import Flask, jsonify, session, request, redirect, url_for, make_response
+from flask import (
+    Flask,
+    jsonify,
+    session,
+    request,
+    redirect,
+    url_for,
+    make_response,
+    send_from_directory,
+)
 from flask.typing import ResponseReturnValue
 from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
@@ -16,7 +25,7 @@ from app_front.config.flask_conf import (
     BLUEPRINTS,
     setup_logging,
 )
-from app_front.config.db_conf import DATABASE_URL, MONGODB_URL, _SessionMain
+from app_front.config.db_conf import _SessionMain
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -32,8 +41,8 @@ log = f"""
 [MAIN] Configuration :
 - DEBUG: {DEBUG}
 - LOG_LEVEL: {LOG_LEVEL}
-- DATABASE_URL: {DATABASE_URL}
-- MONGODB_URL: {MONGODB_URL}
+- DATABASE_URL: ***
+- MONGODB_URL: ***
 - FLASK_SECRET_KEY: {'***'}
 - BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
 """
@@ -50,10 +59,9 @@ def before_request():
         return None
     # Vérifier si la page demandée est autorisée sans authentification
     if is_allowed(request.path):
-        print("Accès à une page autorisée, aucune redirection nécessaire.")
         return None
     # Sinon, rediriger vers la page de connexion
-    print(f"page demandée : {request.path} --> redirection vers login")
+    logger.debug("Redirection vers la page de connexion")
     return redirect(url_for("user.login"))
 
 
@@ -90,13 +98,14 @@ def after_request(response):
     method = request.method
     if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
         return response
+    username = session.get("username")
     logger.info(
         msg=path,
         extra={
             "level": LOG_LEVEL,
             "action": method,
             "log_type": "logs",
-            "user_id": session.get("username"),
+            "user_id": username,
             "status_code": response.status_code,
             "ip_address": request.remote_addr,
         },
@@ -159,6 +168,11 @@ def ready():
         ),
         200,
     )
+
+@app.route("/favicon.ico", methods=["GET"])
+def favicon():
+    """Endpoint de favicon"""
+    return send_from_directory("static", "favicon.ico")
 
 
 @app.errorhandler(400)

@@ -91,6 +91,6 @@ collections.forEach(function(col) {
         
         print('✓ Collection ' + col.name + ' créée - ' + col.description);
     } catch (e) {
-        print('⚠ Collection ' + col.name + ' existe déjà');
+        print('⚠ Collection ' + col.name + ' existe déjà' + (e.message ? ': ' + e.message : ''));
     }
 });

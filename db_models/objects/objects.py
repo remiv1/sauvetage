@@ -183,6 +183,17 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "backorders": "notify",
         }
 
+    def to_dict_for_henrri(self) -> Dict[str, Any]:
+        """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
+        # TODO: Ajouter les autres attributs
+        return {
+            "name": self.name,
+            "description": self.description,
+            "ean13": self.ean13,
+            "price": self.price,
+            "vat_rate": self.vat_rate.rate if self.vat_rate else None,
+        }
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire."""
         return {
@@ -571,6 +582,11 @@ class Tags(WorkingBase, QueryMixin):
         String, nullable=False, unique=True, comment="Nom du tag"
     )
     description: Mapped[str] = mapped_column(String, comment="Description du tag")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        comment="Indique si le tag est actif"
+    )
 
     # Meta-données de suivi
     created_at: Mapped[datetime] = mapped_column(

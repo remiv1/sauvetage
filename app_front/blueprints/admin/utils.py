@@ -5,6 +5,8 @@ from urllib.parse import quote
 from datetime import datetime, timezone
 
 import requests
+from bson import ObjectId
+from bson.errors import InvalidId
 from sqlalchemy import select, func
 from app_front.config import db_conf, USERS
 from db_models.objects.vat import VatRate
@@ -238,16 +240,42 @@ def get_logs_recent(
         skip = (page - 1) * per_page
         cursor = (
             db[collection_name]
-            .find(query, {"_id": 0})
+            .find(query)          # _id inclus, converti en str ci-dessous
             .sort("timestamp", -1)
             .skip(skip)
             .limit(per_page)
         )
         items = []
         for doc in cursor:
+            doc["_id"] = str(doc["_id"])   # ObjectId → str pour Jinja / JSON
             if "timestamp" in doc and hasattr(doc["timestamp"], "strftime"):
                 doc["timestamp"] = doc["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
             items.append(doc)
         return {"items": items, "total": total, "page": page, "per_page": per_page}
     except (KeyError, TypeError, ValueError):
         return {"items": [], "total": 0, "page": page, "per_page": per_page}
+
+
+def get_log_by_id(
+    log_id: str,
+    log_type: str = "logs",
+    year: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
+    """Retourne un log unique par son ObjectId MongoDB."""
+    from app_front.config.db_conf import get_mongo_db
+    db = get_mongo_db()
+    if db is None:
+        return None
+    try:
+        oid = ObjectId(log_id)
+    except InvalidId:
+        return None
+    target_year = str(year) if year else datetime.now().strftime("%Y")
+    collection_name = f"{target_year}-{log_type}"
+    doc = db[collection_name].find_one({"_id": oid})
+    if doc is None:
+        return None
+    doc["_id"] = str(doc["_id"])
+    if "timestamp" in doc and hasattr(doc["timestamp"], "strftime"):
+        doc["timestamp"] = doc["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
+    return doc

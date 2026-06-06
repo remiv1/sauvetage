@@ -20,7 +20,7 @@ class TagsRepository(BaseRepository):
         """Récupère tous les tags, avec une option pour ne récupérer que les actifs."""
         stmt = select(Tags)
         if only_actives:
-            stmt = stmt.where(Tags.active == True)  # pylint: disable=singleton-comparison
+            stmt = stmt.where(Tags.is_active == True)  # pylint: disable=singleton-comparison
         return self.session.execute(stmt).scalars().all()
 
     def create(self, data: Dict[str, Any]) -> Tags:

@@ -1,0 +1,76 @@
+{# ── Détail complet d'un log — fragment HTMX (modale) ───────────────────── #}
+{% set level_classes = {
+    'DEBUG':    'badge-info',
+    'INFO':     'badge-success',
+    'WARNING':  'badge-warning',
+    'ERROR':    'badge-danger',
+    'CRITICAL': 'badge-danger'
+} %}
+
+<dl class="log-detail-grid">
+
+    <dt>Identifiant</dt>
+    <dd><span class="badge-code">{{ entry.get('_id', '—') }}</span></dd>
+
+    <dt>Horodatage</dt>
+    <dd><span class="badge-code">{{ entry.get('timestamp', '—') }}</span></dd>
+
+    <dt>Type de log</dt>
+    <dd><span class="badge-code">{{ log_type }}</span></dd>
+
+    <dt>Niveau</dt>
+    <dd>
+        <span class="log-level-badge {{ level_classes.get(entry.get('level', ''), 'badge-info') }}">
+            {{ entry.get('level', '—') }}
+        </span>
+    </dd>
+
+    <dt>Méthode</dt>
+    <dd>
+        {% set m = entry.get('action', '') %}
+        {% if m %}
+        <span class="log-method-badge log-method-{{ m | lower }}">{{ m }}</span>
+        {% else %}—{% endif %}
+    </dd>
+
+    <dt>Statut HTTP</dt>
+    <dd>
+        {% set code = entry.get('status_code') %}
+        {% if code %}
+            {% set code_int = code | int %}
+            {% if code_int < 300 %}
+            <span class="log-status-badge log-status-2xx">{{ code }}</span>
+            {% elif code_int < 400 %}
+            <span class="log-status-badge log-status-3xx">{{ code }}</span>
+            {% elif code_int < 500 %}
+            <span class="log-status-badge log-status-4xx">{{ code }}</span>
+            {% else %}
+            <span class="log-status-badge log-status-5xx">{{ code }}</span>
+            {% endif %}
+        {% else %}—{% endif %}
+    </dd>
+
+    <dt>Message</dt>
+    <dd class="log-detail-message">{{ entry.get('message', '—') }}</dd>
+
+    <dt>Utilisateur</dt>
+    <dd>{{ entry.get('user_id', '—') }}</dd>
+
+    <dt>Adresse IP</dt>
+    <dd><span class="badge-code">{{ entry.get('ip_address', '—') }}</span></dd>
+
+    <dt>Type de ressource</dt>
+    <dd>{{ entry.get('resource_type', '—') }}</dd>
+
+    <dt>ID ressource</dt>
+    <dd>{{ entry.get('resource_id', '—') }}</dd>
+
+    <dt>Métadonnées</dt>
+    <dd>
+        {% set meta = entry.get('obj_metadata') %}
+        {% if meta %}
+        <pre class="log-detail-meta">{{ meta | tojson(indent=2) }}</pre>
+        {% else %}—{% endif %}
+    </dd>
+
+</dl>

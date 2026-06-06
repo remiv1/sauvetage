@@ -24,6 +24,16 @@ def update_vat_rates(specific: bool = False, specific_name: Optional[str] = None
     else:
         wc_service.export_vat_rates()
 
+@router.post("/update-tags")
+def update_tags():
+    """Lit les tags WooCommerce et met à jour les tags locaux."""
+    try:
+        _run_sync_tags()
+        return {"status": "synchronisation des tags terminée"}
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.error("Erreur lors de la synchronisation des tags : %s", str(e))
+        return {"status": "erreur lors de la synchronisation des tags", "error": str(e)}
+
 
 @router.post("/import-vat-slugs")
 def import_vat_slugs():
@@ -42,6 +52,22 @@ def _run_sync_catalog() -> None:
         wc_service.export_all_products()
     finally:
         session.close()
+
+def _run_sync_tags() -> None:
+    """Tâche exécutée en arrière-plan : synchronise les tags vers WooCommerce."""
+    session = next(config.get_main_session())
+    try:
+        wc_service = WCProductsService(session, separated_keys=True)
+        wc_service.export_tags()
+    finally:
+        session.close()
+
+
+@router.post("/sync-tags", status_code=202)
+def sync_tags(background_tasks: BackgroundTasks):
+    """Déclenche la synchronisation des tags vers WooCommerce en arrière-plan."""
+    background_tasks.add_task(_run_sync_tags)
+    return {"status": "synchronisation des tags démarrée"}
 
 
 @router.post("/sync-catalog", status_code=202)

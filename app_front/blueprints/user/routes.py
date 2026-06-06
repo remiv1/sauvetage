@@ -25,6 +25,7 @@ from app_front.blueprints.user.utils import (
 )
 from app_front.utils.decorators import permission_required, ADMIN, SUPER_ADMIN, ALL
 from app_front.utils.pages import render_page
+from logs.log_actions import log_user_action
 
 bp_user = Blueprint("user", __name__, url_prefix="/user")
 
@@ -45,18 +46,34 @@ def login():
         pwd_input = form.password.data or ""
         data = log_user(user_input, pwd_input)
         success = data.get("valid", False)
-        username = data.get("username", None)
+        username = data.get("username", "")
         email = data.get("email", None)
         permissions = data.get("permissions", [])
         message = "Une erreur inconnue du développeur est survenue."
         error = data.get("error", message)
         if not success:
             flash(error, "danger")
+            log_user_action(
+                user_id=user_input,
+                action="POST",
+                resource_type="session",
+                ip_address=request.remote_addr,
+                status_code=401,
+                obj_metadata={"event": "login_failed", "error": error},
+            )
         else:
             session["username"] = username
             session["email"] = email
             session["permissions"] = permissions
             flash("Connexion réussie.", "success")
+            log_user_action(
+                user_id=username,
+                action="POST",
+                resource_type="session",
+                ip_address=request.remote_addr,
+                status_code=200,
+                obj_metadata={"event": "login"},
+            )
             return redirect(url_for("home"))
     else:
         if form.errors:
@@ -84,6 +101,15 @@ def register():
             permissions="".join(permissions_input),
         )
         flash(f"Utilisateur {user_input} créé avec succès.", "success")
+        log_user_action(
+            user_id=session.get("username", ""),
+            action="POST",
+            resource_type="user",
+            resource_id=user_input,
+            ip_address=request.remote_addr,
+            status_code=200,
+            obj_metadata={"event": "create_user", "permissions": "".join(permissions_input)},
+        )
         return redirect(url_for("user.login"))
     return render_page("register", form=form)
 
@@ -92,6 +118,15 @@ def register():
 @permission_required(ALL, _and=False)
 def logout():
     """Route pour la déconnexion de l'utilisateur connecté."""
+    username = session.get("username", "")
+    log_user_action(
+        user_id=username,
+        action="GET",
+        resource_type="session",
+        ip_address=request.remote_addr,
+        status_code=200,
+        obj_metadata={"event": "logout"},
+    )
     session.clear()
     flash("Déconnexion réussie.", "success")
     return redirect(url_for("user.login"))

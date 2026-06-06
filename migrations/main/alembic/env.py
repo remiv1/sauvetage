@@ -12,16 +12,16 @@ from alembic import context
 sys.path.insert(0, "/app")
 
 # Import main base model après avoir chargé les variables
-from db_models import WorkingBase
-from db_models.objects.customers import *   #pylint: disable=unused-wildcard-import
-from db_models.objects.orders import *  #pylint: disable=unused-wildcard-import
-from db_models.objects.invoices import *    #pylint: disable=unused-wildcard-import
-from db_models.objects.shipments import *   #pylint: disable=unused-wildcard-import
-from db_models.objects.suppliers import *   #pylint: disable=unused-wildcard-import
-from db_models.objects.objects import * #pylint: disable=unused-wildcard-import
-from db_models.objects.inventory import *   #pylint: disable=unused-wildcard-import
-from db_models.objects.stocks import *  #pylint: disable=unused-wildcard-import
-from db_models.objects.vat import * #pylint: disable=unused-wildcard-import
+from db_models import WorkingBase #pylint: disable=C0413, W0401, W0614
+from db_models.objects.customers import *   #pylint: disable=C0413, W0401, W0614
+from db_models.objects.orders import *  #pylint: disable=C0413, W0401, W0614
+from db_models.objects.invoices import *    #pylint: disable=C0413, W0401, W0614
+from db_models.objects.shipments import *   #pylint: disable=C0413, W0401, W0614
+from db_models.objects.suppliers import *   #pylint: disable=C0413, W0401, W0614
+from db_models.objects.objects import * #pylint: disable=C0413, W0401, W0614
+from db_models.objects.inventory import *   #pylint: disable=C0413, W0401, W0614
+from db_models.objects.stocks import *  #pylint: disable=C0413, W0401, W0614
+from db_models.objects.vat import * #pylint: disable=C0413, W0401, W0614
 
 # this is the Alembic Config object, which provides access to the values within
 # the .ini file in use, as well as the Python logging config.
