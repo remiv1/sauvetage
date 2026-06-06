@@ -1,9 +1,13 @@
 """Blueprint pour les fonctionnalités des commandes clients"""
 
-from flask import Blueprint, make_response, send_file, url_for
+from flask import Blueprint, make_response, send_file, url_for, session, request
 from app_front.utils.pages import render_page
 from app_front.blueprints.order.utils import get_order_by_id, push_order_wc
-from app_front.utils.documents import build_qrcode_data_uri, create_pdf_from_template
+from logs.log_actions import log_metier_event
+from app_front.utils.documents import (
+    build_qrcode_data_uri,
+    create_pdf_from_template,
+)
 
 bp_order = Blueprint("order", __name__, url_prefix="/order")
 ORDER_NOT_FOUND = "<p>Commande introuvable.</p>"
@@ -28,6 +32,13 @@ def order_view(order_id: int):
 def order_wc_push(order_id: int):
     """Pousse la commande vers WooCommerce, puis redirige vers la page de détail."""
     push_order_wc(order_id)  # succès ou échec sont logés dans OrderSyncLog
+    log_metier_event(
+        event="wc_push",
+        resource_type="order",
+        resource_id=str(order_id),
+        user_id=session.get("username"),
+        status_code=204,
+    )
     resp = make_response("", 204)
     resp.headers["HX-Redirect"] = url_for("order.order_view", order_id=order_id)
     return resp

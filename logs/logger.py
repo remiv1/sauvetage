@@ -50,7 +50,6 @@ class MongoDBLogger:
         self.log_types: List[str] = ["users", "logs", "clients", "métiers"]
 
     def _connect(self) -> None:
-        """Établir la connexion à MongoDB"""
         try:
             username_enc = quote_plus(self.username)
             password_enc = quote_plus(self.password)
@@ -65,14 +64,19 @@ class MongoDBLogger:
 
             # Vérifier la connexion
             self.client.admin.command("ping")
-            logging.info("✓ Connecté à MongoDB")
+            logging.info("Connecté à MongoDB")
 
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logging.error("✗ Erreur de connexion MongoDB: %s", e)
+            logging.error("Erreur de connexion MongoDB: %s", e)
             raise
 
     def _get_collection_name(self) -> str:
-        """Obtenir le nom de la collection pour l'année courante"""
+        """
+        Obtenir le nom de la collection pour l'année courante
+
+        Returns:
+            str: Nom de la collection
+        """
         return datetime.now().strftime("%Y")
 
     def log(    # pylint: disable=too-many-arguments
@@ -243,7 +247,17 @@ class MongoDBLogger:
         user_id: Optional[str] = None,
         limit: int = 100,
     ) -> List[Any]:
-        """Rechercher des logs"""
+        """
+        Rechercher des logs.
+        
+        Args:
+            log_type (str): Type de log (users, logs, clients, metiers)
+            level (Optional[str]): Niveau de log (DEBUG, INFO, WARNING, ERROR)
+            user_id (Optional[str]): ID de l'utilisateur
+            limit (int): Nombre de logs à retourner
+        Returns:
+            List[Any]: Liste des logs trouvés
+        """
         collection_name = f"{self._get_collection_name()}-{log_type}"
 
         query = {}
@@ -304,41 +318,20 @@ class MongoForwardHandler(logging.Handler):
         if record.name.startswith("pymongo"):
             return
 
-        # Récupérer les extras du record de log
-        extra: Dict[str, Any] = getattr(record, "extra", {})
-
+        # logging.Logger.info(..., extra={"key": val}) pose chaque clé directement
+        # comme attribut sur le LogRecord (record.key), PAS dans un sous-dict record.extra.
         self.mongo_logger.log(
             level=record.levelname,
             message=record.getMessage(),
-            log_type=extra.get("log_type", "logs"),
-            user_id=extra.get("user_id"),
-            action=extra.get("action"),
-            resource_type=extra.get("resource_type"),
-            resource_id=extra.get("resource_id"),
-            obj_metadata=extra.get("obj_metadata"),
-            ip_address=extra.get("ip_address"),
-            status_code=extra.get("status_code"),
+            log_type=getattr(record, "log_type", "logs"),
+            user_id=getattr(record, "user_id", None),
+            action=getattr(record, "action", None),
+            resource_type=getattr(record, "resource_type", None),
+            resource_id=getattr(record, "resource_id", None),
+            obj_metadata=getattr(record, "obj_metadata", None),
+            ip_address=getattr(record, "ip_address", None),
+            status_code=getattr(record, "status_code", None),
         )
-
-
-class FilterExtras(logging.Filter):
-    """
-    Génère un filtre pour ajouter les extras de log_type aux enregistrements de log.
-    """
-    def __init__(self, **extras: str):
-        super().__init__()
-        self.extras: dict[str, Any] = extras
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        """Ajouter le log_type aux extras du record de log"""
-        if not hasattr(record, "extra"):
-            setattr(record, "extra", {})
-        record.extra.setdefault("extra", {})    # type: ignore
-
-        for key, value in self.extras.items():
-            record.extra["extra"].setdefault(key, value)  # type: ignore
-
-        return True
 
 
 # Instance globale (singleton)
