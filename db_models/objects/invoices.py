@@ -83,6 +83,22 @@ class Invoice(WorkingBase, QueryMixin):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
+    def to_dict_henrri(self) -> Dict[str, Any]:
+        """Convertit l'objet Invoice en dictionnaire pour Henrri."""
+        now_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S+1:00")
+        return {
+            "id": self.id,
+            "title": f"Commande {self.reference}",
+            "subtitle": f"Commande du {self.created_at.strftime('%d/%m/%Y')}",
+            "finalized": True,
+            "price_before_tax": float(self.total_amount),
+            "tax_amount": float(self.vat_amount),
+            "price_after_tax": float(self.total_amount) + float(self.vat_amount),
+            "due_label": "Paiement comptant",
+            "date": now_datetime,
+            # TODO: add invoice lines and other henrri fields
+        }
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Invoice":
         """Crée un objet Invoice à partir d'un dictionnaire."""
