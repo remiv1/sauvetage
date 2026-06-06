@@ -1,13 +1,13 @@
 """Blueprint pour les fonctionnalités des commandes clients"""
 
-from flask import Blueprint, make_response, send_file, url_for, session, request
+from flask import Blueprint, make_response, send_file, url_for, session
 from app_front.utils.pages import render_page
 from app_front.blueprints.order.utils import get_order_by_id, push_order_wc
-from logs.log_actions import log_metier_event
 from app_front.utils.documents import (
     build_qrcode_data_uri,
     create_pdf_from_template,
 )
+from logs.log_actions import log_metier_event
 
 bp_order = Blueprint("order", __name__, url_prefix="/order")
 ORDER_NOT_FOUND = "<p>Commande introuvable.</p>"

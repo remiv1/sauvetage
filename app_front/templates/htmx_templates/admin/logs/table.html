@@ -34,9 +34,10 @@
                 <th>Date / Heure</th>
                 <th>Niveau</th>
                 <th>Méthode</th>
-                <th>Route</th>
+                <th>Route / Message</th>
                 <th>Statut</th>
                 <th>Utilisateur</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -63,6 +64,16 @@
                 </td>
                 <td>{{ status_badge(entry.get('status_code')) }}</td>
                 <td>{{ entry.get('user_id', '—') }}</td>
+                <td>
+                    <button class="btn btn-sm btn-secondary"
+                            hx-get="{{ url_for('admin_logs.log_detail', log_type=log_type, log_id=entry['_id']) }}?year={{ year }}"
+                            hx-target="#log-detail-modal-body"
+                            hx-swap="innerHTML"
+                            hx-on::after-request="document.getElementById('log-detail-modal').showModal()"
+                            title="Voir le détail">
+                        &hellip;
+                    </button>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

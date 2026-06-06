@@ -2,12 +2,13 @@
 
 from flask import Blueprint, render_template, request
 from app_front.utils.decorators import permission_required, ADMIN, SUPER_ADMIN
-from app_front.blueprints.admin.utils import get_logs_stats, get_logs_recent
+from app_front.blueprints.admin.utils import get_logs_stats, get_logs_recent, get_log_by_id
 
 bp_admin_logs = Blueprint("admin_logs", __name__, url_prefix="/admin/htmx/logs")
 
 LOGS_STATS = "htmx_templates/admin/logs/stats.html"
 LOGS_TABLE = "htmx_templates/admin/logs/table.html"
+LOGS_DETAIL = "htmx_templates/admin/logs/detail.html"
 
 LOG_TYPES = ["users", "logs", "clients", "métiers"]
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -60,3 +61,17 @@ def logs_table():
         user_id=user_id or "",
         year=year or "",
     )
+
+
+@bp_admin_logs.get("/detail/<log_type>/<log_id>")
+@permission_required([ADMIN, SUPER_ADMIN], _and=False)
+def log_detail(log_type: str, log_id: str):
+    """Fragment HTMX — modale de détail d'un log."""
+    if log_type not in LOG_TYPES:
+        return "", 400
+    year_str = request.args.get("year", "").strip()
+    year = int(year_str) if year_str.isdigit() else None
+    entry = get_log_by_id(log_id, log_type=log_type, year=year)
+    if entry is None:
+        return "<p class='text-muted'>Log introuvable.</p>", 404
+    return render_template(LOGS_DETAIL, entry=entry, log_type=log_type)

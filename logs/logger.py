@@ -334,6 +334,34 @@ class MongoForwardHandler(logging.Handler):
         )
 
 
+class FilterExtras(logging.Filter):
+    """
+    Filtre qui injecte des attributs par défaut sur tous les LogRecord
+    d'un logger donné, sans avoir à les passer à chaque appel.
+
+    Usage dans app_back :
+        logging.getLogger("dilicom_parser").addFilter(
+            FilterExtras(log_type="métiers", action="opération dilicom")
+        )
+
+    Tout log émis par "dilicom_parser" recevra automatiquement
+    record.log_type="métiers" et record.action="opération dilicom"
+    si ces attributs ne sont pas déjà présents.
+    """
+
+    def __init__(self, **defaults: Any):
+        super().__init__()
+        self.defaults: Dict[str, Any] = defaults
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Pose chaque valeur par défaut directement sur le LogRecord."""
+        for key, value in self.defaults.items():
+            # setdefault-like : ne pas écraser si déjà posé par l'appelant
+            if not hasattr(record, key):
+                setattr(record, key, value)
+        return True
+
+
 # Instance globale (singleton)
 _logger = None  # pylint: disable=invalid-name
 
