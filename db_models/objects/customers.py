@@ -127,6 +127,12 @@ class Customers(WorkingBase, QueryMixin):
         uselist=True,
         cascade=_CASCADE_ALL
     )
+    invoices = relationship(
+        "Invoice",
+        back_populates="customer",
+        uselist=True,
+        cascade=_CASCADE_ALL
+    )
 
     def __repr__(self) -> str:
         """

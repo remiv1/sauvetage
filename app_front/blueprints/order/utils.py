@@ -12,6 +12,7 @@ from db_models.repositories.invoices import InvoiceRepository, Invoice, InvoiceL
 from db_models.repositories.shipments import ShipmentsRepository, ShipmentLine
 from db_models.repositories.objects.objects import ObjectsRepository, GeneralObjects
 from db_models.services.woo_commerce.orders import WCOrdersService
+from db_models.services.henrri.documents import HenrriDocumentsService
 
 logger = logging.getLogger(__name__)
 
@@ -494,13 +495,16 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
             )
         )
 
-    # Créer la facture
+    # Créer la facture en local
     inv_repo = InvoiceRepository(session)
     invoice = inv_repo.create_invoice(
         order_id=order_id,
         line_items=invoice_lines,
         create_source="backoffice",
     )
+
+    # Créer la facture sur Henrri
+    h_invoice = 
 
     # Mettre à jour le statut des lignes de commande
     for line in line_objects:

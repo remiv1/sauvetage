@@ -57,6 +57,7 @@ class Invoice(WorkingBase, QueryMixin):
     )
 
     # Relations
+    customer = relationship("Customers", back_populates="invoices")
     order = relationship("Order", back_populates="invoices")
     lines = relationship(
         "InvoiceLine", back_populates="invoice", cascade="all, delete-orphan"
