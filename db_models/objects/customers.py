@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy import Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy.ext.hybrid import hybrid_property
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
@@ -134,6 +135,15 @@ class Customers(WorkingBase, QueryMixin):
         cascade=_CASCADE_ALL
     )
 
+    @hybrid_property
+    def full_name(self) -> str:
+        """Nom complet du client."""
+        if self.part:
+            return f"{self.part.first_name} {self.part.last_name}"
+        if self.pro:
+            return self.pro.company_name
+        return f"Client #{self.id}"
+
     def __repr__(self) -> str:
         """
         Représentation en chaîne de l'objet Customer.
@@ -168,6 +178,52 @@ class Customers(WorkingBase, QueryMixin):
                 [log.to_dict() for log in self.sync_logs] if self.sync_logs else None
             ),
         }
+
+    def to_dict_henrri(self) -> dict[str, Any]:
+        """Convertit l'objet Customer en dictionnaire."""
+        date_now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if self.pro:
+            siret = self.pro.siret_number
+            address = next(
+                (addr for addr in self.addresses if addr.is_active), self.addresses[0]
+            )
+            customer = {
+                "id": self.id,
+                "name": self.full_name,
+                "type": "professional",
+                "company_identifier_type": "Siret" if len(siret) == 14 else "Unknown",
+                "contacts": [
+                    {
+                        "last_name": self.full_name,
+                        "email": next((e.email for e in self.emails if e.is_active), None),
+                        "id": self.pro.contact_henrri_id,
+                        "is_primary": True,
+                        "mobile": next(
+                            (p.phone_number for p in self.phones if p.is_active), None
+                        ),
+                        "phone": next(
+                            (p.phone_number for p in self.phones if p.is_active), None
+                        ),
+                        "role": "administrateur",
+                        "show_on_document": True,
+                    },
+                ],
+                "creation_date": date_now,
+                "customer_type_alert_enabled": False,
+                "siret": self.pro.siret_number,
+                "trade_name": self.full_name,
+                "company_name": self.pro.company_name,
+                "ict": self.pro.vat_number,
+                "vat_number": self.pro.vat_number[2:],
+                "address": address.to_dict_henrri(),
+            }
+        else :
+            customer = {
+                "id": self.id,
+                "name": self.full_name,
+                "type": "individual",
+            }
+        return customer
 
     def _get_names(self) -> tuple[str | None, str | None]:
         first_name = self.part.first_name if self.part else None
@@ -367,6 +423,11 @@ class CustomerPros(WorkingBase, QueryMixin):
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True, comment="Identifiant unique"
     )
+    contact_henrri_id: Mapped[int] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Identifiant de contact Henrri",
+    )
     customer_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey(CUSTOMER_PK),
@@ -428,6 +489,9 @@ class CustomerAddresses(WorkingBase, QueryMixin):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True, comment="Identifiant unique"
+    )
+    henrri_id: Mapped[int] = mapped_column(
+        Integer, nullable=True, comment="Identifiant HENRRI associé"
     )
     customer_id: Mapped[int] = mapped_column(
         Integer,
@@ -545,6 +609,17 @@ class CustomerAddresses(WorkingBase, QueryMixin):
             "is_shipping": self.is_shipping,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+    def to_dict_henrri(self) -> dict[str, Any]:
+        """Convertit l'objet CustomerAddress en dictionnaire."""
+        return {
+            "id": self.henrri_id,
+            "address": self.address_line1 + "\n" + self.address_line2,
+            "city": self.city,
+            "post_code": self.postal_code,
+            "is_post_code_shared": True,
+            "country": self.country,
         }
 
     @classmethod

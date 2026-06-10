@@ -1,7 +1,8 @@
 """Module de données pour les factures."""
 
+from decimal import Decimal
 from typing import Any, Dict, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, event
 from db_models import WorkingBase
@@ -21,7 +22,7 @@ class Invoice(WorkingBase, QueryMixin):
         nullable=False,
         comment="Commande parente",
     )
-    ext_id: Mapped[str] = mapped_column(
+    henrri_id: Mapped[str] = mapped_column(
         String(50), nullable=True, comment="ID externe de la facture (Henrri)"
     )
     reference: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
@@ -76,7 +77,7 @@ class Invoice(WorkingBase, QueryMixin):
             "id": self.id,
             "order_id": self.order_id,
             "reference": self.reference,
-            "ext_id": self.ext_id,
+            "ext_id": self.henrri_id,
             "total_amount": float(self.total_amount),
             "vat_amount": float(self.vat_amount),
             "lines": [ln.to_dict() for ln in self.lines] if self.lines else [],
@@ -85,20 +86,49 @@ class Invoice(WorkingBase, QueryMixin):
         }
 
     def to_dict_henrri(self) -> Dict[str, Any]:
-        """Convertit l'objet Invoice en dictionnaire pour Henrri."""
-        now_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S+1:00")
-        return {
-            "id": self.id,
-            "title": f"Commande {self.reference}",
-            "subtitle": f"Commande du {self.created_at.strftime('%d/%m/%Y')}",
-            "finalized": True,
-            "price_before_tax": float(self.total_amount),
-            "tax_amount": float(self.vat_amount),
-            "price_after_tax": float(self.total_amount) + float(self.vat_amount),
-            "due_label": "Paiement comptant",
-            "date": now_datetime,
-            # TODO: add invoice lines and other henrri fields
+        """
+        Convertit l'objet Invoice en dictionnaire pour Henrri.
+        
+        Chez Henrri, une facture est un document, lui-même subdivisé en plusieurs éléments :
+        un document et son type, un titre, une date, de totaux, les lignes qui y sont rattachées,
+        d'éventuelles lignes de décoration, une client et son adresse, le contact rattaché.
+
+        Returns:
+            dict[str, Any]: Dictionnaire représentant la facture chez Henrri.
+        """
+        now_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        due_datetime = (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+        customer = self.customer.to_dict_henrri()
+        document_type = {
+            "document_kind": "invoice",
+            "id": 1,
+            "is_accounting": True,
+            "is_managed": True,
+            "is_mandatory": True,
+            "is_visible": True,
         }
+        invoice = {
+            "customer_id": self.customer.id,
+            "document_type_id": 1,  # Facture
+            "bank_account_label": "Banque",
+            "customer": customer,
+            "customer_address": customer.get("address", {}),
+            "date": now_datetime,
+            "document_type": document_type,
+            "due_label": due_datetime,
+            "finalized": False,
+            "id": self.id,
+            "identity": self.reference,
+            "label": f"Facture de la commande du {self.order.created_at.date()}",
+            "subtitle": f"Facture Editions Sauvetage du {now_datetime}",
+            "lines": [ln.to_dict_henrri() for ln in self.lines],
+            "price_after_tax": Decimal(self.total_amount + self.vat_amount),
+            "price_before_tax": Decimal(self.total_amount),
+            "tax_amount": Decimal(self.vat_amount),
+            "validated": True,
+            "validation_date": now_datetime,
+        }
+        return invoice
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Invoice":
@@ -115,6 +145,9 @@ class InvoiceLine(WorkingBase, QueryMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     invoice_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("app_schema.invoices.id"), nullable=False
+    )
+    henrri_id: Mapped[int] = mapped_column(
+        Integer, nullable=True, comment="ID de la ligne de facture chez Henrri"
     )
     order_line_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("app_schema.order_lines.id"), nullable=False
@@ -156,6 +189,22 @@ class InvoiceLine(WorkingBase, QueryMixin):
             "invoice_id": self.invoice_id,
             "order_line_id": self.order_line_id,
             "quantity": self.quantity,
+        }
+
+    def to_dict_henrri(self) -> Dict[str, Any]:
+        """Convertit l'objet InvoiceLine en dictionnaire pour Henrri."""
+        return {
+            "id": self.henrri_id,
+            "type_id": 3,
+            "are_elements_of_group_shown": False,
+            "is_tax_included": False,
+            "item_id": self.order_line.general_object.id_henrri,
+            "quantity": self.quantity,
+            "reference": self.reference,
+            "selling_price_without_tax": self.unit_price,
+            "total_without_tax": self.unit_price * self.quantity,
+            "total_with_tax": self.unit_price * self.quantity * (1 + self.vat_rate),
+            "vat_percent": self.vat_rate * 100,
         }
 
 

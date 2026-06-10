@@ -57,6 +57,12 @@ class GeneralObjects(WorkingBase, QueryMixin):
         unique=True,
         comment="Identifiant de l'objet dans WooCommerce (si synchronisé)",
     )
+    id_henrri: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant de l'objet chez Henrri (si synchronisé)",
+    )
 
     # Données de base
     supplier_id: Mapped[int] = mapped_column(
@@ -185,13 +191,19 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
     def to_dict_for_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
-        # TODO: Ajouter les autres attributs
+        now_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         return {
-            "name": self.name,
+            "vat_percent": self.vat_rate.rate,
+            "creation_date": now_datetime,
             "description": self.description,
-            "ean13": self.ean13,
-            "price": self.price,
-            "vat_rate": self.vat_rate.rate if self.vat_rate else None,
+            "id": self.id_henrri,
+            "is_a_group": False,
+            "is_tax_included": False,
+            "item_category_id": 17,     # Produits
+            "reference": self.ean13,
+            "selling_price_without_tax": self.price,
+            "selling_price_with_tax": self.price * (1 + self.vat_rate.rate / 100),
+            "unit_id": 16,
         }
 
     def to_dict(self) -> Dict[str, Any]:

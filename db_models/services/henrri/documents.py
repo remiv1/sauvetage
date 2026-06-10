@@ -50,8 +50,7 @@ class HenrriDocumentsService(HenrriService):
     def create_document(
             self,
             document: Document,
-            document_lines: Sequence[DocumentLine]
-        ) -> tuple[Document, Sequence[DocumentLine]]:
+        ) -> Document:
         """
         Crée un nouveau produit sur Henrri.
         
@@ -63,13 +62,7 @@ class HenrriDocumentsService(HenrriService):
         - tuple[Document, list[DocumentLine]]: La facture et ses lignes.
         """
         response = self.client.documents.add(document)
-        if not response.id:
-            raise ValueError("Aucun document créé")
-        responses = []
-        for line in document_lines:
-            document_line = self.client.document_lines.add(document_id=response.id, line=line)
-            responses.append(document_line)
-        return response, responses
+        return response
 
     def update_document(
             self,

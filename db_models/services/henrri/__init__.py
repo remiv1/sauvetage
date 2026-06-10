@@ -2,8 +2,10 @@
 
 from .products import HenrriProductsService
 from .customers import HenrriCustomersService
+from .documents import HenrriDocumentsService
 
 __all__ = [
     "HenrriCustomersService",
+    "HenrriDocumentsService",
     "HenrriProductsService",
 ]
