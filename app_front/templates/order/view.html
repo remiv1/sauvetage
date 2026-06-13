@@ -195,7 +195,9 @@
                     <th>Référence</th>
                     <th>Total HT</th>
                     <th>TVA</th>
+                    <th>Henrri</th>
                     <th>Date</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -204,7 +206,46 @@
                     <td>{{ inv.reference }}</td>
                     <td>{{ "%.2f"|format(inv.total_amount) }} €</td>
                     <td>{{ "%.2f"|format(inv.vat_amount) }} €</td>
+                    <td>
+                        {% if inv.henrri_sync_status == 'success' %}
+                        <span class="badge badge-wc badge-wc--synced"
+                              title="Synchronisé Henrri le {{ inv.henrri_sync_at }}">
+                            Henrri OK
+                        </span>
+                        {% elif inv.henrri_sync_status == 'failed' %}
+                        <span class="badge badge-wc badge-wc--error"
+                              title="Erreur Henrri le {{ inv.henrri_sync_at }} : {{ inv.henrri_sync_error }}">
+                            Métier OK / Henrri KO
+                        </span>
+                        {% else %}
+                        <span class="badge badge-wc badge-wc--pending"
+                              title="Synchronisation Henrri en attente">
+                            Henrri en attente
+                        </span>
+                        {% endif %}
+                        {% if inv.henrri_sync_error %}
+                        <div class="subtile-text-500 mt-1">{{ inv.henrri_sync_error }}</div>
+                        {% endif %}
+                    </td>
                     <td>{{ inv.created_at[:10] if inv.created_at else '—' }}</td>
+                    <td class="actions-cell">
+                        {% set ns = namespace(unsynced=[]) %}
+                        {% for l in inv.lines %}
+                            {% if (l.henrri_id|default('')) == '' %}
+                                {% set _ = ns.unsynced.append(l) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if not inv.henrri_id or (ns.unsynced|length > 0) %}
+                        <button type="button"
+                                class="btn btn-secondary btn-sm"
+                                hx-post="{{ url_for('order_htmx_create.retry_invoice_sync_route', invoice_id=inv.id) }}"
+                                hx-target="closest td"
+                                hx-swap="innerHTML"
+                                hx-on::afterSwap="htmx.ajax('GET', location.href, {target: '#tab-invoices', swap: 'innerHTML'})">
+                            Relancer Henrri
+                        </button>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

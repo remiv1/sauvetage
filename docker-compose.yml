@@ -9,6 +9,8 @@ services:
       - ./databases/logs/.env.db_logs
       - ./app_front/.env.flask
       - ./app_front/.env.woo
+      - ./app_front/.env.henrri
+      - ./app_front/.env.dilicom
     volumes:
       - sauv-documents-front:/home/root/app/documents/front:rw,z
       - sauv-pictures:/home/root/app/documents/shared/pictures:rw,z

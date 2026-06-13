@@ -1,9 +1,14 @@
 """Utilitaires pour les commandes, utilisés par les routes et tests."""
 
+import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence
 from app_front.config import db_conf
+from app_front.blueprints.order.utils_henrri import (
+    HenrriSyncError,
+    create_invoice as create_henrri_invoice,
+)
 from db_models.objects import Order, OrderLine, CustomerAddresses
 from db_models.objects import InventoryMovements
 from db_models.repositories.orders import OrdersRepository
@@ -12,7 +17,6 @@ from db_models.repositories.invoices import InvoiceRepository, Invoice, InvoiceL
 from db_models.repositories.shipments import ShipmentsRepository, ShipmentLine
 from db_models.repositories.objects.objects import ObjectsRepository, GeneralObjects
 from db_models.services.woo_commerce.orders import WCOrdersService
-from db_models.services.henrri.documents import HenrriDocumentsService
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +245,7 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
 
     # Documents liés
     data["invoices"] = [
-        inv.to_dict()
+        inv.to_dict() | _get_sync_data_for_invoice(inv)
         for inv in InvoiceRepository(session).get_by_order_id(order_id)
     ]
     data["shipments"] = [
@@ -279,6 +283,71 @@ def _get_sync_data_for_order(order: Order) -> Dict[str, Any]:
         data["wpwc_sync_at"] = None
         data["wpwc_sync_error"] = None
     return data
+
+
+def _get_sync_data_for_invoice(invoice: Invoice) -> Dict[str, Any]:
+    """Extrait les données de synchronisation Henrri d'une facture."""
+    data: dict[str, Any] = {"henrri_id": invoice.henrri_id}
+    last_sync = None
+    if invoice.sync_logs:
+        henrri_logs = [
+            log for log in invoice.sync_logs if log.external_system == "henrri"
+        ]
+        if henrri_logs:
+            last_sync = max(henrri_logs, key=lambda log: log.synced_at)
+    if last_sync:
+        data["henrri_sync_status"] = last_sync.sync_status
+        data["henrri_sync_operation"] = last_sync.operation
+        data["henrri_sync_at"] = last_sync.synced_at.strftime("%d/%m/%Y %H:%M")
+        data["henrri_sync_error"] = last_sync.error_message
+    else:
+        data["henrri_sync_status"] = None
+        data["henrri_sync_operation"] = None
+        data["henrri_sync_at"] = None
+        data["henrri_sync_error"] = None
+    return data
+
+
+def _format_henrri_sync_error(exc: HenrriSyncError) -> str:
+    """Construit un message d'erreur Henrri exploitable dans l'interface."""
+    parts = [str(exc)]
+    if exc.details:
+        if isinstance(exc.details, (dict, list)):
+            details = json.dumps(exc.details, ensure_ascii=False)
+        else:
+            details = str(exc.details)
+        parts.append(details)
+    return " | ".join(parts)
+
+
+def _sync_invoice_with_henrri(
+    invoice: Invoice,
+    invoice_repo: InvoiceRepository,
+) -> Invoice:
+    """Synchronise une facture avec Henrri et journalise le résultat."""
+    try:
+        _, synced_invoice = create_henrri_invoice(invoice)
+    except HenrriSyncError as exc:
+        error_message = _format_henrri_sync_error(exc)
+        invoice_repo.add_sync_log(
+            invoice,
+            sync_status="failed",
+            error_message=error_message,
+        )
+        logger.warning(
+            "Facture %s créée localement mais non synchronisée Henrri: %s",
+            invoice.id,
+            error_message,
+        )
+        raise
+
+    synced_invoice.last_synced_at = datetime.now(timezone.utc)
+    invoice_repo.add_sync_log(
+        synced_invoice,
+        external_id=synced_invoice.henrri_id,
+        sync_status="success",
+    )
+    return synced_invoice
 
 
 # ── Création ─────────────────────────────────────────────────────────────
@@ -473,9 +542,9 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
         raise ValueError(_ORDER_NOT_FOUND)
 
     # Valider les lignes et enrichir avec les prix
-    line_objects: List[OrderLine] = [
-        l for l in (order.order_lines or []) \
-            if l.id in {item["order_line_id"] for item in line_items}]
+    requested_ids = {item["order_line_id"] for item in line_items}
+    line_objects = [l for l in order.order_lines if l.id in requested_ids]
+
     invoice_lines = []
     for line in line_objects:
         if line.status != "draft":
@@ -497,31 +566,55 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
 
     # Créer la facture en local
     inv_repo = InvoiceRepository(session)
-    invoice = inv_repo.create_invoice(
+    local_invoice = inv_repo.create_invoice(
         order_id=order_id,
+        customer_id=order.customer_id,
         line_items=invoice_lines,
         create_source="backoffice",
     )
 
-    # Créer la facture sur Henrri
-    h_invoice = 
+    try:
+        local_invoice = _sync_invoice_with_henrri(local_invoice, inv_repo)
+    except HenrriSyncError:
+        pass
 
     # Mettre à jour le statut des lignes de commande
     for line in line_objects:
         qty_invoiced = next(
             item["quantity"] for item in line_items if item["order_line_id"] == line.id
             )
-        if line.quantity == qty_invoiced:
-            line.status = "invoiced"
-        else:
-            # Facturation partielle : couper la ligne
+
+        if line.quantity != qty_invoiced:
             order_repo.cut_line_for_invoice(line, qty_invoiced)
-            line.status = "invoiced"
+
+        line.status = "invoiced"
     session.commit()
 
     # Recalculer le statut de la commande
     _recalculate_order_status(order, order_repo)
-    return invoice
+    return local_invoice
+
+
+def retry_henrri_invoice(invoice_id: int) -> Invoice:
+    """Relance la création Henrri d'une facture locale non synchronisée.
+    
+    Si la facture est déjà créée sur Henrri (henrri_id défini), relance juste
+    la création des lignes et la finalisation.
+    """
+    session = db_conf.get_main_session()
+    invoice_repo = InvoiceRepository(session)
+    invoice = invoice_repo.get_by_id(invoice_id)
+    if invoice is None:
+        raise ValueError("Facture introuvable")
+
+    try:
+        synced_invoice = _sync_invoice_with_henrri(invoice, invoice_repo)
+    except HenrriSyncError as exc:
+        session.commit()
+        raise ValueError(_format_henrri_sync_error(exc)) from exc
+
+    session.commit()
+    return synced_invoice
 
 
 def ship_order(

@@ -52,17 +52,41 @@ class HenrriDocumentsService(HenrriService):
             document: Document,
         ) -> Document:
         """
-        Crée un nouveau produit sur Henrri.
-        
+        Crée un nouveau document sur Henrri (sans lignes, non finalisé).
+
         Arguments:
         - document (Document): Le document à créer.
-        - document_lines (Sequence[DocumentLine]): La liste des lignes du document.
 
         Returns:
-        - tuple[Document, list[DocumentLine]]: La facture et ses lignes.
+        - Document: Le document créé avec son ID Henrri.
         """
         response = self.client.documents.add(document)
         return response
+
+    def add_line(self, document_id: int, line: DocumentLine) -> DocumentLine:
+        """
+        Ajoute une ligne à un document existant sur Henrri.
+
+        Arguments:
+        - document_id (int): L'identifiant Henrri du document.
+        - line (DocumentLine): La ligne à ajouter.
+
+        Returns:
+        - DocumentLine: La ligne créée avec son ID Henrri.
+        """
+        return self.client.document_lines.add(document_id, line)
+
+    def finalize_document(self, document_id: int) -> Document:
+        """
+        Finalise un document sur Henrri.
+
+        Arguments:
+        - document_id (int): L'identifiant Henrri du document à finaliser.
+
+        Returns:
+        - Document: Le document finalisé.
+        """
+        return self.client.documents.finalize(document_id)
 
     def update_document(
             self,

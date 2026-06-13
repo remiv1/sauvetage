@@ -104,11 +104,11 @@ def _index_wc_lines_by_product(wc_lines: list[WCData]) -> dict[tuple[int, int], 
 
 def _match_line_to_wc(line: OrderLine, wc_by_product: dict[tuple[int, int], int]) -> int | None:
     """Retourne le wpwc_id WC correspondant à une ligne locale, ou None si introuvable."""
-    if not line.general_object or not line.general_object.id_wpwc:
+    if not line.general_object or not line.general_object.wpwc_id:
         return None
-    pid = int(line.general_object.id_wpwc)
-    vid = int(line.object_variation.id_wpwc) if (
-        line.object_variation and line.object_variation.id_wpwc
+    pid = int(line.general_object.wpwc_id)
+    vid = int(line.object_variation.wpwc_id) if (
+        line.object_variation and line.object_variation.wpwc_id
     ) else 0
     return wc_by_product.get((pid, vid))
 

@@ -52,9 +52,9 @@
                     {% endif %}
                 </td>
                 <td class="text-center">
-                    {% if item.id_wpwc %}
+                    {% if item.wpwc_id %}
                         <span class="dilicom-dot dot-green"
-                              title="Synchronisé sur le Site Internet (ID WC : {{ item.id_wpwc }})">
+                              title="Synchronisé sur le Site Internet (ID WC : {{ item.wpwc_id }})">
                         </span>
                     {% else %}
                         <span class="dilicom-dot dot-grey"
@@ -98,7 +98,7 @@
                         </button>
                         {# Bouton Site Internet (WooCommerce) #}
                         <button class="action-icon action-wc"
-                                title="{{ 'Resynchroniser sur le Site Internet' if item.id_wpwc else 'Envoyer sur le Site Internet' }}"
+                                title="{{ 'Resynchroniser sur le Site Internet' if item.wpwc_id else 'Envoyer sur le Site Internet' }}"
                                 hx-post="{{ url_for('stock_htmx_search.product_wc_push', object_id=item.id) }}"
                                 hx-disabled-elt="this"
                                 hx-swap="none">

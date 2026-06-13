@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.objects import Invoice, InvoiceLine
+from db_models.objects import Invoice, InvoiceLine, OrderLine
+from db_models.objects.invoices import InvoiceSyncLog
 
 
 class InvoiceRepository(BaseRepository):
@@ -43,6 +44,7 @@ class InvoiceRepository(BaseRepository):
         self,
         *,
         order_id: int,
+        customer_id: int,
         line_items: list[InvoiceLine],
         create_source: str = "web",
     ) -> Invoice:
@@ -65,6 +67,7 @@ class InvoiceRepository(BaseRepository):
 
         invoice = Invoice(
             order_id=order_id,
+            customer_id=customer_id,
             reference=self.generate_reference(),
             total_amount=round(total_ht, 2),
             vat_amount=round(total_vat, 2),
@@ -91,7 +94,14 @@ class InvoiceRepository(BaseRepository):
         stmt = (
             select(Invoice)
             .where(Invoice.id == invoice_id)
-            .options(selectinload(Invoice.lines))
+            .options(
+                selectinload(Invoice.customer),
+                selectinload(Invoice.order),
+                selectinload(Invoice.sync_logs),
+                selectinload(Invoice.lines)
+                .selectinload(InvoiceLine.order_line)
+                .selectinload(OrderLine.general_object),
+            )
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
@@ -100,7 +110,10 @@ class InvoiceRepository(BaseRepository):
         stmt = (
             select(Invoice)
             .where(Invoice.order_id == order_id)
-            .options(selectinload(Invoice.lines))
+            .options(
+                selectinload(Invoice.lines),
+                selectinload(Invoice.sync_logs),
+            )
             .order_by(Invoice.created_at.desc())
         )
         return list(self.session.execute(stmt).scalars().all())
@@ -115,3 +128,58 @@ class InvoiceRepository(BaseRepository):
             "Synchronisation Henrri non encore implémentée. "
             "Prévu pour après le 15 avril."
         )
+
+    def add_sync_log(
+        self,
+        invoice: Invoice,
+        *,
+        external_id: str | None = None,
+        external_system: str = "henrri",
+        sync_direction: str = "outbound",
+        operation: str = "create",
+        sync_status: str = "success",
+        error_message: str | None = None,
+    ) -> InvoiceSyncLog:
+        """Ajoute un log de synchronisation pour une facture.
+
+        Args:
+            invoice: Facture concernée.
+            external_id: ID externe (Henrri) si disponible.
+            external_system: Système externe (par défaut "henrri").
+            sync_direction: Direction de la sync ("inbound" ou "outbound").
+            operation: Opération effectuée ("create", "update", "delete").
+            sync_status: Statut ("success", "failed", "pending").
+            error_message: Message d'erreur en cas d'échec.
+
+        Returns:
+            InvoiceSyncLog créé.
+        """
+        sync_log = InvoiceSyncLog(
+            invoice_id=invoice.id,
+            external_id=external_id,
+            external_system=external_system,
+            sync_direction=sync_direction,
+            operation=operation,
+            sync_status=sync_status,
+            error_message=error_message,
+        )
+        self.session.add(sync_log)
+        self.session.flush()
+        return sync_log
+
+    def get_pending_sync_invoices(self) -> list[Invoice]:
+        """Récupère les factures en attente de synchronisation Henrri.
+
+        Retourne les factures sans henrri_id (non synchronisées).
+        """
+        stmt = (
+            select(Invoice)
+            .where(Invoice.henrri_id.is_(None))
+            .options(
+                selectinload(Invoice.lines),
+                selectinload(Invoice.customer),
+                selectinload(Invoice.order),
+            )
+            .order_by(Invoice.created_at.asc())
+        )
+        return list(self.session.execute(stmt).scalars().all())

@@ -235,7 +235,7 @@ class InventoryRepository(BaseRepository):
                 go.general_object_type,
                 go.is_active,
                 go.price,
-                go.id_wpwc,
+                go.wpwc_id,
                 Suppliers.name.label("supplier_name"),
                 Suppliers.id.label("sid"),
                 qty_expr,
@@ -304,7 +304,7 @@ class InventoryRepository(BaseRepository):
                     "stock_qty": int(row.stock_qty) if row.stock_qty else 0,
                     "dilicom_status": dilicom_st,
                     "dilicom_id": row.dilicom_id,
-                    "id_wpwc": row.id_wpwc,
+                    "wpwc_id": row.wpwc_id,
                 }
             )
 

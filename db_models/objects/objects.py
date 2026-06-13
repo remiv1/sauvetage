@@ -27,7 +27,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
     
     Attributs :
     - id : Identifiant unique de l'objet (clé primaire)
-    - id_wpwc : Identifiant de l'objet dans WooCommerce (nullable, unique)
+    - wpwc_id : Identifiant de l'objet dans WooCommerce (nullable, unique)
     - supplier_id : Identifiant du fournisseur de l'objet (clé étrangère vers suppliers.id)
     - general_object_type : Type d'objet (ex: book, other)
     - ean13 : Code EAN13 de l'objet (unique, non nullable)
@@ -51,13 +51,13 @@ class GeneralObjects(WorkingBase, QueryMixin):
         autoincrement=True,
         comment="Identifiant unique de l'objet",
     )
-    id_wpwc: Mapped[Optional[int]] = mapped_column(
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         unique=True,
         comment="Identifiant de l'objet dans WooCommerce (si synchronisé)",
     )
-    id_henrri: Mapped[Optional[int]] = mapped_column(
+    henrri_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         unique=True,
@@ -189,14 +189,14 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "backorders": "notify",
         }
 
-    def to_dict_for_henrri(self) -> Dict[str, Any]:
+    def to_dict_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
-        now_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         return {
             "vat_percent": self.vat_rate.rate,
             "creation_date": now_datetime,
             "description": self.description,
-            "id": self.id_henrri,
+            "id": self.henrri_id,
             "is_a_group": False,
             "is_tax_included": False,
             "item_category_id": 17,     # Produits
@@ -240,7 +240,7 @@ class ObjectVariations(WorkingBase, QueryMixin):
 
     Attributs :
     - id : Identifiant unique de la variation (clé primaire)
-    - id_wpwc : Identifiant de la variation dans WooCommerce (nullable, unique)
+    - wpwc_id : Identifiant de la variation dans WooCommerce (nullable, unique)
     - general_object_id : FK vers l'objet parent (general_objects.id)
     - name : Nom de la variation
     - description : Description spécifique à la variation (nullable)
@@ -261,7 +261,7 @@ class ObjectVariations(WorkingBase, QueryMixin):
         autoincrement=True,
         comment="Identifiant unique de la variation d'objet",
     )
-    id_wpwc: Mapped[Optional[int]] = mapped_column(
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         unique=True,
@@ -564,7 +564,7 @@ class Tags(WorkingBase, QueryMixin):
     
     Attributs :
     - id : Identifiant unique du tag (clé primaire)
-    - id_wpwc : Identifiant du tag dans WooCommerce (nullable, unique)
+    - wpwc_id : Identifiant du tag dans WooCommerce (nullable, unique)
     - name : Nom du tag (unique, non nullable)
     - description : Description du tag (nullable)
     - created_at : Date de création du tag (non nullable, valeur par défaut = date actuelle)
@@ -584,7 +584,7 @@ class Tags(WorkingBase, QueryMixin):
         autoincrement=True,
         comment="Identifiant unique du tag",
     )
-    id_wpwc: Mapped[Optional[int]] = mapped_column(
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         unique=True,
@@ -627,7 +627,7 @@ class Tags(WorkingBase, QueryMixin):
         """Convertit l'objet Tag en dictionnaire."""
         if is_woo_commerce:
             value_dict = {
-                "id": self.id_wpwc,
+                "id": self.wpwc_id,
             }
         else:
             value_dict = {
@@ -698,7 +698,7 @@ class ObjectTags(WorkingBase, QueryMixin):
     def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
         """Convertit l'objet ObjectTag en dictionnaire formaté pour WooCommerce."""
         value_dict = {
-            "id": self.tag.id_wpwc,
+            "id": self.tag.wpwc_id,
         }
         return value_dict
 
@@ -796,7 +796,7 @@ class MediaFiles(WorkingBase, QueryMixin):
     Modèle pour les fichiers médias associés aux métadonnées.
     Attributs :
     - id : Identifiant unique du fichier média (clé primaire)
-    - id_wpwc : Identifiant du fichier média dans WooCommerce (nullable, unique)
+    - wpwc_id : Identifiant du fichier média dans WooCommerce (nullable, unique)
     - general_object_id : Identifiant de la métadonnée associée
     - file_type : Type du fichier média (ex: image/jpeg)
     - alt_text : Texte alternatif pour le fichier média
@@ -816,7 +816,7 @@ class MediaFiles(WorkingBase, QueryMixin):
         autoincrement=True,
         comment="Identifiant unique du fichier média",
     )
-    id_wpwc: Mapped[Optional[int]] = mapped_column(
+    wpwc_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         unique=True,

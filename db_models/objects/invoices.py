@@ -1,6 +1,5 @@
 """Module de données pour les factures."""
 
-from decimal import Decimal
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import mapped_column, Mapped, relationship
@@ -21,6 +20,12 @@ class Invoice(WorkingBase, QueryMixin):
         ForeignKey("app_schema.orders.id"),
         nullable=False,
         comment="Commande parente",
+    )
+    customer_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.customers.id"),
+        nullable=False,
+        comment="Client de la facture",
     )
     henrri_id: Mapped[str] = mapped_column(
         String(50), nullable=True, comment="ID externe de la facture (Henrri)"
@@ -96,8 +101,9 @@ class Invoice(WorkingBase, QueryMixin):
         Returns:
             dict[str, Any]: Dictionnaire représentant la facture chez Henrri.
         """
-        now_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        due_datetime = (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+        now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+        due_datetime = str((datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d"))
+        order_date = str(self.order.created_at.strftime("%Y-%m-%d"))
         customer = self.customer.to_dict_henrri()
         document_type = {
             "document_kind": "invoice",
@@ -119,12 +125,11 @@ class Invoice(WorkingBase, QueryMixin):
             "finalized": False,
             "id": self.id,
             "identity": self.reference,
-            "label": f"Facture de la commande du {self.order.created_at.date()}",
+            "label": f"Facture de la commande du {order_date}",
             "subtitle": f"Facture Editions Sauvetage du {now_datetime}",
-            "lines": [ln.to_dict_henrri() for ln in self.lines],
-            "price_after_tax": Decimal(self.total_amount + self.vat_amount),
-            "price_before_tax": Decimal(self.total_amount),
-            "tax_amount": Decimal(self.vat_amount),
+            "price_after_tax": float(self.total_amount) + float(self.vat_amount),
+            "price_before_tax": float(self.total_amount),
+            "tax_amount": float(self.vat_amount),
             "validated": True,
             "validation_date": now_datetime,
         }
@@ -198,13 +203,11 @@ class InvoiceLine(WorkingBase, QueryMixin):
             "type_id": 3,
             "are_elements_of_group_shown": False,
             "is_tax_included": False,
-            "item_id": self.order_line.general_object.id_henrri,
+            "item_id": self.order_line.general_object.henrri_id,
             "quantity": self.quantity,
             "reference": self.reference,
-            "selling_price_without_tax": self.unit_price,
-            "total_without_tax": self.unit_price * self.quantity,
-            "total_with_tax": self.unit_price * self.quantity * (1 + self.vat_rate),
-            "vat_percent": self.vat_rate * 100,
+            "selling_price_without_tax": float(self.unit_price),
+            "vat_percent": float(self.vat_rate),
         }
 
 

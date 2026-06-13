@@ -265,15 +265,15 @@ class WCProductsService(WCBase):
                 (p for p in prods if str(p.id) == str(item.get("sku") or "")), None
             ),
             "update": lambda prods, item: next(
-                (p for p in prods if p.id_wpwc == int(item["id"])), None
+                (p for p in prods if p.wpwc_id == int(item["id"])), None
             ),
         }
         updaters = {
-            "create": lambda p, wc_id, _: setattr(p, "id_wpwc", wc_id),
-            "delete": lambda p, _, __: setattr(p, "id_wpwc", None),
+            "create": lambda p, wc_id, _: setattr(p, "wpwc_id", wc_id),
+            "delete": lambda p, _, __: setattr(p, "wpwc_id", None),
         }
         finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
-            select(GeneralObjects).where(GeneralObjects.id_wpwc == wc_id)
+            select(GeneralObjects).where(GeneralObjects.wpwc_id == wc_id)
         ).scalar_one_or_none()
 
         self._apply_returns_generic(
@@ -291,15 +291,15 @@ class WCProductsService(WCBase):
                 (t for t in tgs if t.name == item.get("name")), None
             ),
             "update": lambda tgs, item: next(
-                (t for t in tgs if t.id_wpwc == int(item["id"])), None
+                (t for t in tgs if t.wpwc_id == int(item["id"])), None
             ),
         }
         updaters = {
-            "create": lambda t, wc_id, _: setattr(t, "id_wpwc", wc_id),
-            "delete": lambda t, _, __: setattr(t, "id_wpwc", None),
+            "create": lambda t, wc_id, _: setattr(t, "wpwc_id", wc_id),
+            "delete": lambda t, _, __: setattr(t, "wpwc_id", None),
         }
         finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
-            select(Tags).where(Tags.id_wpwc == wc_id)
+            select(Tags).where(Tags.wpwc_id == wc_id)
         ).scalar_one_or_none()
 
         self._apply_returns_generic(
@@ -317,15 +317,15 @@ class WCProductsService(WCBase):
                 (p for p in pics if p.file_link == item.get("name")), None
             ),
             "update": lambda pics, item: next(
-                (p for p in pics if p.id_wpwc == int(item["id"])), None
+                (p for p in pics if p.wpwc_id == int(item["id"])), None
             ),
         }
         updaters = {
-            "create": lambda p, wc_id, _: setattr(p, "id_wpwc", wc_id),
-            "delete": lambda p, _, __: setattr(p, "id_wpwc", None),
+            "create": lambda p, wc_id, _: setattr(p, "wpwc_id", wc_id),
+            "delete": lambda p, _, __: setattr(p, "wpwc_id", None),
         }
         finder = lambda wc_id: self.session.execute(    # pylint: disable=C3001
-            select(MediaFiles).where(MediaFiles.id_wpwc == wc_id)
+            select(MediaFiles).where(MediaFiles.wpwc_id == wc_id)
         ).scalar_one_or_none()
 
         self._apply_returns_generic(
@@ -390,8 +390,8 @@ class WCProductsService(WCBase):
 
         # Récupération de la version actuelle du produit dans WooCommerce pour calculer des difs
         wpwc_product = self.api_read.get(
-            f"products/{product.id_wpwc}"
-            ).json() if product.id_wpwc else None
+            f"products/{product.wpwc_id}"
+            ).json() if product.wpwc_id else None
         data = self.__diff_objects([product], [wpwc_product] if wpwc_product else [])
 
         # Envoi de la requête de mise à jour à WooCommerce et traitement des retours
@@ -418,7 +418,7 @@ class WCProductsService(WCBase):
             self._log_sync(
                 entity_type="object",
                 entity_id=product.id,
-                wpwc_id=product.id_wpwc,
+                wpwc_id=product.wpwc_id,
                 operation="update",
                 sync_status="error",
                 error_message=str(exc)
@@ -439,9 +439,9 @@ class WCProductsService(WCBase):
     def export_all_products(self):
         """
         Exporte la dernière version des produits vers WooCommerce.
-        - Créations : stocke l'id_wpwc retourné sur l'objet local + trace dans ObjectSyncLog.
-        - Mises à jour : trace uniquement dans ObjectSyncLog (id_wpwc déjà connu).
-        - Suppressions : efface id_wpwc sur l'objet local (désactivé) + trace dans ObjectSyncLog.
+        - Créations : stocke l'wpwc_id retourné sur l'objet local + trace dans ObjectSyncLog.
+        - Mises à jour : trace uniquement dans ObjectSyncLog (wpwc_id déjà connu).
+        - Suppressions : efface wpwc_id sur l'objet local (désactivé) + trace dans ObjectSyncLog.
         """
         products = self.object_repo.get_all(only_actives=True)
         logger.info("Export de %d produits vers WooCommerce...", len(products))
@@ -461,7 +461,7 @@ class WCProductsService(WCBase):
                 self._log_sync(
                     entity_type="object",
                     entity_id=p.id,
-                    wpwc_id=p.id_wpwc,
+                    wpwc_id=p.wpwc_id,
                     operation="batch",
                     sync_status="error",
                     error_message=str(exc)
@@ -481,9 +481,9 @@ class WCProductsService(WCBase):
     def export_tags(self) -> None:
         """
         Exporte les tags vers WooCommerce.
-        - Créations : stocke l'id_wpwc retourné sur le tag local + trace dans ObjectSyncLog.
+        - Créations : stocke l'wpwc_id retourné sur le tag local + trace dans ObjectSyncLog.
         - Mises à jour : trace uniquement dans ObjectSyncLog.
-        - Suppressions : efface id_wpwc sur le tag local + trace dans ObjectSyncLog.
+        - Suppressions : efface wpwc_id sur le tag local + trace dans ObjectSyncLog.
         """
         tags = self.tag_repo.get_all(only_actives=True)
         if not tags:
@@ -498,7 +498,7 @@ class WCProductsService(WCBase):
         except Exception as exc:  # pylint: disable=broad-except
             logger.exception("Erreur lors de l'export des tags vers WooCommerce : %s", exc)
             for t in tags:
-                self._log_sync("tag", t.id, t.id_wpwc, "batch", "error", str(exc))
+                self._log_sync("tag", t.id, t.wpwc_id, "batch", "error", str(exc))
             self.session.commit()
             return
         self._apply_tag_returns(returns, tags)
@@ -513,9 +513,9 @@ class WCProductsService(WCBase):
     def export_pictures(self):
         """
         Exporte les images vers WooCommerce.
-        - Créations : stocke l'id_wpwc retourné sur l'image locale + trace dans ObjectSyncLog.
+        - Créations : stocke l'wpwc_id retourné sur l'image locale + trace dans ObjectSyncLog.
         - Mises à jour : trace uniquement dans ObjectSyncLog.
-        - Suppressions : efface id_wpwc sur l'image locale + trace dans ObjectSyncLog.
+        - Suppressions : efface wpwc_id sur l'image locale + trace dans ObjectSyncLog.
         """
         pictures = self.media_repo.get_all()
         if not pictures:
@@ -530,7 +530,7 @@ class WCProductsService(WCBase):
         except Exception as exc:  # pylint: disable=broad-except
             logger.exception("Erreur lors de l'export des images vers WooCommerce : %s", exc)
             for p in pictures:
-                self._log_sync("media", p.id, p.id_wpwc, "batch", "error", str(exc))
+                self._log_sync("media", p.id, p.wpwc_id, "batch", "error", str(exc))
             self.session.commit()
             return
         self._apply_picture_returns(returns, pictures)
@@ -552,7 +552,7 @@ class WCProductsService(WCBase):
         wpwc_tag_ids = {int(tag["id"]) for tag in wpwc_tags}
         for t in tags:
             matched = next(
-                (wpwc for wpwc in wpwc_tags if int(wpwc["id"]) == int(t.id_wpwc or 0)),
+                (wpwc for wpwc in wpwc_tags if int(wpwc["id"]) == int(t.wpwc_id or 0)),
                 None
             )
             if matched:
@@ -585,7 +585,7 @@ class WCProductsService(WCBase):
         wpwc_picture_ids = {int(p["id"]) for p in wpwc_pictures}
         for p in pictures:
             matched = next(
-                (wpwc for wpwc in wpwc_pictures if int(wpwc["id"]) == int(p.id_wpwc or 0)),
+                (wpwc for wpwc in wpwc_pictures if int(wpwc["id"]) == int(p.wpwc_id or 0)),
                 None
             )
             if matched:
@@ -619,7 +619,7 @@ class WCProductsService(WCBase):
         wpwc_object_ids = {int(obj["id"]) for obj in wpwc_objects}
         for i, o in enumerate(objects):
             matched = next(
-                (wpwc for wpwc in wpwc_objects if int(wpwc["id"]) == int(o.id_wpwc or 0)),
+                (wpwc for wpwc in wpwc_objects if int(wpwc["id"]) == int(o.wpwc_id or 0)),
                 None
             )
             logger.debug(
@@ -860,7 +860,7 @@ class WCProductsService(WCBase):
         Si un tag n'existe pas dans WooCommerce, il est créé à partir des données locales.
         """
         local_tags = self.session.execute(
-            select(Tags).where(Tags.id_wpwc == None)  # pylint: disable=singleton-comparison
+            select(Tags).where(Tags.wpwc_id == None)  # pylint: disable=singleton-comparison
         ).scalars().all()
         wpwc_tags: list[dict[str, Any]] = self.api_read.get("products/tags").json()
         for local_tag in local_tags:
@@ -880,7 +880,7 @@ class WCProductsService(WCBase):
         wpwc_products: list[dict[str, Any]] = self.api_read.get("products").json()
         for local_product in local_products:
             if not any(
-                int(wpwc["id"]) == int(local_product.id_wpwc or 0)
+                int(wpwc["id"]) == int(local_product.wpwc_id or 0)
                 for wpwc in wpwc_products
             ):
                 logger.info(
@@ -899,7 +899,7 @@ class WCProductsService(WCBase):
         wpwc_media: list[dict[str, Any]] = self.api_read.get("media").json()
         for local_file in local_media:
             if not any(
-                int(wpwc["id"]) == int(local_file.id_wpwc or 0)
+                int(wpwc["id"]) == int(local_file.wpwc_id or 0)
                 for wpwc in wpwc_media
             ):
                 logger.info(

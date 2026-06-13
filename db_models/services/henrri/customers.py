@@ -47,7 +47,7 @@ class HenrriCustomersService(HenrriService):
         response = self.client.customers.list_customers(request=request)
         return response.elements or []
 
-    def create_customer(self, customer: Customer) -> Customer:
+    def create_customer(self, customer: Customer) -> int:
         """
         Crée un nouveau client sur Henrri.
         
@@ -55,10 +55,12 @@ class HenrriCustomersService(HenrriService):
         - customer (Customer): Le client à créer.
 
         Returns:
-        - Customer: Le client créé au format de la bibliothèque henrri-connect.
+        - int: L'identifiant du client cré au format de la bibliothèque henrri-connect.
         """
         response = self.client.customers.add(customer)
-        return response
+        if response.id is None:
+            raise ValueError("Le client n'a pas pu étre créé.")
+        return response.id
 
     def create_customers_batch(self, customers: Sequence[Customer]) -> Sequence[Customer]:
         """

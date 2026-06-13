@@ -17,7 +17,6 @@ from .customers import (
     CustomerMailsRepository,
     CustomerPhonesRepository,
 )
-from .henrii import *
 from .invoices import InvoiceRepository
 from .orders import OrdersRepository
 from .shipments import ShipmentsRepository
@@ -25,3 +24,28 @@ from .suppliers import SuppliersRepository
 from .sync_log import SyncLogRepository
 from .tags import TagsRepository
 from .user import UsersRepository
+
+__all__ = [
+    "ObjectsRepository",
+    "BooksRepository",
+    "MediaRepository",
+    "MediaAccessTokenRepository",
+    "ObjMetadatasRepository",
+    "ObjectTagsRepository",
+    "OtherObjectsRepository",
+    "DilicomReferencialRepository",
+    "InventoryRepository",
+    "OrdersSuppliersRepository",
+    "StockRepository",
+    "CustomersRepository",
+    "CustomerAddressesRepository",
+    "CustomerMailsRepository",
+    "CustomerPhonesRepository",
+    "InvoiceRepository",
+    "OrdersRepository",
+    "ShipmentsRepository",
+    "SuppliersRepository",
+    "SyncLogRepository",
+    "TagsRepository",
+    "UsersRepository",
+]
