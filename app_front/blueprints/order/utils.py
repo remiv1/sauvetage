@@ -8,6 +8,8 @@ from app_front.config import db_conf
 from app_front.blueprints.order.utils_henrri import (
     HenrriSyncError,
     create_invoice as create_henrri_invoice,
+    find_invoice as find_henrri_invoice,
+    get_invoice_pdf as get_henrri_invoice_pdf,
 )
 from db_models.objects import Order, OrderLine, CustomerAddresses
 from db_models.objects import InventoryMovements
@@ -288,13 +290,7 @@ def _get_sync_data_for_order(order: Order) -> Dict[str, Any]:
 def _get_sync_data_for_invoice(invoice: Invoice) -> Dict[str, Any]:
     """Extrait les données de synchronisation Henrri d'une facture."""
     data: dict[str, Any] = {"henrri_id": invoice.henrri_id}
-    last_sync = None
-    if invoice.sync_logs:
-        henrri_logs = [
-            log for log in invoice.sync_logs if log.external_system == "henrri"
-        ]
-        if henrri_logs:
-            last_sync = max(henrri_logs, key=lambda log: log.synced_at)
+    last_sync = _get_last_henrri_sync_log(invoice)
     if last_sync:
         data["henrri_sync_status"] = last_sync.sync_status
         data["henrri_sync_operation"] = last_sync.operation
@@ -306,6 +302,18 @@ def _get_sync_data_for_invoice(invoice: Invoice) -> Dict[str, Any]:
         data["henrri_sync_at"] = None
         data["henrri_sync_error"] = None
     return data
+
+
+def _get_last_henrri_sync_log(invoice: Invoice):
+    """Retourne le dernier log de synchronisation Henrri d'une facture."""
+    if not invoice.sync_logs:
+        return None
+    henrri_logs = [
+        log for log in invoice.sync_logs if log.external_system == "henrri"
+    ]
+    if not henrri_logs:
+        return None
+    return max(henrri_logs, key=lambda log: log.synced_at)
 
 
 def _format_henrri_sync_error(exc: HenrriSyncError) -> str:
@@ -607,6 +615,57 @@ def retry_henrri_invoice(invoice_id: int) -> Invoice:
     if invoice is None:
         raise ValueError("Facture introuvable")
 
+    # Vérifie d'abord l'état réel côté Henrri pour éviter une relance inutile.
+    sync_candidates: list[str] = []
+    if invoice.henrri_id:
+        sync_candidates.append(str(invoice.henrri_id))
+    if invoice.sync_logs:
+        for log in sorted(invoice.sync_logs, key=lambda item: item.synced_at, reverse=True):
+            if log.external_system == "henrri" and log.external_id:
+                sync_candidates.append(str(log.external_id))
+    seen_candidates = set()
+    for external_id in sync_candidates:
+        if external_id in seen_candidates:
+            continue
+        seen_candidates.add(external_id)
+        try:
+            remote_invoice = find_henrri_invoice(external_id)
+        except HenrriSyncError:
+            continue
+
+        if remote_invoice.finalized:
+            invoice.henrri_id = str(remote_invoice.id) if remote_invoice.id is not None else external_id
+            invoice.last_synced_at = datetime.now(timezone.utc)
+            invoice_repo.add_sync_log(
+                invoice,
+                external_id=invoice.henrri_id,
+                operation="update",
+                sync_status="success",
+            )
+            session.commit()
+            logger.info(
+                "Facture %s déjà synchronisée/finalisée sur Henrri (id externe %s).",
+                invoice.id,
+                invoice.henrri_id,
+            )
+            return invoice
+
+    last_sync = _get_last_henrri_sync_log(invoice)
+    if last_sync and last_sync.sync_status == "success":
+        invoice.last_synced_at = datetime.now(timezone.utc)
+        invoice_repo.add_sync_log(
+            invoice,
+            external_id=invoice.henrri_id,
+            operation="update",
+            sync_status="success",
+        )
+        session.commit()
+        logger.info(
+            "Facture %s déjà finalisée sur Henrri, journalisation d'un succès idempotent.",
+            invoice.id,
+        )
+        return invoice
+
     try:
         synced_invoice = _sync_invoice_with_henrri(invoice, invoice_repo)
     except HenrriSyncError as exc:
@@ -615,6 +674,39 @@ def retry_henrri_invoice(invoice_id: int) -> Invoice:
 
     session.commit()
     return synced_invoice
+
+
+def download_henrri_invoice_pdf(invoice_id: int) -> tuple[bytes, str]:
+    """Télécharge le PDF d'une facture synchronisée sur Henrri.
+
+    Args:
+        invoice_id: Identifiant de la facture locale.
+
+    Returns:
+        Tuple contenant le PDF binaire et le nom de fichier.
+
+    Raises:
+        ValueError: Si la facture n'est pas trouvée, pas finalisée ou inaccessible.
+    """
+    session = db_conf.get_main_session()
+    invoice_repo = InvoiceRepository(session)
+    invoice = invoice_repo.get_by_id(invoice_id)
+    if invoice is None:
+        raise ValueError("Facture introuvable")
+
+    if not invoice.henrri_id:
+        raise ValueError("Facture non synchronisée sur Henrri")
+
+    last_sync = _get_last_henrri_sync_log(invoice)
+    if last_sync is None or last_sync.sync_status != "success":
+        raise ValueError("Facture non finalisée sur Henrri")
+
+    try:
+        pdf_bytes = get_henrri_invoice_pdf(str(invoice.henrri_id))
+    except HenrriSyncError as exc:
+        raise ValueError(_format_henrri_sync_error(exc)) from exc
+
+    return pdf_bytes, f"{invoice.reference}.pdf"
 
 
 def ship_order(

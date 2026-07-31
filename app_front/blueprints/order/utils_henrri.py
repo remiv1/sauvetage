@@ -223,13 +223,33 @@ def _extract_error_details(exc: Exception) -> dict | str | None:
             return text
     return str(exc)
 
-def find_invoice(ext_id: str) -> Invoice:
+def find_invoice(ext_id: str) -> Document:
     """Retrouve une facture chez Henrri."""
-    raise NotImplementedError
+    hds = HenrriDocumentsService()
+    try:
+        return hds.get_document(int(ext_id))
+    except Exception as e:
+        logger.exception("Erreur lors de la récupération de la facture Henrri %s", ext_id)
+        raise HenrriSyncError(
+            f"Échec récupération facture {ext_id}: {e}",
+            status_code=_extract_status_code(e),
+            details=_extract_error_details(e),
+            step="document_status",
+        ) from e
 
 def get_invoice_pdf(ext_id: str) -> bytes:
     """Récupère une facture PDF chez Henrri."""
-    raise NotImplementedError
+    hds = HenrriDocumentsService()
+    try:
+        return hds.get_pdf_bytes(int(ext_id))
+    except Exception as e:
+        logger.exception("Erreur lors de la récupération du PDF Henrri %s", ext_id)
+        raise HenrriSyncError(
+            f"Échec récupération PDF facture {ext_id}: {e}",
+            status_code=_extract_status_code(e),
+            details=_extract_error_details(e),
+            step="pdf",
+        ) from e
 
 def check_product(ext_id: str) -> bool:
     """Vérifie l'existance d'un produit chez Henrri."""

@@ -1,12 +1,10 @@
 import { fetchJson } from './functions.js';
 
 export async function loadFinances() {
-    const sampleFinances = {
-        months: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
-        charges: [30, 35, 38, 42, 39, 45, 40, 36, 44, 48, 46, 50],
-        ressources: [45, 52, 48, 61, 55, 67, 58, 49, 62, 72, 66, 76]
-    };
-    const data = await fetchJson('/dashboard/data/finances') || sampleFinances;
+    const response = await fetchJson('/dashboard/data/finances');
+    const data = response && typeof response === 'object'
+        ? response
+        : { months: [], charges: [], ressources: [] };
     const ctx = document.getElementById('finances-bar');
     if (!ctx) return;
     new Chart(ctx.getContext('2d'), {

@@ -63,6 +63,10 @@ class HenrriDocumentsService(HenrriService):
         response = self.client.documents.add(document)
         return response
 
+    def get_document(self, document_id: int) -> Document:
+        """Récupère un document Henrri par son identifiant."""
+        return self.client.documents.get(document_id)
+
     def add_line(self, document_id: int, line: DocumentLine) -> DocumentLine:
         """
         Ajoute une ligne à un document existant sur Henrri.
@@ -87,6 +91,10 @@ class HenrriDocumentsService(HenrriService):
         - Document: Le document finalisé.
         """
         return self.client.documents.finalize(document_id)
+
+    def get_pdf_bytes(self, document_id: int) -> bytes:
+        """Récupère le PDF binaire d'un document Henrri."""
+        return self.client.documents.get_pdf_bytes(document_id)
 
     def update_document(
             self,

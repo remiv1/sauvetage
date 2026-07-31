@@ -229,13 +229,14 @@
                     </td>
                     <td>{{ inv.created_at[:10] if inv.created_at else '—' }}</td>
                     <td class="actions-cell">
-                        {% set ns = namespace(unsynced=[]) %}
-                        {% for l in inv.lines %}
-                            {% if (l.henrri_id|default('')) == '' %}
-                                {% set _ = ns.unsynced.append(l) %}
-                            {% endif %}
-                        {% endfor %}
-                        {% if not inv.henrri_id or (ns.unsynced|length > 0) %}
+                        {% if inv.henrri_sync_status == 'success' %}
+                        <a class="action-icon"
+                           title="Télécharger le PDF Henrri"
+                           href="{{ url_for('order.order_download_henrri_invoice', invoice_id=inv.id) }}">
+                            {% include "svg/download.html" %}
+                        </a>
+                        {% endif %}
+                        {% if inv.henrri_sync_status != 'success' %}
                         <button type="button"
                                 class="btn btn-secondary btn-sm"
                                 hx-post="{{ url_for('order_htmx_create.retry_invoice_sync_route', invoice_id=inv.id) }}"
