@@ -141,15 +141,53 @@
                         {{ render_field_errors(form.description) }}
                     </div>
 
-                    {# Prix de vente #}
-                    <div class="form-group">
-                        {{ form.price.label(class="form-label") }}
-                        <div class="input-group">
-                            {{ form.price(class="form-control", placeholder="0.00",
-                                          disabled=disabled) }}
-                            <span class="input-group-text">€</span>
+                    {# Historique des prix #}
+                    <div class="form-group form-group-wide">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <label class="form-label mb-0">Historique des prix</label>
+                            {% if not disabled %}
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    hx-get="{{ url_for('stock_htmx_search.price_row', index=form.prices|length) }}"
+                                    hx-target="#price-history-rows"
+                                    hx-swap="beforeend">
+                                Ajouter une ligne
+                            </button>
+                            {% endif %}
                         </div>
-                        {{ render_field_errors(form.price) }}
+
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Depuis</th>
+                                        <th>Jusqu'à</th>
+                                        <th>Prix de vente</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="price-history-rows">
+                                    {% for entry in form.prices %}
+                                        {% set price_row = entry.form %}
+                                        {% include 'htmx_templates/stock/search/price_row.html' %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if form.prices.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for entry_errors in form.prices.errors %}
+                                {% if entry_errors is string %}
+                                    <div>{{ entry_errors }}</div>
+                                {% else %}
+                                    {% for error in entry_errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
 
                     {# Prix d'achat #}
@@ -234,6 +272,43 @@
         // Fermer le mini-formulaire de création
         var modal = document.getElementById('supplier-create-modal');
         if (modal) modal.innerHTML = '';
+    });
+
+    function renumberPriceRows() {
+        const rows = document.querySelectorAll('#price-history-rows [data-price-row]');
+        rows.forEach(function(row, index) {
+            row.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                ['name', 'id', 'for'].forEach(function(attribute) {
+                    const current = element.getAttribute(attribute);
+                    if (!current) {
+                        return;
+                    }
+                    const updated = current.replace(/prices-\d+-/g, 'prices-' + index + '-');
+                    if (updated !== current) {
+                        element.setAttribute(attribute, updated);
+                    }
+                });
+            });
+        });
+    }
+
+    document.body.addEventListener('click', function(evt) {
+        const button = evt.target.closest('[data-price-row-remove]');
+        if (!button) {
+            return;
+        }
+        evt.preventDefault();
+        const row = button.closest('[data-price-row]');
+        if (row) {
+            row.remove();
+            renumberPriceRows();
+        }
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.target && evt.target.id === 'price-history-rows') {
+            renumberPriceRows();
+        }
     });
 })();
 </script>

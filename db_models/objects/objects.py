@@ -1,17 +1,26 @@
 """Module contenant les modèles pour les objets mise en vente."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
+from decimal import Decimal
 from typing import Any, Dict, Optional
 from sqlalchemy import (
     Integer,
     String,
     Numeric,
     DateTime,
+    Date,
     ForeignKey,
     JSON,
     Boolean,
+    func,
+    and_,
+    or_,
+    select,
+    literal,
 )
 from sqlalchemy.orm import relationship, mapped_column, Mapped
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.sql.elements import SQLColumnExpression
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 from db_models.services.utils import slugify
@@ -80,10 +89,6 @@ class GeneralObjects(WorkingBase, QueryMixin):
     )
     name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom de l'objet")
     description: Mapped[str] = mapped_column(String, comment="Description de l'objet")
-    price: Mapped[float] = mapped_column(
-        Numeric(10, 2), nullable=False, default=0.0,
-        comment="Prix de l'objet"
-    )
     purchase_price: Mapped[float] = mapped_column(
         Numeric(10, 2), nullable=True, default=0.0,
         comment="Prix d'achat de l'objet"
@@ -122,6 +127,12 @@ class GeneralObjects(WorkingBase, QueryMixin):
     # Relations
     supplier = relationship("Suppliers", back_populates="objects")
     vat_rate = relationship("VatRate", back_populates="general_objects")
+    prices = relationship(
+        "ObjectPrices",
+        back_populates="general_object",
+        cascade=CASCADE_OPTIONS,
+        order_by="ObjectPrices.from_date",
+    )
     book = relationship(
         "Books",
         uselist=False,
@@ -162,11 +173,52 @@ class GeneralObjects(WorkingBase, QueryMixin):
         cascade=CASCADE_OPTIONS,
     )
 
+    def _current_price_row(self) -> Optional["ObjectPrices"]:
+        """Retourne la ligne de prix courante ou la plus proche disponible."""
+        today = date.today()
+        valid_prices = [
+            price
+            for price in self.prices
+            if price.from_date <= today and (price.to_date is None or price.to_date >= today)
+        ]
+        if valid_prices:
+            return max(valid_prices, key=lambda price: (price.from_date, price.id or 0))
+
+        past_prices = [price for price in self.prices if price.from_date <= today]
+        if past_prices:
+            return max(past_prices, key=lambda price: (price.from_date, price.id or 0))
+
+        future_prices = [price for price in self.prices if price.from_date > today]
+        if future_prices:
+            return min(future_prices, key=lambda price: (price.from_date, price.id or 0))
+
+        return None
+
+    def get_price(self) -> Decimal:
+        """Retourne le prix courant calculé depuis l'historique."""
+        current_price = self._current_price_row()
+        if current_price is None:
+            return Decimal("0.00")
+        return current_price.price or Decimal("0.00")
+
+    def set_price(self, value: float | int | str | Decimal | None) -> None:
+        """Met à jour le prix courant en créant une ligne historique si besoin."""
+        if value is None:
+            return
+        decimal_value = Decimal(str(value))
+        current_price = self._current_price_row()
+        if current_price is None:
+            self.prices.append(
+                ObjectPrices(price=decimal_value, from_date=date.today(), to_date=None)
+            )
+            return
+        current_price.price = decimal_value
+
     def __repr__(self) -> str:
         return (
             f"<GeneralObject(id={self.id}, supplier_id={self.supplier_id}, "
             f"general_object_type={self.general_object_type}, ean13={self.ean13}, "
-            f"name={self.name}, price={self.price})>"
+            f"name={self.name}, price={self.get_price()})>"
         )
 
     def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
@@ -180,8 +232,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "short_description": self.description[:50] if self.description else "",
             "sku": self.id,
             "global_unique_id": self.ean13,
-            "regular_price": str(self.price),
-            "sale_price": str(self.price) if self.price > 0 else None,
+            "regular_price": str(self.get_price()),
+            "sale_price": str(self.get_price()) if self.get_price() > 0 else None,
             "tax_class": self.vat_rate.label if self.vat_rate else None,
             "manage_stock": True,
             "stock_quantity": 0,    # Sera modifié dans le repository
@@ -201,8 +253,8 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "is_tax_included": False,
             "item_category_id": 17,     # Produits
             "reference": self.ean13,
-            "selling_price_without_tax": self.price,
-            "selling_price_with_tax": self.price * (1 + self.vat_rate.rate / 100),
+            "selling_price_without_tax": self.get_price(),
+            "selling_price_with_tax": self.get_price() * (1 + self.vat_rate.rate / 100),
             "unit_id": 16,
         }
 
@@ -215,7 +267,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "ean13": self.ean13,
             "name": self.name,
             "description": self.description,
-            "price": self.price,
+            "price": self.get_price(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_inventory_timestamp": (
@@ -230,6 +282,111 @@ class GeneralObjects(WorkingBase, QueryMixin):
     def from_dict(cls, data: Dict[str, Any]) -> "GeneralObjects":
         """Crée un objet GeneralObject à partir d'un dictionnaire."""
         return cls(**data)
+
+
+class ObjectPrices(WorkingBase, QueryMixin):
+    """
+    Modèle pour les prix des objets.
+    Attributs :
+    - id : Identifiant unique du prix (clé primaire)
+    - general_object_id : Identifiant de l'objet général associé
+    - price : Prix de l'objet
+    - from_date : Date de début de validité du prix
+    - to_date : Date de fin de validité du prix
+    """
+    __tablename__ = "object_prices"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Identifiant unique du prix",
+    )
+    general_object_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey(GENERAL_OBJECT_PK),
+        nullable=False,
+        comment=DESCRIPTION_FK,
+    )
+    price: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2, asdecimal=True), nullable=False, default=Decimal("0.00"),
+        comment="Prix de l'objet"
+    )
+    from_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        default=date.today,
+        comment="Date de début de validité du prix",
+    )
+    to_date: Mapped[Optional[date]] = mapped_column(
+        Date,
+        nullable=True,
+        comment="Date de fin de validité du prix",
+    )
+
+    general_object = relationship("GeneralObjects", back_populates="prices")
+
+    @hybrid_property
+    def is_current(self) -> bool:   # type: ignore
+        """Indique si le prix est actuellement valide."""
+        today = date.today()
+        if self.to_date is None:
+            return today >= self.from_date
+        return self.from_date <= today <= self.to_date
+
+    @is_current.expression
+    def is_current(cls):    # type: ignore # pylint: disable=E0213
+        """Expression SQL pour filtrer les prix actuellement valides."""
+        today = func.current_date() # pylint: disable=E1102 # type: ignore
+        return or_(
+            and_(cls.to_date.is_(None), cls.from_date <= today),    # type: ignore
+            and_(
+                cls.to_date.isnot(None), # type: ignore
+                cls.from_date <= today,
+                cls.to_date >= today
+            )
+        )
+
+
+def _general_object_price_expression(cls) -> SQLColumnExpression[Decimal]:
+    """Expression SQL du prix courant pour GeneralObjects."""
+    today = func.current_date() # pylint: disable=E1102 # type: ignore
+    current_price = (
+        select(ObjectPrices.price)
+        .where(
+            ObjectPrices.general_object_id == cls.id,
+            or_(
+                and_(ObjectPrices.to_date.is_(None), ObjectPrices.from_date <= today),
+                and_(
+                    ObjectPrices.to_date.isnot(None),
+                    ObjectPrices.from_date <= today,
+                    ObjectPrices.to_date >= today,
+                ),
+            ),
+        )
+        .order_by(ObjectPrices.from_date.desc(), ObjectPrices.id.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    fallback_price = (
+        select(ObjectPrices.price)
+        .where(
+            ObjectPrices.general_object_id == cls.id,
+            ObjectPrices.from_date <= today,
+        )
+        .order_by(ObjectPrices.from_date.desc(), ObjectPrices.id.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    return func.coalesce(current_price, fallback_price, literal(Decimal("0.00")))
+
+
+GeneralObjects.price = hybrid_property(
+    GeneralObjects.get_price,
+    GeneralObjects.set_price,
+    expr=_general_object_price_expression,
+)
 
 
 class ObjectVariations(WorkingBase, QueryMixin):

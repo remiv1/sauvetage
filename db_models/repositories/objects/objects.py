@@ -4,6 +4,7 @@ Module pour les dépôts des objets vendus par la librairie. Contient les classe
                           vendus par la librairie.
 """
 
+from datetime import date, timedelta
 from typing import Any, Sequence, Optional
 from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
@@ -15,9 +16,10 @@ from db_models.objects import (
     OtherObjects,
     ObjMetadatas,
     ObjectTags,
-    MediaFiles
+    MediaFiles,
 )
 from db_models.objects.vat import VatRate
+from db_models.services.objects import sync_collection
 
 
 class ObjectsRepository(BaseRepository):
@@ -68,6 +70,7 @@ class ObjectsRepository(BaseRepository):
                 joinedload(self.model.media_files),
                 joinedload(self.model.object_variations),
                 joinedload(self.model.vat_rate),
+                joinedload(self.model.prices),
             )
         )
 
@@ -184,7 +187,6 @@ class ObjectsRepository(BaseRepository):
         instance.ean13 = form.ean_13.data
         instance.name = form.name.data
         instance.description = form.description.data
-        instance.price = float(form.price.data or 0)
         instance.purchase_price = float(form.purchase_price.data) \
                                         if getattr(form, 'purchase_price', None) \
                                               and form.purchase_price.data \
@@ -208,6 +210,7 @@ class ObjectsRepository(BaseRepository):
             general_object_id=instance.id,
             instance=instance.obj_metadatas if instance.obj_metadatas else None,
         )
+        self._sync_price_history_from_form(instance, form.prices)
         self.object_tags_repo.save_from_form(
             form=form,
             general_object_id=instance.id,
@@ -221,6 +224,48 @@ class ObjectsRepository(BaseRepository):
         self.commit_object()
         return instance.id
 
+    def _sync_price_history_from_form(
+        self, instance: GeneralObjects, price_entries: Any
+    ) -> None:
+        """Synchronise l'historique des prix à partir du tableau du formulaire."""
+        price_model = instance.__mapper__.relationships["prices"].mapper.class_
+        sorted_entries = sorted(
+            list(price_entries or []),
+            key=lambda entry: (
+                entry.form.from_date.data or date.min,
+                entry.form.to_date.data or date.max,
+            ),
+        )
+        sync_collection(
+            parent=instance,
+            general_object_id=instance.id,
+            attr_name="prices",
+            form_fieldlist=[entry.form for entry in sorted_entries],
+            model_class=price_model,
+            session=self.session,
+        )
+
+    def _set_current_price(self, instance: GeneralObjects, price: float) -> None:
+        """Ajoute ou remplace le prix courant sans toucher aux autres périodes."""
+        price_model = instance.__mapper__.relationships["prices"].mapper.class_
+        today = date.today()
+        current_price = next((row for row in instance.prices if row.is_current), None)
+        if current_price is not None:
+            if float(current_price.price or 0.0) == float(price):
+                return
+            if current_price.from_date == today and current_price.to_date is None:
+                current_price.price = float(price)
+                return
+            current_price.to_date = today - timedelta(days=1)
+
+        instance.prices.append(
+            price_model(
+                price=float(price),
+                from_date=today,
+                to_date=None,
+            )
+        )
+
     def save_or_update_from_object(
             self,
             general_object: GeneralObjects,
@@ -229,6 +274,7 @@ class ObjectsRepository(BaseRepository):
             obj_metadatas: Optional[ObjMetadatas] = None,
             object_tags: Optional[ObjectTags] = None,
             media_files: Optional[MediaFiles] = None,
+            price: Optional[float] = None,
             ) -> int:
         """
         Sauvegarde un objet à partir d'une instance de GeneralObjects complète.
@@ -265,6 +311,9 @@ class ObjectsRepository(BaseRepository):
 
         if media_files:
             instance.media_files = media_files
+
+        if price is not None:
+            self._set_current_price(instance, price)
 
         # 6. Retour verse l'appelant (id de l'objet créé ou mis à jour)
         return instance.id

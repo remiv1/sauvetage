@@ -21,6 +21,7 @@ from .shipments import Shipment, ShipmentLine
 from .users import Users, UsersPasswords
 from .objects import (
     GeneralObjects,
+    ObjectPrices,
     ObjectVariations,
     Books,
     OtherObjects,

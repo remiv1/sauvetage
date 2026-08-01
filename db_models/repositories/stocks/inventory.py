@@ -234,7 +234,7 @@ class InventoryRepository(BaseRepository):
                 go.ean13,
                 go.general_object_type,
                 go.is_active,
-                go.price,
+                go.price.label("price"),
                 go.wpwc_id,
                 Suppliers.name.label("supplier_name"),
                 Suppliers.id.label("sid"),

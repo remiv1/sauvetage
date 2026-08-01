@@ -14,6 +14,7 @@ from flask import (
 )
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
+    PriceHistoryEntryForm,
     VariationForm,
 )
 from app_front.blueprints.stock.utils import (
@@ -54,6 +55,7 @@ OBJECT_COMPLEMENT = "htmx_templates/stock/search/object_complement.html"
 AUTOCOMPLETE_DROPDOWN = "htmx_templates/stock/search/autocomplete_dropdown.html"
 TAG_AUTOCOMPLETE = "htmx_templates/stock/search/tag_autocomplete_dropdown.html"
 TAG_SELECTED = "htmx_templates/stock/search/tag_selected.html"
+PRICE_ROW = "htmx_templates/stock/search/price_row.html"
 VARIATIONS_TABLE = "htmx_templates/stock/search/variations_table.html"
 VARIATION_FORM = "htmx_templates/stock/search/variation_form.html"
 
@@ -175,6 +177,17 @@ def object_form():
         OBJECT_FORM, form=form, form_state="create", vat_rates=vat_rates,
         from_inventory=from_inventory,
     )
+
+
+@bp_stock_htmx_search.get("/object/price-row")
+def price_row():
+    """Retourne une nouvelle ligne de prix prête à être ajoutée au tableau."""
+    index_str = request.args.get("index", "0").strip()
+    index = int(index_str) if index_str.isdigit() else 0
+    row_form = PriceHistoryEntryForm(prefix=f"prices-{index}")
+    row_form.from_date.data = None
+    row_form.to_date.data = None
+    return render_template(PRICE_ROW, price_row=row_form, disabled=False)
 
 
 @bp_stock_htmx_search.get("/object/<action>/<int:object_id>")
