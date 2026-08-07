@@ -14,7 +14,7 @@ entryPoints:
     forwardedHeaders:
       insecure: true
       trustedIPs:
-        - "10.89.0.0/24"
+        - "10.89.0.0/16"
   
   websecure:
     address: ":443"
@@ -23,7 +23,7 @@ entryPoints:
     forwardedHeaders:
       insecure: true
       trustedIPs:
-        - "10.89.0.0/24"
+        - "10.89.0.0/16"
 
 providers:
   file:

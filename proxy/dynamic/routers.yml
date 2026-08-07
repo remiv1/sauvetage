@@ -6,7 +6,6 @@ http:
         - websecure
       service: app-front
       middlewares:
-        - forwarded-headers
         - no-robots
       tls:
         certResolver: letsencrypt

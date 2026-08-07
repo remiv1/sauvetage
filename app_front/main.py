@@ -18,6 +18,7 @@ from flask.typing import ResponseReturnValue
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
+from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
 from app_front.utils.router import is_allowed
 from app_front.config.flask_conf import (
     DEBUG,
@@ -40,7 +41,7 @@ for bp in BLUEPRINTS:
 # Appliquer le middleware ProxyFix
 app.wsgi_app = ProxyFix(
     app.wsgi_app,
-    x_for=1,
+    x_for=5,
     x_proto=1,
     x_host=1,
     x_port=1,
@@ -110,6 +111,7 @@ def after_request(response):
     if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
         return response
     username = session.get("username")
+    client_ip = get_client_ip(request)
     logger.info(
         msg=path,
         extra={
@@ -118,7 +120,8 @@ def after_request(response):
             "log_type": "logs",
             "user_id": username,
             "status_code": response.status_code,
-            "ip_address": request.remote_addr,
+            "ip_address": client_ip,
+            "obj_metadata": get_request_log_metadata(request),
         },
     )
     return response
@@ -209,7 +212,8 @@ def error_handler(_error: Any) -> ResponseReturnValue:   # pylint: disable=unuse
             "log_type": "logs",
             "user_id": session.get("username"),
             "status_code": code,
-            "ip_address": request.remote_addr,
+            "ip_address": get_client_ip(request),
+            "obj_metadata": get_request_log_metadata(request),
         },
     )
     message = getattr(_error, "description", None) or str(_error)
@@ -243,7 +247,8 @@ def internal_error(_error: Any) -> ResponseReturnValue:
             "log_type": "logs",
             "user_id": session.get("username"),
             "status_code": 500,
-            "ip_address": request.remote_addr,
+            "ip_address": get_client_ip(request),
+            "obj_metadata": get_request_log_metadata(request),
         }
     )
 

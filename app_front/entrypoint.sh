@@ -81,6 +81,8 @@ exec gunicorn \
     --workers 4 \
     --worker-class sync \
     --access-logfile - \
+    --access-logformat 'remote=%(h)s xff=%({x-forwarded-for}i)s xrealip=%({x-real-ip}i)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' \
     --error-logfile - \
     --log-level info \
+    --forwarded-allow-ips="10.89.0.0/32" \
     app_front.main:app
