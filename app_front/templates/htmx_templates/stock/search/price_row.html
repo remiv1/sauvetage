@@ -1,0 +1,24 @@
+{% from 'common/macros.html' import render_field_errors %}
+
+<tr data-price-row>
+    <td>
+        {{ price_row.from_date(class="form-control", disabled=disabled) }}
+        {{ render_field_errors(price_row.from_date) }}
+    </td>
+    <td>
+        {{ price_row.to_date(class="form-control", disabled=disabled) }}
+        {{ render_field_errors(price_row.to_date) }}
+    </td>
+    <td>
+        <div class="input-group">
+            {{ price_row.price(class="form-control", disabled=disabled, placeholder="0.00", step="0.01", type="number") }}
+            <span class="input-group-text">€</span>
+        </div>
+        {{ render_field_errors(price_row.price) }}
+    </td>
+    <td class="text-end">
+        {% if not disabled %}
+        <button type="button" class="btn btn-outline-danger btn-sm" data-price-row-remove>Supprimer</button>
+        {% endif %}
+    </td>
+</tr>

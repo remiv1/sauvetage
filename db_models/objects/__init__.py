@@ -1,6 +1,6 @@
 """Module d'initialisation pour les modèles d'objets de la base de données.
 Ce module importe tous les modèles d'objets pour les rendre facilement accessibles à partir
-d'autres parties de l'application.
+ d'autres parties de l'application.
 """
 
 from .common import QueryMixin
@@ -21,6 +21,7 @@ from .shipments import Shipment, ShipmentLine
 from .users import Users, UsersPasswords
 from .objects import (
     GeneralObjects,
+    ObjectPrices,
     ObjectVariations,
     Books,
     OtherObjects,
@@ -33,3 +34,41 @@ from .objects import (
 )
 from .vat import VatRate
 from .suppliers import Suppliers
+
+__all__ = [
+    "QueryMixin",
+    "Customers",
+    "CustomerMails",
+    "CustomerPhones",
+    "CustomerAddresses",
+    "CustomerSyncLog",
+    "CustomerParts",
+    "CustomerPros",
+    "Order",
+    "OrderLine",
+    "OrderSyncLog",
+    "OrderIn",
+    "OrderInLine",
+    "DilicomReferencial",
+    "InventoryMovements",
+    "Invoice",
+    "InvoiceLine",
+    "InvoiceSyncLog",
+    "Shipment",
+    "ShipmentLine",
+    "Users",
+    "UsersPasswords",
+    "GeneralObjects",
+    "ObjectPrices",
+    "ObjectVariations",
+    "Books",
+    "OtherObjects",
+    "Tags",
+    "ObjectTags",
+    "ObjMetadatas",
+    "MediaFiles",
+    "ObjectSyncLog",
+    "MediaAccessToken",
+    "VatRate",
+    "Suppliers",
+]

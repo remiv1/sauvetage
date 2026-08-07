@@ -1,13 +1,10 @@
 import { fetchJson } from './functions.js';
 
 export async function loadStocks() {
-    const sampleStocks = {
-        labels: ['Livres Ados', 'Petite enfance', 'Jeunesse', 'Spiritualité', 'Foyer', 'Objets'],
-        values: [503, 652, 498, 395, 198, 760],
-        value_total: 55300,
-        items_total: 3006
-    };
-    const data = await fetchJson('/dashboard/data/stock') || sampleStocks;
+    const response = await fetchJson('/dashboard/data/stock');
+    const data = response && typeof response === 'object'
+        ? response
+        : { labels: [], values: [], value_total: 0, items_total: 0 };
     const ctx = document.getElementById('stocks-donut');
     if (!ctx) return;
     const colors = [

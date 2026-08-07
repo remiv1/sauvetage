@@ -11,6 +11,7 @@ from app_front.blueprints.order.utils import (
     update_order_delivery_address,
     search_customers_for_dropdown,
     invoice_order,
+    retry_henrri_invoice,
     ship_order,
     get_objects_by_name,
 )
@@ -172,6 +173,21 @@ def invoice_order_route(order_id: int):
     response = make_response("", 200)
     response.headers["HX-Redirect"] = url_for(
         _VIEW_ORDER_ROUTE, order_id=order_id
+    )
+    return response
+
+
+@bp_order_htmx_create.post("/invoice/<int:invoice_id>/retry-sync")
+def retry_invoice_sync_route(invoice_id: int):
+    """Relance la création d'une facture sur Henrri."""
+    try:
+        invoice = retry_henrri_invoice(invoice_id)
+    except ValueError as exc:
+        return f"<p class='error'>{exc}</p>", 422
+
+    response = make_response("", 200)
+    response.headers["HX-Redirect"] = url_for(
+        _VIEW_ORDER_ROUTE, order_id=invoice.order_id
     )
     return response
 

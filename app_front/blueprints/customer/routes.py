@@ -15,10 +15,10 @@ from app_front.blueprints.customer.utils.users import (
     push_customer_wc,
 )
 from app_front.utils.decorators import permission_required, COMMERCIAL, COMPTA, DIRECTION
+from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
 from logs.log_actions import log_client_event
 
 bp_customer = Blueprint("customer", __name__, url_prefix="/customer")
-
 
 @bp_customer.get("/")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
@@ -46,8 +46,9 @@ def create():
             client_id=str(customer_id),
             event="create",
             user_id=session.get("username"),
-            ip_address=request.remote_addr,
+            ip_address=get_client_ip(request),
             status_code=200,
+            obj_metadata=get_request_log_metadata(request),
         )
         return redirect(url_for("customer.view", customer_id=customer_id))
 
@@ -77,8 +78,9 @@ def customer_wc_push(customer_id: int):
         client_id=str(customer_id),
         event="wc_push",
         user_id=session.get("username"),
-        ip_address=request.remote_addr,
+        ip_address=get_client_ip(request),
         status_code=204,
+        obj_metadata=get_request_log_metadata(request),
     )
     response = make_response("", 204)
     response.headers["HX-Redirect"] = url_for("customer.view", customer_id=customer_id)

@@ -25,6 +25,7 @@ from app_front.blueprints.user.utils import (
 )
 from app_front.utils.decorators import permission_required, ADMIN, SUPER_ADMIN, ALL
 from app_front.utils.pages import render_page
+from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
 from logs.log_actions import log_user_action
 
 bp_user = Blueprint("user", __name__, url_prefix="/user")
@@ -57,9 +58,13 @@ def login():
                 user_id=user_input,
                 action="POST",
                 resource_type="session",
-                ip_address=request.remote_addr,
+                ip_address=get_client_ip(request),
                 status_code=401,
-                obj_metadata={"event": "login_failed", "error": error},
+                obj_metadata={
+                    "event": "login_failed",
+                    "error": error,
+                    **get_request_log_metadata(request),
+                },
             )
         else:
             session["username"] = username
@@ -70,9 +75,12 @@ def login():
                 user_id=username,
                 action="POST",
                 resource_type="session",
-                ip_address=request.remote_addr,
+                ip_address=get_client_ip(request),
                 status_code=200,
-                obj_metadata={"event": "login"},
+                obj_metadata={
+                    "event": "login",
+                    **get_request_log_metadata(request),
+                },
             )
             return redirect(url_for("home"))
     else:
@@ -106,9 +114,13 @@ def register():
             action="POST",
             resource_type="user",
             resource_id=user_input,
-            ip_address=request.remote_addr,
+            ip_address=get_client_ip(request),
             status_code=200,
-            obj_metadata={"event": "create_user", "permissions": "".join(permissions_input)},
+            obj_metadata={
+                "event": "create_user",
+                "permissions": "".join(permissions_input),
+                **get_request_log_metadata(request),
+            },
         )
         return redirect(url_for("user.login"))
     return render_page("register", form=form)
@@ -123,9 +135,12 @@ def logout():
         user_id=username,
         action="GET",
         resource_type="session",
-        ip_address=request.remote_addr,
+        ip_address=get_client_ip(request),
         status_code=200,
-        obj_metadata={"event": "logout"},
+        obj_metadata={
+            "event": "logout",
+            **get_request_log_metadata(request),
+        },
     )
     session.clear()
     flash("Déconnexion réussie.", "success")

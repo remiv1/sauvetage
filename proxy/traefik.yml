@@ -11,11 +11,21 @@ ping:
 entryPoints:
   web:
     address: ":80"
+    forwardedHeaders:
+      insecure: true
+      trustedIPs:
+        - "10.89.0.0/16"
+        - "192.168.1.0/24"
   
   websecure:
     address: ":443"
     http:
-      tls: {} # Active TLS, utilisera les certificats définis plus bas
+      tls: {}
+    forwardedHeaders:
+      insecure: true
+      trustedIPs:
+        - "10.89.0.0/16"
+        - "192.168.1.0/24"
 
 providers:
   file:

@@ -384,7 +384,7 @@ class OrderLine(WorkingBase, QueryMixin):
 
         value_dict: dict[str, Any] = {
             "name": self.general_object.name if self.general_object else "Unknown Product",
-            "product_id": int(self.general_object.id_wpwc),
+            "product_id": int(self.general_object.wpwc_id),
             "quantity": self.quantity,
             "subtotal": str(subtotal_ht),
             "total": str(total_ht),
@@ -397,8 +397,8 @@ class OrderLine(WorkingBase, QueryMixin):
         # Inclure l'ID WooCommerce de la ligne pour que le PUT mette à jour au lieu de dupliquer
         if self.wpwc_id:
             value_dict["id"] = self.wpwc_id
-        if self.object_variation and self.object_variation.id_wpwc:
-            value_dict["variation_id"] = int(self.object_variation.id_wpwc)
+        if self.object_variation and self.object_variation.wpwc_id:
+            value_dict["variation_id"] = int(self.object_variation.wpwc_id)
         return value_dict
 
     @classmethod

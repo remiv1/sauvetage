@@ -321,7 +321,6 @@ class DilicomService:
             ean13=book.isbn,
             name=book.title,
             description=book.description,
-            price=float(book.price_ht),
             vat_rate_id=book.vat_rate_id,
             )
         b = Books(
@@ -337,7 +336,12 @@ class DilicomService:
             semistructured_data=self._get_metadatas_from_onix(onix_product)
         )
 
-        return {"general_object": g_o, "book": b, "obj_metadatas": metadatas}
+        return {
+            "general_object": g_o,
+            "book": b,
+            "obj_metadatas": metadatas,
+            "price": float(book.price_ht),
+        }
 
 
     def _update_books(self, books_list: list[Path]) -> None:
@@ -370,7 +374,8 @@ class DilicomService:
                 self.objects_repo.save_or_update_from_object(
                     general_object=g_o,
                     book=b,
-                    obj_metadatas=m
+                    obj_metadatas=m,
+                    price=values["price"],
                 )
                 list_ean13.append(g_o.ean13)
             self.objects_repo.commit_object()

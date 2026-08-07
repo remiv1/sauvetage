@@ -48,7 +48,7 @@ class VariationsRepository(BaseRepository):
         Les champs attendus sont :
         - general_object_id (requis),
         - name (requis),
-        - description, price, purchase_price, vat_rate_id, is_active, id_wpwc
+        - description, price, purchase_price, vat_rate_id, is_active, wpwc_id
         """
         # Levée d'une exception si des champs diffèrent des champs attendus pour une variation
         extra_keys = set(variation_data.keys()) - set(self._kwargs)

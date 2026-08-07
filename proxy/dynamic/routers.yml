@@ -1,5 +1,15 @@
 http:
   routers:
+    catch-all:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - websecure
+      service: app-front
+      middlewares:
+        - no-robots
+      tls:
+        certResolver: letsencrypt
+
     redirect-http-to-https:
       rule: "PathPrefix(`/`)"
       entryPoints:
@@ -45,16 +55,6 @@ http:
 
     internal-editions-host:
       rule: "Host(`internal.editions-sauvetage.fr`)"
-      entryPoints:
-        - websecure
-      service: app-front
-      middlewares:
-        - no-robots
-      tls:
-        certResolver: letsencrypt
-
-    catch-all:
-      rule: "PathPrefix(`/`)"
       entryPoints:
         - websecure
       service: app-front

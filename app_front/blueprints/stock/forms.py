@@ -1,5 +1,6 @@
 """Module contenant les formulaires liés à la gestion des stocks."""
 
+from datetime import date
 from typing import Any
 from collections import namedtuple
 from flask_wtf import FlaskForm
@@ -14,8 +15,10 @@ from wtforms import (
     SelectField,
     FileField,
     TextAreaField,
+    FloatField,
+    DateField,
 )
-from wtforms.validators import DataRequired, Optional, NumberRange
+from wtforms.validators import DataRequired, Optional, NumberRange, ValidationError
 
 
 OrderTuple = namedtuple("Order", ["id", "general_object_id", "qty", "pu", "vat_rate"])
@@ -190,6 +193,29 @@ class VariationForm(FlaskForm):
     is_active = BooleanField("Active", default=True)
 
 
+class PriceHistoryEntryForm(FlaskForm):
+    """Formulaire d'une ligne de l'historique des prix."""
+
+    class Meta:
+        """Désactive CSRF pour ce formulaire imbriqué."""
+
+        csrf = False
+
+    price = FloatField("Prix de vente", validators=[DataRequired()])
+    from_date = DateField(
+        "Depuis",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        render_kw={"type": "date"},
+    )
+    to_date = DateField(
+        "Jusqu'à",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+        render_kw={"type": "date"},
+    )
+
+
 class CreateObjectForm(FlaskForm):
     """Formulaire de création d'objet (étape 1)."""
 
@@ -213,7 +239,7 @@ class CreateObjectForm(FlaskForm):
     ean_13 = StringField("EAN13", validators=[DataRequired()])
     name = StringField("Nom de l'objet", validators=[DataRequired()])
     description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
-    price = StringField("Prix de vente", validators=[DataRequired()])
+    prices = FieldList(FormField(PriceHistoryEntryForm), min_entries=1)  # type: ignore[arg-type]
     purchase_price = StringField("Prix d'achat")
     vat_rate_id = SelectField(
         VAT_RATE,
@@ -227,6 +253,19 @@ class CreateObjectForm(FlaskForm):
     media_files = FieldList(FormField(MediaFileForm), min_entries=0)  # type: ignore[arg-type]
     submit = SubmitField("Valider")
 
+    def validate_prices(self, field: FieldList):
+        """Valide la cohérence des lignes de prix."""
+        if not field.entries:
+            raise ValidationError("Ajouter au moins une ligne de prix.")
+        for entry in field.entries:
+            row = entry.form
+            if row.from_date.data is None:
+                raise ValidationError("La date de début est obligatoire pour chaque prix.")
+            if row.to_date.data is not None and row.to_date.data < row.from_date.data:
+                raise ValidationError("La date de fin doit être postérieure à la date de début.")
+            if row.price.data is None or row.price.data <= 0:
+                raise ValidationError("Le prix de vente doit être strictement positif.")
+
     def populate_from_object(self, obj: Any):
         """Remplit les champs du formulaire à partir d'un objet existant."""
         self.general_object_id.data = str(obj.id)
@@ -236,14 +275,38 @@ class CreateObjectForm(FlaskForm):
         self.ean_13.data = obj.ean13
         self.name.data = obj.name
         self.description.data = obj.description
-        self.price.data = str(obj.price)
         self.purchase_price.data = str(obj.purchase_price) if obj.purchase_price is not None else ""
         self.vat_rate_id.data = str(obj.vat_rate_id) if obj.vat_rate_id is not None else ""
+
+        self._populate_prices(getattr(obj, "prices", []), getattr(obj, "price", None))
 
         self._populate_book(obj.book)
         self._populate_object_tags(obj.object_tags)
         self._populate_obj_metadatas(obj.obj_metadatas)
         self._populate_media_files(obj.media_files)
+
+    def _populate_prices(self, prices: Any, fallback_price: Any = None):
+        """Remplit l'historique des prix à partir de l'objet persistant."""
+        while len(self.prices) > 0:
+            self.prices.pop_entry()
+
+        sorted_prices = sorted(
+            list(prices or []),
+            key=lambda price: (price.from_date, price.id or 0),
+        )
+        if sorted_prices:
+            for price in sorted_prices:
+                inner = self.prices.append_entry().form  # type: ignore[attr-defined]
+                inner["price"].data = float(price.price)
+                inner["from_date"].data = price.from_date
+                inner["to_date"].data = price.to_date
+            return
+
+        inner = self.prices.append_entry().form  # type: ignore[attr-defined]
+        if fallback_price is not None and float(fallback_price) > 0:
+            inner["price"].data = float(fallback_price)
+        inner["from_date"].data = date.today()
+        inner["to_date"].data = None
 
     def _populate_book(self, book: Any):
         if not book:

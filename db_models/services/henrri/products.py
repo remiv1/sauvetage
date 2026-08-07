@@ -47,7 +47,7 @@ class HenrriProductsService(HenrriService):
         response = self.client.items.list_items(request=request)
         return response.elements or []
 
-    def create_product(self, product: Item) -> Item:
+    def create_product(self, product: Item) -> int:
         """
         Crée un nouveau produit sur Henrri.
         
@@ -55,10 +55,12 @@ class HenrriProductsService(HenrriService):
         - product (Item): Le produit à créer.
 
         Returns:
-        - Item: Le produit créé au format de la bibliothèque henrri-connect.
+        - int: L'identifiant du produit cré au format de la bibliothèque henrri-connect.
         """
         response = self.client.items.add(product)
-        return response
+        if response.id is None:
+            raise ValueError("Le produit n'a pas pu étre créé.")
+        return response.id
 
     def create_products_batch(self, products: Sequence[Item]) -> Sequence[Item]:
         """

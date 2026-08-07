@@ -1,8 +1,13 @@
 """Blueprint pour les fonctionnalités des commandes clients"""
 
+from io import BytesIO
 from flask import Blueprint, make_response, send_file, url_for, session
 from app_front.utils.pages import render_page
-from app_front.blueprints.order.utils import get_order_by_id, push_order_wc
+from app_front.blueprints.order.utils import (
+    download_henrri_invoice_pdf,
+    get_order_by_id,
+    push_order_wc,
+)
 from app_front.utils.documents import (
     build_qrcode_data_uri,
     create_pdf_from_template,
@@ -100,6 +105,22 @@ def order_download_slip(order_id: int):
     )
     return send_file(
         pdf_stream,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@bp_order.get("/invoice/<int:invoice_id>/henrri.pdf")
+def order_download_henrri_invoice(invoice_id: int):
+    """Télécharge le PDF d'une facture depuis Henrri."""
+    try:
+        pdf_bytes, filename = download_henrri_invoice_pdf(invoice_id)
+    except ValueError as exc:
+        return f"<p>{exc}</p>", 422
+
+    return send_file(
+        BytesIO(pdf_bytes),
         mimetype="application/pdf",
         as_attachment=True,
         download_name=filename,

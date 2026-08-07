@@ -1,11 +1,8 @@
 import { formatCurrency, createClassName, fetchJson } from "./functions.js";
 
 export async function loadOrders() {
-    const sampleOrders = [
-        { name: 'M Rémi Verschuur', date: '01/01/2026', amount: 1253, availability: 'Disponible', status: 'En cours' },
-        { name: 'M Christian de la Pellequirole', date: '03/01/2026', amount: 126.32, availability: 'Disponible', status: 'Annulée' }
-    ];
-    const data = await fetchJson('/dashboard/data/commandes') || sampleOrders;
+    const response = await fetchJson('/dashboard/data/commandes');
+    const data = Array.isArray(response) ? response : [];
     const wrap = document.getElementById('orders-table');
     if (!wrap) return;
     const table = document.createElement('table');
