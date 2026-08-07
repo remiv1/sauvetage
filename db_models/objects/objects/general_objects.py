@@ -240,7 +240,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
         return {
             "vat_percent": self.vat_rate.rate,
             "creation_date": now_datetime,
-            "description": self.description,
+            "description": self.name,
             "id": self.henrri_id,
             "is_a_group": False,
             "is_tax_included": False,
