@@ -84,5 +84,5 @@ exec gunicorn \
     --access-logformat 'remote=%(h)s xff=%({x-forwarded-for}i)s xrealip=%({x-real-ip}i)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' \
     --error-logfile - \
     --log-level info \
-    --forwarded-allow-ips="10.89.0.0/32" \
+    --forwarded-allow-ips="10.89.0.0/16" \
     app_front.main:app
