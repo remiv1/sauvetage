@@ -46,6 +46,7 @@ class ObjectsRepository(BaseRepository):
         from .obj_metadatas import ObjMetadatasRepository  # pylint: disable=import-outside-toplevel
         from .object_tags import ObjectTagsRepository  # pylint: disable=import-outside-toplevel
         from .media import MediaRepository  # pylint: disable=import-outside-toplevel
+        from .prices import PricesRepository  # pylint: disable=import-outside-toplevel
         from .variations import VariationsRepository  # pylint: disable=import-outside-toplevel
 
         self.book_repo = BooksRepository(self.session)
@@ -53,6 +54,7 @@ class ObjectsRepository(BaseRepository):
         self.obj_metadata_repo = ObjMetadatasRepository(self.session)
         self.object_tags_repo = ObjectTagsRepository(self.session)
         self.media_repo = MediaRepository(self.session)
+        self.price_repo = PricesRepository(self.session)
         self.variation_repo = VariationsRepository(self.session)
 
     def _get_global_select(self):

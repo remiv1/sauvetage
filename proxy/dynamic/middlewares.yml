@@ -27,3 +27,9 @@ http:
       headers:
         customResponseHeaders:
           X-Robots-Tag: "noindex, nofollow, noarchive, nosnippet"
+
+    forwarded-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-For: "{client.ip}"
+          X-Real-IP: "{client.ip}"

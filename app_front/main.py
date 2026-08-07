@@ -15,6 +15,7 @@ from flask import (
     send_from_directory,
 )
 from flask.typing import ResponseReturnValue
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
 from app_front.utils.router import is_allowed
@@ -35,6 +36,16 @@ app.config["DEBUG"] = DEBUG
 # Enregistrement des blueprints
 for bp in BLUEPRINTS:
     app.register_blueprint(bp)
+
+# Appliquer le middleware ProxyFix
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=1,
+    x_proto=1,
+    x_host=1,
+    x_port=1,
+    x_prefix=1,
+)
 
 log = f"""
 [MAIN] Application Flask initialisée avec succès
