@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ONIXMessage release="3.0" xmlns="http://www.editeur.org/onix/3.0/reference"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.editeur.org/onix/3.0/reference 
+https://hub-dilicom.centprod.com/notices_onix/schema_onix/ONIX_BookProduct_3.0_reference.xsd">
+<Header>
+  <Sender>
+    <SenderIdentifier>
+      <SenderIDType>06</SenderIDType>
+      <IDValue>3025590000008</IDValue>
+    </SenderIdentifier>
+    <SenderName>DILICOM</SenderName>
+    <EmailAddress>bdd@dilicom.fr</EmailAddress>
+  </Sender>
+  <Addressee>
+    <AddresseeIdentifier>
+      <AddresseeIDType>06</AddresseeIDType>
+      <IDValue>3025599265804</IDValue>
+    </AddresseeIdentifier>
+    <AddresseeName>EDITIONS SAUVETAGE - TEST BDD</AddresseeName>
+  </Addressee>
+  <MessageNumber>494009074</MessageNumber>
+  <SentDateTime>20260614T032537Z</SentDateTime>
+</Header>
+<Product>
+  <RecordReference>9791097878542</RecordReference>
+  <NotificationType>05</NotificationType>
+  <DeletionText>01</DeletionText>
+  <ProductIdentifier>
+    <ProductIDType>03</ProductIDType>
+    <IDValue>9791097878542</IDValue>
+  </ProductIdentifier>
+  <ProductSupply>
+    <SupplyDetail>
+      <Supplier>
+        <SupplierRole sourcename="DILICOM" sourcetype="04">03</SupplierRole>
+        <SupplierIdentifier>
+          <SupplierIDType>06</SupplierIDType>
+          <IDValue>3019000559309</IDValue>
+        </SupplierIdentifier>
+        <SupplierName sourcename="DILICOM" sourcetype="04">ANCADE</SupplierName>
+      </Supplier>
+      <ReturnsConditions>
+        <ReturnsCodeType>01</ReturnsCodeType>
+        <ReturnsCode>3</ReturnsCode>
+      </ReturnsConditions>
+      <ProductAvailability>43</ProductAvailability>
+      <Price>
+        <PriceType>02</PriceType>
+        <PriceAmount>15.00</PriceAmount>
+        <Tax>
+          <TaxType>01</TaxType>
+          <TaxRatePercent>5.50</TaxRatePercent>
+          <TaxableAmount>14.22</TaxableAmount>
+        </Tax>
+        <CurrencyCode>EUR</CurrencyCode>
+        <Territory>
+          <CountriesIncluded>FR</CountriesIncluded>
+        </Territory>
+      </Price>
+      <Price>
+        <PriceType>01</PriceType>
+        <PriceAmount>14.22</PriceAmount>
+        <CurrencyCode>EUR</CurrencyCode>
+        <Territory>
+          <RegionsIncluded>WORLD</RegionsIncluded>
+          <CountriesExcluded>FR BE</CountriesExcluded>
+        </Territory>
+      </Price>
+    </SupplyDetail>
+  </ProductSupply>
+</Product>
+
+</ONIXMessage>
