@@ -93,3 +93,4 @@ cython_debug/
 *.sqlite
 */backups/*
 *.tar.gz
+*.tar.*
