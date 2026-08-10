@@ -114,6 +114,31 @@ services:
     restart: on-failure:5
     volumes:
       - sauv-logs-data:/data/db
+
+  backup:
+    container_name: sauv-backup
+    build:
+      context: .
+      dockerfile: backup/Dockerfile
+    env_file:
+      - ./databases/main/.env.db_main
+      - ./databases/logs/.env.db_logs
+      - ./backup/.env.save
+    environment:
+      - "CRON_SCHEDULE=0 2 * * *"
+      - RUN_ON_STARTUP=true
+    volumes:
+      - ./backups:/backups:rw,z
+      - ./backup_logs:/var/log/backup:rw,z
+      - ./documents:/data/documents:rw,z
+      - ./backup/.env.save:/etc/backup/.env.save:ro,z
+      - ./backup/ssh:/root/.ssh:ro,z
+    networks:
+      - sauv-secure
+    depends_on:
+      - db-main
+      - db-logs
+    restart: unless-stopped
     
 volumes:
   db-main-data:
