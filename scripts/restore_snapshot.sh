@@ -11,6 +11,14 @@ if [ ! -d "$SNAP_ROOT" ]; then
   exit 2
 fi
 
+# Support optional flag --new-cluster: forward to run-restore.sh to use
+# --no-owner --no-privileges when restoring to a new cluster.
+NEW_CLUSTER=""
+if [ "${1:-}" = "--new-cluster" ]; then
+  NEW_CLUSTER="--new-cluster"
+  shift || true
+fi
+
 SNAPS=$(ls -1dt "$SNAP_ROOT"/* 2>/dev/null || true)
 if [ -z "$SNAPS" ]; then
   echo "Aucun snapshot disponible" >&2
@@ -46,7 +54,7 @@ case "$ans" in
 esac
 
 # Exécute la restauration dans le conteneur déjà démarré. Échoue clairement si le service n'est pas up.
-if ! $COMPOSE exec -T "$SERVICE" /usr/local/bin/run-restore.sh "$SNAP_ID"; then
+if ! $COMPOSE exec -T "$SERVICE" /usr/local/bin/run-restore.sh "$SNAP_ID" $NEW_CLUSTER; then
   echo "Erreur: échec de l'exécution dans le service '$SERVICE'." >&2
   echo "Vérifiez qu'il est démarré : $COMPOSE up -d $SERVICE" >&2
   echo "Consultez backup_logs/restore.log pour le détail." >&2

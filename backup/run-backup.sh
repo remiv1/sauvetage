@@ -42,14 +42,14 @@ POSTGRES_DB_MAIN="${POSTGRES_DB_MAIN:-sauvetage_main}"
 POSTGRES_DB_USERS="${POSTGRES_DB_USERS:-sauvetage_users}"
 
 log "pg_dump $POSTGRES_DB_MAIN commencé..."
-pg_dump --format=custom --no-owner --no-privileges \
+pg_dump --format=custom \
   --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
   --dbname="$POSTGRES_DB_MAIN" \
   --file="$WORK_DIR/${POSTGRES_DB_MAIN}.dump" >>"$LOG_FILE" 2>&1
 log "pg_dump $POSTGRES_DB_MAIN terminé"
 
 log "pg_dump $POSTGRES_DB_USERS commencé..."
-pg_dump --format=custom --no-owner --no-privileges \
+pg_dump --format=custom \
   --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
   --dbname="$POSTGRES_DB_USERS" \
   --file="$WORK_DIR/${POSTGRES_DB_USERS}.dump" >>"$LOG_FILE" 2>&1

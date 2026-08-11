@@ -7,6 +7,9 @@ LOG_FILE="/var/log/backup/restore.log"
 log() { printf '[%s] %s\n' "$(date -Is)" "$*" >> "$LOG_FILE"; }
 
 SNAPSHOT_ID="${1:-latest}"
+# Optional second arg: when set to "--new-cluster" we restore for a new cluster
+# (i.e. do not preserve owners/privileges in the dump). Default: restore owners/privs.
+NEW_CLUSTER_FLAG="${2:-}"
 RESTORE_DOCS="${RESTORE_DOCS:-true}"
 SNAP_ROOT="/backups/local/snapshots"
 LATEST_LINK="/backups/local/meta/latest"
@@ -62,8 +65,16 @@ POSTGRES_DB_MAIN="${POSTGRES_DB_MAIN:-sauvetage_main}"
 POSTGRES_DB_USERS="${POSTGRES_DB_USERS:-sauvetage_users}"
 
 log "pg_restore $POSTGRES_DB_MAIN commencé..."
+
+# Choose pg_restore flags depending on cluster intent
+if [ "$NEW_CLUSTER_FLAG" = "--new-cluster" ]; then
+  RESTORE_FLAGS="--clean --if-exists --no-owner --no-privileges"
+else
+  RESTORE_FLAGS="--clean --if-exists"
+fi
+
 pg_restore \
-  --clean --if-exists --no-owner --no-privileges \
+  $RESTORE_FLAGS \
   --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
   --dbname="$POSTGRES_DB_MAIN" \
   "$WORK_DIR/${POSTGRES_DB_MAIN}.dump" >>"$LOG_FILE" 2>&1
@@ -71,7 +82,7 @@ log "pg_restore $POSTGRES_DB_MAIN terminé"
 
 log "pg_restore $POSTGRES_DB_USERS commencé..."
 pg_restore \
-  --clean --if-exists --no-owner --no-privileges \
+  $RESTORE_FLAGS \
   --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
   --dbname="$POSTGRES_DB_USERS" \
   "$WORK_DIR/${POSTGRES_DB_USERS}.dump" >>"$LOG_FILE" 2>&1
@@ -102,4 +113,4 @@ if [ "$RESTORE_DOCS" = "true" ]; then
   log "Restauration des documents terminée"
 fi
 
-log "Restauration terminée: $SNAPSHOT_ID"
+log "Restauration terminée: $SNAPSHOT_ID" 
