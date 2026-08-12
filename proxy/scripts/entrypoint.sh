@@ -41,6 +41,15 @@ else
     fi
 fi
 
-echo "[ENTRYPOINT] PKI configuration OK, launching Traefik..."
+mkdir -p /etc/traefik/dynamic
 
+echo "[ENTRYPOINT] PKI configuration OK, regenerating bot block rules..."
+python3 /usr/local/bin/generate_bot_rules.py \
+  --input /etc/traefik/dynamic/bot_patterns.txt \
+  --output /etc/traefik/dynamic/bot-blockers.yml || {
+    echo "[ENTRYPOINT] ERROR: Failed to generate bot block rules"
+    exit 1
+}
+
+echo "[ENTRYPOINT] Launching Traefik..."
 exec traefik --configFile=/etc/traefik/traefik.yml

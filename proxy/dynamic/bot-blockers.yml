@@ -1,0 +1,21 @@
+http:
+  routers:
+    block-bots-http:
+      rule: 'PathRegexp(`(?i)(/wp-|\.env|\.git|\.htaccess|\.sql|\.bak|/server-status|/config|/anthropic|/sdk|\.php|/telescope|/security\.txt|/actuator|/dr0v|/check|/ip|/bin|/index\.aspx|/global-protect/login\.esp|/containers/json|/test\.hello|/hello\.world|/vpn/index\.html|/logon/LogonPoint/index\.html|/geoserver/web/|/qp_1kqfdl|/sse|/mcp/|/mcp|/api/mcp|/vpn/svc/connect\.cgi|/ecp/Current/exporttool/microsoft\.exchange\.ediscovery\.exporttool\.application|/v2/_catalog|/cgi-bin/authLogin\.cgi|/solr/admin/cores|/query|/solr/admin/info/system|/x0ezgr0hhk2g3o40|/\.e5350|/AGENTS\.md|/teorema505|/ab2h|/ab2g|/dicom-web/studies|/app-config\.js|/vendor/|/\.well-known/|/media/system/js/core\.js|/js/env\.js|/\.vscode/sftp\.json|\.axd)`)'
+      priority: 1000
+      entryPoints:
+        - web
+      middlewares:
+        - bot-blocker
+      service: noop
+
+    block-bots-https:
+      rule: 'PathRegexp(`(?i)(/wp-|\.env|\.git|\.htaccess|\.sql|\.bak|/server-status|/config|/anthropic|/sdk|\.php|/telescope|/security\.txt|/actuator|/dr0v|/check|/ip|/bin|/index\.aspx|/global-protect/login\.esp|/containers/json|/test\.hello|/hello\.world|/vpn/index\.html|/logon/LogonPoint/index\.html|/geoserver/web/|/qp_1kqfdl|/sse|/mcp/|/mcp|/api/mcp|/vpn/svc/connect\.cgi|/ecp/Current/exporttool/microsoft\.exchange\.ediscovery\.exporttool\.application|/v2/_catalog|/cgi-bin/authLogin\.cgi|/solr/admin/cores|/query|/solr/admin/info/system|/x0ezgr0hhk2g3o40|/\.e5350|/AGENTS\.md|/teorema505|/ab2h|/ab2g|/dicom-web/studies|/app-config\.js|/vendor/|/\.well-known/|/media/system/js/core\.js|/js/env\.js|/\.vscode/sftp\.json|\.axd)`)'
+      priority: 1000
+      entryPoints:
+        - websecure
+      middlewares:
+        - bot-blocker
+      service: noop
+      tls:
+        certResolver: letsencrypt

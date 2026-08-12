@@ -16,3 +16,4 @@ tenacity>=9.1.4
 pillow==12.2.0
 henrri-connect==0.2.0
 python-multipart==0.0.32
+toml==0.10.2

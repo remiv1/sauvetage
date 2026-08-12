@@ -18,28 +18,6 @@ http:
         - redirect-https
       service: noop
 
-    # Bloque les requêtes de bots sur HTTP (wp-*, .env, .git, .htaccess…)
-    block-bots-http:
-      rule: "PathRegexp(`(?i)(/wp-|\\.env|\\.git|\\.htaccess|\\.sql|\\.bak|/server-status|/config|/anthropic|/sdk|\\.php|/telescope|/security\\.txt|/actuator|/dr0v|/check|/ip|/bin)`)"
-      priority: 1000
-      entryPoints:
-        - web
-      middlewares:
-        - bot-blocker
-      service: noop
-
-    # Bloque les requêtes de bots sur HTTPS
-    block-bots-https:
-      rule: "PathRegexp(`(?i)(/wp-|\\.env|\\.git|\\.htaccess|\\.sql|\\.bak|/server-status|/config|/anthropic|/sdk|\\.php|/telescope|/security\\.txt|/actuator|/dr0v|/check|/ip|/bin)`)"
-      priority: 1000
-      entryPoints:
-        - websecure
-      middlewares:
-        - bot-blocker
-      service: noop
-      tls:
-        certResolver: letsencrypt
-
     # Limite les appels sur l'endpoint de login
     login-rate-limit:
       rule: "Path(`/user/login`)"

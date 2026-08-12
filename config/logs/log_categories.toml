@@ -3,9 +3,16 @@ default = "logs"
 [users]
 modules = [
   "app_front.blueprints.user",
+  "app_front.blueprints.user.routes",
   "app_front.blueprints.admin",
+  "app_front.blueprints.admin.routes_htmx_users",
+  "app_front.blueprints.admin.routes",
   "app_back.router.v1.users",
-  "logs.logger"
+  "app_back.v1.users",
+  "app_back.v1.mails",
+  "logs.logger",
+  "db_models.repositories.user",
+  "db_models.objects.users"
 ]
 
 [logs]
@@ -19,7 +26,12 @@ modules = [
 [clients]
 modules = [
   "app_front.blueprints.customer",
+  "app_front.blueprints.customer.routes",
+  "app_front.blueprints.customer.routes_data",
   "app_front.blueprints.order",
+  "app_front.blueprints.order.routes",
+  "app_front.blueprints.order.routes_htmx_create",
+  "app_front.blueprints.order.routes_htmx_list",
   "db_models.services.woo_commerce.customers",
   "db_models.repositories.customers"
 ]
@@ -30,6 +42,49 @@ modules = [
   "app_front.blueprints.inventory",
   "app_front.blueprints.supplier",
   "db_models.services.dilicom",
+  "db_models.services.henri",
+  "db_models.services.henri.base",
+  "db_models.services.henri.customers",
+  "db_models.services.henri.documents",
+  "db_models.services.henri.products",
+  "db_models.services.henri.utils",
+  "db_models.repositories.suppliers",
+  "db_models.repositories.objects",
+  "db_models.repositories.objects.books",
+  "db_models.repositories.objects.media",
+  "db_models.repositories.objects.obj_metadatas",
+  "db_models.repositories.objects.object_tags",
+  "db_models.repositories.objects.objects",
+  "db_models.repositories.objects.other_objects",
+  "db_models.repositories.objects.prices",
+  "db_models.repositories.objects.variations",
+  "db_models.repositories.stocks",
+  "db_models.repositories.stocks.dilicom",
+  "db_models.repositories.stocks.inventory",
+  "db_models.repositories.stocks.orders",
+  "db_models.repositories.stocks.stock",
+  "db_models.repositories.invoices",
+  "db_models.repositories.orders",
+  "db_models.repositories.shipments",
+  "db_models.repositories.suppliers",
+  "db_models.repositories.sync_logs",
+  "db_models.repositories.tags",
   "app_back.v1.dilicom.background_transactions",
-  "app_back.main"
+  "app_back.v1.henrri.background_transactions",
+  "app_back.main",
+  "app_back.services.dilicom",
+  "app_back.v1.henrri",
+  "app_back.v1.henrri.background_transactions",
+  "app_back.v1.woocommerce",
+  "app_back.v1.woocommerce.background_transactions",
+  "app_back.v1.woocommerce.media",
+  "app_back.v1.woocommerce.orders",
+  "app_back.v1.documents",
+  "app_back.v1.inventory",
+  "dilicom_parser",
+  "dilicom_parser.transport",
+  "dilicom_parser.classifier",
+  "dilicom_parser.models",
+  "henrri_connect",
+  "henrri_connect.models"
 ]
