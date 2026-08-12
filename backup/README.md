@@ -27,7 +27,7 @@ Les archives de suppression distantes et les archives DB distantes sont purgées
 
 ## Configuration
 
-Créer le fichier `backup/.env.save` à partir de `backup/.env.exemple`.
+Créer le fichier `config/env/.env.backup` à partir de `backup/.env.exemple` et le monter dans le conteneur backup.
 
 Variables importantes :
 

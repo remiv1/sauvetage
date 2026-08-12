@@ -1,0 +1,35 @@
+default = "logs"
+
+[users]
+modules = [
+  "app_front.blueprints.user",
+  "app_front.blueprints.admin",
+  "app_back.router.v1.users",
+  "logs.logger"
+]
+
+[logs]
+modules = [
+  "app_front.blueprints.admin.routes_htmx_logs",
+  "logs.logger",
+  "app_back.main",
+  "app_front.main"
+]
+
+[clients]
+modules = [
+  "app_front.blueprints.customer",
+  "app_front.blueprints.order",
+  "db_models.services.woo_commerce.customers",
+  "db_models.repositories.customers"
+]
+
+[metiers]
+modules = [
+  "app_front.blueprints.stock",
+  "app_front.blueprints.inventory",
+  "app_front.blueprints.supplier",
+  "db_models.services.dilicom",
+  "app_back.v1.dilicom.background_transactions",
+  "app_back.main"
+]

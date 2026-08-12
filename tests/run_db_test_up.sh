@@ -25,7 +25,7 @@ detect_compose_cmd "$ENGINE_ARG" || {
 
 echo "⚙️  Conteneur engine choisi: ${COMPOSE_ENGINE} -> using: ${COMPOSE_CMD[*]}"
 
-ENV_TEST_FILE="$PROJECT_ROOT/databases/main/.env.db_main"
+ENV_TEST_FILE="$PROJECT_ROOT/config/env/.env.db_main"
 
 echo "📁 Script dir: $SCRIPT_DIR"
 

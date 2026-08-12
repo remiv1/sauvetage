@@ -53,6 +53,7 @@ def post_referencial_dilicom(
         ds.send_updates()
         return {"status": "success", "message": "Référentiel Dilicom créé et déposé avec succès."}
     except ValueError as e:
+        logger.exception("Erreur lors de la création du référentiel Dilicom: %s", e)
         return {"status": "error", "message": str(e)}
 
 @router.post("/fetch-returns")

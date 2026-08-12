@@ -23,12 +23,18 @@ def start_dilicom_scheduler():
         with config.main_session_ctx() as session:
             DilicomService(session=session).fetch_returns()
 
+    # Attention de ne pas embouteiller les schedulings.
+    # 02:00 : Réception de la sauvegarde du site e-commerce.
+    # 02:01 : Envoi de la sauvegarde locale sur le serveur du site e-commerce.
+    # 22:00 : Envoi des référentiels à Dilicom.
+    # 06:00-12:00 : Vérification des retours de Dilicom toutes les heures.
+
     # Planification de l'envoie des référentiels à Dilicom tous les jours à 2h du matin
     scheduler.add_job(
         _send_updates,
         "cron",
-        hour=2,
-        minute=0,
+        hour=22,
+        minute=00,
         id="dilicom_send_updates",
     )
 

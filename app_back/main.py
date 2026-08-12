@@ -30,12 +30,33 @@ async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined
     logging.getLogger("pymongo.command").setLevel(logging.WARNING)
     logging.getLogger("dilicom_parser").addFilter(
         FilterExtras(
-            log_type="métiers",
+            log_type="metiers",
             action="opération dilicom",
-            obj_metadata=str({
-                    "source": "dilicom_parser",
-                    "service": "sauvetage-backend"
-                }),
+            dilicom_event=True,
+            obj_metadata={
+                "source": "dilicom_parser",
+                "service": "sauvetage-backend",
+            },
+        ))
+    logging.getLogger("app_back.services.dilicom").addFilter(
+        FilterExtras(
+            log_type="metiers",
+            action="opération dilicom",
+            dilicom_event=True,
+            obj_metadata={
+                "source": "app_back.services.dilicom",
+                "service": "sauvetage-backend",
+            },
+        ))
+    logging.getLogger("app_back.v1.dilicom.background_transactions").addFilter(
+        FilterExtras(
+            log_type="metiers",
+            action="opération dilicom",
+            dilicom_event=True,
+            obj_metadata={
+                "source": "app_back.v1.dilicom.background_transactions",
+                "service": "sauvetage-backend",
+            },
         ))
 
     yield

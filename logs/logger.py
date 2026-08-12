@@ -11,6 +11,7 @@ import os
 import logging
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, PyMongoError
+from config.logs.config_loader import get_log_types
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -47,7 +48,7 @@ class MongoDBLogger:
         self.db = None
         self._connect()
         self.levels: List[str] = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        self.log_types: List[str] = ["users", "logs", "clients", "métiers"]
+        self.log_types: List[str] = get_log_types()
 
     def _connect(self) -> None:
         try:
@@ -104,7 +105,7 @@ class MongoDBLogger:
         Args:
             level (str): Niveau de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
             message (str): Message de log
-            log_type (str): Type de log (users, logs, clients, métiers)
+            log_type (str): Type de log (users, logs, clients, metiers)
             user_id (Optional[str]): ID de l'utilisateur associé au log
             action (Optional[str]): Action effectuée (ex: "login", "upload_file", etc.)
             resource_type (Optional[str]): Type de ressource (ex: "file", "endpoint", etc.)
@@ -318,6 +319,34 @@ class MongoForwardHandler(logging.Handler):
         if record.name.startswith("pymongo"):
             return
 
+        is_dilicom_business_log = (
+            record.name.startswith("dilicom_parser")
+            or "dilicom" in record.name.lower()
+            or getattr(record, "log_type", None) == "metiers"
+            or getattr(record, "dilicom_event", False)
+        )
+
+        if is_dilicom_business_log:
+            obj_metadata = getattr(record, "obj_metadata", None)
+            if isinstance(obj_metadata, str):
+                obj_metadata = {"value": obj_metadata}
+
+            metadata: Dict[str, Any] = {
+                "logger": record.name,
+                "level": record.levelname,
+                "source": "dilicom_parser" if record.name.startswith("dilicom_parser") else "application",
+            }
+            if isinstance(obj_metadata, dict):
+                metadata.update(obj_metadata)
+            elif obj_metadata is not None:
+                metadata["payload"] = obj_metadata
+
+            self.mongo_logger.log_dilicom_event(
+                event=getattr(record, "event", None) or record.getMessage(),
+                obj_metadata=metadata,
+            )
+            return
+
         # logging.Logger.info(..., extra={"key": val}) pose chaque clé directement
         # comme attribut sur le LogRecord (record.key), PAS dans un sous-dict record.extra.
         self.mongo_logger.log(
@@ -341,11 +370,11 @@ class FilterExtras(logging.Filter):
 
     Usage dans app_back :
         logging.getLogger("dilicom_parser").addFilter(
-            FilterExtras(log_type="métiers", action="opération dilicom")
+            FilterExtras(log_type="metiers", action="opération dilicom")
         )
 
     Tout log émis par "dilicom_parser" recevra automatiquement
-    record.log_type="métiers" et record.action="opération dilicom"
+    record.log_type="metiers" et record.action="opération dilicom"
     si ces attributs ne sont pas déjà présents.
     """
 

@@ -56,6 +56,8 @@ __pypackages__/
 # Environments
 .env
 .env.*
+!config/env/.env.example
+!config/env/.env.exemple
 !.env.exemple
 .envrc
 .venv

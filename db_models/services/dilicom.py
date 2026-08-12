@@ -21,6 +21,7 @@ from onixlib.models.generated.v3_0 import (
     List24,
     List74,
 )
+from pathlib import Path
 from dilicom_parser.transport import Connector
 from dilicom_parser.classifier import FilesClassifier
 from dilicom_parser.models import DistributorData, DistributorLineData
@@ -66,7 +67,8 @@ class DilicomService:
     """
     def __init__(self, session: Session):
         self.session = session
-        self.connect = Connector(env_path=".env.dilicom")
+        env_path = Path(__file__).resolve().parents[2] / "config" / "logs" / ".env.dilicom"
+        self.connect = Connector(env_path=str(env_path))
         self.classifier: FilesClassifier
         self.parser: list[Any] = []
         self.objects_repo = ObjectsRepository(self.session)
@@ -135,8 +137,9 @@ class DilicomService:
         Cette méthode se connecte au serveur SFTP, télécharge les fichiers de retour,
         et les traite pour mettre à jour les statuts des commandes dans la base de données.
         """
-        # Vidage du dossier local de réception avant téléchargement pour éviter les confusions
         local_dir = Path(getenv("DILICOM_IN_DIR", "dilicom_returns"))
+
+        # Vidage du dossier local de réception avant téléchargement pour éviter les confusions
         self._clear_directory(local_dir)
         with self.connect as server:
             files_list = server.download_all(archive=archives)
@@ -449,7 +452,7 @@ class DilicomService:
         b1, b2, _ = l.bloc1, l.bloc2, l.bloc3
         global_address = _generate_address_from_distributor_line(line)
         if b1.mvt in ["00", "01", "03", "04"]:
-            logger.debug(
+            logger.info(
                 "Génération d'un objet Suppliers pour le distributeur %s avec mvt %s",
                 b1.rs1,
                 b1.mvt
@@ -470,8 +473,8 @@ class DilicomService:
                 cutoff_time=_convert_cutoff_time(b2.heure_limite),
             )
         elif b1.mvt == "05":
-            logger.debug(
-                "Génération d'un objet Suppliers bloc 1 pour le distributeur %s avec mvt %s",
+            logger.info(
+                "Génération d'un objet Suppliers inactif bloc 1 pour le distributeur %s avec mvt %s",
                 b1.rs1,
                 b1.mvt
             )
@@ -488,7 +491,7 @@ class DilicomService:
                 is_active=bool(b1.gln_repreneur),
             )
         elif b1.mvt == "06":
-            logger.debug(
+            logger.info(
                 "Génération d'un objet Suppliers bloc 2 pour le distributeur %s avec mvt %s",
                 b1.rs1,
                 b1.mvt
@@ -500,7 +503,7 @@ class DilicomService:
                 cutoff_time=_convert_cutoff_time(b2.heure_limite),
             )
         elif b1.mvt == "08":
-            logger.debug(
+            logger.info(
                 "Génération d'un objet Suppliers pour suppression du distributeur %s avec mvt %s",
                 b1.rs1,
                 b1.mvt

@@ -21,7 +21,7 @@ log() { printf '[%s] %s\n' "$(date -Is)" "$*" >> "$LOG_FILE"; }
 } > /etc/backup/env.sh
 chmod 600 /etc/backup/env.sh
 
-CRON_SCHEDULE="${CRON_SCHEDULE:-0 2 * * *}"
+CRON_SCHEDULE="${CRON_SCHEDULE:-1 2 * * *}"
 cat > /etc/cron.d/backup-cron <<EOF
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 $CRON_SCHEDULE root /usr/local/bin/run-backup.sh

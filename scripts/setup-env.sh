@@ -62,7 +62,7 @@ prompt_yesno() {
 # ============================================================================
 # ÉTAPE 1 : PostgreSQL
 # ============================================================================
-echo -e "${BLUE}[1/7] Configuration PostgreSQL${NC}"
+echo -e "${BLUE}[1/10] Configuration PostgreSQL${NC}"
 echo ""
 
 echo -e "${YELLOW}Génération de mots de passe sécurisés...${NC}"
@@ -74,8 +74,10 @@ PG_MIGR_PASSWORD=$(generate_password)
 echo -e "${GREEN}✓ Mots de passe générés${NC}"
 echo ""
 
+mkdir -p "config/env"
+
 # Créer le fichier .env.db_main
-cat > "databases/main/.env.db_main" << EOF
+cat > "config/env/.env.db_main" << EOF
 # PostgreSQL Configuration - Bases de données
 POSTGRES_DB_MAIN=sauvetage_main
 POSTGRES_DB_USERS=sauvetage_users
@@ -106,19 +108,19 @@ BACKUP_RETENTION_DAYS=30
 BACKUP_SCHEDULE="0 2 * * *"
 EOF
 
-echo -e "${GREEN}✓ databases/main/.env.db_main créé${NC}"
-chmod 600 "databases/main/.env.db_main"
+echo -e "${GREEN}✓ config/env/.env.db_main créé${NC}"
+chmod 600 "config/env/.env.db_main"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
 # ============================================================================
 # ÉTAPE 2 : Alembic Migrations
 # ============================================================================
 
-echo -e "${BLUE}[2/7] Configuration Alembic${NC}"
+echo -e "${BLUE}[2/10] Configuration Alembic${NC}"
 echo ""
 
 # Créer le fichier environnement pour les migrations
-cat > "migrations/.env.migr" << EOF
+cat > "config/env/.env.migr" << EOF
 # PostgreSQL Configuration - Bases de données
 POSTGRES_DB_MAIN=sauvetage_main
 POSTGRES_DB_USERS=sauvetage_users
@@ -140,14 +142,14 @@ BACKUP_RETENTION_DAYS=30
 BACKUP_SCHEDULE="0 2 * * *"
 EOF
 
-echo -e "${GREEN}✓ migrations/.env.migr créé${NC}"
-chmod 600 "migrations/.env.migr"
+echo -e "${GREEN}✓ config/env/.env.migr créé${NC}"
+chmod 600 "config/env/.env.migr"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
 # ============================================================================
 # ÉTAPE 3 : MongoDB
 # ============================================================================
-echo -e "${BLUE}[3/7] Configuration MongoDB${NC}"
+echo -e "${BLUE}[3/10] Configuration MongoDB${NC}"
 echo ""
 
 echo -e "${YELLOW}Génération de mots de passe sécurisés...${NC}"
@@ -158,7 +160,7 @@ echo -e "${GREEN}✓ Mots de passe générés${NC}"
 echo ""
 
 # Créer le fichier .env.db_logs
-cat > "databases/logs/.env.db_logs" << EOF
+cat > "config/env/.env.db_logs" << EOF
 # MongoDB Configuration
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=${MONGO_ADMIN_PASSWORD}
@@ -178,14 +180,14 @@ MONGO_BACKUP_ENABLED=true
 MONGO_BACKUP_RETENTION_DAYS=30
 EOF
 
-echo -e "${GREEN}✓ databases/logs/.env.db_logs créé${NC}"
-chmod 600 "databases/logs/.env.db_logs"
+echo -e "${GREEN}✓ config/env/.env.db_logs créé${NC}"
+chmod 600 "config/env/.env.db_logs"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
 # ============================================================================
 # ÉTAPE 4 : Traefik Proxy
 # ============================================================================
-echo -e "${BLUE}[4/7] Configuration Traefik Proxy${NC}"
+echo -e "${BLUE}[4/10] Configuration Traefik Proxy${NC}"
 echo ""
 
 PROXY_STANDARD=$(prompt_yesno "  → Utiliser configuration standard?" "y")
@@ -202,26 +204,26 @@ fi
 echo ""
 
 # Créer le fichier .env.proxy
-cat > "proxy/.env.proxy" << EOF
+cat > "config/env/.env.proxy" << EOF
 TZ=${TRAEFIK_TZ}
 TRAEFIK_LOG_LEVEL=${TRAEFIK_LOG_LEVEL}
 EOF
-chmod 600 "proxy/.env.proxy"
+chmod 600 "config/env/.env.proxy"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
-echo -e "${GREEN}✓ proxy/.env.proxy créé${NC}"
+echo -e "${GREEN}✓ config/env/.env.proxy créé${NC}"
 
 # ============================================================================
 # ÉTAPE 5 : Backend FastAPI
 # ============================================================================
-echo -e "${BLUE}[5/7] Configuration Backend FastAPI${NC}"
+echo -e "${BLUE}[5/10] Configuration Backend FastAPI${NC}"
 echo ""
 
 BACKEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
 BACKEND_DEBUG=$(prompt_value "  → Mode DEBUG (true/false)" "false")
 SECURITY_TOKEN=$(generate_password)
 
-echo -e "${BLUE}[5bis/7] Configuration mailer SMTP${NC}"
+echo -e "${BLUE}[5bis/10] Configuration mailer SMTP${NC}"
 
 SMTP_SERVER=$(prompt_value "  → Serveur SMTP" "smtp.example.com")
 SMTP_PORT=$(prompt_value "  → Port SMTP" "587")
@@ -234,7 +236,7 @@ SMTP_USE_SSL=$(prompt_yesno "  → Utiliser SSL pour SMTP?" "n")
 echo ""
 
 # Créer le fichier .env.fast
-cat > "app_back/.env.fast" << EOF
+cat > "config/env/.env.fast" << EOF
 # Application
 LOG_LEVEL="${BACKEND_LOG_LEVEL}"
 DEBUG="${BACKEND_DEBUG}"
@@ -252,15 +254,15 @@ SMTP_USE_TLS="${SMTP_USE_TLS}"
 SMTP_USE_SSL="${SMTP_USE_SSL}"
 
 EOF
-chmod 600 "app_back/.env.fast"
+chmod 600 "config/env/.env.fast"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
-echo -e "${GREEN}✓ app_back/.env.fast créé${NC}"
+echo -e "${GREEN}✓ config/env/.env.fast créé${NC}"
 
 # ============================================================================
 # ÉTAPE 6 : Frontend Flask
 # ============================================================================
-echo -e "${BLUE}[6/7] Configuration Frontend Flask${NC}"
+echo -e "${BLUE}[6/10] Configuration Frontend Flask${NC}"
 echo ""
 
 FRONTEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
@@ -284,7 +286,7 @@ echo -e "${GREEN}✓ Clé générée${NC}"
 echo ""
 
 # Créer le fichier .env.flask
-cat > "app_front/.env.flask" << EOF
+cat > "config/env/.env.flask" << EOF
 # Gestion des identifiants de l'API de votre outil de facturation
 INVOICER_ID=${INVOICER_ID}
 INVOICER_SECRET=${INVOICER_SECRET}
@@ -304,16 +306,77 @@ API_URL=http://app-back:8000/api/v1
 LOG_LEVEL=${FRONTEND_LOG_LEVEL}
 DEBUG=${FRONTEND_DEBUG}
 EOF
-chmod 600 "app_front/.env.flask"
+chmod 600 "config/env/.env.flask"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
-echo -e "${GREEN}✓ app_front/.env.flask créé${NC}"
-
+echo -e "${GREEN}✓ config/env/.env.flask créé${NC}"
 
 # ============================================================================
-# ÉTAPE 7 : Gestion Dilicom
+# ÉTAPE 7 : Gestion WooCommerce
 # ============================================================================
-echo -e "${BLUE}[7/7] Configuration Dilicom${NC}"
+echo -e "${BLUE}[7/8] Configuration WooCommerce${NC}"
+echo ""
+
+if [ -f "config/env/.env.woo" ]; then
+    set -a
+    source "config/env/.env.woo"
+    set +a
+fi
+
+WOOCOMMERCE_BASE_URL=$(prompt_value "  → URL de base WooCommerce" "${WOOCOMMERCE_BASE_URL:-https://shop.editions-sauvetage.fr}")
+WOOCOMMERCE_VERIFY_SSL=$(prompt_yesno "  → Vérifier le certificat SSL WooCommerce?" "${WOOCOMMERCE_VERIFY_SSL:-y}")
+WOOCOMMERCE_VERSION=$(prompt_value "  → Version de l'API WooCommerce" "${WOOCOMMERCE_VERSION:-wc/v3}")
+WOOCOMMERCE_WP_API=$(prompt_yesno "  → Utiliser l'API WordPress WooCommerce?" "${WOOCOMMERCE_WP_API:-y}")
+WOOCOMMERCE_READER_KEY=$(prompt_value "  → Clé WooCommerce lecture" "${WOOCOMMERCE_READER_KEY:-your_reader_key}")
+WOOCOMMERCE_READER_SECRET=$(prompt_value "  → Secret WooCommerce lecture" "${WOOCOMMERCE_READER_SECRET:-your_reader_secret}")
+WOOCOMMERCE_WRITER_KEY=$(prompt_value "  → Clé WooCommerce écriture" "${WOOCOMMERCE_WRITER_KEY:-your_writer_key}")
+WOOCOMMERCE_WRITER_SECRET=$(prompt_value "  → Secret WooCommerce écriture" "${WOOCOMMERCE_WRITER_SECRET:-your_writer_secret}")
+WOOCOMMERCE_CONSUMER_KEY=$(prompt_value "  → Clé WooCommerce consommateur" "${WOOCOMMERCE_CONSUMER_KEY:-your_consumer_key}")
+WOOCOMMERCE_CONSUMER_SECRET=$(prompt_value "  → Secret WooCommerce consommateur" "${WOOCOMMERCE_CONSUMER_SECRET:-your_consumer_secret}")
+
+cat > "config/env/.env.woo" << EOF
+WOOCOMMERCE_BASE_URL=${WOOCOMMERCE_BASE_URL}
+WOOCOMMERCE_VERIFY_SSL=${WOOCOMMERCE_VERIFY_SSL}
+WOOCOMMERCE_VERSION=${WOOCOMMERCE_VERSION}
+WOOCOMMERCE_WP_API=${WOOCOMMERCE_WP_API}
+WOOCOMMERCE_READER_KEY=${WOOCOMMERCE_READER_KEY}
+WOOCOMMERCE_READER_SECRET=${WOOCOMMERCE_READER_SECRET}
+WOOCOMMERCE_WRITER_KEY=${WOOCOMMERCE_WRITER_KEY}
+WOOCOMMERCE_WRITER_SECRET=${WOOCOMMERCE_WRITER_SECRET}
+WOOCOMMERCE_CONSUMER_KEY=${WOOCOMMERCE_CONSUMER_KEY}
+WOOCOMMERCE_CONSUMER_SECRET=${WOOCOMMERCE_CONSUMER_SECRET}
+EOF
+chmod 600 "config/env/.env.woo"
+echo -e "${GREEN}✓ config/env/.env.woo créé${NC}"
+
+# ============================================================================
+# ÉTAPE 8 : Gestion Henrri
+# ============================================================================
+echo -e "${BLUE}[8/9] Configuration Henrri${NC}"
+echo ""
+
+if [ -f "config/env/.env.henrri" ]; then
+    set -a
+    source "config/env/.env.henrri"
+    set +a
+fi
+
+HENRRI_BASE_URL=$(prompt_value "  → URL de base Henrri" "${HENRRI_BASE_URL:-https://api.henrri.com}")
+HENRRI_API_KEY=$(prompt_value "  → Clé API Henrri" "${HENRRI_API_KEY:-your_api_key}")
+HENRRI_API_SECRET=$(prompt_value "  → Secret API Henrri" "${HENRRI_API_SECRET:-your_api_secret}")
+
+cat > "config/env/.env.henrri" << EOF
+HENRRI_BASE_URL=${HENRRI_BASE_URL}
+HENRRI_API_KEY=${HENRRI_API_KEY}
+HENRRI_API_SECRET=${HENRRI_API_SECRET}
+EOF
+chmod 600 "config/env/.env.henrri"
+echo -e "${GREEN}✓ config/env/.env.henrri créé${NC}"
+
+# ============================================================================
+# ÉTAPE 9 : Gestion Dilicom
+# ============================================================================
+echo -e "${BLUE}[9/10] Configuration Dilicom${NC}"
 echo ""
 
 DILICOM_ID=$(prompt_value "  → ID de Dilicom" "your_dilicom_id_here")
@@ -326,7 +389,7 @@ DILICOM_IN_DIR=$(prompt_value "  → Répertoire d'entrée pour Dilicom" "/home/
 echo ""
 
 # Créer le fichier .env.dilicom
-cat > "app_back/.env.dilicom" << EOF
+cat > "config/env/.env.dilicom" << EOF
 # Configuration des dossiers et des points de montage pour Dilicom
 DILICOM_OUT_DIR=${DILICOM_OUT_DIR}
 DILICOM_IN_DIR=${DILICOM_IN_DIR}
@@ -338,22 +401,22 @@ DILICOM_USER=${DILICOM_ID}
 DILICOM_SECRET=${DILICOM_SECRET}
 
 EOF
-chmod 600 "app_back/.env.dilicom"
+chmod 600 "config/env/.env.dilicom"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
-echo -e "${GREEN}✓ app_back/.env.dilicom créé${NC}"
+echo -e "${GREEN}✓ config/env/.env.dilicom créé${NC}"
 
-cp "app_back/.env.dilicom" "app_front/.env.dilicom"
+cp "config/env/.env.dilicom" "config/env/.env.dilicom"
 
-chmod 600 "app_front/.env.dilicom"
+chmod 600 "config/env/.env.dilicom"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"
 
-echo -e "${GREEN}✓ app_front/.env.dilicom créé${NC}"
+echo -e "${GREEN}✓ config/env/.env.dilicom créé${NC}"
 
 # ============================================================================
 # ÉTAPE 7bis : Gestion du .env racine pour le docker-compose
 # ============================================================================
-echo -e "${BLUE}[7bis/7] Configuration du .env racine pour le docker-compose${NC}"
+echo -e "${BLUE}[7bis/10] Configuration du .env racine pour le docker-compose${NC}"
 echo ""
 
 # Créer le fichier .env
@@ -378,12 +441,14 @@ echo -e "${BLUE}╚════════════════════�
 echo ""
 
 echo -e "${GREEN}Fichiers créés :${NC}"
-echo "  ✓ databases/main/.env.db_main"
-echo "  ✓ migrations/.env.migr"
-echo "  ✓ databases/logs/.env.db_logs"
-echo "  ✓ proxy/.env.proxy"
-echo "  ✓ app_back/.env.fast"
-echo "  ✓ app_front/.env.flask"
+echo "  ✓ config/env/.env.db_main"
+echo "  ✓ config/env/.env.migr"
+echo "  ✓ config/env/.env.db_logs"
+echo "  ✓ config/env/.env.proxy"
+echo "  ✓ config/env/.env.fast"
+echo "  ✓ config/env/.env.flask"
+echo "  ✓ config/env/.env.woo"
+echo "  ✓ config/env/.env.henrri"
 echo ""
 
 echo -e "${YELLOW}Prochaines étapes:${NC}"
