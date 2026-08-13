@@ -338,7 +338,13 @@ class DilicomService:
         metadatas = ObjMetadatas(
             semistructured_data=self._get_metadatas_from_onix(onix_product)
         )
-
+        logger.debug(
+            "Génération d'un objet avec EAN13 %s: GeneralObjects: %s, Book: %s, metadatas: %s",
+            book.isbn,
+            g_o,
+            b,
+            metadatas
+        )
         return {
             "general_object": g_o,
             "book": b,

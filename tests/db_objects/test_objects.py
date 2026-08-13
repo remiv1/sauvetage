@@ -40,3 +40,29 @@ def test_object_create_read_and_update(
     assert retrieved.obj_metadatas.semistructured_data == {"key": "value"}  # type: ignore
     assert len(retrieved.media_files) == 1  # type: ignore
     assert retrieved.media_files[0].file_link == "http://example.com/test_image.jpg"  # type: ignore
+
+
+def test_get_by_ref_finds_existing_object_even_when_inactive(
+    db_session_main: Session,
+    supplier: Suppliers,
+) -> None:
+    """La recherche doit pouvoir retrouver un objet existant pour une mise à jour même s’il est inactif."""
+    from db_models.repositories.objects.objects import ObjectsRepository
+
+    general_object = GeneralObjects(
+        supplier_id=supplier.id,
+        general_object_type="book",
+        ean13="9780000000001",
+        name="Livre ancien",
+        description="Objet déjà existant",
+        is_active=False,
+    )
+    db_session_main.add(general_object)
+    db_session_main.commit()
+
+    repo = ObjectsRepository(db_session_main)
+    found = repo.get_by_ref("9780000000001", only_actives=False)
+
+    assert found is not None
+    assert found.id == general_object.id
+    assert found.ean13 == "9780000000001"

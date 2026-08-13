@@ -97,6 +97,10 @@ cython_debug/
 *.tar.gz
 *.tar.*
 
+# Backup files/logs/sécurité
 backups/
 *.log
 ssh/
+
+# Data
+documents/*

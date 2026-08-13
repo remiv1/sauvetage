@@ -20,6 +20,9 @@ from db_models.objects import (
 )
 from db_models.objects.vat import VatRate
 from db_models.services.objects import sync_collection
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 
 class ObjectsRepository(BaseRepository):
@@ -57,49 +60,50 @@ class ObjectsRepository(BaseRepository):
         self.price_repo = PricesRepository(self.session)
         self.variation_repo = VariationsRepository(self.session)
 
-    def _get_global_select(self):
+    def _get_global_select(self, only_actives: bool = False):
         """Retourne une requête de base pour les objets, avec tous les éléments liés."""
-        return (
-            select(self.model)
-            .where(self.model.is_active == True)  # pylint: disable=singleton-comparison
-            .options(
-                joinedload(self.model.supplier),
-                joinedload(self.model.book),
-                joinedload(self.model.other_object),
-                joinedload(self.model.inventory_movements),
-                joinedload(self.model.obj_metadatas),
-                joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
-                joinedload(self.model.media_files),
-                joinedload(self.model.object_variations),
-                joinedload(self.model.vat_rate),
-                joinedload(self.model.prices),
-            )
+        stmt = select(self.model).options(
+            joinedload(self.model.supplier),
+            joinedload(self.model.book),
+            joinedload(self.model.other_object),
+            joinedload(self.model.inventory_movements),
+            joinedload(self.model.obj_metadatas),
+            joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
+            joinedload(self.model.media_files),
+            joinedload(self.model.object_variations),
+            joinedload(self.model.vat_rate),
+            joinedload(self.model.prices),
         )
+        if only_actives:
+            stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
+        return stmt
 
     def get_all(self, only_actives: bool = False) -> Sequence["GeneralObjects"]:
         """
-        Récupère tous les objets actifs avec tous les éléments liés :
-        (supplier, book, other_object, inventory_movements, obj_metadata, object_tags).
+        Récupère les objets avec tous les éléments liés.
         Returns:
-            List[GeneralObjects]: Une liste de tous les objets actifs avec leurs éléments liés.
+            List[GeneralObjects]: Une liste d'objets avec leurs éléments liés.
         """
-        stmt = self._get_global_select()
-        if only_actives:
-            stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
+        stmt = self._get_global_select(only_actives=only_actives)
         return self.session.execute(stmt).unique().scalars().all()
 
     def get_by_ref(self, reference: str | int, only_actives: bool = False) -> "GeneralObjects":
-        """Récupère un objet par une référence (id ou ean13)."""
-        if isinstance(reference, str) and not reference.isdigit():
-            stmt = self._get_global_select().where(self.model.ean13 == reference)
-        elif isinstance(reference, int) or (
-            isinstance(reference, str) and reference.isdigit()
-        ):
-            stmt = self._get_global_select().where(self.model.id == int(reference))
+        """Récupère un objet par référence EAN13 ou par identifiant interne.
+
+        Les chaînes sont traitées comme EAN13, tandis que les entiers sont traités
+        comme identifiants SQL de l'objet. Cela évite de chercher un enregistrement
+        par l'ID au lieu de l'EAN13 lorsqu'un EAN13 numérique est fourni sous forme de chaîne.
+        """
+        if isinstance(reference, str):
+            stmt = self._get_global_select(only_actives=only_actives).where(
+                self.model.ean13 == reference.strip()
+            )
+        elif isinstance(reference, int):
+            stmt = self._get_global_select(only_actives=only_actives).where(
+                self.model.id == reference
+            )
         else:
             raise ValueError("Reference must be an integer id or a string ean13.")
-        if only_actives:
-            stmt = stmt.where(self.model.is_active == True)  # pylint: disable=singleton-comparison
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
     def get_by_wpwc_id(self, wpwc_id: int) -> Optional["GeneralObjects"]:
@@ -283,7 +287,12 @@ class ObjectsRepository(BaseRepository):
         Si l'objet a un id, met à jour l'objet existant, sinon en crée un nouveau.
         """
         # 1. Récupération éventuelle de l'objet existant
-        instance = self.get_by_ref(general_object.ean13)
+        instance = self.get_by_ref(str(general_object.ean13)) if general_object.ean13 else None
+        logger.debug(
+            "save_or_update_from_object: instance found for ean13 %s: %s",
+            general_object.ean13,
+            instance,
+        )
 
         if instance is None:
             # 2. Création
