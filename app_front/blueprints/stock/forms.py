@@ -202,6 +202,12 @@ class PriceHistoryEntryForm(FlaskForm):
         csrf = False
 
     price = FloatField("Prix de vente", validators=[DataRequired()])
+    vat_rate_id = SelectField(
+        VAT_RATE,
+        coerce=int,
+        choices=[(0, "— Aucun —")],
+        validators=[Optional()],
+    )
     from_date = DateField(
         "Depuis",
         format="%Y-%m-%d",
@@ -265,6 +271,8 @@ class CreateObjectForm(FlaskForm):
                 raise ValidationError("La date de fin doit être postérieure à la date de début.")
             if row.price.data is None or row.price.data <= 0:
                 raise ValidationError("Le prix de vente doit être strictement positif.")
+            if row.vat_rate_id.data in (None, "", 0):
+                raise ValidationError("Le taux de TVA est obligatoire pour chaque prix de vente.")
 
     def populate_from_object(self, obj: Any):
         """Remplit les champs du formulaire à partir d'un objet existant."""
@@ -298,6 +306,7 @@ class CreateObjectForm(FlaskForm):
             for price in sorted_prices:
                 inner = self.prices.append_entry().form  # type: ignore[attr-defined]
                 inner["price"].data = float(price.price)
+                inner["vat_rate_id"].data = str(price.vat_rate_id) if price.vat_rate_id is not None else ""
                 inner["from_date"].data = price.from_date
                 inner["to_date"].data = price.to_date
             return
@@ -305,6 +314,7 @@ class CreateObjectForm(FlaskForm):
         inner = self.prices.append_entry().form  # type: ignore[attr-defined]
         if fallback_price is not None and float(fallback_price) > 0:
             inner["price"].data = float(fallback_price)
+        inner["vat_rate_id"].data = ""
         inner["from_date"].data = date.today()
         inner["to_date"].data = None
 

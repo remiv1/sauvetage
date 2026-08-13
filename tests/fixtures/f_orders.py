@@ -101,6 +101,7 @@ def invoice(
     )  # type: ignore
     invoice_object = Invoice(
         order_id=order.id,
+        customer_id=order.customer_id,
         reference="INV123456",
         total_amount=total_amount,
         vat_amount=vat_amount,

@@ -187,6 +187,16 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
         return None
 
+    def get_valid_prices(self, at: date | None = None) -> list["ObjectPrices"]:
+        """Retourne les lignes de prix valides à la date donnée."""
+        ref_date = at or date.today()
+        return [
+            price
+            for price in self.prices
+            if price.from_date <= ref_date
+            and (price.to_date is None or price.to_date >= ref_date)
+        ]
+
     def get_price(self) -> Decimal:
         """Retourne le prix courant calculé depuis l'historique."""
         current_price = self._current_price_row()
@@ -307,6 +317,12 @@ class ObjectPrices(WorkingBase, QueryMixin):
         Numeric(10, 2, asdecimal=True), nullable=False, default=Decimal("0.00"),
         comment="Prix de l'objet"
     )
+    vat_rate_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.vat_rates.id"),
+        nullable=True,
+        comment="Taux de TVA associé au prix de vente",
+    )
     from_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
@@ -320,6 +336,7 @@ class ObjectPrices(WorkingBase, QueryMixin):
     )
 
     general_object = relationship("GeneralObjects", back_populates="prices")
+    vat_rate = relationship("VatRate", back_populates="object_prices")
 
     @hybrid_property
     def is_current(self) -> bool:

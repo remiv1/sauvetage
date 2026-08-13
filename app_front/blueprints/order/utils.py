@@ -454,18 +454,18 @@ def add_order_line(     # pylint: disable=too-many-arguments
     discount: float = 0,
     vat_rate: float,
     object_variation_id: int | None = None,
-) -> Dict[str, Any]:
+) -> list[dict[str, Any]] | dict[str, Any]:
     """Ajoute une ligne à une commande existante et crée un mouvement de réservation.
 
-    Returns:
-        Dict de la ligne créée.
+    Lorsque l'article a plusieurs prix valides, la commande est découpée en plusieurs
+    lignes de commande, une par tarif actif.
     """
     session = db_conf.get_main_session()
     repo = OrdersRepository(session)
     order = repo.get_by_id(order_id)
     if order is None:
         raise ValueError(_ORDER_NOT_FOUND)
-    line = repo.add_line(
+    created_lines = repo.add_line(
         order,
         general_object_id=general_object_id,
         quantity=quantity,
@@ -475,7 +475,20 @@ def add_order_line(     # pylint: disable=too-many-arguments
         object_variation_id=object_variation_id,
         create_source="backoffice",
     )
-    # Créer un mouvement de réservation dans inventory_movements
+    if isinstance(created_lines, list):
+        for line in created_lines:
+            movement = InventoryMovements(
+                general_object_id=general_object_id,
+                movement_type="reserved",
+                quantity=line.quantity,
+                price_at_movement=float(line.unit_price),
+                source="order",
+                destination=f"CMD-{order_id}",
+                notes=f"Réservation commande {order.reference}",
+            )
+            session.add(movement)
+        return [line.to_dict() for line in created_lines]
+
     movement = InventoryMovements(
         general_object_id=general_object_id,
         movement_type="reserved",
@@ -486,7 +499,7 @@ def add_order_line(     # pylint: disable=too-many-arguments
         notes=f"Réservation commande {order.reference}",
     )
     session.add(movement)
-    return line.to_dict()
+    return created_lines.to_dict()
 
 
 def remove_order_line(order_id: int, line_id: int) -> bool:
