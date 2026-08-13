@@ -77,6 +77,57 @@ def test_book_processing(
         return {"status": "error", "message": str(e)}
 
 
+@router.post("/process-single-xml")
+def process_single_xml_dilicom(
+    session: Annotated[Session, Depends(config.get_main_session)],
+    file_path: str | None = Form(None),
+    remove_after: bool = Form(False),
+    payload: dict | None = Body(None),
+):
+    """
+    Route provisoire pour tester un fichier XML unique sans relancer les archives complètes.
+    Utile pour reproduire un cas précis de fusion livre / EAN / métadonnées.
+    curl -X POST "http://127.0.0.1:8000/api/v1/dilicom/background/process-single-xml" -F "file_path=/home/root/app/dilicom_in/DIF492327800/492327800.xml"
+    """
+    try:
+        if not file_path and payload and isinstance(payload, dict):
+            file_path = payload.get("file_path") or payload.get("filename")
+            if payload.get("remove_after") is not None:
+                remove_after = bool(payload.get("remove_after"))
+
+        if not file_path:
+            message = "Paramètre 'file_path' manquant dans la requête (formulaire ou JSON)."
+            logger.warning(message)
+            return {"status": "error", "message": message}
+
+        xml_path = Path(file_path)
+        if not xml_path.is_absolute():
+            xml_path = (Path(getenv("DILICOM_IN_DIR", "dilicom_in")) / xml_path).resolve()
+
+        if not xml_path.exists() or not xml_path.is_file():
+            message = f"Fichier XML introuvable: {xml_path}"
+            logger.warning(message)
+            return {"status": "error", "message": message}
+
+        ds = DilicomService(session=session)
+        ds._update_books([xml_path])  # pylint: disable=protected-access
+
+        if remove_after:
+            try:
+                xml_path.unlink()
+                logger.info("Fichier %s supprimé après traitement unique.", xml_path)
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.exception("Impossible de supprimer %s: %s", xml_path, exc)
+
+        return {
+            "status": "success",
+            "processed": {"books": 1, "file": str(xml_path)},
+        }
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Erreur lors du traitement du fichier XML Dilicom %s: %s", file_path, exc)
+        return {"status": "error", "message": str(exc)}
+
+
 @router.post("/process-file")
 def process_dilicom_file(
     session: Annotated[Session, Depends(config.get_main_session)],

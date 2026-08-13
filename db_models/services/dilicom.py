@@ -8,7 +8,8 @@ import re
 from os import getenv
 import logging
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import Any, Optional, cast
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -17,14 +18,12 @@ from onixlib.models.generated.v3_0 import (
     Extent,
     Language,
     Subject,
-    List23,
-    List24,
     List74,
 )
-from pathlib import Path
 from dilicom_parser.transport import Connector
 from dilicom_parser.classifier import FilesClassifier
 from dilicom_parser.models import DistributorData, DistributorLineData
+from db_models.objects import ObjectPrices
 from db_models.objects.stocks import DilicomReferencial
 from db_models.services.models import Book
 from db_models.repositories.suppliers import SuppliersRepository, Suppliers
@@ -49,6 +48,19 @@ def _deep_getattr(obj: object, attr_path: str, default: str="N/A") -> str | obje
     else:
         return obj
 
+
+def _read_value(value: Any) -> Any:
+    """Lit une valeur issue de types xsdata/Enum sans lever d'exception."""
+    if value is None:
+        return None
+    if hasattr(value, "value"):
+        inner = getattr(value, "value")
+        if inner is not None and not isinstance(inner, (str, int, float, bool)):
+            return _read_value(inner)
+        return inner
+    return value
+
+
 def _build_label_map(enum_cls: type[Any]) -> dict[str, str]:
     doc = enum_cls.__doc__ or ""
     pattern = r":cvar\s+([A-Z0-9_]+):\s+(.+)"
@@ -59,6 +71,12 @@ def _build_label_map(enum_cls: type[Any]) -> dict[str, str]:
     }
 
 LANGUAGE_LABEL_MAP = _build_label_map(List74)
+LANGUAGE_FRIENDLY_LABEL_MAP = {
+    "FRE": "français",
+    "FR": "français",
+    "ENG": "anglais",
+    "EN": "anglais",
+}
 
 class DilicomService:
     """
@@ -74,6 +92,23 @@ class DilicomService:
         self.objects_repo = ObjectsRepository(self.session)
         self.supplier_repo = SuppliersRepository(self.session)
         self.dilicom_referencial_repo = DilicomReferencialRepository(self.session)
+        self.vat_rates_by_value: dict[float, int] = {}
+        self.vat_rates_by_id: dict[int, float] = {}
+        self.refresh_vat_rate_cache()
+
+    def refresh_vat_rate_cache(self) -> None:
+        """Charge les taux de TVA actifs et les mappe vers l'identifiant associé."""
+        self.vat_rates_by_value = self.objects_repo.get_current_vat_rates()
+        self.vat_rates_by_id = {
+            vat_id: vat_rate for vat_rate, vat_id in self.vat_rates_by_value.items()
+        }
+
+    def _get_vat_rate_id(self, vat_rate_value: float | str | Decimal | None) -> Optional[int]:
+        """Retourne l'ID TVA actif correspondant, sans requête SQL supplémentaire."""
+        if vat_rate_value is None:
+            return None
+        normalized = float(Decimal(str(vat_rate_value)).quantize(Decimal("0.01")))
+        return self.vat_rates_by_value.get(normalized)
 
     def send_updates(self) -> None:
         """
@@ -192,6 +227,7 @@ class DilicomService:
                 "Mise à jour des livres avec %d entrées à traiter.",
                 len(books_to_merge)
             )
+            self.refresh_vat_rate_cache()
             self._update_books(books_to_merge)
 
         # Suppression des fichiers locaux après traitement
@@ -248,34 +284,279 @@ class DilicomService:
             message = f"Erreur lors de la construction du contenu REFEL: {e}"
             raise RuntimeError(message) from e
 
+    def _extract_price_and_vat_from_onix(self, onix_product: Product) -> dict[str, float]:
+        """Extrait le prix HT et le taux TVA depuis les blocs ONIX et leurs taxes.
+
+        Les fichiers Dilicom exposent souvent le HT dans le bloc de taxe sous la clé
+        ``TaxableAmount`` et le TTC dans ``PriceAmount`` pour un prix de type 04.
+        Dans ce cas, la base taxable est le montant réellement utilisé pour la TVA.
+        """
+        aggregated = getattr(onix_product, "price", None)
+        if aggregated is not None:
+            if aggregated.ht is not None:
+                price_ht = float(aggregated.ht)
+            else:
+                price_ht = None
+            if aggregated.vat_rate is not None:
+                vat_rate = float(aggregated.vat_rate)
+            else:
+                vat_rate = None
+        else:
+            price_ht = None
+            vat_rate = None
+
+        raw_product = getattr(onix_product, "raw", None)
+        prices: list[Any] = []
+        for supply in getattr(raw_product, "product_supply", []) or []:
+            for supply_detail in getattr(supply, "supply_detail", []) or []:
+                prices.extend(getattr(supply_detail, "price", []) or [])
+
+        for raw_price in prices:
+            price_type = _read_value(getattr(raw_price, "price_type", None))
+            price_type_code = _read_value(getattr(price_type, "value", None))
+            price_amount = _read_value(getattr(raw_price, "price_amount", None))
+            price_amount_value = _read_value(getattr(price_amount, "value", None))
+
+            for tax in getattr(raw_price, "tax", []) or []:
+                rate_value = _read_value(
+                    getattr(getattr(tax, "tax_rate_percent", None), "value", None)
+                )
+                taxable_value = _read_value(
+                    getattr(getattr(tax, "taxable_amount", None), "value", None)
+                )
+
+                if vat_rate is None and rate_value is not None:
+                    vat_rate = float(rate_value)
+                if price_ht is None and taxable_value is not None:
+                    price_ht = float(taxable_value)
+
+            if (
+                price_ht is None
+                and price_type_code == "01"
+                and price_amount_value is not None
+            ):
+                price_ht = float(price_amount_value)
+
+            if (
+                price_ht is None
+                and price_type_code == "04"
+                and price_amount_value is not None
+                and vat_rate is not None
+            ):
+                price_ht = float(price_amount_value) / (1 + float(vat_rate) / 100)
+
+        if price_ht is None:
+            price_ht = 0.0
+        if vat_rate is None:
+            vat_rate = 0.0
+        return {"price_ht": price_ht, "vat_rate": vat_rate}
+
+    def _extract_publication_year_from_onix(self, onix_product: Product) -> Optional[int]:
+        """Extrait l’année de publication ONIX en supportant plusieurs variantes de structure."""
+        candidates: list[Any] = []
+
+        for source in (
+            getattr(onix_product, "publishing", None),
+            getattr(onix_product, "_raw", None)
+        ):
+            if source is None:
+                continue
+            for attr in ("publication_date", "publishing_date", "date"):
+                value = getattr(source, attr, None)
+                if value is not None:
+                    candidates.append(value)
+
+        raw_product = getattr(onix_product, "_raw", None)
+        publishing_detail = getattr(raw_product, "publishing_detail", None)
+        if publishing_detail is not None:
+            for publication_date in getattr(publishing_detail, "publishing_date", []) or []:
+                if publication_date is not None:
+                    candidates.append(getattr(publication_date, "date", None))
+                    candidates.append(publication_date)
+
+        for candidate in candidates:
+            extracted = _read_value(candidate)
+            if extracted is None:
+                continue
+            if isinstance(extracted, (int, float)):
+                if 1900 <= int(extracted) <= 2100:
+                    return int(extracted)
+                continue
+            digits = re.sub(r"\D", "", str(extracted))
+            if len(digits) >= 4:
+                year = int(digits[:4])
+                if 1900 <= year <= 2100:
+                    return year
+        return None
+
     def _get_metadatas_from_onix(self, onix_product: Product) -> dict[str, Optional[str]]:
-        """
-        Extrait les métadonnées pertinentes d'un objet `Product` ONIX pour un produit.
-        Cette méthode prend un objet `Product` représentant un produit ONIX, et extrait les
-        métadonnées nécessaires pour la mise à jour des livres dans la base de données.
-        
-        param :
-            - onix_product: L'objet `Product` ONIX à partir duquel extraire les métadonnées.
-        """
-        metadatas: dict[str, Optional[str]] = {}
-        subjects = cast(list[Subject], _deep_getattr(onix_product, "descriptive.subjects"))
-        s: dict[str, str] = {}
-        l: dict[str, str] = {}
-        for subject in subjects:
+        """Extrait les métadonnées utiles, y compris les variantes d’images ONIX."""
+        metadatas: dict[str, Any] = {}
+
+        raw_product = getattr(onix_product, "_raw", None)
+        descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+
+        def _normalise_list(value: Any) -> list[Any]:
+            if value is None:
+                return []
+            if isinstance(value, list):
+                return value
+            return [value]
+
+        subject_values: list[str] = []
+        raw_subjects = getattr(descriptive_detail, "subject", []) or []
+        if not raw_subjects and hasattr(onix_product, "descriptive"):
+            raw_subjects = cast(list[Subject], _deep_getattr(onix_product, "descriptive.subjects")) or []
+        for subject in _normalise_list(raw_subjects):
             if not subject:
                 continue
-            k, v = cast(tuple[str, str], subject)
-            s[k] = v
-        metadatas["sujet"] = s.get("20", None)
-        languages = cast(list[Language], _deep_getattr(onix_product, "descriptive.languages"))
-        for language in languages:
+            heading_text = _read_value(getattr(subject, "subject_heading_text", None))
+            subject_code = _read_value(getattr(subject, "subject_code", None))
+            if heading_text:
+                subject_values.append(str(heading_text))
+            elif subject_code:
+                subject_values.append(str(subject_code))
+        if subject_values:
+            metadatas["sujets"] = subject_values
+            metadatas["sujet_principal"] = subject_values[0]
+            metadatas["sujet"] = subject_values[0]
+
+        language_values: list[str] = []
+        raw_languages = getattr(descriptive_detail, "language", []) or []
+        if not raw_languages and hasattr(onix_product, "descriptive"):
+            raw_languages = cast(
+                list[Language],
+                _deep_getattr(
+                    onix_product,
+                    "descriptive.languages"
+                )
+            ) or []
+        for language in _normalise_list(raw_languages):
             if not language:
                 continue
-            k, v = cast(tuple[str, str], language)
-            l[k] = v
-        language_code = l.get("01", None)
+            role = _read_value(getattr(language, "language_role", None))
+            code = _read_value(getattr(language, "language_code", None))
+            if role is not None and code is not None:
+                language_values.append(str(code))
+            elif code is not None:
+                language_values.append(str(code))
+        language_code = None
+        for candidate in ["01", "02", "fr", "fre", "FRE"]:
+            for code in language_values:
+                if str(code).upper() == str(candidate).upper():
+                    language_code = code
+                    break
+            if language_code is not None:
+                break
+        if language_code is None and language_values:
+            language_code = language_values[0]
         if language_code:
-            metadatas["langue"] = LANGUAGE_LABEL_MAP.get(language_code, language_code)
+            normalized_code = str(language_code).upper()
+            if normalized_code.startswith("VALUE_"):
+                normalized_code = normalized_code.split("VALUE_", 1)[1]
+            metadatas["code_langue"] = normalized_code
+            metadatas["langue"] = LANGUAGE_FRIENDLY_LABEL_MAP.get(
+                normalized_code,
+                LANGUAGE_LABEL_MAP.get(normalized_code, normalized_code),
+            )
+
+        collection_names: list[str] = []
+        raw_collections = getattr(descriptive_detail, "collection", []) or []
+        if not raw_collections:
+            raw_collections = []
+        for collection in _normalise_list(raw_collections):
+            if not collection:
+                continue
+            title_details = getattr(collection, "title_detail", []) or []
+            if not isinstance(title_details, list):
+                title_details = [title_details]
+            for title_detail in title_details:
+                title_elements = getattr(title_detail, "title_element", []) or []
+                if not isinstance(title_elements, list):
+                    title_elements = [title_elements]
+                for title_element in title_elements:
+                    title_text = _read_value(getattr(title_element, "title_text", None))
+                    if title_text and str(title_text) not in collection_names:
+                        collection_names.append(str(title_text))
+        if collection_names:
+            metadatas["collection"] = collection_names[0]
+            metadatas["collections"] = collection_names
+
+        measures = getattr(descriptive_detail, "measure", []) or []
+        for measure in measures:
+            measure_type = _read_value(getattr(measure, "measure_type", None))
+            measure_value = _read_value(getattr(measure, "measurement", None))
+            measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
+            if measure_type == "01" and measure_unit == "mm" and measure_value is not None:
+                metadatas["dimensions_largeur_mm"] = str(measure_value)
+            elif measure_type == "02" and measure_unit == "mm" and measure_value is not None:
+                metadatas["dimensions_hauteur_mm"] = str(measure_value)
+            elif measure_type == "03" and measure_unit == "mm" and measure_value is not None:
+                metadatas["dimensions_epaisseur_mm"] = str(measure_value)
+            elif measure_type == "08" and measure_unit == "gr" and measure_value is not None:
+                metadatas["poids_gr"] = str(measure_value)
+
+        if not any(
+            key in metadatas for key in (
+                "dimensions_largeur_mm",
+                "dimensions_hauteur_mm",
+                "dimensions_epaisseur_mm"
+            )
+        ):
+            for measure in measures:
+                measure_type = _read_value(getattr(measure, "measure_type", None))
+                measure_value = _read_value(getattr(measure, "measurement", None))
+                measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
+                if measure_type == "01" and measure_value is not None:
+                    metadatas["dimensions_largeur_mm"] = str(measure_value)
+                elif measure_type == "02" and measure_value is not None:
+                    metadatas["dimensions_hauteur_mm"] = str(measure_value)
+                elif measure_type == "03" and measure_value is not None:
+                    metadatas["dimensions_epaisseur_mm"] = str(measure_value)
+
+        collateral_detail = getattr(getattr(onix_product, "_raw", None), "collateral_detail", None)
+        supporting_resources = getattr(collateral_detail, "supporting_resource", []) or []
+        for resource in supporting_resources:
+            resource_versions = getattr(resource, "resource_version", []) or []
+            for version in resource_versions:
+                feature_map: dict[str, str] = {}
+                for feature in getattr(version, "resource_version_feature", []) or []:
+                    feature_type = _read_value(
+                        getattr(
+                            getattr(
+                                feature,
+                                "resource_version_feature_type",
+                                None,
+                            ),
+                            "value",
+                            None,
+                        )
+                    )
+                    feature_value = _read_value(
+                        getattr(getattr(feature, "feature_value", None), "value", None)
+                    )
+                    if feature_type is not None and feature_value is not None:
+                        feature_map[str(feature_type)] = str(feature_value)
+
+                base_name = feature_map.get("04")
+                if base_name:
+                    label = re.sub(r"[^a-z0-9]+", "_", base_name.lower()).strip("_")
+                    metadatas[label] = base_name
+                    for suffix, feature_code in (
+                        ("width", "02"),
+                        ("height", "03"),
+                        ("size", "07"),
+                    ):
+                        if feature_map.get(feature_code):
+                            metadatas[f"{label}_{suffix}"] = feature_map[feature_code]
+                    resource_link = getattr(version, "resource_link", None)
+                    if resource_link:
+                        link = _read_value(getattr(resource_link[0], "value", None)) \
+                            if isinstance(resource_link, list) \
+                            else _read_value(resource_link)
+                        if link:
+                            metadatas[f"{label}_url"] = str(link)
+
         return metadatas
 
 
@@ -294,8 +575,11 @@ class DilicomService:
         book.supplier_gln = cast(str, _deep_getattr(onix_product, "publisher.gln"))
         book.editor_gln = cast(str, _deep_getattr(onix_product, "editor.gln"))
         book.description = cast(str, _deep_getattr(onix_product, "collateral.description"))
-        book.price_ht = cast(float, _deep_getattr(onix_product, "price.ht", default="0.0"))
-        book.vat_rate = cast(float, _deep_getattr(onix_product, "price.vat_rate", default="0.0"))
+
+        price_data = self._extract_price_and_vat_from_onix(onix_product)
+        book.price_ht = float(price_data["price_ht"])
+        book.vat_rate = float(price_data["vat_rate"])
+
         authors = _deep_getattr(onix_product, "authors")
         authors = [a.full_name for a in authors if hasattr(a, "full_name")] \
                         if isinstance(authors, list) \
@@ -304,12 +588,23 @@ class DilicomService:
         logger.debug("Mise à jour du livre avec ISBN %s et titre %s", book.isbn, book.title)
         book.supplier = self.supplier_repo.get_by_gln13(book.supplier_gln)
         book.editor = self.supplier_repo.get_by_gln13(book.editor_gln)
-        book.vat_rate_id = self.objects_repo.get_vat_rate_id(book.vat_rate)
-        book.year = cast(str,_deep_getattr(onix_product, "publishing.publication_date"))[:4]
+        vat_rate_id = self._get_vat_rate_id(book.vat_rate)
+        if book.vat_rate is not None and vat_rate_id is None:
+            logger.warning(
+                "Aucun taux de TVA actif trouvé pour la valeur %.2f lors de l'import ONIX %s.",
+                float(book.vat_rate),
+                book.isbn,
+            )
+        publication_year = self._extract_publication_year_from_onix(onix_product)
+        if publication_year is not None:
+            book.year = str(publication_year)
         extents = cast(list[Extent], _deep_getattr(onix_product, "_raw.descriptive_detail.extent"))
         for extent in extents:
-            if extent.extent_type == List23.VALUE_00 and extent.extent_unit == List24.VALUE_03:
-                book.pages = cast(int, _deep_getattr(extent, "extent_value"))
+            extent_type = _read_value(getattr(extent, "extent_type", None))
+            extent_unit = _read_value(getattr(extent, "extent_unit", None))
+            extent_value = _read_value(getattr(extent, "extent_value", None))
+            if extent_type == "00" and extent_unit == "03" and extent_value is not None:
+                book.pages = int(extent_value)
                 break
         if not book.supplier:
             logger.info("Création d'un nouveau fournisseur %s nécessaire.", book.supplier_gln)
@@ -324,12 +619,11 @@ class DilicomService:
             ean13=book.isbn,
             name=book.title,
             description=book.description,
-            vat_rate_id=book.vat_rate_id,
             )
         b = Books(
             author=book.authors,
             diffuser=book.supplier_name,
-            publication_year=book.year,
+            publication_year=int(book.year) if book.year is not None else None,
         )
         if book.pages:
             b.pages = cast(int, book.pages)
@@ -345,11 +639,17 @@ class DilicomService:
             b,
             metadatas
         )
+        object_price = ObjectPrices(
+            price=float(book.price_ht),
+            vat_rate_id=vat_rate_id,
+            from_date=date.today(),
+            to_date=None,
+        )
         return {
             "general_object": g_o,
             "book": b,
             "obj_metadatas": metadatas,
-            "price": float(book.price_ht),
+            "object_price": object_price,
         }
 
 
@@ -375,6 +675,7 @@ class DilicomService:
                     g_o = values["general_object"]
                     b = values["book"]
                     m = values["obj_metadatas"]
+                    object_price = values.get("object_price")
                 else:
                     logger.warning(
                         "Eléments manquants pour le livre %s avec les données ONIX du fichier %s,",
@@ -384,7 +685,7 @@ class DilicomService:
                     general_object=g_o,
                     book=b,
                     obj_metadatas=m,
-                    price=values["price"],
+                    object_price=object_price,
                 )
                 list_ean13.append(g_o.ean13)
             self.objects_repo.commit_object()
@@ -480,7 +781,7 @@ class DilicomService:
             )
         elif b1.mvt == "05":
             logger.info(
-                "Génération d'un objet Suppliers inactif bloc 1 pour le distributeur %s avec mvt %s",
+                "Génération d'un Supplier inactif pour le distributeur %s avec mvt %s",
                 b1.rs1,
                 b1.mvt
             )

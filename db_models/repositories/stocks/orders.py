@@ -325,7 +325,7 @@ class OrderRepository(BaseRepository):
         if order is None:
             raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
         price = float(obj.purchase_price) if obj.purchase_price else 0.0
-        vat_rate = float(obj.vat_rate.rate) if obj.vat_rate else 20.0
+        vat_rate = obj.get_current_vat_rate() if obj.get_current_vat_rate() is not None else 20.0
         order_details = Order(
             price=price,
             vat_rate=vat_rate,

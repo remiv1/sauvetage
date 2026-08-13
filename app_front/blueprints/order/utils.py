@@ -647,7 +647,9 @@ def retry_henrri_invoice(invoice_id: int) -> Invoice:
             continue
 
         if remote_invoice.finalized:
-            invoice.henrri_id = str(remote_invoice.id) if remote_invoice.id is not None else external_id
+            invoice.henrri_id = str(remote_invoice.id) \
+                if remote_invoice.id is not None \
+                else external_id
             invoice.last_synced_at = datetime.now(timezone.utc)
             invoice_repo.add_sync_log(
                 invoice,

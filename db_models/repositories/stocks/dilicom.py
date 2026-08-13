@@ -72,7 +72,7 @@ class DilicomReferencialRepository(BaseRepository):
         Args:
             row: L'instance de `DilicomReferencial` dont on veut déterminer le statut.
         Returns:
-            Le statut de la référence, qui peut être "to_create", "created", "to_delete" ou "deleted".
+            Le statut de la référence, qui peut être "to_create/created", "to_delete/deleted".
         Raises:
             ValueError: Si le statut de la référence ne correspond à aucun des cas attendus.
         """
@@ -180,13 +180,22 @@ class DilicomReferencialRepository(BaseRepository):
         row = self.get_last_by_ean13(ean13)
         if not row:
             raise ValueError(f"Aucune référence Dilicom trouvée pour l'EAN13 : {ean13}")
+
         movement = self._get_status(row)
         if movement == "to_create":
             next_movement = "created"
         elif movement == "to_delete":
             next_movement = "deleted"
+        elif movement in {"created", "deleted"}:
+            logger.info(
+                "Référence Dilicom déjà dans un statut final %s ; rien à faire pour l'EAN13=%s.",
+                movement,
+                ean13,
+            )
+            return row
         else:
             raise ValueError(f"Statut de mouvement inconnu pour mise à jour : {movement}")
+
         row.dilicom_synced = True
         new_row = self.create_status(ean13=ean13, gln13=row.gln13, movement=next_movement)
         self.session.add(new_row)

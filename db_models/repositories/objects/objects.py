@@ -5,10 +5,12 @@ Module pour les dépôts des objets vendus par la librairie. Contient les classe
 """
 
 from datetime import date, timedelta
+from decimal import Decimal
+from logging import getLogger
 from typing import Any, Sequence, Optional
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func, or_
 from sqlalchemy.orm import joinedload
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from db_models.repositories.base_repo import BaseRepository
 from db_models.objects import (
     GeneralObjects,
@@ -17,10 +19,10 @@ from db_models.objects import (
     ObjMetadatas,
     ObjectTags,
     MediaFiles,
+    ObjectPrices,
 )
 from db_models.objects.vat import VatRate
 from db_models.services.objects import sync_collection
-from logging import getLogger
 
 logger = getLogger(__name__)
 
@@ -71,7 +73,6 @@ class ObjectsRepository(BaseRepository):
             joinedload(self.model.object_tags).joinedload(ObjectTags.tag),
             joinedload(self.model.media_files),
             joinedload(self.model.object_variations),
-            joinedload(self.model.vat_rate),
             joinedload(self.model.prices),
         )
         if only_actives:
@@ -122,24 +123,43 @@ class ObjectsRepository(BaseRepository):
         return self.session.execute(stmt).unique().scalars().all()
 
     def get_vat_rate(self, object_id: int) -> Optional[float]:
-        """Récupère le taux de TVA d'un objet à partir de son id."""
+        """Récupère le taux de TVA du prix courant d'un objet à partir de son id."""
         stmt = (
             select(self.model)
             .where(self.model.id == object_id, self.model.is_active == True)  # pylint: disable=singleton-comparison
-            .options(joinedload(self.model.vat_rate))
+            .options(joinedload(self.model.prices))
         )
         obj = self.session.execute(stmt).unique().scalar_one_or_none()
-        if obj and obj.vat_rate:
-            return obj.vat_rate.rate
-        return None
+        if obj is None:
+            return None
+        current_vat = obj.get_current_vat_rate()
+        if current_vat is None:
+            return None
+        return current_vat
 
     def get_vat_rate_id(self, vat_rate: float) -> Optional[int]:
         """Récupère l'id d'un taux de TVA à partir de son taux."""
-        stmt = select(VatRate).where(and_(VatRate.rate == vat_rate, VatRate.date_end == None))  # pylint: disable=singleton-comparison
+        stmt = select(VatRate).where(
+            and_(
+                VatRate.rate == Decimal(str(vat_rate)).quantize(Decimal("0.01")),
+                or_(VatRate.date_end == None, VatRate.date_end > func.now()),  # pylint: disable=singleton-comparison, not-callable
+            )
+        )
         vat_rate_obj = self.session.execute(stmt).scalar_one_or_none()
         if vat_rate_obj:
             return vat_rate_obj.id
         return None
+
+    def get_current_vat_rates(self) -> dict[float, int]:
+        """Retourne le mapping des taux de TVA actuellement valides vers leur identifiant."""
+        stmt = select(VatRate).where(
+            or_(VatRate.date_end == None, VatRate.date_end > func.now())  # pylint: disable=singleton-comparison, not-callable
+        )
+        mapping: dict[float, int] = {}
+        for vat_rate in self.session.execute(stmt).scalars().all():
+            rounded_rate = float(Decimal(str(vat_rate.rate)).quantize(Decimal("0.01")))
+            mapping[rounded_rate] = vat_rate.id
+        return mapping
 
     def commit_object(self) -> None:
         """
@@ -197,8 +217,6 @@ class ObjectsRepository(BaseRepository):
                                         if getattr(form, 'purchase_price', None) \
                                               and form.purchase_price.data \
                                         else None   # type: ignore
-        vat_id = getattr(form, 'vat_rate_id', None) and form.vat_rate_id.data
-        instance.vat_rate_id = int(vat_id) if vat_id else None
         self.session.flush()
         form.general_object_id.data = instance.id
 
@@ -251,22 +269,34 @@ class ObjectsRepository(BaseRepository):
             session=self.session,
         )
 
-    def _set_current_price(self, instance: GeneralObjects, price: float) -> None:
+    def _set_current_price(
+            self,
+            instance: GeneralObjects,
+            object_price: ObjectPrices,
+        ) -> None:
         """Ajoute ou remplace le prix courant sans toucher aux autres périodes."""
-        price_model = instance.__mapper__.relationships["prices"].mapper.class_
         today = date.today()
         current_price = next((row for row in instance.prices if row.is_current), None)
         if current_price is not None:
-            if float(current_price.price or 0.0) == float(price):
+            if (
+                float(current_price.price or 0.0) == float(object_price.price)
+                and (
+                    object_price.vat_rate_id is None
+                    or current_price.vat_rate_id == object_price.vat_rate_id
+                )
+            ):
                 return
             if current_price.from_date == today and current_price.to_date is None:
-                current_price.price = float(price)
+                current_price.price = float(object_price.price)
+                if object_price.vat_rate_id is not None:
+                    current_price.vat_rate_id = object_price.vat_rate_id
                 return
             current_price.to_date = today - timedelta(days=1)
 
         instance.prices.append(
-            price_model(
-                price=float(price),
+            ObjectPrices(
+                price=float(object_price.price),
+                vat_rate_id=object_price.vat_rate_id,
                 from_date=today,
                 to_date=None,
             )
@@ -280,32 +310,57 @@ class ObjectsRepository(BaseRepository):
             obj_metadatas: Optional[ObjMetadatas] = None,
             object_tags: Optional[ObjectTags] = None,
             media_files: Optional[MediaFiles] = None,
-            price: Optional[float] = None,
+            object_price: Optional[ObjectPrices] = None,
             ) -> int:
         """
         Sauvegarde un objet à partir d'une instance de GeneralObjects complète.
         Si l'objet a un id, met à jour l'objet existant, sinon en crée un nouveau.
         """
-        # 1. Récupération éventuelle de l'objet existant
-        instance = self.get_by_ref(str(general_object.ean13)) if general_object.ean13 else None
-        logger.debug(
-            "save_or_update_from_object: instance found for ean13 %s: %s",
-            general_object.ean13,
-            instance,
+        normalized_ean = (
+            str(general_object.ean13).strip() if general_object.ean13 is not None else None
         )
+        if normalized_ean is not None:
+            general_object.ean13 = normalized_ean
+
+        # 1. Récupération éventuelle de l'objet existant
+        instance = None
+        if general_object.id is not None:
+            instance = self.session.get(self.model, general_object.id)
+        if instance is None and normalized_ean:
+            instance = self.get_by_ref(normalized_ean, only_actives=False)
+        if instance is None and normalized_ean:
+            instance = self.session.execute(
+                select(self.model).where(self.model.ean13 == normalized_ean)
+            ).scalar_one_or_none()
 
         if instance is None:
             # 2. Création
-            instance = general_object
+            instance = GeneralObjects()
+            for attr, value in vars(general_object).items():
+                if attr not in ("id", "_sa_instance_state") and value is not None:
+                    setattr(instance, attr, value)
             self.session.add(instance)
         else:
             # 3. Mise à jour : on copie les champs utiles
             for attr, value in vars(general_object).items():
-                if attr not in ("id", "_sa_instance_state"):
+                if attr not in ("id", "_sa_instance_state") and value is not None:
                     setattr(instance, attr, value)
 
-        # 4. Flush pour obtenir instance.id si nouvel objet
-        self.session.flush()
+        try:
+            # 4. Flush pour obtenir instance.id si nouvel objet
+            self.session.flush()
+        except IntegrityError:
+            self.session.rollback()
+            if normalized_ean:
+                instance = self.session.execute(
+                    select(self.model).where(self.model.ean13 == normalized_ean)
+                ).scalar_one_or_none()
+                if instance is None:
+                    raise
+                for attr, value in vars(general_object).items():
+                    if attr not in ("id", "_sa_instance_state") and value is not None:
+                        setattr(instance, attr, value)
+                self.session.flush()
 
         # 5. Assignation des relations (SQLAlchemy gère les FK)
         if book:
@@ -323,8 +378,20 @@ class ObjectsRepository(BaseRepository):
         if media_files:
             instance.media_files = media_files
 
-        if price is not None:
-            self._set_current_price(instance, price)
+        if object_price is not None:
+            self._set_current_price(instance, object_price)
+
+        logger.debug(
+            "[ObjectsRepository] objet avant commit: ean13=%s, name=%s, description=%s, book=%s, obj_metadatas=%s, prices=%s, object_price=%s, vat_rate_id=%s",
+            getattr(instance, "ean13", None),
+            getattr(instance, "name", None),
+            getattr(instance, "description", None),
+            getattr(instance, "book", None),
+            getattr(instance, "obj_metadatas", None),
+            getattr(instance, "prices", None),
+            object_price,
+            getattr(object_price, "vat_rate_id", None),
+        )
 
         # 6. Retour verse l'appelant (id de l'objet créé ou mis à jour)
         return instance.id

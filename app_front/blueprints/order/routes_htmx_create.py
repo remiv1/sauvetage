@@ -316,7 +316,6 @@ def search_articles():
                 "name": a.name,
                 "ean13": a.ean13 or "",
                 "price": float(a.price) if a.price else 0,
-                "vat_rate_id": a.vat_rate_id,
                 "variations": variations,
             })
         return render_template(ARTICLE_DROPDOWN, articles=articles, query=query)

@@ -1,14 +1,36 @@
 #! /usr/bin/env bash
 
+resolve_alembic_cmd() {
+	local project_root="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+	local candidates=(
+		"${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/alembic}"
+		"$project_root/venv/bin/alembic"
+		"$project_root/.venv/bin/alembic"
+		"alembic"
+	)
+	for candidate in "${candidates[@]}"; do
+		if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+			echo "$candidate"
+			return 0
+		fi
+	done
+	return 1
+}
+
 run_alembic_with_retry() {
 	local cfg="$1"
 	local attempts=${2:-3}
 	local delay=${3:-10}
 	local i=1
+	local alembic_cmd
+	alembic_cmd="$(resolve_alembic_cmd)" || {
+		echo "❌ Alembic binaire introuvable dans le venv du projet ni dans PATH"
+		return 127
+	}
 	while :; do
 		echo "🚀 Alembic: tentative $i/$attempts pour $cfg"
 		set +e
-		alembic -c "$cfg" upgrade head
+		"$alembic_cmd" -c "$cfg" upgrade head
 		rc=$?
 		set -e
 		if [ $rc -eq 0 ]; then

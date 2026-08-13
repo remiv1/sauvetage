@@ -19,7 +19,6 @@ class Book:
     price_ht: Optional[float] = None
     price_ttc: Optional[float] = None
     vat_rate: Optional[float] = None
-    vat_rate_id: Optional[int] = None
     authors: Optional[str] = None
     year: Optional[str] = None
     pages: Optional[int] = None

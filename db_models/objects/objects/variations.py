@@ -23,7 +23,6 @@ class ObjectVariations(WorkingBase, QueryMixin):
     - description : Description spécifique à la variation (nullable)
     - price : Prix de la variation
     - purchase_price : Prix d'achat de la variation (nullable)
-    - vat_rate_id : Taux de TVA de la variation (nullable)
     - created_at : Date de création
     - updated_at : Date de dernière mise à jour
     - is_active : Indique si la variation est active pour la vente
@@ -60,12 +59,6 @@ class ObjectVariations(WorkingBase, QueryMixin):
         Numeric(10, 2), nullable=True, default=0.0,
         comment="Prix d'achat de l'objet"
     )
-    vat_rate_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        ForeignKey("app_schema.vat_rates.id"),
-        nullable=True,
-        comment="Code TVA associé à l'objet (référence la table vat_rates)",
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -88,7 +81,6 @@ class ObjectVariations(WorkingBase, QueryMixin):
         back_populates="object_variations",
         uselist=False,
     )
-    vat_rate = relationship("VatRate")
 
     def __repr__(self) -> str:
         return (
@@ -104,7 +96,6 @@ class ObjectVariations(WorkingBase, QueryMixin):
             "sku": self.id,
             "regular_price": str(self.price),
             "sale_price": str(self.price) if self.price > 0 else None,
-            "tax_class": self.vat_rate.label if self.vat_rate else None,
             "manage_stock": "parent",
             "backorders": "notify",
         }
@@ -118,7 +109,6 @@ class ObjectVariations(WorkingBase, QueryMixin):
             "description": self.description,
             "price": self.price,
             "purchase_price": self.purchase_price,
-            "vat_rate_id": self.vat_rate_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "is_active": self.is_active,

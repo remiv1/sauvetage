@@ -234,7 +234,7 @@ class MongoDBLogger:
         """
         return self.log(
             level=self.levels[1],
-            message=f"Événement métier Dilicom: {event}",
+            message=f"Dilicom: {event}",
             log_type=self.log_types[3],
             resource_type="dilicom_event",
             obj_metadata=obj_metadata,

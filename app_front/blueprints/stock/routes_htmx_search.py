@@ -167,14 +167,14 @@ def create_tag_htmx():
 def object_form():
     """Retourne le formulaire de base de l'objet en mode création (HTMX)."""
     form = CreateObjectForm()
-    vat_rates = get_vat_rates()
-    form.vat_rate_id.choices = vat_rates
     ean13 = request.args.get("ean13", "")
     from_inventory = request.args.get("from_inventory", "")
     if ean13:
         form.ean_13.data = ean13
     return render_template(
-        OBJECT_FORM, form=form, form_state="create", vat_rates=vat_rates,
+        OBJECT_FORM,
+        form=form,
+        form_state="create",
         from_inventory=from_inventory,
     )
 
@@ -185,6 +185,7 @@ def price_row():
     index_str = request.args.get("index", "0").strip()
     index = int(index_str) if index_str.isdigit() else 0
     row_form = PriceHistoryEntryForm(prefix=f"prices-{index}")
+    row_form.vat_rate_id.choices = get_vat_rates()
     row_form.from_date.data = None
     row_form.to_date.data = None
     return render_template(PRICE_ROW, price_row=row_form, disabled=False)
@@ -196,16 +197,13 @@ def object_view_or_edit(action: str, object_id: int):
     obj = get_object_by_id(object_id)
     if obj is None:
         return UNKNOWN_OBJECT, 404
-    vat_rates = get_vat_rates()
     form = CreateObjectForm()
-    form.vat_rate_id.choices = vat_rates
     form.populate_from_object(obj)
     return render_template(
         OBJECT_FORM,
         form=form,
         form_state=action,
         obj=obj,
-        vat_rates=vat_rates,
     )
 
 
@@ -245,9 +243,7 @@ def object_complement():
 @bp_stock_htmx_search.post("/object/create")
 def create_object():
     """Valide et crée un nouvel objet à partir du formulaire global (HTMX)."""
-    vat_rates = get_vat_rates()
     form = CreateObjectForm()
-    form.vat_rate_id.choices = vat_rates
     from_inventory = request.form.get("from_inventory", "")
     if not form.validate_on_submit():
         logger.warning("[create_object] Erreurs de validation : %s", form.errors)
@@ -274,7 +270,6 @@ def create_object():
                     OBJECT_FORM,
                     form=form,
                     form_state="create",
-                    vat_rates=vat_rates,
                     from_inventory=from_inventory,
                 ),
                 422,
@@ -284,7 +279,6 @@ def create_object():
             OBJECT_FORM,
             form=form,
             form_state="create",
-            vat_rates=vat_rates,
             from_inventory=from_inventory,
         ),
         423,
@@ -297,9 +291,7 @@ def edit_object(object_id: int):
     obj = get_object_by_id(object_id)
     if obj is None:
         return UNKNOWN_OBJECT, 404
-    vat_rates = get_vat_rates()
     form = CreateObjectForm()
-    form.vat_rate_id.choices = vat_rates
     if not form.validate_on_submit():
         logger.warning("[edit_object %s] Erreurs de validation : %s", object_id, form.errors)
     if form.validate_on_submit():
@@ -316,7 +308,6 @@ def edit_object(object_id: int):
                     form=form,
                     form_state="edit",
                     obj=obj,
-                    vat_rates=vat_rates,
                 ),
                 422,
             )
@@ -326,7 +317,6 @@ def edit_object(object_id: int):
             form=form,
             form_state="edit",
             obj=obj,
-            vat_rates=vat_rates,
         ),
         422,
     )
@@ -396,13 +386,11 @@ def variations_list(object_id: int):
     if obj is None:
         return UNKNOWN_OBJECT, 404
     variations = get_variations(object_id)
-    vat_rates = get_vat_rates()
     form_state = request.args.get('form_state', 'view')
     return render_template(
         VARIATIONS_TABLE,
         obj=obj,
         variations=variations,
-        vat_rates=vat_rates,
         form_state=form_state,
     )
 
@@ -414,13 +402,9 @@ def variation_create_form(object_id: int):
     if obj is None:
         return UNKNOWN_OBJECT, 404
     form = VariationForm()
-    vat_rates = get_vat_rates()
-    form.vat_rate_id.choices = vat_rates
     # Pré-remplir prix depuis l'objet parent
     form.price.data = str(obj.price) if obj.price is not None else ""
     form.purchase_price.data = str(obj.purchase_price) if obj.purchase_price is not None else ""
-    if obj.vat_rate_id is not None:
-        form.vat_rate_id.data = str(obj.vat_rate_id)
     return render_template(
         VARIATION_FORM,
         form=form,
@@ -441,15 +425,12 @@ def variation_edit_form(object_id: int, variation_id: int):
     if variation is None:
         return "<p>Variation introuvable.</p>", 404
     form = VariationForm()
-    vat_rates = get_vat_rates()
-    form.vat_rate_id.choices = vat_rates
     form.id.data = str(variation.id)
     form.name.data = variation.name or ""
     form.description.data = variation.description or ""
     form.price.data = str(variation.price) if variation.price is not None else ""
     form.purchase_price.data = str(variation.purchase_price) \
         if variation.purchase_price is not None else ""
-    form.vat_rate_id.data = str(variation.vat_rate_id) if variation.vat_rate_id is not None else ""
     form.is_active.data = variation.is_active
     return render_template(
         VARIATION_FORM,
@@ -464,7 +445,6 @@ def variation_edit_form(object_id: int, variation_id: int):
 def variation_create(object_id: int):
     """Crée une nouvelle variation et retourne le tableau mis à jour."""
     form = VariationForm()
-    form.vat_rate_id.choices = get_vat_rates()
     if not form.validate_on_submit():
         logger.warning("Formulaire variation invalide : %s", form.errors)
         return render_template(
@@ -485,7 +465,6 @@ def variation_create(object_id: int):
         VARIATIONS_TABLE,
         obj=obj,
         variations=variations,
-        vat_rates=get_vat_rates(),
         form_state='edit',
     )
 
@@ -494,7 +473,6 @@ def variation_create(object_id: int):
 def variation_edit(object_id: int, variation_id: int):
     """Met à jour une variation et retourne le tableau mis à jour."""
     form = VariationForm()
-    form.vat_rate_id.choices = get_vat_rates()
     if not form.validate_on_submit():
         logger.warning("Formulaire variation invalide : %s", form.errors)
         obj = get_object_by_id(object_id)
@@ -518,7 +496,6 @@ def variation_edit(object_id: int, variation_id: int):
         VARIATIONS_TABLE,
         obj=obj,
         variations=variations,
-        vat_rates=get_vat_rates(),
         form_state='edit',
     )
 
@@ -537,7 +514,6 @@ def variation_delete(object_id: int, variation_id: int):
         VARIATIONS_TABLE,
         obj=obj,
         variations=variations,
-        vat_rates=get_vat_rates(),
         form_state='edit',
     )
 
