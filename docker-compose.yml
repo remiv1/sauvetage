@@ -45,6 +45,7 @@ services:
     volumes:
       - sauv-dilicom-in:${DILICOM_IN_DIR}:rw,z
       - sauv-dilicom-out:${DILICOM_OUT_DIR}:rw,z
+      - sauv-dilicom-logs:/var/log/dilicom:rw,z
       - sauv-pictures:/home/root/app/documents/shared/pictures:rw,z
     networks:
       - sauv-secure
@@ -183,6 +184,13 @@ volumes:
     driver_opts:
       type: none
       device: ./documents/back/dilicom/out
+      o: bind
+
+  sauv-dilicom-logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./app_back/logs
       o: bind
 
 networks:

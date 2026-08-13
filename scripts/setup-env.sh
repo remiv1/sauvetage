@@ -222,6 +222,10 @@ echo ""
 BACKEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
 BACKEND_DEBUG=$(prompt_value "  → Mode DEBUG (true/false)" "false")
 SECURITY_TOKEN=$(generate_password)
+DILICOM_API_URL=$(prompt_value "  → URL API Dilicom interne" "http://localhost:8000/api/v1")
+DILICOM_FETCH_ARCHIVES=$(prompt_yesno "  → Télécharger aussi les archives de retours Dilicom?" "n")
+DILICOM_POST_CRON=$(prompt_value "  → Planification envoi des référentiels" "0 22 * * *")
+DILICOM_FETCH_CRON=$(prompt_value "  → Planification récupération des retours" "0 6-12 * * *")
 
 echo -e "${BLUE}[5bis/10] Configuration mailer SMTP${NC}"
 
@@ -243,6 +247,12 @@ DEBUG="${BACKEND_DEBUG}"
 
 # Communication FastAPI - Flask
 SECURITY_TOKEN="${SECURITY_TOKEN}"
+
+# Planification Dilicom via cron dans le conteneur
+DILICOM_API_URL="${DILICOM_API_URL}"
+DILICOM_FETCH_ARCHIVES="${DILICOM_FETCH_ARCHIVES}"
+DILICOM_POST_CRON="${DILICOM_POST_CRON}"
+DILICOM_FETCH_CRON="${DILICOM_FETCH_CRON}"
 
 # SMTP Configuration
 SMTP_SERVER="${SMTP_SERVER}"

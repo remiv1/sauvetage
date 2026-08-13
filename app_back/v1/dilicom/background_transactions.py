@@ -24,22 +24,6 @@ router = APIRouter(prefix="/background", tags=["dilicom", "background"])
 logger = logging.getLogger(__name__)
 
 
-@router.post("/parse-returns")
-def send_dilicom_order(
-    session: Annotated[Session, Depends(config.get_main_session)],
-    archives: bool = False,
-):
-    """
-    Route pour déclencher la récupération et le traitement des fichiers de retour de Dilicom.
-    C'est une route de test, destinée à être appelée manuellement pour les tests.
-    """
-    try:
-        ds = DilicomService(session=session)
-        ds.fetch_returns(archives=archives)
-        return {"status": "success", "message": "Fichiers de retour traités avec succès."}
-    except ValueError as e:
-        return {"status": "error", "message": str(e)}
-
 @router.post("/post-referencial")
 def post_referencial_dilicom(
     session: Annotated[Session, Depends(config.get_main_session)],
