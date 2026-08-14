@@ -1,8 +1,9 @@
 """Module utilitaire pour la gestion des documents (génération de PDF, etc.)."""
 
 from pathlib import Path
+
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML
+
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -32,9 +33,16 @@ def create_document_buffer(
 def render_html_to_pdf(html: str, base_url: str | None = None) -> bytes:
     """
     Convertit un contenu HTML en PDF et retourne le résultat sous forme de bytes.
-    Utilise une bibliothèque comme WeasyPrint, xhtml2pdf, ou wkhtmltopdf.
+    Utilise WeasyPrint et exige les dépendances système associées.
     """
-    # Exemple avec WeasyPrint (assurez-vous d'avoir installé la bibliothèque)
+    try:
+        from weasyprint import HTML # pylint: disable=C0415
+    except (ImportError, OSError, RuntimeError) as exc:
+        raise RuntimeError(
+            "WeasyPrint n'est pas disponible : installez les dépendances système requises "
+            "(libpango, libharfbuzz, libcairo, etc.)."
+        ) from exc
+
     pdf = HTML(string=html, base_url=base_url).write_pdf()
     if not pdf:
         raise ValueError("La génération du PDF a échoué.")

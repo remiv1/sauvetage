@@ -17,7 +17,6 @@ from onixlib import Notice, Product
 from onixlib.models.generated.v3_0 import (
     Extent,
     Language,
-    Subject,
     List74,
 )
 from dilicom_parser.transport import Connector
@@ -391,10 +390,6 @@ class DilicomService:
 
     def _get_metadatas_from_onix(self, onix_product: Product) -> dict[str, Optional[str]]:
         """Extrait les métadonnées utiles, y compris les variantes d’images ONIX."""
-        metadatas: dict[str, Any] = {}
-
-        raw_product = getattr(onix_product, "_raw", None)
-        descriptive_detail = getattr(raw_product, "descriptive_detail", None)
 
         def _normalise_list(value: Any) -> list[Any]:
             if value is None:
@@ -403,118 +398,186 @@ class DilicomService:
                 return value
             return [value]
 
-        subject_values: list[str] = []
-        raw_subjects = getattr(descriptive_detail, "subject", []) or []
-        if not raw_subjects and hasattr(onix_product, "descriptive"):
-            raw_subjects = cast(list[Subject], _deep_getattr(onix_product, "descriptive.subjects")) or []
-        for subject in _normalise_list(raw_subjects):
-            if not subject:
-                continue
-            heading_text = _read_value(getattr(subject, "subject_heading_text", None))
-            subject_code = _read_value(getattr(subject, "subject_code", None))
-            if heading_text:
-                subject_values.append(str(heading_text))
-            elif subject_code:
-                subject_values.append(str(subject_code))
-        if subject_values:
-            metadatas["sujets"] = subject_values
-            metadatas["sujet_principal"] = subject_values[0]
-            metadatas["sujet"] = subject_values[0]
+        def _format_measurement(value: Any) -> Optional[str]:
+            if value is None:
+                return None
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                return None
+            if numeric_value.is_integer():
+                return str(int(numeric_value))
+            return str(numeric_value).rstrip("0").rstrip(".")
 
-        language_values: list[str] = []
-        raw_languages = getattr(descriptive_detail, "language", []) or []
-        if not raw_languages and hasattr(onix_product, "descriptive"):
-            raw_languages = cast(
-                list[Language],
-                _deep_getattr(
-                    onix_product,
-                    "descriptive.languages"
-                )
-            ) or []
-        for language in _normalise_list(raw_languages):
-            if not language:
-                continue
-            role = _read_value(getattr(language, "language_role", None))
-            code = _read_value(getattr(language, "language_code", None))
-            if role is not None and code is not None:
-                language_values.append(str(code))
-            elif code is not None:
-                language_values.append(str(code))
-        language_code = None
-        for candidate in ["01", "02", "fr", "fre", "FRE"]:
-            for code in language_values:
-                if str(code).upper() == str(candidate).upper():
-                    language_code = code
+        def _convert_to_mm(value: Any, unit: Any) -> Optional[float]:
+            if value is None:
+                return None
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                return None
+            unit_key = str(unit or "").strip().lower()
+            conversion_factors = {
+                "mm": 1,
+                "cm": 10,
+                "m": 1000,
+                "in": 25.4,
+                "inch": 25.4,
+                "inches": 25.4,
+            }
+            factor = conversion_factors.get(unit_key)
+            if factor is None:
+                return numeric_value
+            return numeric_value * factor
+
+        def _convert_to_grams(value: Any, unit: Any) -> Optional[float]:
+            if value is None:
+                return None
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                return None
+            unit_key = str(unit or "").strip().lower()
+            conversion_factors = {
+                "mg": 0.001,
+                "g": 1,
+                "gr": 1,
+                "kg": 1000,
+                "lb": 453.59237,
+                "oz": 28.349523125,
+            }
+            factor = conversion_factors.get(unit_key)
+            if factor is None:
+                return numeric_value
+            return numeric_value * factor
+
+        def _extract_language_metadata(raw_product: Any) -> dict[str, Any]:
+            metadatas: dict[str, Any] = {}
+            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+            language_values: list[str] = []
+            raw_languages = getattr(descriptive_detail, "language", []) or []
+            if not raw_languages and hasattr(onix_product, "descriptive"):
+                raw_languages = cast(
+                    list[Language],
+                    _deep_getattr(onix_product, "descriptive.languages"),
+                ) or []
+            for language in _normalise_list(raw_languages):
+                if not language:
+                    continue
+                code = _read_value(getattr(language, "language_code", None))
+                if code is not None:
+                    language_values.append(str(code))
+            language_code = None
+            for candidate in ["01", "02", "fr", "fre", "FRE"]:
+                for code in language_values:
+                    if str(code).upper() == str(candidate).upper():
+                        language_code = code
+                        break
+                if language_code is not None:
                     break
-            if language_code is not None:
-                break
-        if language_code is None and language_values:
-            language_code = language_values[0]
-        if language_code:
-            normalized_code = str(language_code).upper()
-            if normalized_code.startswith("VALUE_"):
-                normalized_code = normalized_code.split("VALUE_", 1)[1]
-            metadatas["code_langue"] = normalized_code
-            metadatas["langue"] = LANGUAGE_FRIENDLY_LABEL_MAP.get(
-                normalized_code,
-                LANGUAGE_LABEL_MAP.get(normalized_code, normalized_code),
-            )
+            if language_code is None and language_values:
+                language_code = language_values[0]
+            if language_code:
+                normalized_code = str(language_code).upper()
+                if normalized_code.startswith("VALUE_"):
+                    normalized_code = normalized_code.split("VALUE_", 1)[1]
+                metadatas["code_langue"] = normalized_code
+                metadatas["langue"] = LANGUAGE_FRIENDLY_LABEL_MAP.get(
+                    normalized_code,
+                    LANGUAGE_LABEL_MAP.get(normalized_code, normalized_code),
+                )
+            return metadatas
 
-        collection_names: list[str] = []
-        raw_collections = getattr(descriptive_detail, "collection", []) or []
-        if not raw_collections:
-            raw_collections = []
-        for collection in _normalise_list(raw_collections):
-            if not collection:
-                continue
-            title_details = getattr(collection, "title_detail", []) or []
-            if not isinstance(title_details, list):
-                title_details = [title_details]
-            for title_detail in title_details:
-                title_elements = getattr(title_detail, "title_element", []) or []
-                if not isinstance(title_elements, list):
-                    title_elements = [title_elements]
-                for title_element in title_elements:
-                    title_text = _read_value(getattr(title_element, "title_text", None))
-                    if title_text and str(title_text) not in collection_names:
-                        collection_names.append(str(title_text))
-        if collection_names:
-            metadatas["collection"] = collection_names[0]
-            metadatas["collections"] = collection_names
+        def _extract_collection_metadata(raw_product: Any) -> dict[str, Any]:
+            metadatas: dict[str, Any] = {}
+            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+            collection_names: list[str] = []
+            raw_collections = getattr(descriptive_detail, "collection", []) or []
+            for collection in _normalise_list(raw_collections):
+                if not collection:
+                    continue
+                title_details = getattr(collection, "title_detail", []) or []
+                if not isinstance(title_details, list):
+                    title_details = [title_details]
+                for title_detail in title_details:
+                    title_elements = getattr(title_detail, "title_element", []) or []
+                    if not isinstance(title_elements, list):
+                        title_elements = [title_elements]
+                    for title_element in title_elements:
+                        title_text = _read_value(getattr(title_element, "title_text", None))
+                        if title_text and str(title_text) not in collection_names:
+                            collection_names.append(str(title_text))
+            if collection_names:
+                metadatas["collection"] = collection_names[0]
+                metadatas["collections"] = collection_names
+            return metadatas
 
-        measures = getattr(descriptive_detail, "measure", []) or []
-        for measure in measures:
-            measure_type = _read_value(getattr(measure, "measure_type", None))
-            measure_value = _read_value(getattr(measure, "measurement", None))
-            measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
-            if measure_type == "01" and measure_unit == "mm" and measure_value is not None:
-                metadatas["dimensions_largeur_mm"] = str(measure_value)
-            elif measure_type == "02" and measure_unit == "mm" and measure_value is not None:
-                metadatas["dimensions_hauteur_mm"] = str(measure_value)
-            elif measure_type == "03" and measure_unit == "mm" and measure_value is not None:
-                metadatas["dimensions_epaisseur_mm"] = str(measure_value)
-            elif measure_type == "08" and measure_unit == "gr" and measure_value is not None:
-                metadatas["poids_gr"] = str(measure_value)
-
-        if not any(
-            key in metadatas for key in (
-                "dimensions_largeur_mm",
-                "dimensions_hauteur_mm",
-                "dimensions_epaisseur_mm"
-            )
-        ):
+        def _extract_dimensions_metadata(raw_product: Any) -> dict[str, Any]:
+            metadatas: dict[str, Any] = {}
+            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+            measures = getattr(descriptive_detail, "measure", []) or []
+            width_value: Optional[float] = None
+            height_value: Optional[float] = None
+            thickness_value: Optional[float] = None
             for measure in measures:
                 measure_type = _read_value(getattr(measure, "measure_type", None))
                 measure_value = _read_value(getattr(measure, "measurement", None))
                 measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
-                if measure_type == "01" and measure_value is not None:
-                    metadatas["dimensions_largeur_mm"] = str(measure_value)
-                elif measure_type == "02" and measure_value is not None:
-                    metadatas["dimensions_hauteur_mm"] = str(measure_value)
-                elif measure_type == "03" and measure_value is not None:
-                    metadatas["dimensions_epaisseur_mm"] = str(measure_value)
+                if measure_type == "01":
+                    width_value = _convert_to_mm(measure_value, measure_unit)
+                elif measure_type == "02":
+                    height_value = _convert_to_mm(measure_value, measure_unit)
+                elif measure_type == "03":
+                    thickness_value = _convert_to_mm(measure_value, measure_unit)
+            dimensions = [
+                _format_measurement(width_value),
+                _format_measurement(height_value),
+                _format_measurement(thickness_value),
+            ]
+            dimensions_values = [dimension for dimension in dimensions if dimension is not None]
+            if dimensions_values:
+                metadatas["dimensions_mm"] = "*".join(dimensions_values)
+            return metadatas
 
-        collateral_detail = getattr(getattr(onix_product, "_raw", None), "collateral_detail", None)
+        def _extract_weight_metadata(raw_product: Any) -> dict[str, Any]:
+            metadatas: dict[str, Any] = {}
+            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+            measures = getattr(descriptive_detail, "measure", []) or []
+            for measure in measures:
+                measure_type = _read_value(getattr(measure, "measure_type", None))
+                measure_value = _read_value(getattr(measure, "measurement", None))
+                measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
+                if measure_type == "08":
+                    grams = _convert_to_grams(measure_value, measure_unit)
+                    if grams is not None:
+                        metadatas["poids_grammes"] = _format_measurement(grams) or str(grams)
+                        break
+            return metadatas
+
+        def _extract_bnf_metadata(raw_product: Any) -> dict[str, Any]:
+            metadatas: dict[str, Any] = {}
+            product_identifiers = getattr(raw_product, "product_identifier", []) or []
+            for identifier in product_identifiers:
+                product_id_type = _read_value(getattr(identifier, "product_idtype", None))
+                id_value = _read_value(getattr(getattr(identifier, "idvalue", None), "value", None))
+                if product_id_type == "31" and id_value is not None:
+                    metadatas["ref_bnf"] = str(id_value)
+                elif product_id_type == "35" and id_value is not None:
+                    metadatas["notice_bnf"] = str(id_value)
+            return metadatas
+
+        metadatas: dict[str, Any] = {}
+        raw_product = getattr(onix_product, "_raw", None)
+        if raw_product is None:
+            return metadatas
+
+        metadatas.update(_extract_bnf_metadata(raw_product))
+        metadatas.update(_extract_language_metadata(raw_product))
+        metadatas.update(_extract_collection_metadata(raw_product))
+        metadatas.update(_extract_dimensions_metadata(raw_product))
+        metadatas.update(_extract_weight_metadata(raw_product))
+
+        collateral_detail = getattr(raw_product, "collateral_detail", None)
         supporting_resources = getattr(collateral_detail, "supporting_resource", []) or []
         for resource in supporting_resources:
             resource_versions = getattr(resource, "resource_version", []) or []
