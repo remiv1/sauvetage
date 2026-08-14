@@ -102,9 +102,16 @@ class Invoice(WorkingBase, QueryMixin):
             dict[str, Any]: Dictionnaire représentant la facture chez Henrri.
         """
         now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
-        due_datetime = str((datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d"))
-        order_date = str(self.order.created_at.strftime("%Y-%m-%d"))
-        customer = self.customer.to_dict_henrri()
+        due_datetime = str(
+            (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+        )
+        order_date = str(
+            self.order.created_at.strftime("%Y-%m-%d")
+            if self.order and self.order.created_at
+            else now_datetime
+        )
+        customer_payload = self.customer.to_dict_henrri() if self.customer else {}
+        customer_address = customer_payload.get("address") or {}
         document_type = {
             "document_kind": "invoice",
             "id": 1,
@@ -114,24 +121,25 @@ class Invoice(WorkingBase, QueryMixin):
             "is_visible": True,
         }
         invoice = {
-            "customer_id": self.customer.id,
-            "document_type_id": 1,  # Facture
-            "bank_account_label": "Banque",
-            "customer": customer,
-            "customer_address": customer.get("address", {}),
-            "date": now_datetime,
-            "document_type": document_type,
-            "due_label": due_datetime,
-            "finalized": False,
             "id": self.id,
             "identity": self.reference,
-            "label": f"Facture de la commande du {order_date}",
+            "finalized": False,
+            "document_type_id": 1,
+            "document_type": document_type,
+            "title": f"Facture de la commande du {order_date}",
             "subtitle": f"Facture Editions Sauvetage du {now_datetime}",
-            "price_after_tax": float(self.total_amount) + float(self.vat_amount),
             "price_before_tax": float(self.total_amount),
             "tax_amount": float(self.vat_amount),
+            "price_after_tax": float(self.total_amount) + float(self.vat_amount),
+            "due_label": due_datetime,
+            "date": now_datetime,
             "validated": True,
             "validation_date": now_datetime,
+            "customer_id": self.customer_id,
+            "customer": customer_payload,
+            "customer_address": customer_address,
+            "lines": [line.to_dict_henrri() for line in self.lines] if self.lines else [],
+            "bank_account_label": "Banque",
         }
         return invoice
 
@@ -198,17 +206,25 @@ class InvoiceLine(WorkingBase, QueryMixin):
 
     def to_dict_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet InvoiceLine en dictionnaire pour Henrri."""
-        return {
+        item_id = (
+            self.order_line.general_object.henrri_id
+            if self.order_line and self.order_line.general_object
+            else None
+        )
+        payload: dict[str, Any] = {
             "id": self.henrri_id,
-            "type_id": 3,
-            "are_elements_of_group_shown": False,
-            "is_tax_included": False,
-            "item_id": self.order_line.general_object.henrri_id,
-            "quantity": self.quantity,
+            "document_id": self.invoice_id,
             "reference": self.reference,
+            "description": self.description,
             "selling_price_without_tax": float(self.unit_price),
             "vat_percent": float(self.vat_rate),
+            "quantity": float(self.quantity),
+            "is_tax_included": False,
+            "are_elements_of_group_shown": False,
+            "type_id": 3,
+            "item_id": item_id,
         }
+        return payload
 
 
 @event.listens_for(Invoice, "before_delete")

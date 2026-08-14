@@ -1,6 +1,7 @@
 """Modèle des variations d'objets."""
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any, Dict, Optional
 from sqlalchemy import Integer, String, Numeric, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, mapped_column, Mapped
@@ -90,12 +91,14 @@ class ObjectVariations(WorkingBase, QueryMixin):
 
     def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
         """Convertit l'objet ObjectVariations en dictionnaire formaté pour WooCommerce."""
+        regular_price = Decimal(str(self.price)).quantize(Decimal("0.01"))
+        sale_price = regular_price if self.price > 0 else None
         return {
             "name": self.name,
             "description": self.description,
             "sku": self.id,
-            "regular_price": str(self.price),
-            "sale_price": str(self.price) if self.price > 0 else None,
+            "regular_price": format(regular_price, "f"),
+            "sale_price": format(sale_price, "f") if sale_price is not None else None,
             "manage_stock": "parent",
             "backorders": "notify",
         }

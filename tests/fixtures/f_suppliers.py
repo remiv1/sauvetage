@@ -2,11 +2,12 @@
 
 import pytest
 from sqlalchemy.orm import Session
+
 from db_models.objects import Suppliers
-from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type : ignore
-    db_session_main,  # pylint: disable=unused-import # type : ignore
-    engine,  # pylint: disable=unused-import # type : ignore
-)  # pylint: disable=unused-import # type : ignore
+from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
+    db_session_main,  # pylint: disable=unused-import # type: ignore
+    engine,  # pylint: disable=unused-import # type: ignore
+)  # pylint: disable=unused-import # type: ignore
 
 
 @pytest.fixture

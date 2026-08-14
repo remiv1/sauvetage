@@ -21,6 +21,7 @@ from db_models.repositories import CustomersRepository, OrdersRepository
 from db_models.objects import Customers, Order, OrderLine
 from db_models.services.woo_commerce.base import WCBase
 from db_models.services.woo_commerce.customers import WCCustomersService
+from db_models.services.woo_commerce.products import WCProductsService
 from db_models.services.woo_commerce.utils import _serialize_decimals
 
 logger = logging.getLogger(__name__)
@@ -218,15 +219,23 @@ class WCOrdersService(WCBase):
         Raises:
             RuntimeError: Si la création échoue côté WooCommerce.
         """
-        existing_customer = self.customer_repo.get_by_email(order.customer.mail)
-        if existing_customer:
-            wc_customer = self.customer_service.get_by_mail(order.customer.mail)
+        customer_email = order.customer.get_wpwc_mail()
+        if not customer_email:
+            raise RuntimeError(
+                f"Le client #{order.customer_id} n'a pas d'email WooCommerce actif" +
+                " pour créer la commande."
+            )
+
+        existing_customer = self.customer_repo.get_by_email(customer_email)
+        wc_customer = self.customer_service.get_by_mail(customer_email)
+
+        if existing_customer and wc_customer is not None:
             self.customer_service.diff_customer(
                 local_customer=order.customer,
                 wc_customer=wc_customer,
-                from_local=True
+                from_local=True,
             )
-        else:
+        elif wc_customer is None:
             self.customer_service.create_wpwc_customer_if_not_exists(order.customer)
 
         data = _serialize_decimals(order.to_dict_for_woo_commerce())
@@ -262,6 +271,9 @@ class WCOrdersService(WCBase):
         - Actives sans wpwc_id : créées dans WC, wpwc_id assigné depuis la réponse.
         - Actives avec wpwc_id : mises à jour dans WC.
 
+        Si un produit n'est pas encore synchronisé sur WooCommerce, il est exporté
+        automatiquement avant la création de la commande.
+
         En cas d'échec API, les wpwc_id des lignes sont restaurés à leur état initial.
         Ne commite pas. Enregistre un OrderSyncLog dans tous les cas.
 
@@ -277,15 +289,65 @@ class WCOrdersService(WCBase):
             self._pre_sync_line_ids(order)
 
         try:
+            product_service = getattr(self, "product_service", None)
+            if product_service is None and hasattr(self, "session"):
+                product_service = WCProductsService(self.session)
+            for line in order.order_lines:
+                if not line or not line.general_object:
+                    continue
+                product = line.general_object
+                if product.wpwc_id is None:
+                    logger.info(
+                        "Commande %d : produit WooCommerce manquant pour la ligne %d (%s). "
+                        "Tentative de synchronisation du produit avant push commande.",
+                        order.id,
+                        line.id,
+                        product.name,
+                    )
+                    if product_service is None:
+                        raise ValueError(
+                            f"Le produit '{product.name}' de la ligne {line.id} "
+                            "n'est pas synchronisé sur WooCommerce et aucun service de création" +
+                            " n'est disponible."
+                        )
+                    created_wc_id = product_service.update_product(product.id)
+                    if created_wc_id is not None:
+                        product.wpwc_id = created_wc_id
+                        logger.info(
+                            "Commande %d : produit '%s' synchronisé sur WooCommerce avec " +
+                            "id=%s avant push commande.",
+                            order.id,
+                            product.name,
+                            created_wc_id,
+                        )
+                    if hasattr(self, "session"):
+                        self.session.flush()
+            logger.info(
+                "Commande %d : préparation du payload WooCommerce pour %d ligne(s).",
+                order.id,
+                len(order.order_lines),
+            )
             data = _serialize_decimals(order.to_dict_for_woo_commerce())
             if operation == "create":
+                logger.info("Commande %d : création de la commande WooCommerce.", order.id)
                 response = _call_api(self.api_write.post, "orders", data=data)
                 ok = response.status_code == 201
             else:
+                logger.info(
+                    "Commande %d : mise à jour de la commande WooCommerce (wc_id=%s).",
+                    order.id,
+                    order.wpwc_id,
+                )
                 response = _call_api(
                     self.api_write.put, f"orders/{order.wpwc_id}", data=data
                 )
                 ok = response.status_code == 200
+            logger.info(
+                "Commande %d : réponse WooCommerce HTTP %s — %s",
+                order.id,
+                response.status_code,
+                _safe_log_text(response.text)[:1000],
+            )
         except Exception as exc:  # pylint: disable=broad-except
             self._restore_line_snapshot(order, wpwc_snapshot)
             error_msg = str(exc)[:500]
@@ -297,7 +359,11 @@ class WCOrdersService(WCBase):
                 sync_status="failed",
                 error_message=error_msg,
             )
-            logger.exception("Exception lors du push WooCommerce (commande %d)", order.id)
+            logger.exception(
+                "Exception lors du push WooCommerce (commande %d) : %s",
+                order.id,
+                error_msg,
+            )
             return False, error_msg
 
         if ok:

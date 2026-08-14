@@ -28,10 +28,14 @@ modules = [
   "app_front.blueprints.customer",
   "app_front.blueprints.customer.routes",
   "app_front.blueprints.customer.routes_data",
+  "app_front.blueprints.customer.utils",
+  "app_front.blueprints.customer.utils.users",
   "app_front.blueprints.order",
   "app_front.blueprints.order.routes",
   "app_front.blueprints.order.routes_htmx_create",
   "app_front.blueprints.order.routes_htmx_list",
+  "app_front.blueprints.order.utils",
+  "app_front.blueprints.order.utils_henrri",
   "db_models.services.woo_commerce.customers",
   "db_models.repositories.customers"
 ]
@@ -41,6 +45,8 @@ modules = [
   "app_front.blueprints.stock",
   "app_front.blueprints.inventory",
   "app_front.blueprints.supplier",
+  "app_front.blueprints.order.utils",
+  "app_front.blueprints.order.utils_henrri",
   "db_models.services.dilicom",
   "db_models.services.henri",
   "db_models.services.henri.base",

@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
+from db_models.services.utils import slugify
 from ..common import QueryMixin
 from .object_constants import GENERAL_OBJECT_PK, DESCRIPTION_FK
 
@@ -52,12 +53,20 @@ class ObjMetadatas(WorkingBase, QueryMixin):
         """Convertit l'objet ObjMetadata en dictionnaire formaté pour WooCommerce."""
         if not self.semistructured_data:
             return {"attributes": []}
-        return {
-            "attributes": [
-                {"key": key, "value": value}
-                for key, value in self.semistructured_data.items()
-            ]
-        }
+
+        attributes: list[dict[str, Any]] = []
+        for index, (key, value) in enumerate(self.semistructured_data.items()):
+            current_values = value if isinstance(value, list) else [value]
+            attributes.append(
+                {
+                    "name": str(key),
+                    "options": [str(item) for item in current_values],
+                    "visible": True,
+                    "position": index,
+                    "slug": slugify(str(key)),
+                }
+            )
+        return {"attributes": attributes}
 
     def to_dict(self) -> Optional[dict[str, Any]]:
         """Convertit l'objet ObjMetadata en dictionnaire."""

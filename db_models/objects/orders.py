@@ -137,12 +137,12 @@ class Order(WorkingBase, QueryMixin):
     def _get_wc_metadata(self) -> dict[str, Any]:
         """Récupère les métadonnées spécifiques à WooCommerce pour la commande."""
         customer_type = 'Particulier' if self.customer.customer_type == 'part' else 'Professionnel'
-        rs = self.customer.pro.company_name if self.customer.pro else ''
-        siret = self.customer.pro.siret if self.customer.pro else ''
+        company_name = self.customer.pro.company_name if self.customer.pro else ''
+        siret_number = self.customer.pro.siret_number if self.customer.pro else ''
         return {
             '_billing_wooccm10': customer_type,
-            '_billing_wooccm11': rs,
-            '_billing_wooccm12': siret,
+            '_billing_wooccm11': company_name,
+            '_billing_wooccm12': siret_number,
         }
 
     def __get_customer_name_parts(self) -> tuple[str, str]:
@@ -377,13 +377,21 @@ class OrderLine(WorkingBase, QueryMixin):
 
     def to_dict_for_woo_commerce(self) -> dict[str, Any]:
         """Convertit l'objet OrderLine en dictionnaire au format attendu par WooCommerce."""
+        if not self.general_object:
+            raise ValueError(f"La ligne de commande {self.id} n'est rattachée à aucun produit.")
+        if self.general_object.wpwc_id is None:
+            raise ValueError(
+                f"Le produit '{self.general_object.name}' de la ligne {self.id} "
+                "n'est pas synchronisé sur WooCommerce (wpwc_id manquant)."
+            )
+
         vat_rate_obj = self.general_object.vat_rate if self.general_object else None
         subtotal_ht = round(float(self.unit_price) * self.quantity, 4)
         discount_ratio = 1 - float(self.discount) / 100
         total_ht = round(subtotal_ht * discount_ratio, 4)
 
         value_dict: dict[str, Any] = {
-            "name": self.general_object.name if self.general_object else "Unknown Product",
+            "name": self.general_object.name,
             "product_id": int(self.general_object.wpwc_id),
             "quantity": self.quantity,
             "subtotal": str(subtotal_ht),

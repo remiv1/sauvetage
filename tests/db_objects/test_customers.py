@@ -1,26 +1,23 @@
-"""Test unitaire pour la classe Customers dans db_models.objects.customers."""
+"""Tests métiers des clients dans le modèle applicatif."""
 
 from sqlalchemy.orm import Session
+
 from db_models.objects import Customers
 
 
 def test_customer_create_read_and_update(
     db_session_main: Session,
+    customer_pair: list[Customers],
 ) -> None:  # pylint: disable=redefined-outer-name
     """test de lecture du client rentré précédemment et de modification"""
-    customer = Customers(
-        wpwc_id="1", henrri_id="2", customer_type="pro", is_active=True
-    )
+    customer, new_customer = customer_pair
     db_session_main.add(customer)
     db_session_main.commit()
-    new_customer = Customers(
-        wpwc_id="ojg54561", henrri_id="oe65v06b5g106e", customer_type="part"
-    )
     db_session_main.add(new_customer)
     db_session_main.commit()
     customer = (
         db_session_main.query(Customers)
-        .where(Customers.henrri_id == "oe65v06b5g106e")
+        .where(Customers.henrri_id == new_customer.henrri_id)
         .first()
     )
     assert customer is not None
@@ -29,7 +26,7 @@ def test_customer_create_read_and_update(
     db_session_main.commit()
     customer = (
         db_session_main.query(Customers)
-        .where(Customers.henrri_id == "oe65v06b5g106e")
+        .where(Customers.henrri_id == new_customer.henrri_id)
         .first()
     )
     assert customer.is_active is False if customer else None

@@ -9,6 +9,7 @@ Le schéma métier est le suivant :
 - Mise à jour du statut des commandes dans WooCommerce en fonction du traitement local.
 """
 
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from typing import Any, Optional, Sequence, Callable
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import Session
+from db_models.objects import MediaAccessToken
 from db_models.objects.vat import VatRate
 from db_models.repositories.objects import ObjectsRepository, GeneralObjects
 from db_models.repositories.tags import TagsRepository, Tags
@@ -171,8 +173,11 @@ class WCProductsService(WCBase):
             product_dict["images"] = [
                 {
                     "src": self._build_media_src(media),
-                    "name": media.file_link,
-                    "alt": f"{product.name} - {media.alt_text or media.file_link}"
+                    "name": os.path.basename(media.file_link or "") or media.file_link or "",
+                    "alt": f"{product.name} - {media.alt_text or (
+                        os.path.basename(media.file_link or "") or media.file_link or ""
+                        ),
+                    }"
                 }
                 for media in product.media_files
             ]
@@ -181,21 +186,28 @@ class WCProductsService(WCBase):
     def _build_media_src(self, media: MediaFiles) -> str:
         """Construit l'URL source d'une image pour WooCommerce.
 
-        Pour les fichiers locaux (``is_local=True``), crée un jeton d'accès
-        à usage unique et retourne l'URL tokenisée via la route ``serve_media``.
-        Pour les fichiers externes, retourne directement ``file_link``.
+        Les fichiers locaux sont servis via un jeton d'accès à usage unique,
+        même lorsque le chemin est enregistré comme un nom de fichier ou un
+        chemin absolu sans marqueur ``is_local`` explicite. Les URLs HTTP(S)
+        restent transmises telles quelles.
         """
-        if not media.is_local:
-            return media.file_link or ""
+        file_link = media.file_link or ""
+        is_local = bool(media.is_local) or not file_link.startswith(("http://", "https://"))
+        if not is_local:
+            return file_link
+
+        base_url = (_FRONT_BASE_URL or "https://internal.editions-sauvetage.fr").strip().rstrip("/")
 
         token_repo = MediaAccessTokenRepository(self.session)
-        existing = token_repo.get(media.file_link)
-        if existing:
-            token = existing if existing.is_valid() else token_repo.renew(existing)
+        existing = token_repo.get_last_by_media_id(media.id)
+        if existing and existing.is_valid():
+            token = existing
+        elif existing:
+            token = token_repo.renew(existing)
         else:
-            token = token_repo.create(media.file_link)
+            token = token_repo.create(media_id=media.id)
 
-        return f"{_FRONT_BASE_URL}/woocommerce/media/{token.token}"
+        return f"{base_url}/woocommerce/media/{token.token}"
 
     def _process_returns_action(
         self,
@@ -369,24 +381,26 @@ class WCProductsService(WCBase):
             returns, vat_rates, "vat_rate", matchers, updaters, finder
         )
 
-    def update_product(self, product_id: int):
+    def update_product(self, product_id: int) -> int | None:
         """
         Met à jour ou crée un produit spécifique dans WooCommerce.
         Si le produit est inactif, la mise à jour est ignorée.
         Args:
             product_id (int): ID du produit local à mettre à jour dans WooCommerce.
         Returns:
-            None
+            int | None: L'identifiant WooCommerce du produit si connu après synchronisation.
         """
 
         # Récupération du produit local et vérification de son statut
         product = self.object_repo.get_by_ref(product_id, only_actives=False)
-        if product and not product.is_active:
+        if product is None:
+            return None
+        if not product.is_active:
             logger.warning(
                 "Produit avec ID %d inactif. Mise à jour WooCommerce ignorée.",
                 product_id
                 )
-            return
+            return product.wpwc_id
 
         # Récupération de la version actuelle du produit dans WooCommerce pour calculer des difs
         wpwc_product = self.api_read.get(
@@ -401,6 +415,13 @@ class WCProductsService(WCBase):
                 response = self.api_write.post("products/batch", data=d)
                 response.raise_for_status()
                 r = response.json()
+                raw_response = getattr(response, "text", None) or json.dumps(r, ensure_ascii=False, default=str)
+                logger.info(
+                    "Retour WooCommerce produit %d: HTTP %s — %s",
+                    product_id,
+                    getattr(response, "status_code", "unknown"),
+                    raw_response[:1000],
+                )
                 logger.debug(
                     "Retour de WooCommerce pour la mise à jour du produit %d : %s",
                     product_id,
@@ -424,17 +445,40 @@ class WCProductsService(WCBase):
                 error_message=str(exc)
             )
             self.session.commit()
-            return
+            return product.wpwc_id
 
         # Application des retours de WooCommerce et enregistrement dans le log de synchronisation
         for r in returns:
             self._apply_product_returns(returns=r, products=[product])
+        self.session.flush()
         self.session.commit()
-        logger.info(
-            "Mise à jour du produit %d vers WooCommerce terminée. Statut: %s",
-            product_id,
-            "success" if any(r.get("create") or r.get("update") for r in returns) else "no change"
+
+        has_valid_wc_id = bool(product.wpwc_id)
+        has_batch_effect = any(
+            bool(r.get("create") or r.get("update"))
+            for r in returns
         )
+        status = "success" \
+            if has_batch_effect and has_valid_wc_id \
+            else "error" \
+                if has_batch_effect \
+                else "no change"
+
+        if status == "error":
+            logger.warning(
+                "Produit %d non synchronisé vers WooCommerce: un retour valide a été reçu " +
+                "mais aucun wc_id n'a été attribué. Retour=%s",
+                product_id,
+                returns,
+            )
+        else:
+            logger.info(
+                "Produit %d synchronisé vers WooCommerce: statut=%s, wc_id=%s.",
+                product_id,
+                status,
+                product.wpwc_id,
+            )
+        return product.wpwc_id if status == "success" else None
 
     def export_all_products(self):
         """
@@ -588,20 +632,22 @@ class WCProductsService(WCBase):
                 (wpwc for wpwc in wpwc_pictures if int(wpwc["id"]) == int(p.wpwc_id or 0)),
                 None
             )
+            src = self._build_media_src(p)
+            name = os.path.basename(p.file_link or "") or p.file_link or ""
             if matched:
                 entry = {
                     "id": int(matched["id"]),
-                    "name": p.file_link,
+                    "name": name,
                     "alt": p.alt_text or "",
-                    "src": p.file_link or "",
+                    "src": src,
                 }
                 data["update"].append(entry)
                 wpwc_picture_ids.remove(int(entry["id"]))
             else:
                 entry = {
-                    "name": p.file_link,
+                    "name": name,
                     "alt": p.alt_text or "",
-                    "src": p.file_link or "",
+                    "src": src,
                 }
                 data["create"].append(entry)
         for wpwc_id in wpwc_picture_ids:

@@ -1,10 +1,12 @@
-"""Module de fixtures pour les tests liés aux stocks"""
+"""Module de fixtures pour les tests liés aux stocks."""
 
 from decimal import Decimal
+
 import pytest
 from sqlalchemy.orm import Session
-from db_models.objects.stocks import OrderIn, OrderInLine, DilicomReferencial
+
 from db_models.objects.inventory import InventoryMovements
+from db_models.objects.stocks import DilicomReferencial, OrderIn, OrderInLine
 from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
     db_session_main,  # pylint: disable=unused-import # type: ignore
     engine,  # pylint: disable=unused-import # type: ignore

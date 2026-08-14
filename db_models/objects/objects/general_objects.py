@@ -177,21 +177,38 @@ class GeneralObjects(WorkingBase, QueryMixin):
     def _current_price_row(self) -> Optional["ObjectPrices"]:
         """Retourne la ligne de prix courante ou la plus proche disponible."""
         today = date.today()
-        valid_prices = [
-            price
-            for price in self.prices
-            if price.from_date <= today and (price.to_date is None or price.to_date >= today)
+
+        safe_prices = []
+        for price in self.prices:
+            source_date = price.from_date or today
+            if source_date <= today and (price.to_date is None or price.to_date >= today):
+                safe_prices.append(price)
+
+        if safe_prices:
+            return max(
+                safe_prices,
+                key=lambda price: ((price.from_date or today), price.id or 0),
+            )
+
+        past_prices = [
+            price for price in self.prices
+            if (price.from_date or today) <= today
         ]
-        if valid_prices:
-            return max(valid_prices, key=lambda price: (price.from_date, price.id or 0))
-
-        past_prices = [price for price in self.prices if price.from_date <= today]
         if past_prices:
-            return max(past_prices, key=lambda price: (price.from_date, price.id or 0))
+            return max(
+                past_prices,
+                key=lambda price: ((price.from_date or today), price.id or 0),
+            )
 
-        future_prices = [price for price in self.prices if price.from_date > today]
+        future_prices = [
+            price for price in self.prices
+            if (price.from_date or today) > today
+        ]
         if future_prices:
-            return min(future_prices, key=lambda price: (price.from_date, price.id or 0))
+            return min(
+                future_prices,
+                key=lambda price: ((price.from_date or today), price.id or 0),
+            )
 
         return None
 
@@ -241,6 +258,11 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
     def to_dict_for_woo_commerce(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire formaté pour WooCommerce."""
+        current_price = self.get_price()
+        tax_class = None
+        if self.vat_rate:
+            tax_class = self.vat_rate.wpwc_slug or slugify(self.vat_rate.label)
+
         return {
             "name": self.name,
             "slug": slugify(self.name),
@@ -250,9 +272,9 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "short_description": self.description[:50] if self.description else "",
             "sku": self.id,
             "global_unique_id": self.ean13,
-            "regular_price": str(self.get_price()),
-            "sale_price": str(self.get_price()) if self.get_price() > 0 else None,
-            "tax_class": self.vat_rate.label if self.vat_rate else None,
+            "regular_price": str(current_price),
+            "sale_price": str(current_price) if current_price > 0 else None,
+            "tax_class": tax_class,
             "manage_stock": True,
             "stock_quantity": 0,
             "stock_status": "onbackorder",
@@ -261,19 +283,26 @@ class GeneralObjects(WorkingBase, QueryMixin):
 
     def to_dict_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
+        vat_rate = float(self.vat_rate.rate) if self.vat_rate else 0.0
+        price_without_tax = self.get_price()
         now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         return {
-            "vat_percent": self.vat_rate.rate,
-            "creation_date": now_datetime,
-            "description": self.name,
-            "id": self.henrri_id,
-            "is_a_group": False,
-            "is_tax_included": False,
-            "item_category_id": 17,
             "reference": self.ean13,
-            "selling_price_without_tax": self.get_price(),
-            "selling_price_with_tax": self.get_price() * (1 + self.vat_rate.rate / 100),
+            "description": self.description or self.name,
+            "is_tax_included": False,
+            "selling_price_without_tax": float(price_without_tax),
+            "selling_price_with_tax": float(
+                price_without_tax * (
+                    Decimal("1") + Decimal(str(vat_rate)) / Decimal("100")
+                )
+            ),
+            "purchase_price": float(self.purchase_price or 0.0),
+            "vat_percent": vat_rate,
+            "is_a_group": False,
+            "item_category_id": 17,
             "unit_id": 16,
+            "creation_date": now_datetime,
+            "id": self.henrri_id,
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -354,7 +383,7 @@ class ObjectPrices(WorkingBase, QueryMixin):
     vat_rate = relationship("VatRate", back_populates="object_prices")
 
     @hybrid_property
-    def is_current(self) -> bool:
+    def is_current(self) -> bool:   # type: ignore
         """Indique si le prix est actuellement valide."""
         today = date.today()
         if self.to_date is None:
@@ -366,9 +395,9 @@ class ObjectPrices(WorkingBase, QueryMixin):
         """Expression SQL pour filtrer les prix actuellement valides."""
         today = func.current_date()  # pylint: disable=E1102 # type: ignore
         return or_(
-            and_(cls.to_date.is_(None), cls.from_date <= today),
+            and_(cls.to_date.is_(None), cls.from_date <= today),    # type: ignore
             and_(
-                cls.to_date.isnot(None),
+                cls.to_date.isnot(None),    # type: ignore
                 cls.from_date <= today,
                 cls.to_date >= today,
             ),

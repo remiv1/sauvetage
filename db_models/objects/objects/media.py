@@ -71,6 +71,7 @@ class MediaFiles(WorkingBase, QueryMixin):
     )
 
     general_object = relationship("GeneralObjects", back_populates="media_files")
+    access_tokens = relationship("MediaAccessToken", back_populates="media_file")
 
     def __repr__(self) -> str:
         return (
@@ -99,9 +100,10 @@ class MediaFiles(WorkingBase, QueryMixin):
 class MediaAccessToken(WorkingBase):
     """Jeton d'accès temporaire permettant à WooCommerce de télécharger une image.
 
-    Chaque jeton est à usage unique et expire 1 heure après sa création.
-    Le champ ``token`` est le nom du fichier (UUID.webp) stocké sur le volume,
-    ce qui permet à WooCommerce de l'enregistrer sous ce même nom.
+    Le token pointe vers un média local précis via ``media_file_id``.
+    Cela évite de dépendre du nom du fichier en tant que clé de sécurité et
+    permet de servir le bon fichier même si le token n'est pas identique au
+    nom de fichier physique.
     """
 
     __tablename__ = "media_access_tokens"
@@ -110,7 +112,13 @@ class MediaAccessToken(WorkingBase):
     token: Mapped[str] = mapped_column(
         String,
         primary_key=True,
-        comment="Nom du fichier image (UUID.webp) — sert d'identifiant de jeton",
+        comment="Jeton de sécurité utilisé dans l'URL publique WooCommerce",
+    )
+    media_file_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.media_files.id"),
+        nullable=False,
+        comment="Média local associé à ce jeton",
     )
     valid_from: Mapped[datetime] = mapped_column(
         DateTime,
@@ -129,10 +137,12 @@ class MediaAccessToken(WorkingBase):
         comment="Date de consommation du jeton (None = pas encore utilisé)",
     )
 
+    media_file = relationship("MediaFiles")
+
     def __repr__(self) -> str:
         return (
-            f"<MediaAccessToken(token={self.token}, valid_until={self.valid_until}, "
-            f"used_at={self.used_at})>"
+            f"<MediaAccessToken(token={self.token}, media_file_id={self.media_file_id}, "
+            f"valid_until={self.valid_until}, used_at={self.used_at})>"
         )
 
     def is_valid(self) -> bool:

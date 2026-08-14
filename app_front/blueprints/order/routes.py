@@ -36,15 +36,22 @@ def order_view(order_id: int):
 @bp_order.post("/view/<int:order_id>/wc-push")
 def order_wc_push(order_id: int):
     """Pousse la commande vers WooCommerce, puis redirige vers la page de détail."""
-    push_order_wc(order_id)  # succès ou échec sont logés dans OrderSyncLog
+    success, error_message = push_order_wc(order_id)
+    payload = {"sync": "wc_push"}
+    if error_message:
+        payload["error"] = error_message
+    status_code = 204 if success else 500
     log_metier_event(
         event="wc_push",
         resource_type="order",
         resource_id=str(order_id),
         user_id=session.get("username"),
-        status_code=204,
+        status_code=status_code,
+        obj_metadata=payload,
     )
-    resp = make_response("", 204)
+    if not success:
+        return make_response(error_message or "Erreur de synchronisation WooCommerce", status_code)
+    resp = make_response("", status_code)
     resp.headers["HX-Redirect"] = url_for("order.order_view", order_id=order_id)
     return resp
 

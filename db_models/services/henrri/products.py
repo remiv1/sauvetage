@@ -8,7 +8,7 @@ Classes:
 - ``HenrriProductsService``: Service de gestion des produits pour Henrri.
 """
 
-from typing import Sequence
+from typing import Any, Sequence
 from henrri_connect.models import Item, ItemsQuery
 from .base import HenrriService
 
@@ -25,6 +25,14 @@ class HenrriProductsService(HenrriService):
     - create_products_batch(products): Crée plusieurs produits en une seule requête sur Henrri.
     - update_product(product_id, updated_product): Met à jour un produit existant sur Henrri.
     """
+    @staticmethod
+    def _as_item(product: Item | Any) -> Item:
+        """Convertit un objet local ou un modèle SDK Henri en Item."""
+        if isinstance(product, Item):
+            return product
+        if hasattr(product, "to_dict_henrri"):
+            return Item(**product.to_dict_henrri())
+        raise TypeError("Le produit fourni n'est ni un Item Henri ni un objet local sérialisable.")
 
     def get_products(self, from_date: str, to_date: str, search: str) -> Sequence[Item]:
         """
@@ -47,45 +55,46 @@ class HenrriProductsService(HenrriService):
         response = self.client.items.list_items(request=request)
         return response.elements or []
 
-    def create_product(self, product: Item) -> int:
+    def create_product(self, product: Item | Any) -> int:
         """
         Crée un nouveau produit sur Henrri.
         
         Arguments:
-        - product (Item): Le produit à créer.
+        - product (Item | Any): Le produit local ou le modèle SDK Henri à créer.
 
         Returns:
-        - int: L'identifiant du produit cré au format de la bibliothèque henrri-connect.
+        - int: L'identifiant du produit créé au format de la bibliothèque henrri-connect.
         """
-        response = self.client.items.add(product)
+        item = self._as_item(product)
+        response = self.client.items.add(item)
         if response.id is None:
             raise ValueError("Le produit n'a pas pu étre créé.")
         return response.id
 
-    def create_products_batch(self, products: Sequence[Item]) -> Sequence[Item]:
+    def create_products_batch(self, products: Sequence[Item | Any]) -> Sequence[Item]:
         """
         Crée plusieurs produits en une seule requête sur Henrri.
         
         Arguments:
-        - products (Sequence[Item]): La liste des produits à créer.
+        - products (Sequence[Item | Any]): La liste des produits à créer.
 
         Returns:
-        - Sequence[Item]: La liste des produits crées au format de la bibliothèque henrri-connect.
+        - Sequence[Item]: La liste des produits créés au format de la bibliothèque henrri-connect.
         """
 
         responses = []
         for product in products:
-            response = self.client.items.add(product)
+            response = self.client.items.add(self._as_item(product))
             responses.append(response)
         return responses
 
-    def update_product(self, product_id: str, updated_product: Item) -> Item:
+    def update_product(self, product_id: str, updated_product: Item | Any) -> Item:
         """
         Met à jour un produit existant sur Henrri.
         
         Arguments:
         - product_id (str): L'identifiant du produit à mettre à jour.
-        - updated_product (Item): Le produit mis à jour.
+        - updated_product (Item | Any): Le produit local ou le modèle SDK Henri mis à jour.
 
         Returns:
         - Item: Le produit mis à jour au format de la bibliothèque henrri-connect.
@@ -96,5 +105,6 @@ class HenrriProductsService(HenrriService):
             raise ValueError(
                 f"Identifiant produit invalide: {product_id}. Il doit être une chaîne d'entier."
             ) from e
-        response = self.client.items.modify(p_id, updated_product)
+        remote_product = self._as_item(updated_product)
+        response = self.client.items.modify(p_id, remote_product)
         return response

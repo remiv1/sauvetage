@@ -2,12 +2,13 @@
 
 import pytest
 from sqlalchemy.orm import Session
+
 from db_models.objects import Users, UsersPasswords
 from db_models.security.secur_sauv import PwdHasher
-from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type : ignore
-    db_session_main,  # pylint: disable=unused-import # type : ignore
-    engine,  # pylint: disable=unused-import # type : ignore
-)  # pylint: disable=unused-import # type : ignore
+from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
+    db_session_main,  # pylint: disable=unused-import # type: ignore
+    engine,  # pylint: disable=unused-import # type: ignore
+)  # pylint: disable=unused-import # type: ignore
 
 # Mot de passe clair de test
 TEST_PASSWORD = "test_password_123"

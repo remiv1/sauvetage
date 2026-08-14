@@ -561,6 +561,12 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
     order = order_repo.get_by_id(order_id)
     if order is None:
         raise ValueError(_ORDER_NOT_FOUND)
+    if order.customer_id is None:
+        raise ValueError("Commande sans client de rattachement.")
+    if order.status == "invoiced":
+        raise ValueError(
+            "Commande déjà facturée. Pour créer une facture d'avoir, utilisez le flux dédié."
+        )
 
     # Valider les lignes et enrichir avec les prix
     requested_ids = {item["order_line_id"] for item in line_items}

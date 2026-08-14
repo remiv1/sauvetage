@@ -149,68 +149,75 @@ class Customers(WorkingBase, QueryMixin):
     def to_dict_henrri(self) -> dict[str, Any]:
         """Convertit l'objet Customer en dictionnaire Henrri."""
         date_now = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+        address = next(
+            (addr for addr in self.addresses if addr.is_active),
+            self.addresses[0] if self.addresses else None
+        )
+        address_payload = address.to_dict_henrri() if address else None
+        email = next(
+            (e.email for e in self.emails if e.is_active),
+            None
+        ) if self.emails else None
+        phone = next(
+            (p.phone_number for p in self.phones if p.is_active),
+            None
+        ) if self.phones else None
+        mobile = next(
+            (p.phone_number for p in self.phones if p.is_active),
+            None
+        ) if self.phones else None
+
         if self.pro:
             siret = self.pro.siret_number
-            address = next(
-                (addr for addr in self.addresses if addr.is_active), self.addresses[0]
-            )
             customer = {
                 "id": self.id,
                 "name": self.full_name,
                 "type": "professional",
-                "company_identifier_type": "Siret" if len(siret) == 14 else "Unknown",
+                "company_identifier_type": "Siret" if siret and len(siret) == 14 else "Unknown",
                 "contacts": [
                     {
-                        "last_name": self.full_name,
-                        "email": next((e.email for e in self.emails if e.is_active), None),
+                        "first_name": "",
+                        "last_name": self.pro.company_name,
+                        "email": email,
                         "id": self.pro.contact_henrri_id,
                         "is_primary": True,
-                        "mobile": next(
-                            (p.phone_number for p in self.phones if p.is_active), None
-                        ),
-                        "phone": next(
-                            (p.phone_number for p in self.phones if p.is_active), None
-                        ),
+                        "mobile": mobile,
+                        "phone": phone,
                         "role": "administrateur",
                         "show_on_document": True,
                     },
                 ],
                 "creation_date": date_now,
-                "siret": self.pro.siret_number,
-                "trade_name": self.full_name,
+                "siret": siret,
+                "trade_name": self.pro.company_name,
                 "company_name": self.pro.company_name,
                 "ict": self.pro.vat_number,
-                "vat_number": self.pro.vat_number[2:],
+                "vat_number": self.pro.vat_number,
                 "customer_type_alert_enabled": False,
-                "address": address.to_dict_henrri(),
+                "address": address_payload,
             }
         else:
-            address = next(
-                (addr for addr in self.addresses if addr.is_active), self.addresses[0]
-            )
+            first_name, last_name = self._get_names()
             customer = {
                 "id": self.id,
                 "name": self.full_name,
                 "type": "individual",
                 "contacts": [
                     {
-                        "last_name": self.full_name,
-                        "email": next((e.email for e in self.emails if e.is_active), None),
-                        "id": self.part.contact_henrri_id,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": email,
+                        "id": self.part.contact_henrri_id if self.part else None,
                         "is_primary": True,
-                        "mobile": next(
-                            (p.phone_number for p in self.phones if p.is_active), None
-                        ),
-                        "phone": next(
-                            (p.phone_number for p in self.phones if p.is_active), None
-                        ),
+                        "mobile": mobile,
+                        "phone": phone,
                         "role": "administrateur",
                         "show_on_document": True,
                     },
                 ],
                 "creation_date": date_now,
                 "customer_type_alert_enabled": False,
-                "address": address.to_dict_henrri(),
+                "address": address_payload,
             }
         return customer
 

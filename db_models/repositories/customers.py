@@ -106,11 +106,11 @@ class CustomersRepository(BaseRepository):
         """
         if complete:
             stmt = self._get_complete_query().where(
-                Customers.wpwc_customer_id == str(wpwc_customer_id)
+                Customers.wpwc_id == str(wpwc_customer_id)
             )
         else:
             stmt = select(Customers).where(
-                Customers.wpwc_customer_id == str(wpwc_customer_id)
+                Customers.wpwc_id == str(wpwc_customer_id)
             )
 
         return self.session.execute(stmt).scalars().first()

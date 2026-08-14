@@ -8,7 +8,7 @@ Classes:
 - ``HenrriDocumentsService``: Service de gestion des documents pour Henrri.
 """
 
-from typing import Sequence
+from typing import Any, Sequence
 from henrri_connect.models import Document, DocumentLine, DocumentQuery
 from .base import HenrriService
 
@@ -25,6 +25,27 @@ class HenrriDocumentsService(HenrriService):
     - create_documents_batch(documents): Crée plusieurs produits en une seule requête sur Henrri.
     - update_document(document_id, updated_document): Met à jour un produit existant sur Henrri.
     """
+    @staticmethod
+    def _as_document(document: Document | Any) -> Document:
+        """Convertit un objet local ou un modèle SDK Henri en Document."""
+        if isinstance(document, Document):
+            return document
+        if hasattr(document, "to_dict_henrri"):
+            return Document(**document.to_dict_henrri())
+        raise TypeError(
+            "Le document fourni n'est ni un Document Henri ni un objet local sérialisable."
+        )
+
+    @staticmethod
+    def _as_document_line(line: DocumentLine | Any) -> DocumentLine:
+        """Convertit un objet local ou un modèle SDK Henri en DocumentLine."""
+        if isinstance(line, DocumentLine):
+            return line
+        if hasattr(line, "to_dict_henrri"):
+            return DocumentLine(**line.to_dict_henrri())
+        raise TypeError(
+            "La ligne de document fournie n'est ni une DocumentLine Henri ni un objet sérialisable."
+        )
 
     def get_documents(self, from_date: str, to_date: str, search: str) -> Sequence[Document]:
         """
@@ -49,36 +70,38 @@ class HenrriDocumentsService(HenrriService):
 
     def create_document(
             self,
-            document: Document,
+            document: Document | Any,
         ) -> Document:
         """
         Crée un nouveau document sur Henrri (sans lignes, non finalisé).
 
         Arguments:
-        - document (Document): Le document à créer.
+        - document (Document | Any): Le document local ou le modèle SDK Henri à créer.
 
         Returns:
         - Document: Le document créé avec son ID Henrri.
         """
-        response = self.client.documents.add(document)
+        remote_document = self._as_document(document)
+        response = self.client.documents.add(remote_document)
         return response
 
     def get_document(self, document_id: int) -> Document:
         """Récupère un document Henrri par son identifiant."""
         return self.client.documents.get(document_id)
 
-    def add_line(self, document_id: int, line: DocumentLine) -> DocumentLine:
+    def add_line(self, document_id: int, line: DocumentLine | Any) -> DocumentLine:
         """
         Ajoute une ligne à un document existant sur Henrri.
 
         Arguments:
         - document_id (int): L'identifiant Henrri du document.
-        - line (DocumentLine): La ligne à ajouter.
+        - line (DocumentLine | Any): La ligne locale ou le modèle SDK Henri à ajouter.
 
         Returns:
         - DocumentLine: La ligne créée avec son ID Henrri.
         """
-        return self.client.document_lines.add(document_id, line)
+        remote_line = self._as_document_line(line)
+        return self.client.document_lines.add(document_id, remote_line)
 
     def finalize_document(self, document_id: int) -> Document:
         """
@@ -99,8 +122,8 @@ class HenrriDocumentsService(HenrriService):
     def update_document(
             self,
             document_id: int,
-            updated_document: Document,
-            updated_lines: Sequence[DocumentLine],
+            updated_document: Document | Any,
+            updated_lines: Sequence[DocumentLine | Any],
         ) -> tuple[Document, Sequence[DocumentLine]]:
         """
         Met à jour un document existant sur Henrri.
@@ -108,24 +131,28 @@ class HenrriDocumentsService(HenrriService):
         
         Arguments:
         - document_id (str): L'identifiant du produit à mettre à jour.
-        - updated_document (Document): Le produit mis à jour.
-        - updated_lines (Sequence[DocumentLine]): La liste des lignes mis à jour.
+        - updated_document (Document | Any): Le document local ou le modèle SDK Henri mis à jour.
+        - updated_lines (Sequence[DocumentLine | Any]): La liste des lignes mises à jour.
 
         Returns:
         - tuple[Document, list[DocumentLine]]:
         Le document mis à jour au format de la bibliothèque henrri-connect.
         """
-        check = any(line.id is None for line in updated_lines)  # Pour la cohérence métier
+        remote_document = self._as_document(updated_document)
+        check = any(
+            line.id is None 
+            for line in [self._as_document_line(line) for line in updated_lines]
+        )
         if check:
             raise ValueError("Toutes les lignes doivent avoir un id")
 
-        if updated_document.finalized:
+        if remote_document.finalized:
             raise ValueError("Impossible de modifier une facture finalisée")
 
-        response = self.client.documents.modify(document_id, updated_document)
+        response = self.client.documents.modify(document_id, remote_document)
         responses = []
-        for line in updated_lines:
-            if line.id is None: # Pour le type checker
+        for line in [self._as_document_line(line) for line in updated_lines]:
+            if line.id is None:
                 raise ValueError("Toutes les lignes doivent avoir un id")
             document_line = self.client.document_lines.modify(document_id, line.id, line)
             responses.append(document_line)

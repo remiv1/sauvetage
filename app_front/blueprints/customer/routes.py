@@ -73,15 +73,21 @@ def view(customer_id: int):
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def customer_wc_push(customer_id: int):
     """Pousse un client vers WooCommerce (création ou mise à jour)."""
-    push_customer_wc(customer_id)
+    success, error_message = push_customer_wc(customer_id)
+    status_code = 204 if success else 500
+    log_payload = get_request_log_metadata(request) or {}
+    if error_message:
+        log_payload["error"] = error_message
     log_client_event(
         client_id=str(customer_id),
         event="wc_push",
         user_id=session.get("username"),
         ip_address=get_client_ip(request),
-        status_code=204,
-        obj_metadata=get_request_log_metadata(request),
+        status_code=status_code,
+        obj_metadata=log_payload,
     )
-    response = make_response("", 204)
+    if not success:
+        return make_response(error_message or "Erreur de synchronisation WooCommerce", status_code)
+    response = make_response("", status_code)
     response.headers["HX-Redirect"] = url_for("customer.view", customer_id=customer_id)
     return response

@@ -277,6 +277,7 @@ echo ""
 
 FRONTEND_LOG_LEVEL=$(prompt_value "  → Niveau de log" "info")
 FRONTEND_DEBUG=$(prompt_value "  → Mode DEBUG (true/false)" "false")
+MEDIA_UPLOAD_DIR=$(prompt_value "  → Répertoire de stockage des images" "/home/root/app/documents/shared/pictures")
 
 echo ""
 echo -e "${YELLOW}Identifiants APIs externes (optionnels)${NC}"
@@ -308,6 +309,7 @@ EBUSINESS_SECRET=${EBUSINESS_SECRET}
 # Gestion Flask
 FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
 SECURITY_TOKEN=${SECURITY_TOKEN}
+MEDIA_UPLOAD_DIR=${MEDIA_UPLOAD_DIR}
 
 # Adresse de l'API FastAPI
 API_URL=http://app-back:8000/api/v1
@@ -434,6 +436,7 @@ cat > ".env" << EOF
 # Configuration des dossiers et des points de montage pour Dilicom
 DILICOM_OUT_DIR=${DILICOM_OUT_DIR}
 DILICOM_IN_DIR=${DILICOM_IN_DIR}
+MEDIA_UPLOAD_DIR=${MEDIA_UPLOAD_DIR}
 EOF
 chmod 600 ".env"
 echo -e "${GREEN}✓ Permissions appliquées (600)${NC}"

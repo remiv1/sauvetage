@@ -17,6 +17,7 @@ Exceptions:
 import logging
 from typing import Any
 from henrri_connect.models import Document, DocumentLine, Item, Customer
+from henrri_connect.exc import HenrriError
 from db_models.services.henrri import (
     HenrriProductsService,
     HenrriCustomersService,
@@ -25,6 +26,43 @@ from db_models.services.henrri import (
 from db_models.objects.invoices import Invoice
 
 logger = logging.getLogger(__name__)
+
+
+def _build_henrri_document_for_creation(invoice: Invoice) -> Document:
+    """Construit un document Henrri sans lignes pour l'API de création."""
+    payload = invoice.to_dict_henrri()
+    payload.pop("lines", None)
+    return Document(**payload)
+
+
+def _log_henrri_business_error(
+    *,
+    invoice: Invoice,
+    message: str,
+    exc: Exception,
+    step: str,
+    product_id: str | int | None = None,
+) -> None:
+    """Journalise une erreur métier Henrri dans la collection métier dédiée."""
+    metadata: dict[str, Any] = {
+        "invoice_id": getattr(invoice, "id", None),
+        "step": step,
+        "exception_type": type(exc).__name__,
+        "error": str(exc),
+    }
+    if product_id is not None:
+        metadata["product_id"] = product_id
+    logger.exception(
+        message,
+        extra={
+            "log_type": "metiers",
+            "action": "henrri_sync",
+            "resource_type": "invoice",
+            "resource_id": str(getattr(invoice, "id", "unknown")),
+            "status_code": _extract_status_code(exc),
+            "obj_metadata": metadata,
+        },
+    )
 
 
 class HenrriSyncError(Exception):
@@ -79,11 +117,25 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
     # ——— 1. Validation des clients ———
     try:
         if invoice.customer.henrri_id is None:
-            customer = Customer(**invoice.customer.to_dict_henrri())
-            henrri_id = hcs.create_customer(customer)
-            invoice.customer.henrri_id = henrri_id
+            if invoice.customer.id is not None:
+                candidate_customer_id = str(invoice.customer.id)
+                if check_customer(candidate_customer_id):
+                    invoice.customer.henrri_id = candidate_customer_id
+                else:
+                    customer = Customer(**invoice.customer.to_dict_henrri())
+                    henrri_id = hcs.create_customer(customer)
+                    invoice.customer.henrri_id = henrri_id
+            else:
+                customer = Customer(**invoice.customer.to_dict_henrri())
+                henrri_id = hcs.create_customer(customer)
+                invoice.customer.henrri_id = henrri_id
     except Exception as e:
-        logger.exception("Erreur lors de la création du client Henrri")
+        _log_henrri_business_error(
+            invoice=invoice,
+            message="Erreur lors de la création du client Henrri",
+            exc=e,
+            step="customer",
+        )
         raise HenrriSyncError(
             f"Échec création client: {e}",
             status_code=_extract_status_code(e),
@@ -99,11 +151,26 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
             seen.add(product)
             if product.henrri_id is None:
                 try:
-                    henrri_item = Item(**product.to_dict_henrri())
-                    product_id = hps.create_product(henrri_item)
-                    product.henrri_id = product_id
+                    if product.id is not None:
+                        candidate_product_id = str(product.id)
+                        if check_product(candidate_product_id):
+                            product.henrri_id = candidate_product_id
+                        else:
+                            henrri_item = Item(**product.to_dict_henrri())
+                            product_id = hps.create_product(henrri_item)
+                            product.henrri_id = product_id
+                    else:
+                        henrri_item = Item(**product.to_dict_henrri())
+                        product_id = hps.create_product(henrri_item)
+                        product.henrri_id = product_id
                 except Exception as e:
-                    logger.exception("Erreur création produit %s Henrri", product.id)
+                    _log_henrri_business_error(
+                        invoice=invoice,
+                        message="Erreur création produit %s Henrri: %s",
+                        exc=e,
+                        step="product",
+                        product_id=product.id,
+                    )
                     raise HenrriSyncError(
                         f"Échec création produit {product.id}: {e}",
                         status_code=_extract_status_code(e),
@@ -119,11 +186,16 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
         document_id = int(invoice.henrri_id)
     else:
         try:
-            henrri_doc = Document(**invoice.to_dict_henrri())
+            henrri_doc = _build_henrri_document_for_creation(invoice)
             logger.debug("Création de la facture: %s", henrri_doc)
             created = hds.create_document(henrri_doc)
         except Exception as e:
-            logger.exception("Erreur lors de la création de la facture Henrri")
+            _log_henrri_business_error(
+                invoice=invoice,
+                message="Erreur lors de la création de la facture Henrri",
+                exc=e,
+                step="document",
+            )
             raise HenrriSyncError(
                 f"Échec création facture: {e}",
                 status_code=_extract_status_code(e),
@@ -153,7 +225,12 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
             henrri_line = DocumentLine(**local_line.to_dict_henrri())
             created_line = hds.add_line(document_id, henrri_line)
         except Exception as e:
-            logger.exception("Erreur création ligne %s Henrri", local_line.reference)
+            _log_henrri_business_error(
+                invoice=invoice,
+                message="Erreur création ligne %s Henrri",
+                exc=e,
+                step="lines",
+            )
             raise HenrriSyncError(
                 f"Échec création ligne {local_line.reference}: {e}",
                 status_code=_extract_status_code(e),
@@ -173,7 +250,12 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
     try:
         finalized = hds.finalize_document(document_id)
     except Exception as e:
-        logger.exception("Erreur lors de la finalisation de la facture Henrri %s", document_id)
+        _log_henrri_business_error(
+            invoice=invoice,
+            message="Erreur lors de la finalisation de la facture Henrri %s",
+            exc=e,
+            step="finalize",
+        )
         raise HenrriSyncError(
             f"Échec finalisation facture: {e}",
             status_code=_extract_status_code(e),
@@ -252,9 +334,44 @@ def get_invoice_pdf(ext_id: str) -> bytes:
         ) from e
 
 def check_product(ext_id: str) -> bool:
-    """Vérifie l'existance d'un produit chez Henrri."""
-    raise NotImplementedError
+    """Vérifie l'existence d'un produit chez Henrri."""
+    try:
+        product_id = int(ext_id)
+        service = HenrriProductsService()
+        product = service.client.items.get(product_id)
+        return product is not None and getattr(product, "id", None) is not None
+    except (TypeError, ValueError):
+        logger.warning("Identifiant produit Henrri invalide: %s", ext_id)
+        return False
+    except HenrriError as he:
+        logger.warning(
+            "Erreur Henrri lors de la vérification du produit %s: %s",
+            ext_id,
+            he,
+        )
+        return False
+    except Exception as exc:  # pragma: no cover - dépendance réseau / API
+        logger.warning("Produit Henrri %s introuvable ou inaccessible: %s", ext_id, exc)
+        return False
+
 
 def check_customer(ext_id: str) -> bool:
-    """Vérifie l'existance d'un client chez Henrri."""
-    raise NotImplementedError
+    """Vérifie l'existence d'un client chez Henrri."""
+    try:
+        customer_id = int(ext_id)
+        service = HenrriCustomersService()
+        customer = service.client.customers.get(customer_id)
+        return customer is not None and getattr(customer, "id", None) is not None
+    except (TypeError, ValueError):
+        logger.warning("Identifiant client Henrri invalide: %s", ext_id)
+        return False
+    except HenrriError as he:
+        logger.warning(
+            "Erreur Henrri lors de la vérification du client %s: %s",
+            ext_id,
+            he,
+        )
+        return False
+    except Exception as exc:  # pragma: no cover - dépendance réseau / API
+        logger.warning("Client Henrri %s introuvable ou inaccessible: %s", ext_id, exc)
+        return False
