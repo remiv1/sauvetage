@@ -59,10 +59,11 @@ def _build_label_map(enum_cls: type[Any]) -> dict[str, str]:
 
 LANGUAGE_LABEL_MAP = _build_label_map(List74)
 
-class DilicomService:
+class DilicomServiceBase:
     """
-    Service pour les opérations SFTP avec le serveur de Dilicom.
-    Cette classe utilise `Connector` pour gérer les connexions et les opérations SFTP.
+    Service de base pour les opérations SFTP avec le serveur de Dilicom.
+    Cette classe garde les helpers et le flux partagé pour les traitements
+    des fichiers de retour et de référentiel.
     """
     def __init__(self, session: Session):
         self.session = session
@@ -583,3 +584,6 @@ def _generate_address_from_distributor_line(line: DistributorLineData) -> str:
     x += b1.ville + " " if b1.ville else ""
     x += b1.pays if b1.pays else ""
     return x.strip()
+
+
+DilicomService = DilicomServiceBase
