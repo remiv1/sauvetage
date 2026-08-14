@@ -323,15 +323,15 @@ def _get_prices_at_movement(objects_id: List[int]) -> List[ObjectPrice]:
             avg_in = float(avg_in or 0.0)
             final_price = last_price + avg_in
 
-            # récupérer l'ean13 de l'objet général (peut être None)
+            # récupérer l'ean13 de l'objet général ; ignorer les identifiants orphelins
+            # pour éviter un blocage du commit si la ligne a été supprimée ou n'a jamais
+            # été persistée dans la transaction courante.
             ean = session.execute(
                 select(GeneralObjects.ean13).where(GeneralObjects.id == oid)
             ).scalar_one_or_none()
 
             if not ean:
-                raise RuntimeError(
-                    f"Objet général {oid} introuvable pour récupérer l'EAN13"
-                )
+                continue
 
             results.append(
                 ObjectPrice(

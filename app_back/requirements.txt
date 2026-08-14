@@ -5,7 +5,7 @@ pymongo==4.16.0
 psycopg2-binary==2.9.11
 sqlalchemy==2.0.46
 bcrypt==5.0.0
-weasyprint==68.1
+weasyprint==69.0
 jinja2==3.1.6
 paramiko==4.0.0
 dilicom-parser>=0.2.8

@@ -165,11 +165,14 @@ def create_product(product_data: Dict[str, Any]) -> Dict[str, Any]:
             child = OtherObjects(general_object_id=go.id)
 
         session.add(child)
+        session.commit()
 
         return {"status": "created", "ean13": ean13, "general_object_id": go.id}
     except ValueError as e:
+        session.rollback()
         raise ValueError(f"Erreur de validation des données du produit : {e}") from e
     except Exception as e:
+        session.rollback()
         raise ValueError(f"Erreur lors de la création du produit : {e}") from e
 
 

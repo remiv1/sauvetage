@@ -21,15 +21,24 @@ def define_period(start: datetime, period: str) -> Tuple[datetime, ...]:
     return start, end
 
 
+def _with_tzinfo(value: datetime, source: datetime) -> datetime:
+    """Conserve le fuseau horaire d'une date source."""
+    if source.tzinfo is not None:
+        return value.replace(tzinfo=source.tzinfo)
+    return value
+
+
 def _add_a_year(start: datetime) -> datetime:
     """Ajoute un an à une date."""
     try:
-        return datetime(
+        end = datetime(
             year=int(start.year) + 1, month=int(start.month), day=int(start.day)
         ) - timedelta(days=1)
+        return _with_tzinfo(end, start)
     except ValueError:
         # Cas du 29 février
-        return datetime(year=int(start.year) + 1, month=3, day=1) - timedelta(days=1)
+        end = datetime(year=int(start.year) + 1, month=3, day=1) - timedelta(days=1)
+        return _with_tzinfo(end, start)
 
 
 def _add_a_semester(start: datetime) -> datetime:
@@ -37,12 +46,14 @@ def _add_a_semester(start: datetime) -> datetime:
     month = int(start.month)
     year = int(start.year)
     if month <= 6:
-        return datetime(year=year, month=month + 6, day=int(start.day)) - timedelta(
+        end = datetime(year=year, month=month + 6, day=int(start.day)) - timedelta(
             days=1
         )
-    return datetime(year=year + 1, month=month - 6, day=int(start.day)) - timedelta(
-        days=1
-    )
+    else:
+        end = datetime(year=year + 1, month=month - 6, day=int(start.day)) - timedelta(
+            days=1
+        )
+    return _with_tzinfo(end, start)
 
 
 def _add_a_trimestre(start: datetime) -> datetime:
@@ -50,12 +61,14 @@ def _add_a_trimestre(start: datetime) -> datetime:
     month = int(start.month)
     year = int(start.year)
     if month <= 9:
-        return datetime(year=year, month=month + 3, day=int(start.day)) - timedelta(
+        end = datetime(year=year, month=month + 3, day=int(start.day)) - timedelta(
             days=1
         )
-    return datetime(year=year + 1, month=month - 9, day=int(start.day)) - timedelta(
-        days=1
-    )
+    else:
+        end = datetime(year=year + 1, month=month - 9, day=int(start.day)) - timedelta(
+            days=1
+        )
+    return _with_tzinfo(end, start)
 
 
 def _add_a_month(start: datetime) -> datetime:
@@ -63,10 +76,12 @@ def _add_a_month(start: datetime) -> datetime:
     month = int(start.month)
     year = int(start.year)
     if month == 12:
-        return datetime(year=year + 1, month=1, day=int(start.day)) - timedelta(days=1)
-    return datetime(year=year, month=month + 1, day=int(start.day)) - timedelta(days=1)
+        end = datetime(year=year + 1, month=1, day=int(start.day)) - timedelta(days=1)
+    else:
+        end = datetime(year=year, month=month + 1, day=int(start.day)) - timedelta(days=1)
+    return _with_tzinfo(end, start)
 
 
 def _add_a_week(start: datetime) -> datetime:
     """Ajoute une semaine à une date."""
-    return start + timedelta(days=6)
+    return _with_tzinfo(start + timedelta(days=6), start)

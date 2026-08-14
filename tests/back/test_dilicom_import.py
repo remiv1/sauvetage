@@ -35,7 +35,7 @@ def test_reproduces_dif499492052_price_year_and_metadata() -> None:
     ).products[0]
 
     service = object.__new__(DilicomService)
-    service.supplier_repo = type(
+    service.supplier_repo = type(   # type: ignore
         "S",
         (),
         {
@@ -50,7 +50,7 @@ def test_reproduces_dif499492052_price_year_and_metadata() -> None:
             )()
         }
     )()
-    service.objects_repo = type(
+    service.objects_repo = type(   # type: ignore
         "O",
         (),
         {
@@ -76,10 +76,10 @@ def test_reproduces_dif499492052_price_year_and_metadata() -> None:
     assert any("cover" in key.lower() for key in metadata)
 
 
-def test_dilicom_real_file_extracts_language_subject_and_collection_metadata() -> None:
+def test_dilicom_real_file_extracts_language_collection_dimensions_and_weight_metadata() -> None:
     """
     Le fichier ONIX doit remonter les métadonnées explicites de langue,
-    sujets et collection.
+    collection, dimensions et poids.
     """
     product = Notice.parse_full(
         Path("documents/back/dilicom/in/DIF492327800/492327800.xml"),
@@ -91,8 +91,30 @@ def test_dilicom_real_file_extracts_language_subject_and_collection_metadata() -
 
     assert metadata["code_langue"] in {"FRE", "fre", "FR"}
     assert metadata["langue"] in {"français", "fre", "fr"}
-    assert any("poesie" in str(item).lower() for item in metadata.get("sujets", []))
-    assert any("ancade" in str(item).lower() for item in metadata.get("collections", []))
+    assert "sujets" not in metadata
+    assert "sujet" not in metadata
+    assert any(
+        "ancade" in str(item).lower()
+        for item in metadata.get("collections", [])   # type: ignore
+    )
+    assert metadata["dimensions_mm"] == "210*120*7"
+    assert metadata["poids_grammes"] == "115"
+    assert "ref_bnf" not in metadata
+    assert "notice_bnf" not in metadata
+
+
+def test_dilicom_extracts_bnf_metadata_when_present() -> None:
+    """Les identifiants BNF doivent être remontés quand le fichier ONIX les fournit."""
+    product = Notice.parse_full(
+        Path("tests/back/fixtures/dilicom/in/DIF499492052/499492052.xml"),
+        version="3.0",
+    ).products[0]
+
+    service = object.__new__(DilicomService)
+    metadata = service._get_metadatas_from_onix(product)  # pylint: disable=W0212
+
+    assert metadata["ref_bnf"] == "FRBNF468557930000005"
+    assert metadata["notice_bnf"] == "http://catalogue.bnf.fr/ark:/12148/cb46855793p"
 
 
 def test_get_values_from_onix_returns_sqlalchemy_object_price() -> None:
@@ -106,7 +128,7 @@ def test_get_values_from_onix_returns_sqlalchemy_object_price() -> None:
     ).products[0]
 
     service = object.__new__(DilicomService)
-    service.supplier_repo = type(
+    service.supplier_repo = type(   # type: ignore
         "S",
         (),
         {
@@ -121,7 +143,7 @@ def test_get_values_from_onix_returns_sqlalchemy_object_price() -> None:
             )()
         }
     )()
-    service.objects_repo = type(
+    service.objects_repo = type(    # type: ignore
         "O",
         (),
         {"get_current_vat_rates": lambda self: {5.5: 2}}
