@@ -35,15 +35,16 @@ VALUE_TYPE_NBR_MSG = "L'ID de la ligne doit être un nombre entier."
 
 
 def get_vat_rates() -> List[tuple]:
-    """Retourne les taux de TVA actuellement en vigueur sous forme de liste de tuples (id, label).
+    """Retourne les taux de TVA actuellement en vigueur sous forme de liste de tuples.
 
-    Utilisé pour peupler le SelectField vat_rate_id du formulaire CreateObjectForm.
+    Cette liste est utilisée pour les lignes de prix de vente (historique de prix),
+    qui sont la seule source de vérité pour la TVA de vente.
     """
     session = db_conf.get_main_session()
     rates = session.execute(
         select(VatRate).where(VatRate.date_end.is_(None)).order_by(VatRate.code)
     ).scalars().all()
-    return [("", "— Aucun —")] + [(str(r.id), f"{r.label} ({r.rate} %)") for r in rates]
+    return [(str(r.id), f"{r.label} ({r.rate} %)") for r in rates]
 
 
 def get_zero_price_items() -> Sequence[dict]:

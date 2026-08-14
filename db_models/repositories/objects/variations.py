@@ -48,7 +48,7 @@ class VariationsRepository(BaseRepository):
         Les champs attendus sont :
         - general_object_id (requis),
         - name (requis),
-        - description, price, purchase_price, vat_rate_id, is_active, wpwc_id
+        - description, price, purchase_price, is_active, wpwc_id
         """
         # Levée d'une exception si des champs diffèrent des champs attendus pour une variation
         extra_keys = set(variation_data.keys()) - set(self._kwargs)
@@ -78,7 +78,6 @@ class VariationsRepository(BaseRepository):
             - description,
             - price,
             - purchase_price,
-            - vat_rate_id,
             - is_active
         Raise:
             - ValueError: Si des champs diffèrent des champs attendus pour une variation
@@ -119,7 +118,6 @@ class VariationsRepository(BaseRepository):
             - description,
             - price,
             - purchase_price,
-            - vat_rate_id,
             - is_active
         Args:
             - form: Formulaire contenant les données de la variation à mettre à jour.
@@ -141,8 +139,6 @@ class VariationsRepository(BaseRepository):
         instance.price = float(form.price.data or 0)
         purchase_price = form.purchase_price.data
         instance.purchase_price = float(purchase_price) if purchase_price else None
-        vat_id = form.vat_rate_id.data
-        instance.vat_rate_id = int(vat_id) if vat_id else None
         instance.is_active = bool(form.is_active.data)
         try:
             self.session.flush()

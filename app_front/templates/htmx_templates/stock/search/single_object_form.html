@@ -163,6 +163,7 @@
                                         <th>Depuis</th>
                                         <th>Jusqu'à</th>
                                         <th>Prix de vente</th>
+                                        <th>TVA</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -201,20 +202,6 @@
                         {{ render_field_errors(form.purchase_price) }}
                     </div>
 
-                    {# Taux de TVA #}
-                    <div class="form-group">
-                        {{ form.vat_rate_id.label(class="form-label") }}
-                        <select name="vat_rate_id" id="vat_rate_id" class="form-control"
-                                {% if disabled %}disabled{% endif %}>
-                            {% for val, label in (vat_rates or form.vat_rate_id.choices) %}
-                            <option value="{{ val }}"
-                                    {{ 'selected' if form.vat_rate_id.data == val else '' }}>
-                                {{ label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        {{ render_field_errors(form.vat_rate_id) }}
-                    </div>
                 </div>
 
                 {# ── Conteneur du complément (onglets) ──────────── #}

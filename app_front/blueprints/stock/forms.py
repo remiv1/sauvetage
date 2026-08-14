@@ -1,7 +1,7 @@
 """Module contenant les formulaires liés à la gestion des stocks."""
 
 from datetime import date
-from typing import Any
+from typing import Any, cast
 from collections import namedtuple
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -184,12 +184,6 @@ class VariationForm(FlaskForm):
     description = TextAreaField("Description", render_kw={"rows": 3})
     price = StringField("Prix de vente", validators=[DataRequired()])
     purchase_price = StringField("Prix d'achat")
-    vat_rate_id = SelectField(
-        VAT_RATE,
-        coerce=str,
-        choices=[("" , "— Aucun —")],
-        validate_choice=False,
-    )
     is_active = BooleanField("Active", default=True)
 
 
@@ -201,7 +195,20 @@ class PriceHistoryEntryForm(FlaskForm):
 
         csrf = False
 
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialise les choix de TVA pour la ligne de prix de vente."""
+        super().__init__(*args, **kwargs)
+        from app_front.blueprints.stock.utils import get_vat_rates  # pylint: disable=import-outside-toplevel
+
+        self.vat_rate_id.choices = get_vat_rates()
+
     price = FloatField("Prix de vente", validators=[DataRequired()])
+    vat_rate_id = SelectField(
+        VAT_RATE,
+        coerce=int,
+        choices=[],
+        validators=[Optional()],
+    )
     from_date = DateField(
         "Depuis",
         format="%Y-%m-%d",
@@ -241,12 +248,6 @@ class CreateObjectForm(FlaskForm):
     description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
     prices = FieldList(FormField(PriceHistoryEntryForm), min_entries=1)  # type: ignore[arg-type]
     purchase_price = StringField("Prix d'achat")
-    vat_rate_id = SelectField(
-        VAT_RATE,
-        coerce=str,
-        choices=[("", "— Aucun —")],
-        validate_choice=False,
-    )
     book = FormField(BookForm)  # type: ignore[arg-type]
     object_tags = FieldList(FormField(TagForm), min_entries=0)  # type: ignore[arg-type]
     obj_metadatas = FormField(MetadataForm)  # type: ignore[arg-type]
@@ -265,6 +266,8 @@ class CreateObjectForm(FlaskForm):
                 raise ValidationError("La date de fin doit être postérieure à la date de début.")
             if row.price.data is None or row.price.data <= 0:
                 raise ValidationError("Le prix de vente doit être strictement positif.")
+            if row.vat_rate_id.data in (None, "", 0):
+                raise ValidationError("Le taux de TVA est obligatoire pour chaque prix de vente.")
 
     def populate_from_object(self, obj: Any):
         """Remplit les champs du formulaire à partir d'un objet existant."""
@@ -276,7 +279,6 @@ class CreateObjectForm(FlaskForm):
         self.name.data = obj.name
         self.description.data = obj.description
         self.purchase_price.data = str(obj.purchase_price) if obj.purchase_price is not None else ""
-        self.vat_rate_id.data = str(obj.vat_rate_id) if obj.vat_rate_id is not None else ""
 
         self._populate_prices(getattr(obj, "prices", []), getattr(obj, "price", None))
 
@@ -290,23 +292,32 @@ class CreateObjectForm(FlaskForm):
         while len(self.prices) > 0:
             self.prices.pop_entry()
 
+        from app_front.blueprints.stock.utils import get_vat_rates  # pylint: disable=import-outside-toplevel
+
+        vat_rates = get_vat_rates()
         sorted_prices = sorted(
             list(prices or []),
             key=lambda price: (price.from_date, price.id or 0),
         )
         if sorted_prices:
             for price in sorted_prices:
-                inner = self.prices.append_entry().form  # type: ignore[attr-defined]
-                inner["price"].data = float(price.price)
-                inner["from_date"].data = price.from_date
-                inner["to_date"].data = price.to_date
+                inner = cast(PriceHistoryEntryForm, self.prices.append_entry().form)
+                inner.vat_rate_id.choices = vat_rates
+                inner.price.data = float(price.price)
+                inner.vat_rate_id.data = str(price.vat_rate_id) \
+                    if price.vat_rate_id is not None \
+                    else ""
+                inner.from_date.data = price.from_date
+                inner.to_date.data = price.to_date
             return
 
-        inner = self.prices.append_entry().form  # type: ignore[attr-defined]
+        inner = cast(PriceHistoryEntryForm, self.prices.append_entry().form)
+        inner.vat_rate_id.choices = vat_rates
         if fallback_price is not None and float(fallback_price) > 0:
-            inner["price"].data = float(fallback_price)
-        inner["from_date"].data = date.today()
-        inner["to_date"].data = None
+            inner.price.data = float(fallback_price)
+        inner.vat_rate_id.data = ""
+        inner.from_date.data = date.today()
+        inner.to_date.data = None
 
     def _populate_book(self, book: Any):
         if not book:

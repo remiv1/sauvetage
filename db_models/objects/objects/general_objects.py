@@ -40,7 +40,6 @@ class GeneralObjects(WorkingBase, QueryMixin):
     - description : Description de l'objet (nullable)
     - price : Prix de l'objet (non nullable, valeur par défaut = 0.0)
     - purchase_price : Prix d'achat de l'objet (nullable, valeur par défaut = 0.0)
-    - vat_rate_id : Code TVA associé à l'objet (nullable, référence la table vat_rates)
     - created_at : Date de création de l'objet
     - updated_at : Date de dernière mise à jour de l'objet
     - last_inventory_timestamp : Dernier inventaire
@@ -88,12 +87,6 @@ class GeneralObjects(WorkingBase, QueryMixin):
         Numeric(10, 2), nullable=True, default=0.0,
         comment="Prix d'achat de l'objet"
     )
-    vat_rate_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        ForeignKey("app_schema.vat_rates.id"),
-        nullable=True,
-        comment="Code TVA associé à l'objet (référence la table vat_rates)",
-    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -119,7 +112,6 @@ class GeneralObjects(WorkingBase, QueryMixin):
     )
 
     supplier = relationship("Suppliers", back_populates="objects")
-    vat_rate = relationship("VatRate", back_populates="general_objects")
     prices = relationship(
         "ObjectPrices",
         back_populates="general_object",
@@ -166,6 +158,22 @@ class GeneralObjects(WorkingBase, QueryMixin):
         cascade=CASCADE_OPTIONS,
     )
 
+    @property
+    def vat_rate(self) -> Any | None:
+        """Retourne le taux de TVA du prix courant si ce dernier est renseigné."""
+        current_price = self._current_price_row()
+        if current_price is None:
+            return None
+        return current_price.vat_rate
+
+    @property
+    def vat_rate_id(self) -> Optional[int]:
+        """Retourne l'identifiant de taux de TVA du prix courant si existant."""
+        current_price = self._current_price_row()
+        if current_price is None:
+            return None
+        return current_price.vat_rate_id
+
     def _current_price_row(self) -> Optional["ObjectPrices"]:
         """Retourne la ligne de prix courante ou la plus proche disponible."""
         today = date.today()
@@ -186,6 +194,23 @@ class GeneralObjects(WorkingBase, QueryMixin):
             return min(future_prices, key=lambda price: (price.from_date, price.id or 0))
 
         return None
+
+    def get_current_vat_rate(self) -> Optional[float]:
+        """Retourne le taux de TVA du prix courant, si disponible."""
+        current_price = self._current_price_row()
+        if current_price is None or current_price.vat_rate is None:
+            return None
+        return float(current_price.vat_rate.rate)
+
+    def get_valid_prices(self, at: date | None = None) -> list["ObjectPrices"]:
+        """Retourne les lignes de prix valides à la date donnée."""
+        ref_date = at or date.today()
+        return [
+            price
+            for price in self.prices
+            if price.from_date <= ref_date
+            and (price.to_date is None or price.to_date >= ref_date)
+        ]
 
     def get_price(self) -> Decimal:
         """Retourne le prix courant calculé depuis l'historique."""
@@ -307,6 +332,12 @@ class ObjectPrices(WorkingBase, QueryMixin):
         Numeric(10, 2, asdecimal=True), nullable=False, default=Decimal("0.00"),
         comment="Prix de l'objet"
     )
+    vat_rate_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.vat_rates.id"),
+        nullable=True,
+        comment="Taux de TVA associé au prix de vente",
+    )
     from_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
@@ -320,6 +351,7 @@ class ObjectPrices(WorkingBase, QueryMixin):
     )
 
     general_object = relationship("GeneralObjects", back_populates="prices")
+    vat_rate = relationship("VatRate", back_populates="object_prices")
 
     @hybrid_property
     def is_current(self) -> bool:

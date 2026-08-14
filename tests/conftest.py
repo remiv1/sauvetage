@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 def pytest_configure(config):
     """Hook pytest pour configurer avant les tests."""
     # Charger les variables d'environnement
-    env_file = Path(__file__).parent.parent / "databases" / "logs" / ".env.db_logs"
+    env_file = Path(__file__).parent.parent / "config" / "env" / ".env.db_logs"
     if env_file.exists():
         load_dotenv(env_file, override=True)
 
-    app_front_env = Path(__file__).parent.parent / "app_front" / ".env.flask"
+    app_front_env = Path(__file__).parent.parent / "config" / "env" / ".env.flask"
     if app_front_env.exists():
         load_dotenv(app_front_env, override=True)
 

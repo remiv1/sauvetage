@@ -16,6 +16,17 @@
         </div>
         {{ render_field_errors(price_row.price) }}
     </td>
+    <td>
+        <select name="{{ price_row.vat_rate_id.name }}" id="{{ price_row.vat_rate_id.id }}" class="form-control"
+                {% if disabled %}disabled{% endif %}>
+            {% for val, label in (price_row.vat_rate_id.choices or []) %}
+            <option value="{{ val }}" {{ 'selected' if price_row.vat_rate_id.data == val else '' }}>
+                {{ label }}
+            </option>
+            {% endfor %}
+        </select>
+        {{ render_field_errors(price_row.vat_rate_id) }}
+    </td>
     <td class="text-end">
         {% if not disabled %}
         <button type="button" class="btn btn-outline-danger btn-sm" data-price-row-remove>Supprimer</button>

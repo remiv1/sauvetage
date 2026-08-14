@@ -23,6 +23,7 @@ from db_models.objects import (
     CustomerParts,
     CustomerPros,
     CustomerAddresses,
+    ObjectPrices,
 )
 from db_models.models.woo.order import WCOrderGet
 
@@ -304,19 +305,65 @@ class OrdersRepository(BaseRepository):
         vat_rate: float,
         object_variation_id: int | None = None,
         create_source: str = "web",
-    ) -> OrderLine:
+    ) -> OrderLine | list[OrderLine]:
         """Ajoute une ligne à une commande.
-        Args:
-            order: La commande parente.
-            general_object_id: L'identifiant de l'article.
-            quantity: Quantité commandée.
-            unit_price: Prix unitaire HT.
-            discount: Remise en pourcentage (0 par défaut).
-            vat_rate: Taux de TVA en pourcentage.
-            create_source: Source de création.
-        Returns:
-            OrderLine: La ligne de commande créée.
+
+        Si l'article a plusieurs prix valides (avec leur propre TVA), on découpe la
+        commande en autant de lignes que de prix actifs pour respecter le modèle
+        de données métier.
         """
+        general_object = self.session.execute(
+            select(self.object_repo.model)
+            .where(self.object_repo.model.id == general_object_id)
+            .options(
+                joinedload(self.object_repo.model.prices).joinedload(ObjectPrices.vat_rate),
+            )
+        ).scalars().unique().one_or_none()
+        if general_object is None:
+            raise ValueError(f"Article {general_object_id} introuvable.")
+
+        valid_prices = sorted(
+            general_object.get_valid_prices(),
+            key=lambda row: (row.from_date, row.id or 0),
+        )
+        if len(valid_prices) > 1:
+            lines = []
+            for price_row in valid_prices:
+                vat_rate_value = (
+                    float(price_row.vat_rate.rate)
+                    if price_row.vat_rate is not None
+                    else float(vat_rate or 0)
+                )
+                line = OrderLine(
+                    order_id=order.id,
+                    general_object_id=general_object_id,
+                    quantity=quantity,
+                    unit_price=float(price_row.price),
+                    discount=discount,
+                    vat_rate=vat_rate_value,
+                    status="draft",
+                    create_source=create_source,
+                    object_variation_id=object_variation_id,
+                )
+                lines.append(line)
+            try:
+                self.session.add_all(lines)
+                self.session.commit()
+                return lines
+            except IntegrityError as e:
+                self.session.rollback()
+                raise ValueError(
+                    f"Erreur lors de l'ajout des lignes : {e.orig}"
+                ) from e
+
+        if valid_prices:
+            unit_price = float(valid_prices[0].price)
+            vat_rate = (
+                float(valid_prices[0].vat_rate.rate)
+                if valid_prices[0].vat_rate is not None
+                else float(vat_rate or 0)
+            )
+
         line = OrderLine(
             order_id=order.id,
             general_object_id=general_object_id,

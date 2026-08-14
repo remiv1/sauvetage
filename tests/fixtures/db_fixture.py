@@ -2,7 +2,7 @@
 
 Cette fixture se connecte à la base de test créée par le script de tests
 (`tests/run_db_test_up.sh`). Les variables de connexion sont lues depuis
-`databases/main/.env.db_main`.
+`config/env/.env.db_main`.
 
 On expose désormais deux engines / deux sessions dédiées:
 - `db_session_main` : pour la base principale (`POSTGRES_DB_MAIN`) — utilise
@@ -50,8 +50,8 @@ def _load_env() -> None:
     abspath = os.path.abspath
     dotenv_file_path = join(
         abspath(join(dirname(__file__), "..", "..")),
-        "databases",
-        "main",
+        "config",
+        "logs",
         ".env.db_main",
     )
     if os.path.exists(dotenv_file_path):
@@ -60,7 +60,7 @@ def _load_env() -> None:
     # Also load MongoDB env vars if available
     mongo_env_path = join(
         abspath(join(dirname(__file__), "..", "..")),
-        "databases",
+        "config",
         "logs",
         ".env.db_logs",
     )

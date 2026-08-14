@@ -141,7 +141,7 @@ Un troisième rôle `user_migr` (Alembic) dispose des droits DDL sur les schéma
 
 - Stockage des logs applicatifs (module partagé `logs/logger.py`).
 - Écrit par Flask et FastAPI via `MongoDBLogger`.
-- Collections par type d'événement : `users`, `logs`, `clients`, `métiers`.
+- Collections par type d'événement : `users`, `logs`, `clients`, `metiers`.
 
 #### Volume partagé — sauv-pictures
 

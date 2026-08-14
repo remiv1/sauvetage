@@ -8,6 +8,8 @@ ENV PYTHONPATH=/app
 COPY app_front/ app_front/
 COPY db_models/ db_models/
 COPY logs/ logs/
+COPY config/__init__.py config/__init__.py
+COPY config/logs/ config/logs/
 
 # Rendre le script entrypoint exécutable
 RUN pip install -r app_front/requirements.txt \

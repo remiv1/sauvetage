@@ -9,6 +9,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from sqlalchemy import select, func
 from app_front.config import db_conf, USERS
+from config.logs.config_loader import get_log_types
 from db_models.objects.vat import VatRate
 
 
@@ -183,7 +184,7 @@ def get_logs_stats(year: Optional[int] = None) -> Dict[str, Any]:
         return {"year": target_year, "stats": {}, "error": "MongoDB non disponible"}
 
     stats: Dict[str, Any] = {}
-    for log_type in ["users", "logs", "clients", "métiers"]:
+    for log_type in get_log_types():
         collection_name = f"{target_year}-{log_type}"
         try:
             pipeline = [

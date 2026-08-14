@@ -43,12 +43,20 @@ Ce script automatise la création de tous les fichiers `.env` nécessaires pour 
 Le script crée automatiquement :
 
 ```txt
-databases/main/.env.db_main          # Configuration PostgreSQL
-databases/logs/.env.db_logs          # Configuration MongoDB
-proxy/.env.proxy                     # Configuration Traefik
-app_back/.env.fast                   # Configuration FastAPI
-app_front/.env.flask                 # Configuration Flask
+config/env/.env.db_main              # Configuration PostgreSQL
+config/env/.env.db_logs              # Configuration MongoDB
+config/env/.env.proxy                # Configuration Traefik
+config/env/.env.fast                 # Configuration FastAPI
+config/env/.env.flask                # Configuration Flask
+config/env/.env.dilicom              # Configuration Dilicom
+config/env/.env.woo                  # Configuration WooCommerce
+config/env/.env.henrri               # Configuration Henrri
 ```
+
+### Vérification rapide
+
+Les fichiers de configuration partagés sont désormais générés dans :
+`config/env/`.
 
 ## 🔐 Sécurité
 
@@ -80,18 +88,18 @@ la configuration peut être mise à jour à tout moment en relançant le script 
 ## 📝 Exemple de session
 
 ```txt
-[1/5] Configuration PostgreSQL
+[1/7] Configuration PostgreSQL
 
 Génération de mots de passe sécurisés...
 ✓ Mots de passe générés
 
-✓ databases/main/.env.db_main créé
-[2/5] Configuration MongoDB
+✓ config/env/.env.db_main créé
+[2/7] Configuration MongoDB
 
 Génération de mots de passe sécurisés...
 ✓ Mots de passe générés
 
-✓ databases/logs/.env.db_logs créé
+✓ config/env/.env.db_logs créé
 ...
 ```
 

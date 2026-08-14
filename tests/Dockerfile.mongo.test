@@ -4,7 +4,7 @@ FROM docker.io/library/mongo:7.0.16
 RUN apt-get update && apt-get install -y bash gettext
 
 # Copier les fichiers d'environnement et scripts
-COPY databases/logs/.env.db_logs /tmp/.env.db_logs
+COPY config/env/.env.db_logs /tmp/.env.db_logs
 COPY tests/init_mongo/02_immutable_collections.js /docker-entrypoint-initdb.d/02_immutable_collections.js
 COPY tests/init_mongo/03_collections_rotation.js /docker-entrypoint-initdb.d/03_collections_rotation.js
 COPY tests/init_mongo/00_generate_config.sh /tmp/00_generate_config.sh

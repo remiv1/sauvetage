@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="10" time="1.264" timestamp="2026-08-13T11:33:06.752342+02:00" hostname="sauvetage"><testcase classname="tests.db_objects.test_customers" name="test_customer_create_read_and_update" time="0.624" /><testcase classname="tests.db_objects.test_customers" name="test_create_complete_customer" time="0.026" /><testcase classname="tests.db_objects.test_inventory" name="test_multiple_prices_can_have_distinct_vat_rates" time="0.014" /><testcase classname="tests.db_objects.test_inventory" name="test_add_movements" time="0.022" /><testcase classname="tests.db_objects.test_objects" name="test_object_create_read_and_update" time="0.040" /><testcase classname="tests.db_objects.test_objects" name="test_get_by_ref_finds_existing_object_even_when_inactive" time="0.024" /><testcase classname="tests.db_objects.test_orders" name="test_create_order_with_invoice_and_shipment" time="0.034"><error message="failed on setup with &quot;sqlalchemy.exc.IntegrityError: (psycopg2.errors.NotNullViolation) null value in column &quot;customer_id&quot; of relation &quot;invoices&quot; violates not-null constraint&#10;DETAIL:  Failing row contains (1, 1, null, null, INV123456, 59.97, 3.30, e-commerce, 2026-08-13 09:33:07.604408, null, 2026-08-13 09:33:07.604412, null).&#10;&#10;[SQL: INSERT INTO app_schema.invoices (order_id, customer_id, henrri_id, reference, total_amount, vat_amount, create_source, created_at, update_source, updated_at, last_synced_at) VALUES (%(order_id)s, %(customer_id)s, %(henrri_id)s, %(reference)s, %(total_amount)s, %(vat_amount)s, %(create_source)s, %(created_at)s, %(update_source)s, %(updated_at)s, %(last_synced_at)s) RETURNING app_schema.invoices.id]&#10;[parameters: {'order_id': 1, 'customer_id': None, 'henrri_id': None, 'reference': 'INV123456', 'total_amount': Decimal('59.97'), 'vat_amount': Decimal('3.29835'), 'create_source': 'e-commerce', 'created_at': datetime.datetime(2026, 8, 13, 9, 33, 7, 604408, tzinfo=datetime.timezone.utc), 'update_source': None, 'updated_at': datetime.datetime(2026, 8, 13, 9, 33, 7, 604412, tzinfo=datetime.timezone.utc), 'last_synced_at': None}]&#10;(Background on this error at: https://sqlalche.me/e/20/gkpj)&quot;">venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+E   psycopg2.errors.NotNullViolation: null value in column "customer_id" of relation "invoices" violates not-null constraint
+E   DETAIL:  Failing row contains (1, 1, null, null, INV123456, 59.97, 3.30, e-commerce, 2026-08-13 09:33:07.604408, null, 2026-08-13 09:33:07.604412, null).
+
+The above exception was the direct cause of the following exception:
+tests/fixtures/f_orders.py:110: in invoice
+    db_session_main.flush()
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+venv/lib64/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+venv/lib64/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+venv/lib64/python3.12/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+venv/lib64/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.IntegrityError: (psycopg2.errors.NotNullViolation) null value in column "customer_id" of relation "invoices" violates not-null constraint
+E   DETAIL:  Failing row contains (1, 1, null, null, INV123456, 59.97, 3.30, e-commerce, 2026-08-13 09:33:07.604408, null, 2026-08-13 09:33:07.604412, null).
+E   
+E   [SQL: INSERT INTO app_schema.invoices (order_id, customer_id, henrri_id, reference, total_amount, vat_amount, create_source, created_at, update_source, updated_at, last_synced_at) VALUES (%(order_id)s, %(customer_id)s, %(henrri_id)s, %(reference)s, %(total_amount)s, %(vat_amount)s, %(create_source)s, %(created_at)s, %(update_source)s, %(updated_at)s, %(last_synced_at)s) RETURNING app_schema.invoices.id]
+E   [parameters: {'order_id': 1, 'customer_id': None, 'henrri_id': None, 'reference': 'INV123456', 'total_amount': Decimal('59.97'), 'vat_amount': Decimal('3.29835'), 'create_source': 'e-commerce', 'created_at': datetime.datetime(2026, 8, 13, 9, 33, 7, 604408, tzinfo=datetime.timezone.utc), 'update_source': None, 'updated_at': datetime.datetime(2026, 8, 13, 9, 33, 7, 604412, tzinfo=datetime.timezone.utc), 'last_synced_at': None}]
+E   (Background on this error at: https://sqlalche.me/e/20/gkpj)</error></testcase><testcase classname="tests.db_objects.test_users" name="test_user_to_dict" time="0.025" /><testcase classname="tests.db_objects.test_users" name="test_user_from_dict" time="0.000" /><testcase classname="tests.db_objects.test_users" name="test_complete_user" time="0.013" /></testsuite></testsuites>

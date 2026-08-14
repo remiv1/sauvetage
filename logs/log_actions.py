@@ -3,7 +3,7 @@ Fonctions helper de logging métier.
 
 Chaque fonction correspond à un log_type MongoDB et appelle le logger Python standard
 avec le bon extra dict. MongoForwardHandler se charge ensuite de router vers la bonne
-collection (ex: 2026-users, 2026-clients, 2026-métiers).
+collection (ex: 2026-users, 2026-clients, 2026-metiers).
 
 Usage dans un blueprint :
     from logs.log_actions import log_user_action, log_client_event, log_metier_event
@@ -105,7 +105,7 @@ def log_client_event(
 
 
 # ---------------------------------------------------------------------------
-# Collection : 2026-métiers
+# Collection : 2026-metiers
 # Qui  : événements métier automatiques (Dilicom, imports, tâches planifiées…)
 # ---------------------------------------------------------------------------
 
@@ -134,7 +134,7 @@ def log_metier_event(
         resource_type,
         event,
         extra={
-            "log_type": "métiers",
+            "log_type": "metiers",
             "user_id": user_id,
             "action": event,
             "resource_type": resource_type,

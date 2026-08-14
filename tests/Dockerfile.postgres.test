@@ -20,7 +20,7 @@ RUN chmod +x 00_generate_models.sh 04_secure_hba.sh 05_secure_conf.sh 99_cleanup
     && chown -R postgres:postgres /docker-entrypoint-initdb.d
 
 # Copier le fichier .env global dans un emplacement temporaire
-COPY databases/main/.env.db_main /tmp/.env
+COPY config/env/.env.db_main /tmp/.env
 
 # Exécuter le script de génération avant le démarrage
 RUN chmod +x 00_generate_models.sh && \

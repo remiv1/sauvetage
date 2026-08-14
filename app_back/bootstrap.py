@@ -2,12 +2,10 @@
 
 import os
 import time
-import threading
 import subprocess
 import socket
 import signal
 import urllib.parse
-from app_back.scheduler.dilicom_scheduler import start_dilicom_scheduler
 
 
 def wait_for(host: str, port: int, timeout: int = 60) -> bool:
@@ -87,6 +85,34 @@ def build_env():
         )
 
 
+def configure_dilicom_cron() -> None:
+    """Configure les tâches cron du conteneur pour l'envoi des référentiels et le fetch des retours."""
+    cron_post = os.getenv("DILICOM_POST_CRON", "0 22 * * *")
+    cron_fetch = os.getenv("DILICOM_FETCH_CRON", "0 6-12 * * *")
+    cron_path = "/etc/cron.d/dilicom-cron"
+    log_dir = "/var/log/dilicom"
+    log_file = f"{log_dir}/dilicom-cron.log"
+    api_url = os.getenv("DILICOM_API_URL", "http://localhost:8000/api/v1")
+    fetch_archives = os.getenv("DILICOM_FETCH_ARCHIVES", "false")
+
+    os.makedirs("/etc/cron.d", exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+    with open(cron_path, "w", encoding="utf-8") as cron_file:
+        cron_file.write("SHELL=/bin/bash\n")
+        cron_file.write(
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n"
+        )
+        cron_file.write(f"DILICOM_API_URL={api_url}\n")
+        cron_file.write(f"DILICOM_FETCH_ARCHIVES={fetch_archives}\n")
+        cron_file.write(
+            f"{cron_post} root /usr/local/bin/run-dilicom-cron.sh post >> {log_file} 2>&1\n"
+        )
+        cron_file.write(
+            f"{cron_fetch} root /usr/local/bin/run-dilicom-cron.sh fetch >> {log_file} 2>&1\n"
+        )
+    os.chmod(cron_path, 0o644)
+
+
 def start_gunicorn():
     """
     Démarre le serveur Gunicorn pour héberger l'application FastAPI.
@@ -132,9 +158,10 @@ if __name__ == "__main__":
     build_env()
     wait_for("db-main", 5432)
 
-    # Lancer le scheduler dans un thread
-    print("[BOOTSTRAP] Lancement du scheduler Dilicom")
-    threading.Thread(target=start_dilicom_scheduler, daemon=True).start()
+    # Configurer les tâches cron du conteneur pour Dilicom.
+    print("[BOOTSTRAP] Configuration du cron Dilicom")
+    configure_dilicom_cron()
+    subprocess.Popen(["cron", "-f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Lancer Gunicorn dans le process principal
     start_gunicorn()

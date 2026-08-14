@@ -21,7 +21,7 @@ const collections = [
         description: 'Logs des clients - Conservation 5 ans'
     },
     {
-        name: currentYear + '-métiers',
+        name: currentYear + '-metiers',
         ttl: 5 * 365 * 24 * 60 * 60, // 5 ans en secondes
         description: 'Logs des métiers - Conservation 5 ans'
     }

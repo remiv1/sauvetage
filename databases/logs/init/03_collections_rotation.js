@@ -11,7 +11,7 @@ function rotateCollections() {
         { name: nextYear + '-users', ttl: 5 * 365 * 24 * 60 * 60 },
         { name: nextYear + '-logs', ttl: 365 * 24 * 60 * 60 },
         { name: nextYear + '-clients', ttl: 5 * 365 * 24 * 60 * 60 },
-        { name: nextYear + '-métiers', ttl: 5 * 365 * 24 * 60 * 60 }
+        { name: nextYear + '-metiers', ttl: 5 * 365 * 24 * 60 * 60 }
     ];
     
     collections.forEach(function(col) {

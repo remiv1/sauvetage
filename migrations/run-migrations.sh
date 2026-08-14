@@ -27,8 +27,8 @@ if [ "$DB_TYPE" != "main" ] && [ "$DB_TYPE" != "users" ]; then
 fi
 
 # Chemin vers le fichier .env
-ENV_FILE="$PROJECT_ROOT/.env.migr"
-ENV_FILE_HOST="$HOST_PROJECT_ROOT/migrations/.env.migr"
+ENV_FILE="$PROJECT_ROOT/config/env/.env.migr"
+ENV_FILE_HOST="$HOST_PROJECT_ROOT/config/env/.env.migr"
 
 # Déterminer les variables spécifiques en fonction du type de base de données
 if [ "$DB_TYPE" = "main" ]; then

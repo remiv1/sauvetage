@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request
 from app_front.utils.decorators import permission_required, ADMIN, SUPER_ADMIN
 from app_front.blueprints.admin.utils import get_logs_stats, get_logs_recent, get_log_by_id
+from config.logs.config_loader import get_log_types
 
 bp_admin_logs = Blueprint("admin_logs", __name__, url_prefix="/admin/htmx/logs")
 
@@ -10,7 +11,7 @@ LOGS_STATS = "htmx_templates/admin/logs/stats.html"
 LOGS_TABLE = "htmx_templates/admin/logs/table.html"
 LOGS_DETAIL = "htmx_templates/admin/logs/detail.html"
 
-LOG_TYPES = ["users", "logs", "clients", "métiers"]
+LOG_TYPES = get_log_types()
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 

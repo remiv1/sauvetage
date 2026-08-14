@@ -1,15 +1,36 @@
 #!/bin/sh
 set -eu
 
-if [ -f /etc/backup/.env.save ]; then
-  # shellcheck disable=SC1090
-  . /etc/backup/.env.save
-fi
+[ -f /etc/backup/env.sh ] && . /etc/backup/env.sh
+
+LOG_FILE="/var/log/backup/restore.log"
+log() { printf '[%s] %s\n' "$(date -Is)" "$*" >> "$LOG_FILE"; }
 
 SNAPSHOT_ID="${1:-latest}"
+# Optional second arg: when set to "--new-cluster" we restore for a new cluster
+# (i.e. do not preserve owners/privileges in the dump). Default: restore owners/privs.
+NEW_CLUSTER_FLAG="${2:-}"
 RESTORE_DOCS="${RESTORE_DOCS:-true}"
 SNAP_ROOT="/backups/local/snapshots"
 LATEST_LINK="/backups/local/meta/latest"
+WORK_DIR="$(mktemp -d)"
+
+on_exit() {
+  code=$?
+  rm -rf "$WORK_DIR"
+  if [ "$code" -ne 0 ]; then
+    log "ÉCHEC restauration $SNAPSHOT_ID (code $code)"
+  fi
+}
+trap on_exit EXIT
+
+log "Démarrage restauration $SNAPSHOT_ID"
+
+BACKUP_ENCRYPTION_PASSPHRASE="${BACKUP_ENCRYPTION_PASSPHRASE:-}"
+if [ -z "$BACKUP_ENCRYPTION_PASSPHRASE" ]; then
+  log "BACKUP_ENCRYPTION_PASSPHRASE manquant"
+  exit 2
+fi
 
 if [ "$SNAPSHOT_ID" = "latest" ]; then
   SNAP_DIR="$(readlink -f "$LATEST_LINK")"
@@ -18,11 +39,22 @@ else
 fi
 
 if [ ! -d "$SNAP_DIR" ]; then
-  echo "Snapshot introuvable: $SNAP_DIR" >&2
+  log "Snapshot introuvable: $SNAP_DIR"
   exit 2
 fi
 
-echo "Restauration depuis $SNAP_DIR"
+DB_ARCHIVE="$(find "$SNAP_DIR/db" -maxdepth 1 -name '*.tar.enc' | head -n1)"
+if [ -z "$DB_ARCHIVE" ]; then
+  log "Archive DB introuvable dans $SNAP_DIR/db"
+  exit 2
+fi
+
+log "Restauration depuis $SNAP_DIR"
+
+log "Déchiffrement de l'archive DB..."
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -pass env:BACKUP_ENCRYPTION_PASSPHRASE \
+  -in "$DB_ARCHIVE" | tar -C "$WORK_DIR" -xf -
+log "Déchiffrement de l'archive DB terminé"
 
 PGHOST="${POSTGRES_HOST:-db-main}"
 PGPORT="${POSTGRES_PORT:-5432}"
@@ -32,17 +64,29 @@ export PGPASSWORD
 POSTGRES_DB_MAIN="${POSTGRES_DB_MAIN:-sauvetage_main}"
 POSTGRES_DB_USERS="${POSTGRES_DB_USERS:-sauvetage_users}"
 
-pg_restore \
-  --clean --if-exists --no-owner --no-privileges \
-  --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
-  --dbname="$POSTGRES_DB_MAIN" \
-  "$SNAP_DIR/postgres/${POSTGRES_DB_MAIN}.dump"
+log "pg_restore $POSTGRES_DB_MAIN commencé..."
+
+# Choose pg_restore flags depending on cluster intent
+if [ "$NEW_CLUSTER_FLAG" = "--new-cluster" ]; then
+  RESTORE_FLAGS="--clean --if-exists --no-owner --no-privileges"
+else
+  RESTORE_FLAGS="--clean --if-exists"
+fi
 
 pg_restore \
-  --clean --if-exists --no-owner --no-privileges \
+  $RESTORE_FLAGS \
+  --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
+  --dbname="$POSTGRES_DB_MAIN" \
+  "$WORK_DIR/${POSTGRES_DB_MAIN}.dump" >>"$LOG_FILE" 2>&1
+log "pg_restore $POSTGRES_DB_MAIN terminé"
+
+log "pg_restore $POSTGRES_DB_USERS commencé..."
+pg_restore \
+  $RESTORE_FLAGS \
   --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" \
   --dbname="$POSTGRES_DB_USERS" \
-  "$SNAP_DIR/postgres/${POSTGRES_DB_USERS}.dump"
+  "$WORK_DIR/${POSTGRES_DB_USERS}.dump" >>"$LOG_FILE" 2>&1
+log "pg_restore $POSTGRES_DB_USERS terminé"
 
 MONGO_HOST="${MONGO_HOST:-db-logs}"
 MONGO_PORT="${MONGO_PORT:-27017}"
@@ -50,6 +94,7 @@ MONGO_DB_LOGS="${MONGO_DB_LOGS:-sauvetage_logs}"
 MONGO_INITDB_ROOT_USERNAME="${MONGO_INITDB_ROOT_USERNAME:-admin}"
 MONGO_INITDB_ROOT_PASSWORD="${MONGO_INITDB_ROOT_PASSWORD:-}"
 
+log "mongorestore $MONGO_DB_LOGS commencé..."
 mongorestore \
   --drop \
   --host="$MONGO_HOST" \
@@ -58,11 +103,14 @@ mongorestore \
   --password="$MONGO_INITDB_ROOT_PASSWORD" \
   --authenticationDatabase=admin \
   --nsInclude="$MONGO_DB_LOGS.*" \
-  --archive="$SNAP_DIR/mongo/${MONGO_DB_LOGS}.archive.gz" \
-  --gzip
+  --archive="$WORK_DIR/${MONGO_DB_LOGS}.archive.gz" \
+  --gzip >>"$LOG_FILE" 2>&1
+log "mongorestore $MONGO_DB_LOGS terminé"
 
 if [ "$RESTORE_DOCS" = "true" ]; then
-  rsync -a --delete "$SNAP_DIR/documents/" /data/documents/
+  log "Restauration des documents depuis $SNAP_DIR/documents..."
+  rsync -a --delete "$SNAP_DIR/documents/" /data/documents/ >>"$LOG_FILE" 2>&1
+  log "Restauration des documents terminée"
 fi
 
-echo "Restauration terminée"
+log "Restauration terminée: $SNAPSHOT_ID" 

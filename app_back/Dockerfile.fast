@@ -3,7 +3,7 @@ FROM docker.io/library/python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-openbsd libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
     libgdk-pixbuf2.0-0 libglib2.0-0 libfontconfig1 libjpeg62-turbo \
-    libffi-dev shared-mime-info fonts-dejavu-core curl \
+    libffi-dev shared-mime-info fonts-dejavu-core curl cron \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,14 +15,17 @@ RUN pip install -r requirements.txt && \
     pip install uvicorn[standard]
 
 COPY app_back/ app_back/
+COPY app_back/run-dilicom-cron.sh /usr/local/bin/run-dilicom-cron.sh
 COPY db_models/ db_models/
 COPY logs/ logs/
 COPY migrations/main/ main/
 COPY migrations/users/ users/
-COPY app_back/.env.dilicom .env.dilicom
+COPY config/env/.env.dilicom .env.dilicom
+COPY config/__init__.py config/__init__.py
+COPY config/logs/ config/logs/
 
-# Rendre l'entrypoint exécutable
-RUN chmod +x app_back/bootstrap.py
+# Rendre les scripts exécutables
+RUN chmod +x app_back/bootstrap.py /usr/local/bin/run-dilicom-cron.sh
 
 # Entrypoint
 ENTRYPOINT ["python", "app_back/bootstrap.py"]
