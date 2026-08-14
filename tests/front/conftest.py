@@ -75,6 +75,9 @@ class FakeLogger:
     def log_client_event(self, **kwargs):    # pylint: disable=unused-argument
         """Log un événement client (mock)."""
         return "fake"
+    def log_dilicom_event(self, **kwargs):    # pylint: disable=unused-argument
+        """Log un événement Dilicom (mock)."""
+        return "fake"
     def log_error(self, **kwargs):  # pylint: disable=unused-argument
         """Log une erreur (mock)."""
         return "fake"

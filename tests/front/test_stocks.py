@@ -2,7 +2,11 @@
 
 import secrets
 import string
+from datetime import datetime, timezone
+
 import pytest
+
+from db_models.objects import VatRate
 
 # +================================================================================================+
 # |                          Gestion des tests de routes_htmx_search                               |
@@ -127,11 +131,22 @@ def test_object_complement(client_all,
                                     })
 
 
-def test_create_object(client_all, supplier, tags):   # pylint: disable=redefined-outer-name, unused-argument
+def test_create_object(client_all, supplier, tags, db_session_main):   # pylint: disable=redefined-outer-name, unused-argument
     """
     Tester que la route /stock/htmx/search/object/create
     fonctionne avec une session authentifiée.
     """
+    vat_rate = VatRate(
+        code=1,
+        rate=5.50,
+        label="Taux réduit test",
+        date_start=datetime.now(timezone.utc),
+        date_end=None,
+    )
+    db_session_main.add(vat_rate)
+    db_session_main.flush()
+    vat_rate_id = vat_rate.id
+
     alphabet = string.ascii_letters + string.digits
     aleatory_string = ''.join(secrets.choice(alphabet) for _ in range(16))
     response = client_all.post(
@@ -143,7 +158,11 @@ def test_create_object(client_all, supplier, tags):   # pylint: disable=redefine
             "ean_13": "9781234567890",
             "name": f"Test Book {aleatory_string}",
             "description": f"A test book created during unit testing for {aleatory_string}.",
-            "price": "19.99",
+            "purchase_price": "12.50",
+            "prices-0-price": "19.99",
+            "prices-0-vat_rate_id": str(vat_rate_id),
+            "prices-0-from_date": "2026-01-01",
+            "prices-0-to_date": "",
             "book-author": "John Doe",
             "book-diffuser": "Test Diffuser",
             "book-editor": "Test Editor",
