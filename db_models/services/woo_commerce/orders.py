@@ -154,6 +154,7 @@ class WCOrdersService(WCBase):
         self.customer_repo = CustomersRepository(session)
         self.order_repo = OrdersRepository(session)
         self.customer_service = WCCustomersService(session, separated_keys)
+        self.product_service: WCProductsService | None = None
 
     def get_orders(self, status: list[str] | None = None) -> list[Order]:
         """Récupère les commandes depuis WooCommerce, avec filtrage optionnel par statut.

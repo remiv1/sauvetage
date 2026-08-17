@@ -1,82 +1,97 @@
-"""Blueprint WooCommerce — service d'images par jeton temporaire.
-
-Routes :
-  GET /woocommerce/media/<token>
-      Sert le fichier image si le jeton associé est valide et non consommé.
-      Marque le jeton comme consommé après le premier téléchargement réussi.
-
-La création des jetons est assurée par l'API back (FastAPI) via la route
-POST /api/v1/woo-commerce/media/<filename>/access, sécurisée par X-Internal-Token.
-"""
+"""Blueprint WooCommerce — service d'images par jeton temporaire."""
 
 import logging
 import os
+
+import magic
 from flask import Blueprint, abort, send_file, send_from_directory
+
 from app_front.config import db_conf
 from db_models.repositories.objects import MediaAccessTokenRepository, MediaRepository
-from db_models.objects import MediaFiles
+
 bp_woocommerce = Blueprint("woocommerce", __name__, url_prefix="/woocommerce")
-
-logger = logging.getLogger(__name__)
 _MEDIA_UPLOAD_DIR = os.environ.get("MEDIA_UPLOAD_DIR", "")
+logger = logging.getLogger(__name__)
 
 
-@bp_woocommerce.get("/media/<path:token>")
-def serve_media(token: str):
-    """Sert le fichier image si le jeton est valide et non consommé.
+def _detect_mime_type(file_path: str) -> str:
+    """Retourne le vrai type MIME du fichier à partir de son contenu."""
+    try:
+        detected = magic.from_file(file_path, mime=True)
+        logger.info("MIME détecté pour %s : %s", file_path, detected)
+        if detected:
+            return detected
+    except (AttributeError, OSError, ValueError):
+        logger.warning("Impossible de détecter le MIME réel pour %s", file_path)
 
-    Le token est lu depuis le chemin l'URL ; le fichier physique est ensuite
-    résolu via la relation MediaAccessToken -> MediaFiles.
-    """
+    fallback = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+    }.get(os.path.splitext(file_path.lower())[1], "application/octet-stream")
+    logger.info("MIME de repli pour %s : %s", file_path, fallback)
+    return fallback
 
+
+@bp_woocommerce.get("/media/<token>/<path:filename>")
+def serve_media(token: str, filename: str):
+    """Retourne le fichier média associé au jeton WooCommerce et au nom demandé."""
     session = db_conf.get_main_session()
     repo = MediaAccessTokenRepository(session)
-    mrepo = MediaRepository(session)
     record = repo.get(token)
-
     if record is None or not record.is_valid():
+        logger.warning("Jeton WooCommerce invalide ou expiré : %s", token)
         abort(403)
 
-    media_file = mrepo.get_one(MediaFiles, id=record.media_file_id)
-    logger.debug("Jeton %s valide pour le média %s", token, media_file.id if media_file else None)
-    logger.debug("Fichier associé : %s", media_file.file_link if media_file else None)
-
+    media_file = MediaRepository(session).get_by_id(record.media_file_id)
     if media_file is None or not media_file.file_link:
-        logger.warning("Jeton %s valide mais média introuvable ou sans fichier", token)
+        logger.warning("Fichier média introuvable pour le jeton WooCommerce : %s", token)
         abort(404)
 
-    if not _MEDIA_UPLOAD_DIR:
-        logger.error("MEDIA_UPLOAD_DIR non configuré")
-        abort(503)
-
-    file_link = (media_file.file_link or "").strip()
-    file_name = os.path.basename(file_link)
-    if not file_name:
+    file_link = media_file.file_link.strip()
+    expected_filename = os.path.basename(file_link)
+    requested_filename = os.path.basename(filename)
+    if not expected_filename or requested_filename != expected_filename:
         logger.warning(
-            "Jeton %s valide mais fichier introuvable pour le média %s",
+            "Nom de fichier demandé incohérent pour le jeton WooCommerce %s : attendu %s, reçu %s",
             token,
-            media_file.id,
+            expected_filename,
+            requested_filename,
         )
         abort(404)
 
-    # Priorité : servir le chemin absolu réel si présent sur le disque.
+    if os.path.isabs(file_link) and os.path.isfile(file_link) and os.access(file_link, os.R_OK):
+        candidate = file_link
+    elif _MEDIA_UPLOAD_DIR:
+        candidate = os.path.join(_MEDIA_UPLOAD_DIR, expected_filename)
+        if not os.path.isfile(candidate):
+            logger.warning(
+                "Fichier média introuvable dans le répertoire upload pour le jeton "
+                "WooCommerce : %s",
+                token,
+            )
+            return send_from_directory(_MEDIA_UPLOAD_DIR, expected_filename)
+    else:
+        logger.warning(
+            "Chemin de fichier média non absolu et répertoire upload non défini pour le jeton"
+            " WooCommerce : %s",
+            token,
+        )
+        abort(405)
+
     try:
-        if os.path.isabs(file_link) and os.path.isfile(file_link):
-            response = send_file(file_link, mimetype=getattr(media_file, "file_type", None) or None)
-        else:
-            # Essayer le fichier dans le répertoire d'upload configuré
-            candidate = os.path.join(_MEDIA_UPLOAD_DIR, file_name)
-            if os.path.isfile(candidate):
-                response = send_file(candidate, mimetype=getattr(media_file, "file_type", None) or None)
-            else:
-                # Dernier recours : send_from_directory (lève 404 si absent)
-                response = send_from_directory(_MEDIA_UPLOAD_DIR, file_name)
-    except FileNotFoundError:
-        abort(404)
+        response = send_file(candidate, mimetype=_detect_mime_type(candidate))
+    except OSError:
+        logger.error(
+            "Erreur lors de l'envoi du fichier média pour le jeton WooCommerce : %s",
+            token,
+        )
+        abort(403)
 
     try:
         repo.consume(record)
-    except ValueError as exc:
-        logger.warning("Impossible de consommer le jeton %s : %s", token, exc)
-
+    except ValueError:
+        logger.error("Erreur lors de la consommation du jeton WooCommerce : %s", token)
     return response

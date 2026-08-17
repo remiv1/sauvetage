@@ -28,6 +28,11 @@ class MediaRepository(BaseRepository):
             stmt = stmt.filter_by(general_object_id=general_object_id)
         return self.session.execute(stmt).scalars().all()
 
+    def get_by_id(self, media_id: int) -> Optional[MediaFiles]:
+        """Récupère un média par son identifiant."""
+        stmt = select(MediaFiles).where(MediaFiles.id == media_id)
+        return self.session.execute(stmt).scalars().first()
+
     def create(self, media_data: Dict[str, Any]) -> MediaFiles:
         """Création d'un objet média à partir des données fournies."""
         extra_keys = set(media_data.keys()) - set(self._kwargs)

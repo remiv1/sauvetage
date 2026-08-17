@@ -76,7 +76,9 @@ def order_download_slip(order_id: int):
         total_ht += line_total
         lines.append(
             {
-                "article_name": line.general_object.name if line.general_object else f"Article #{line.general_object_id}",
+                "article_name": line.general_object.name \
+                    if line.general_object \
+                    else f"Article #{line.general_object_id}",
                 "quantity": int(line.qty_ordered or 0),
                 "unit_price": f"{float(line.unit_price or 0):.2f} EUR",
                 "vat_rate": f"{float(line.vat_rate or 0):.1f} %",
@@ -160,7 +162,9 @@ def reservation_download_slip(order_id: int):
         total_ht += line_total
         lines.append(
             {
-                "article_name": line.general_object.name if line.general_object else f"Article #{line.general_object_id}",
+                "article_name": line.general_object.name \
+                    if line.general_object \
+                    else f"Article #{line.general_object_id}",
                 "quantity": int(line.qty_ordered or 0),
                 "line_state": line.line_state,
                 "unit_price": f"{float(line.unit_price or 0):.2f} EUR",

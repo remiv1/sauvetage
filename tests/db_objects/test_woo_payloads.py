@@ -1,5 +1,7 @@
 """Tests des payloads WooCommerce générés par les modèles métier."""
 
+import struct
+import zlib
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -110,6 +112,110 @@ def test_object_tag_payload_uses_wc_tag_id() -> None:
     payload = object_tag.to_dict_for_woo_commerce()
 
     assert payload == {"id": 42}
+
+
+def test_wc_product_payload_includes_synced_tags() -> None:
+    """Le payload produit doit inclure les tags WooCommerce déjà synchronisés."""
+    service = object.__new__(WCProductsService)
+    service.session = MagicMock()
+    service._build_media_src = MagicMock(return_value="https://example.com/image.jpg")  # pylint: disable=W0212
+
+    product = GeneralObjects(
+        supplier_id=1,
+        general_object_type="book",
+        ean13="9782222222222",
+        name="Produit tagué",
+        description="Description",
+    )
+    product.prices = [
+        ObjectPrices(
+            price=Decimal("19.90"),
+            vat_rate=VatRate(code=1, rate=20.0, label="TVA 20%", wpwc_slug="standard"),
+        ),
+    ]
+    product.object_tags = [
+        ObjectTags(
+            general_object_id=1,
+            tag_id=1,
+            tag=Tags(
+                name="Promo",
+                description="Promo",
+                wpwc_id=42,
+            ),
+        ),
+        ObjectTags(
+            general_object_id=1,
+            tag_id=2,
+            tag=Tags(
+                name="Nouveauté",
+                description="Nouveauté",
+                wpwc_id=77,
+            ),
+        ),
+    ]
+    product.media_files = []
+
+    payload = service._build_product_payload(product)  # pylint: disable=W0212
+
+    assert payload["tags"] == [{"id": 42}, {"id": 77}]
+
+
+def test_update_product_syncs_missing_wc_tags_before_export() -> None:
+    """
+    Un produit avec tag non synchronisé doit déclencher l'export des tags avant la mise à jour
+    produit.
+    """
+    service = object.__new__(WCProductsService)
+    service.session = MagicMock()
+    service.object_repo = MagicMock()
+    service.api_read = MagicMock()
+    service.api_write = MagicMock()
+    service.sync_log_repo = MagicMock()
+
+    def _fake_export_tags() -> None:
+        product.object_tags[0].tag.wpwc_id = 42
+
+    service.export_tags = MagicMock(side_effect=_fake_export_tags)
+
+    product = GeneralObjects(
+        supplier_id=1,
+        general_object_type="book",
+        ean13="9783333333333",
+        name="Produit avec tag non sync",
+        description="Description",
+        is_active=True,
+    )
+    product.prices = [
+        ObjectPrices(
+            price=Decimal("20.00"),
+            vat_rate=VatRate(code=1, rate=20.0, label="TVA 20%", wpwc_slug="standard"),
+        ),
+    ]
+    product.object_tags = [
+        ObjectTags(
+            general_object_id=1,
+            tag_id=1,
+            tag=Tags(
+                name="Promo",
+                description="Promo",
+                wpwc_id=None,
+            ),
+        ),
+    ]
+    product.media_files = []
+    service.object_repo.get_by_ref.return_value = product
+
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "create": [{"id": 123, "sku": str(product.id), "name": "Produit avec tag non sync"}]
+    }
+    service.api_write.post.return_value = response
+
+    result = service.update_product(7)
+
+    assert result == 123
+    service.export_tags.assert_called_once()
 
 
 def test_order_line_payload_uses_wc_tax_class_and_variation_id(
@@ -620,13 +726,17 @@ def test_wc_product_build_media_src_uses_internal_public_host_when_env_missing(m
     url = service._build_media_src(media)  # pylint: disable=W0212
 
     assert "https://internal.editions-sauvetage.fr/woocommerce/media/" in url
+    assert "/29334045_main.jpg" in url
 
 
 def test_woo_media_route_resolves_media_by_id_and_serves_file(monkeypatch) -> None:
     """La route WooCommerce doit lire le média via son id, pas via un filtre invalide."""
     monkeypatch.setattr("app_front.blueprints.woocommerce.routes._MEDIA_UPLOAD_DIR", "/tmp/images")
     session = MagicMock()
-    monkeypatch.setattr("app_front.blueprints.woocommerce.routes.db_conf.get_main_session", lambda: session)
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes.db_conf.get_main_session",
+        lambda: session
+    )
 
     token_record = MagicMock()
     token_record.is_valid.return_value = True
@@ -635,18 +745,25 @@ def test_woo_media_route_resolves_media_by_id_and_serves_file(monkeypatch) -> No
     media_file = MagicMock()
     media_file.file_link = "cover.jpg"
 
-    with patch("app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository") as token_repo_cls, \
-         patch("app_front.blueprints.woocommerce.routes.MediaRepository") as media_repo_cls, \
-         patch("app_front.blueprints.woocommerce.routes.send_from_directory", return_value="OK"):
+    with patch(
+            "app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository"
+        ) as token_repo_cls, \
+         patch(
+            "app_front.blueprints.woocommerce.routes.MediaRepository"
+        ) as media_repo_cls, \
+         patch(
+            "app_front.blueprints.woocommerce.routes.send_from_directory",
+            return_value="OK",
+        ):
         token_repo = token_repo_cls.return_value
         token_repo.get.return_value = token_record
         media_repo = media_repo_cls.return_value
-        media_repo.get_one.return_value = media_file
+        media_repo.get_by_id.return_value = media_file
 
-        response = serve_media("valid-token")
+        response = serve_media("valid-token", "cover.jpg")
 
     assert response == "OK"
-    media_repo.get_one.assert_called_once_with(MediaFiles, id=77)
+    media_repo.get_by_id.assert_called_once_with(77)
 
 
 def test_wc_product_build_media_src_uses_token_for_absolute_local_paths(monkeypatch) -> None:
@@ -668,15 +785,21 @@ def test_wc_product_build_media_src_uses_token_for_absolute_local_paths(monkeypa
         repo.create.return_value = MagicMock(token="token-abc123")
 
         url = service._build_media_src(media)  # pylint: disable=W0212
-
-    assert "https://internal.editions-sauvetage.fr/woocommerce/media/" in url
+    base_url = "https://internal.editions-sauvetage.fr/woocommerce/media"
+    assert f"{base_url}/token-abc123/29334045_main.jpg" in url
     assert "/app/data-seed/images/" not in url
 
 
 def test_woo_media_route_uses_basename_for_local_file(monkeypatch) -> None:
     """Une URL de média historique avec chemin absolu doit être servie via son nom de fichier."""
-    monkeypatch.setattr("app_front.blueprints.woocommerce.routes._MEDIA_UPLOAD_DIR", "/tmp/images")
-    monkeypatch.setattr("app_front.blueprints.woocommerce.routes.db_conf.get_main_session", lambda: MagicMock())
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes._MEDIA_UPLOAD_DIR",
+        "/tmp/images",
+    )
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes.db_conf.get_main_session",
+        MagicMock()
+    )
 
     token_record = MagicMock()
     token_record.is_valid.return_value = True
@@ -685,26 +808,61 @@ def test_woo_media_route_uses_basename_for_local_file(monkeypatch) -> None:
     media_file = MagicMock()
     media_file.file_link = "/app/data-seed/images/29334045_main.jpg"
 
-    with patch("app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository") as token_repo_cls, \
-         patch("app_front.blueprints.woocommerce.routes.MediaRepository") as media_repo_cls, \
-         patch("app_front.blueprints.woocommerce.routes.send_from_directory", return_value="OK") as send_mock:
+    with patch(
+            "app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository"
+        ) as token_repo_cls, \
+         patch(
+            "app_front.blueprints.woocommerce.routes.MediaRepository"
+        ) as media_repo_cls, \
+         patch(
+            "app_front.blueprints.woocommerce.routes.send_from_directory",
+            return_value="OK"
+        ) as send_mock:
         token_repo = token_repo_cls.return_value
         token_repo.get.return_value = token_record
         media_repo = media_repo_cls.return_value
-        media_repo.get_one.return_value = media_file
+        media_repo.get_by_id.return_value = media_file
 
-        response = serve_media("valid-token")
+        response = serve_media("valid-token", "29334045_main.jpg")
 
     assert response == "OK"
     send_mock.assert_called_once_with("/tmp/images", "29334045_main.jpg")
 
 
+def _make_png_bytes() -> bytes:
+    """Crée un PNG minimal, valide et indépendant de Pillow."""
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(data))
+            + tag
+            + data
+            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        )
+
+    raw_scanline = b"\x00\x00\x00\x00\x00"
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw_scanline))
+        + chunk(b"IEND", b"")
+    )
+
+
 def test_woo_media_route_serves_existing_absolute_local_file(monkeypatch, tmp_path) -> None:
-    """Quand le média historique est un chemin absolu existant, la route doit servir ce fichier lui-même."""
-    image_path = tmp_path / "29334045_main.jpg"
-    image_path.write_bytes(b"img")
-    monkeypatch.setattr("app_front.blueprints.woocommerce.routes._MEDIA_UPLOAD_DIR", str(tmp_path))
-    monkeypatch.setattr("app_front.blueprints.woocommerce.routes.db_conf.get_main_session", lambda: MagicMock())
+    """
+    Quand le média historique est un chemin absolu existant, la route doit servir ce fichier
+    lui-même.
+    """
+    image_path = tmp_path / "29334045_main.png"
+    image_path.write_bytes(_make_png_bytes())
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes._MEDIA_UPLOAD_DIR",
+        str(tmp_path)
+    )
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes.db_conf.get_main_session",
+        MagicMock()
+    )
 
     token_record = MagicMock()
     token_record.is_valid.return_value = True
@@ -712,20 +870,70 @@ def test_woo_media_route_serves_existing_absolute_local_file(monkeypatch, tmp_pa
 
     media_file = MagicMock()
     media_file.file_link = str(image_path)
-    media_file.file_type = "image/jpeg"
+    media_file.file_type = "img"
 
-    with patch("app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository") as token_repo_cls, \
-         patch("app_front.blueprints.woocommerce.routes.MediaRepository") as media_repo_cls, \
-         patch("app_front.blueprints.woocommerce.routes.send_file", return_value="OK") as send_file_mock:
+    with patch(
+            "app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository",
+        ) as token_repo_cls, \
+         patch(
+            "app_front.blueprints.woocommerce.routes.MediaRepository",
+        ) as media_repo_cls, \
+         patch(
+            "app_front.blueprints.woocommerce.routes.send_file",
+            return_value="OK",
+        ) as send_file_mock:
         token_repo = token_repo_cls.return_value
         token_repo.get.return_value = token_record
         media_repo = media_repo_cls.return_value
-        media_repo.get_one.return_value = media_file
+        media_repo.get_by_id.return_value = media_file
 
-        response = serve_media("valid-token")
+        response = serve_media("valid-token", image_path.name)
 
     assert response == "OK"
-    send_file_mock.assert_called_once_with(str(image_path), mimetype="image/jpeg")
+    send_file_mock.assert_called_once_with(str(image_path), mimetype="image/png")
+
+
+def test_woo_media_route_detects_real_mime_from_file_content(monkeypatch, tmp_path) -> None:
+    """Le type MIME réel du fichier doit prévaloir sur l'étiquette métier `img`."""
+    image_path = tmp_path / "example.png"
+    image_path.write_bytes(_make_png_bytes())
+
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes._MEDIA_UPLOAD_DIR",
+        str(tmp_path),
+    )
+    monkeypatch.setattr(
+        "app_front.blueprints.woocommerce.routes.db_conf.get_main_session",
+        MagicMock(),
+    )
+
+    token_record = MagicMock()
+    token_record.is_valid.return_value = True
+    token_record.media_file_id = 77
+
+    media_file = MagicMock()
+    media_file.file_link = str(image_path)
+    media_file.file_type = "img"
+
+    with patch(
+        "app_front.blueprints.woocommerce.routes.MediaAccessTokenRepository",
+    ) as token_repo_cls, \
+         patch(
+        "app_front.blueprints.woocommerce.routes.MediaRepository",
+    ) as media_repo_cls, \
+         patch(
+        "app_front.blueprints.woocommerce.routes.send_file",
+        return_value="OK",
+    ) as send_file_mock:
+        token_repo = token_repo_cls.return_value
+        token_repo.get.return_value = token_record
+        media_repo = media_repo_cls.return_value
+        media_repo.get_by_id.return_value = media_file
+
+        response = serve_media("valid-token", image_path.name)
+
+    assert response == "OK"
+    send_file_mock.assert_called_once_with(str(image_path), mimetype="image/png")
 
 
 def test_wc_orders_service_creates_missing_products_before_push() -> None:

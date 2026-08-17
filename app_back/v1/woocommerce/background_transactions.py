@@ -31,7 +31,7 @@ def update_tags():
         _run_sync_tags()
         return {"status": "synchronisation des tags terminée"}
     except (OSError, ValueError, RuntimeError) as e:
-        logger.error("Erreur lors de la synchronisation des tags : %s", str(e))
+        logger.exception("Erreur lors de la synchronisation des tags : %s", str(e))
         return {"status": "erreur lors de la synchronisation des tags", "error": str(e)}
 
 

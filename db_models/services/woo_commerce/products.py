@@ -17,7 +17,6 @@ from typing import Any, Optional, Sequence, Callable
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import Session
-from db_models.objects import MediaAccessToken
 from db_models.objects.vat import VatRate
 from db_models.repositories.objects import ObjectsRepository, GeneralObjects
 from db_models.repositories.tags import TagsRepository, Tags
@@ -67,24 +66,30 @@ class WooReturnItem:
 class ReturnMatcher:
     """Stratégie pour trouver un local matching un item WooCommerce."""
     def match_create(self, locals_: Sequence[Any], item: WooReturnItem) -> Optional[Any]:
+        """Trouve un local correspondant à un item WooCommerce pour une création."""
         raise NotImplementedError
 
     def match_update(self, locals_: Sequence[Any], item: WooReturnItem) -> Optional[Any]:
+        """Trouve un local correspondant à un item WooCommerce pour une mise à jour."""
         raise NotImplementedError
 
     def match_delete(self, session: Session, item: WooReturnItem) -> Optional[Any]:
+        """Trouve un local correspondant à un item WooCommerce pour une suppression."""
         raise NotImplementedError
 
 
 class ReturnUpdater:
     """Stratégie pour mettre à jour un local après un retour WooCommerce."""
     def update_create(self, local: Any, item: WooReturnItem) -> None:
+        """Met à jour un local après une création WooCommerce."""
         raise NotImplementedError
 
     def update_update(self, local: Any, item: WooReturnItem) -> None:
+        """Met à jour un local après une mise à jour WooCommerce."""
         raise NotImplementedError
 
     def update_delete(self, local: Any, item: WooReturnItem) -> None:
+        """Met à jour un local après une suppression WooCommerce."""
         raise NotImplementedError
 
 class WCProductsService(WCBase):
@@ -169,6 +174,13 @@ class WCProductsService(WCBase):
             merged_attrs = _merge_attribute_lists(current_attrs, meta_attrs) \
                 if isinstance(current_attrs, list) else meta_attrs
             product_dict["attributes"] = merged_attrs
+        synced_tags = [
+            {"id": obj_tag.tag.wpwc_id}
+            for obj_tag in (product.object_tags or [])
+            if obj_tag and obj_tag.tag and obj_tag.tag.wpwc_id is not None
+        ]
+        if synced_tags:
+            product_dict["tags"] = synced_tags
         if product.media_files:
             product_dict["images"] = [
                 {
@@ -207,7 +219,8 @@ class WCProductsService(WCBase):
         else:
             token = token_repo.create(media_id=media.id)
 
-        return f"{base_url}/woocommerce/media/{token.token}"
+        filename = os.path.basename(file_link) or f"media_{media.id}"
+        return f"{base_url}/woocommerce/media/{token.token}/{filename}"
 
     def _process_returns_action(
         self,
@@ -381,6 +394,19 @@ class WCProductsService(WCBase):
             returns, vat_rates, "vat_rate", matchers, updaters, finder
         )
 
+    def _ensure_product_tags_are_synced(self, product: GeneralObjects) -> None:
+        """Synchronise les tags d’un produit vers WooCommerce avant export produit."""
+        has_unsynced_tags = any(
+            obj_tag and obj_tag.tag and obj_tag.tag.wpwc_id is None
+            for obj_tag in (product.object_tags or [])
+        )
+        if has_unsynced_tags:
+            logger.info(
+                "Produit %s contient des tags non synchronisés : déclenchement de export_tags().",
+                product.id,
+            )
+            self.export_tags()
+
     def update_product(self, product_id: int) -> int | None:
         """
         Met à jour ou crée un produit spécifique dans WooCommerce.
@@ -402,6 +428,8 @@ class WCProductsService(WCBase):
                 )
             return product.wpwc_id
 
+        self._ensure_product_tags_are_synced(product)
+
         # Récupération de la version actuelle du produit dans WooCommerce pour calculer des difs
         wpwc_product = self.api_read.get(
             f"products/{product.wpwc_id}"
@@ -415,7 +443,8 @@ class WCProductsService(WCBase):
                 response = self.api_write.post("products/batch", data=d)
                 response.raise_for_status()
                 r = response.json()
-                raw_response = getattr(response, "text", None) or json.dumps(r, ensure_ascii=False, default=str)
+                raw_response = getattr(response, "text", None) \
+                    or json.dumps(r, ensure_ascii=False, default=str)
                 logger.info(
                     "Retour WooCommerce produit %d: HTTP %s — %s",
                     product_id,
@@ -480,6 +509,19 @@ class WCProductsService(WCBase):
             )
         return product.wpwc_id if status == "success" else None
 
+    def fetch_all_wc_products(self) -> list[dict[str, Any]]:
+        """Récupère tous les produits WooCommerce, page par page, avec pagination."""
+        all_products: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            response = self.api_read.get("products", params={"page": page, "per_page": 100})
+            payload = response.json()
+            if not payload:
+                break
+            all_products.extend(payload)
+            page += 1
+        return all_products
+
     def export_all_products(self):
         """
         Exporte la dernière version des produits vers WooCommerce.
@@ -491,7 +533,7 @@ class WCProductsService(WCBase):
         logger.info("Export de %d produits vers WooCommerce...", len(products))
         for p in products:
             self._build_product_payload(p)
-        wpwc_products = self.api_read.get("products").json()
+        wpwc_products = self.fetch_all_wc_products()
         data = self.__diff_objects(products, wpwc_products)
         returns: list[dict[str, list[dict[str, Any]]]] = []
         try:
