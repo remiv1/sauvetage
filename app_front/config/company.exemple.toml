@@ -1,0 +1,9 @@
+[company]
+name = "Company Name"
+address = "adresse, cp ville"
+siret = "000 000 000 00000"
+greffe = "Greffe du TCO de Lons-Le-Saunier (39)"
+naf = "12.34A"
+tva = "FR11123456789"
+tel = "+33 6 78 90 12 34"
+mail = "contact@company.fr"

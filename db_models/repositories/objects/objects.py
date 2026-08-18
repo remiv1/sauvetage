@@ -112,14 +112,16 @@ class ObjectsRepository(BaseRepository):
         stmt = self._get_global_select().where(self.model.wpwc_id == wpwc_id)
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
-    def get_by_name(self, name: str) -> Sequence["GeneralObjects"]:
+    def get_by_name(
+        self,
+        name: str,
+        supplier_id: Optional[int] = None
+    ) -> Sequence["GeneralObjects"]:
         """Récupère une liste d'objets dont le nom correspond à la recherche."""
-        stmt = (
-            self._get_global_select()
-            .where(self.model.name.ilike(f"%{name.lower()}%"))
-            .order_by(self.model.name)
-            .limit(10)
-        )
+        stmt = self._get_global_select().where(self.model.name.ilike(f"%{name.lower()}%"))
+        if supplier_id is not None:
+            stmt = stmt.where(self.model.supplier_id == supplier_id)
+        stmt = stmt.order_by(self.model.name).limit(10)
         return self.session.execute(stmt).unique().scalars().all()
 
     def get_vat_rate(self, object_id: int) -> Optional[float]:

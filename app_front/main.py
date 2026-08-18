@@ -20,6 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
 from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
 from app_front.utils.router import is_allowed
+from app_front.blueprints.stock.utils import get_supplier_order_dispatch
 from app_front.config.flask_conf import (
     DEBUG,
     LOG_LEVEL,
@@ -33,6 +34,7 @@ from app_front.config.db_conf import _SessionMain
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 app.config["DEBUG"] = DEBUG
+app.jinja_env.filters["supplier_order_dispatch"] = get_supplier_order_dispatch
 
 # Enregistrement des blueprints
 for bp in BLUEPRINTS:

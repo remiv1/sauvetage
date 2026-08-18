@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pytest
 
 from db_models.objects import VatRate
+from db_models.objects import GeneralObjects
 
 # +================================================================================================+
 # |                          Gestion des tests de routes_htmx_search                               |
@@ -48,6 +49,46 @@ def test_dilicom_modal(client_all,
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<p>Aucun référentiel Dilicom trouvé pour cet objet.</p>")
+
+
+def test_supplier_object_filter_for_order_line(client_all, supplier, db_session_main):
+    """La recherche d'articles pour une commande ne doit proposer que les objets du fournisseur."""
+
+    other_supplier = supplier.__class__(
+        name="Autre fournisseur",
+        gln13="9876543210987",
+        contact_email="autre@fournisseur.test",
+    )
+    db_session_main.add(other_supplier)
+    db_session_main.flush()
+
+    own_obj = GeneralObjects(
+        supplier_id=supplier.id,
+        general_object_type="generic",
+        ean13="9780000000001",
+        name="Objet fournisseur principal",
+        description="Objet du fournisseur principal",
+        price=10.0,
+    )
+    other_obj = GeneralObjects(
+        supplier_id=other_supplier.id,
+        general_object_type="generic",
+        ean13="9780000000002",
+        name="Objet fournisseur secondaire",
+        description="Objet d'un autre fournisseur",
+        price=12.0,
+    )
+    db_session_main.add_all([own_obj, other_obj])
+    db_session_main.commit()
+
+    response = client_all.get(
+        f"/inventory/htmx/objects/get?object-wrapper=Objet&supplier_id={supplier.id}",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert "Objet fournisseur principal" in response.get_data(as_text=True)
+    assert "Objet fournisseur secondaire" not in response.get_data(as_text=True)
 
 
 def test_object_autocomplete(client_all,
@@ -548,6 +589,18 @@ def test_confirm_order(client_all, order_in):   # pylint: disable=redefined-oute
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
     assert response.text.startswith("<!-- template confirmed.html -->")
+
+
+def test_confirm_order_mail_choice(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
+    """
+    Pour un fournisseur avec email, l'UI doit proposer l'envoi en un clic ou le téléchargement.
+    """
+    order_id = order_in.id
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/confirm")
+
+    assert response.status_code == 200
+    assert "Envoyer par email" in response.get_data(as_text=True)
+    assert "Télécharger le bon de commande" in response.get_data(as_text=True)
 
 
 def test_receipt_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument

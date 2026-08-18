@@ -64,7 +64,7 @@
                       hx-swap="innerHTML">
                     {{ ext_ref_form.hidden_tag() }}
                     <input type="text" name="external_ref" class="form-control form-control-sm d-inline-block"
-                           style="width: auto; min-width: 150px;"
+                           style="width: auto; min-width: 150px;" id="external_ref"
                            value="{{ order.external_ref or '' }}"
                            placeholder="Réf. fournisseur">
                     <button type="submit" class="btn btn-sm btn-outline-primary" title="Enregistrer">
@@ -95,6 +95,21 @@
                 {% endif %}
             </span>
         </div>
+        {% if not reservation %}
+        <div class="info-group">
+            <span class="info-label">Envoi :</span>
+            <span class="info-value" id="order-dispatch">
+                {% set dispatch = order.supplier | supplier_order_dispatch %}
+                {% if dispatch['code'] == 'EDI' %}
+                <span class="badge badge-success" title="Commande envoyée par EDI">EDI</span>
+                {% elif dispatch['code'] == 'MAIL' %}
+                <span class="badge badge-info" title="Commande envoyée par email">MAIL</span>
+                {% else %}
+                <span class="badge badge-secondary" title="Aucun canal numérique disponible">:'-\</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
     </div>
 
     {# ── Tableau des lignes ──────────────────────────────────────────────── #}
@@ -131,7 +146,7 @@
                     {% endif %}
                     <th>PU HT</th>
                     <th>TVA</th>
-                    <th>Montant HT</th>
+                    <th>Montant TTC</th>
                     {% if view_state == 'edit' or view_state == 'new' or view_state == 'receipt' %}
                     <th class="text-center">Actions</th>
                     {% endif %}

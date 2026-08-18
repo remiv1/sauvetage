@@ -1,9 +1,12 @@
 """Module de routage pour la gestion des documents de l'application Sauvetage."""
 
 import base64
+import logging
 from fastapi import APIRouter, HTTPException
 from app_back.v1.schems.documents import DocumentSchema
 from app_back.utils.documents import create_document_buffer
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["document"])
 
@@ -32,4 +35,5 @@ def create_document(payload: DocumentSchema):
         }
 
     except Exception as exc:
+        logger.exception("Erreur lors de la création du document %s", payload.template)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

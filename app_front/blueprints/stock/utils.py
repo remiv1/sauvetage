@@ -34,6 +34,73 @@ logger = logging.getLogger("stock_utils")
 VALUE_TYPE_NBR_MSG = "L'ID de la ligne doit être un nombre entier."
 
 
+def get_supplier_order_dispatch(supplier: Any) -> Dict[str, str]:
+    """Retourne le mode de transmission optimisé pour un fournisseur."""
+    if getattr(supplier, "edi_active", False):
+        return {"code": "EDI", "label": "EDI", "display": "EDI"}
+    if getattr(supplier, "contact_email", None):
+        return {"code": "MAIL", "label": "MAIL", "display": "MAIL"}
+    return {"code": "MANUAL", "label": ":-(", "display": ":-("}
+
+
+def dispatch_supplier_order(order: Any) -> Dict[str, str]:
+    """Détermine le canal d'envoi de la commande fournisseur.
+
+    L'EDI est prioritaire quand le fournisseur le supporte. Sinon on bascule sur
+    un envoi mail si un contact est renseigné. En dernier recours, on renvoie le
+    mode manuel et le bon de commande sera généré pour téléchargement.
+    """
+    dispatch = get_supplier_order_dispatch(getattr(order, "supplier", None))
+    if dispatch["code"] == "EDI":
+        logger.info(
+            "Commande %s envoyée par EDI pour fournisseur %s.",
+            order.id,
+            order.supplier_id,
+        )
+        return {"code": "EDI", "label": "EDI", "display": "EDI"}
+    if dispatch["code"] == "MAIL":
+        logger.info(
+            "Commande %s envoyée par mail pour fournisseur %s.",
+            order.id,
+            order.supplier_id,
+        )
+        return {"code": "MAIL", "label": "MAIL", "display": "MAIL"}
+    logger.info(
+        "Commande %s générée en bon de commande téléchargeable pour fournisseur %s.",
+        order.id,
+        order.supplier_id,
+    )
+    return {"code": "MANUAL", "label": ":-(", "display": ":-("}
+
+
+def send_order_by_edi(order: Any) -> bool:
+    """Placeholder d'envoi EDI.
+
+    À remplacer par l'intégration réelle vers l'EDI du fournisseur.
+    La valeur de retour est volontairement False tant qu'aucune intégration
+    n'est branchée, ce qui garde le comportement explicite et sûr.
+    """
+    # TODO: Implémenter l'intégration EDI réelle ici.
+    logger.warning(
+        "Placeholder EDI appelé pour la commande %s : intégration non implémentée.",
+        getattr(order, "id", None),
+    )
+    return False
+
+
+def send_order_by_mail(order: Any) -> bool:
+    """Placeholder d'envoi de commande par email.
+
+    À remplacer par l'implémentation réelle d'envoi du bon de commande par mail.
+    """
+    # TODO: Implémenter l'envoi réel par email ici.
+    logger.warning(
+        "Placeholder MAIL appelé pour la commande %s : intégration non implémentée.",
+        getattr(order, "id", None),
+    )
+    return False
+
+
 def get_vat_rates() -> List[tuple]:
     """Retourne les taux de TVA actuellement en vigueur sous forme de liste de tuples.
 

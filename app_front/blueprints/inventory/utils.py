@@ -243,8 +243,11 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
     return list({r for r in response if r})  # Uniques et non vides
 
 
-def search_object_by_name(name: str) -> Sequence[GeneralObjects]:
-    """Rechercher les objet dans la base par nom"""
+def search_object_by_name(
+        name: str,
+        supplier_id: Optional[int] = None
+    ) -> Sequence[GeneralObjects]:
+    """Rechercher les objets dans la base par nom, éventuellement filtrés par fournisseur."""
     repo = ObjectsRepository(db_conf.get_main_session())
-    items = repo.get_by_name(name)
+    items = repo.get_by_name(name, supplier_id=supplier_id)
     return items

@@ -129,13 +129,32 @@
         </div>
     </div>
 
+    <table style="margin: 0 0 4mm 0; border: 0.3mm solid #111; background: #f8f8f8;">
+        <tr>
+            <td style="border: 0.3mm solid #111; padding: 3mm; width: 50%; vertical-align: top;">
+                <div style="font-weight: bold; margin-bottom: 2mm;">Entreprise cliente</div>
+                <div><strong>{{ company.name }}</strong></div>
+                <div><strong>SIRET :</strong> {{ company.siret }}</div>
+                <div><strong>Greffe :</strong> {{ company.greffe }}</div>
+                <div><strong>NAF :</strong> {{ company.naf }}</div>
+                <div><strong>N° TVA :</strong> {{ company.tva }}</div>
+            </td>
+            <td style="border: 0.3mm solid #111; padding: 3mm; width: 50%; vertical-align: top;">
+                <div style="font-weight: bold; margin-bottom: 2mm;">Contact</div>
+                <div><strong>Adresse :</strong> {{ company.address }}</div>
+                <div><strong>Mail :</strong> {{ company.email }}</div>
+                <div><strong>Téléphone :</strong> {{ company.tel }}</div>
+            </td>
+        </tr>
+    </table>
+
     <table>
         <thead>
             <tr>
                 <th>Article</th>
-                <th class="right-align">Quantite</th>
+                <th>Ean13</th>
+                <th class="right-align">Qté</th>
                 <th class="right-align">PU HT</th>
-                <th class="right-align">TVA</th>
                 <th class="right-align">Total HT</th>
             </tr>
         </thead>
@@ -143,9 +162,9 @@
             {% for line in lines %}
             <tr>
                 <td>{{ line.article_name }}</td>
+                <td>{{ line.ean13 }}</td>
                 <td class="right-align">{{ line.quantity }}</td>
                 <td class="right-align">{{ line.unit_price }}</td>
-                <td class="right-align">{{ line.vat_rate }}</td>
                 <td class="right-align">{{ line.line_total_ht }}</td>
             </tr>
             {% endfor %}

@@ -62,7 +62,18 @@
             {% if not reservation %}
             <td>{{ order.external_ref or '—' }}</td>
             {% endif %}
-            <td>{{ order.supplier.name }}</td>
+            <td>{{ order.supplier.name }}
+                {% if not reservation %}
+                    {% set dispatch = order.supplier | supplier_order_dispatch %}
+                    {% if dispatch['code'] == 'EDI' %}
+                    <span class="badge badge-success ms-2" title="EDI">EDI</span>
+                    {% elif dispatch['code'] == 'MAIL' %}
+                    <span class="badge badge-info ms-2" title="MAIL">MAIL</span>
+                    {% else %}
+                    <span class="badge badge-secondary ms-2" title="Autre mode">:'-\</span>
+                    {% endif %}
+                {% endif %}
+            </td>
             <td>
                 {% if order.order_state == 'draft' %}
                 <span class="badge badge-warning">Brouillon</span>

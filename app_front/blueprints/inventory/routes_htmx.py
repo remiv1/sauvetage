@@ -23,7 +23,9 @@ SELECTED_OBJECT_TEMPLATE = (
 def get_items_search():
     """Retourne la section de recherche d'informations sur les objets (HTMX)."""
     name = request.args.get("object-wrapper", "").strip()
-    object_list = search_object_by_name(name)
+    supplier_id_raw = request.args.get("supplier_id", "").strip()
+    supplier_id = int(supplier_id_raw) if supplier_id_raw else None
+    object_list = search_object_by_name(name, supplier_id=supplier_id)
     return render_template(DROPDOWN_OBJECT_TEMPLATE, items=object_list)
 
 

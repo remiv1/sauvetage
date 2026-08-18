@@ -16,6 +16,8 @@ from app_front.blueprints.stock.utils import (
     confirm_supplier_order,
     receive_order_line,
     update_order_external_ref,
+    dispatch_supplier_order,
+    send_order_by_mail,
 )
 
 bp_stock_htmx_orders = Blueprint(
@@ -107,7 +109,8 @@ def new_order_line(order_id: int):
             EDIT_TABLE, order=order, form=form,
             view_state="new"
             )
-    return render_template(NEW_LINE, form=form, view_state="create")
+    order = get_order_by_id(order_id)
+    return render_template(NEW_LINE, form=form, order=order, view_state="create")
 
 
 @bp_stock_htmx_orders.route(
@@ -160,7 +163,22 @@ def confirm_order(order_id: int):
     """Confirme une commande fournisseur (draft → sended) et affiche la modale de succès (HTMX)."""
     confirm_supplier_order(order_id)
     order = get_order_by_id(order_id)
-    return render_template(SECTION_CONFIRMED, order=order)
+    order_dispatch = dispatch_supplier_order(order)
+    return render_template(SECTION_CONFIRMED, order=order, order_dispatch=order_dispatch)
+
+
+@bp_stock_htmx_orders.post("/<int:order_id>/send-mail")
+def send_order_mail(order_id: int):
+    """Déclenche l'envoi du bon de commande par email pour un fournisseur mail."""
+    order = get_order_by_id(order_id)
+    send_order_by_mail(order)
+    order_dispatch = dispatch_supplier_order(order)
+    return render_template(
+        SECTION_CONFIRMED,
+        order=order,
+        order_dispatch=order_dispatch,
+        mail_sent=True,
+    )
 
 
 @bp_stock_htmx_orders.get("/<int:order_id>/receipt")

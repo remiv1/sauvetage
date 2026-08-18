@@ -1,5 +1,8 @@
 """Blueprint pour les fonctionnalités de gestion des stocks"""
 
+from pathlib import Path
+import toml
+
 from flask import Blueprint, flash, make_response, redirect, request, send_file, url_for
 from app_front.utils.pages import render_page
 from app_front.blueprints.stock.utils import (
@@ -16,12 +19,20 @@ from app_front.utils.documents import build_qrcode_data_uri, create_pdf_from_tem
 bp_stock = Blueprint("stock", __name__, url_prefix="/stock")
 
 
+def get_company_config() -> dict:
+    """Charge les informations de l'entreprise cliente depuis la config TOML."""
+    company_file = Path(__file__).resolve().parents[2] / "config" / "company.toml"
+    data = toml.load(company_file)
+    return data.get("company", {})
+
+
 @bp_stock.route("/", methods=["GET"])
 def index():
     """Page d'accueil du module stocks"""
     has_zero_price_items = is_zero_price_items()
     return render_page("stock_index", has_zero_price_items=has_zero_price_items)
 
+# ——————————————————————— Conciliation de stocks ———————————————————————
 
 @bp_stock.route("/council", methods=["GET", "POST"])
 def council():
@@ -29,6 +40,7 @@ def council():
     items_to_council = get_zero_price_items()
     return render_page("stock_council", items_to_council=items_to_council)
 
+# ——————————————————————— Commandes & Retours de stocks ———————————————————————
 
 @bp_stock.route("/orders", methods=["GET", "POST"])
 def orders():
@@ -79,13 +91,14 @@ def order_download_slip(order_id: int):
                 "article_name": line.general_object.name \
                     if line.general_object \
                     else f"Article #{line.general_object_id}",
+                "ean13": getattr(line.general_object, "ean13", None) or "-",
                 "quantity": int(line.qty_ordered or 0),
                 "unit_price": f"{float(line.unit_price or 0):.2f} EUR",
-                "vat_rate": f"{float(line.vat_rate or 0):.1f} %",
                 "line_total_ht": f"{line_total:.2f} EUR",
             }
         )
 
+    company = get_company_config()
     pdf_stream, filename = create_pdf_from_template(
         "pdf/supplier_order_slip.html",
         {
@@ -94,6 +107,16 @@ def order_download_slip(order_id: int):
                 "external_ref": order.external_ref or "-",
                 "supplier_name": order.supplier.name if order.supplier else "-",
                 "state": order.order_state,
+            },
+            "company": {
+                "name": company.get("name", "-"),
+                "address": company.get("address", "-"),
+                "siret": company.get("siret", "-"),
+                "greffe": company.get("greffe", "-"),
+                "naf": company.get("naf", "-"),
+                "tva": company.get("tva", "-"),
+                "tel": company.get("tel", "-"),
+                "email": company.get("mail", "-"),
             },
             "lines": lines,
             "total_ht": f"{total_ht:.2f} EUR",
@@ -120,6 +143,7 @@ def create_return():
     """Création d'un retour fournisseur"""
     return render_page("stock_order")
 
+# ——————————————————————— Réservations de stocks ———————————————————————
 
 @bp_stock.route("/reservations", methods=["GET"])
 def reservations():
@@ -193,6 +217,7 @@ def reservation_download_slip(order_id: int):
         download_name=filename,
     )
 
+# ——————————————————————— Recherches de stocks ———————————————————————
 
 @bp_stock.route("/search", methods=["GET"])
 def search():
