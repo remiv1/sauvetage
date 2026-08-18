@@ -23,6 +23,7 @@ from db_models.objects import (
 from db_models.repositories.stocks import (
     StockRepository,
     DilicomReferencialRepository,
+    InventoryRepository,
     )
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.objects.variations import VariationsRepository
@@ -186,6 +187,24 @@ def cancel_supplier_order(
     return True
 
 
+def build_reservation_context(form: Any) -> Dict[str, str]:
+    """Construit le contexte métier d’une réservation à partir du formulaire."""
+    context: Dict[str, str] = {}
+    for key, field_name in {
+        "notes": "reservation_notes",
+        "location": "reservation_location",
+        "responsible_name": "reservation_responsible_name",
+    }.items():
+        field = getattr(form, field_name, None)
+        value = field.data if field is not None and hasattr(field, "data") else None
+        if value is None:
+            continue
+        cleaned = str(value).strip()
+        if cleaned:
+            context[key] = cleaned
+    return context
+
+
 def create_order_in_db(
     form: OrderInCreateForm, reservation: bool = False
 ) -> int:
@@ -205,9 +224,11 @@ def create_order_in_db(
         logger.error(msg)
         raise ValueError(msg) from e
     stock_repo = StockRepository(db_conf.get_main_session())
+    reservation_context = build_reservation_context(form) if reservation else {}
     order = OrderIn(
         order_ref="temp",
         supplier_id=supplier_id,
+        reservation_context=reservation_context,
     )
     return stock_repo.edit_order_in_db(order, action="create", reservation=reservation)
 
@@ -251,6 +272,7 @@ def edit_order_in_line_db(
         logger.error(msg)
         raise ValueError(msg) from e
     stock_repo = StockRepository(db_conf.get_main_session())
+    inventory_repo = InventoryRepository(db_conf.get_main_session())
 
     # Gestion de la suppression d'une ligne de commande
     if action == "delete":
@@ -259,13 +281,25 @@ def edit_order_in_line_db(
     # Gestion de la création d'une ligne de commande
     elif action in ["create", "edit"]:
         order = form.validate_form_data(reservation=reservation)
+        if reservation:
+            if inventory_repo.has_inventory_history(order.general_object_id):
+                available_qty = inventory_repo.get_available_quantity(order.general_object_id)
+                if order.qty > available_qty:
+                    raise ValueError(
+                        f"Quantité indisponible : {order.qty} > stock disponible ({available_qty})."
+                    )
+                unit_price = inventory_repo.get_last_inventory_price(order.general_object_id)
+            else:
+                unit_price = float(form.unit_price.data or 0)
+        else:
+            unit_price = order.pu
         line = OrderInLine(
             order_in_id=order.id,
             general_object_id=order.general_object_id,
             qty_ordered=order.qty,
-            unit_price=order.pu,
-            vat_rate=order.vat_rate,
-            )
+            unit_price=unit_price,
+            vat_rate=0.0 if reservation else order.vat_rate,
+        )
         # Si on est en édition, s'assurer que l'ID de la ligne est renseigné
         if action == "edit":
             line.id = line_id
@@ -549,6 +583,12 @@ def return_reservation(order_id: int) -> None:
     """Retourne (clôture) une réservation."""
     stock_repo = StockRepository(db_conf.get_main_session())
     stock_repo.return_reservation(order_id)
+
+
+def save_reservation_context(order_id: int, form: Any) -> None:
+    """Met à jour le contexte métier d'une réservation."""
+    stock_repo = StockRepository(db_conf.get_main_session())
+    stock_repo.update_reservation_context(order_id, build_reservation_context(form))
 
 
 # ============================================================================

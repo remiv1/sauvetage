@@ -3,8 +3,10 @@
 from os import getenv
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+
 from app_back.router import v1_api_router
 from app_back.migration import run_startup_tasks
 from logs.logger import FilterExtras, setup_logging
@@ -12,6 +14,7 @@ from logs.logger import FilterExtras, setup_logging
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
 LOG_LEVEL = getenv("LOG_LEVEL", "info").upper()
+DILICOM_OPERATION = "opération dilicom"
 
 # Exécution des migrations avec advisory lock PostgreSQL.
 # Chaque worker Gunicorn importe ce module, mais seul le premier
@@ -31,7 +34,7 @@ async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined
     logging.getLogger("dilicom_parser").addFilter(
         FilterExtras(
             log_type="metiers",
-            action="opération dilicom",
+            action=DILICOM_OPERATION,
             dilicom_event=True,
             obj_metadata={
                 "source": "dilicom_parser",
@@ -41,7 +44,7 @@ async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined
     logging.getLogger("app_back.services.dilicom").addFilter(
         FilterExtras(
             log_type="metiers",
-            action="opération dilicom",
+            action=DILICOM_OPERATION,
             dilicom_event=True,
             obj_metadata={
                 "source": "app_back.services.dilicom",
@@ -51,7 +54,7 @@ async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined
     logging.getLogger("app_back.v1.dilicom.background_transactions").addFilter(
         FilterExtras(
             log_type="metiers",
-            action="opération dilicom",
+            action=DILICOM_OPERATION,
             dilicom_event=True,
             obj_metadata={
                 "source": "app_back.v1.dilicom.background_transactions",

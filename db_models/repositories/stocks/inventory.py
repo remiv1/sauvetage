@@ -1,7 +1,7 @@
 """Dépôt pour les opérations liées à l'inventaire et aux mouvements de stock."""
 
 from datetime import datetime
-from typing import Sequence, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from sqlalchemy import select, func, or_, and_
 from db_models.objects import (
     InventoryMovements,
@@ -15,7 +15,7 @@ from db_models.repositories.base_repo import BaseRepository
 class InventoryRepository(BaseRepository):
     """Dépôt pour les mouvements d'inventaire et la recherche de stock."""
 
-    def get_zero_price_items(self) -> Sequence[dict]:
+    def get_zero_price_items(self) -> list[dict[str, object]]:
         """Récupère les articles dont le dernier inventaire a un prix de revient à zéro.
 
         Retourne une liste de dictionnaires avec les clés :
@@ -366,6 +366,47 @@ class InventoryRepository(BaseRepository):
         ).order_by(InventoryMovements.movement_timestamp.desc()).limit(1)
         return self.session.execute(stmt).scalars().first()
 
+    def has_inventory_history(self, general_object_id: int) -> bool:
+        """Vérifie si l'objet possède au moins un mouvement d'inventaire."""
+        stmt = select(InventoryMovements.id).where(
+            InventoryMovements.general_object_id == general_object_id,
+        ).limit(1)
+        return self.session.execute(stmt).scalar_one_or_none() is not None
+
+    def get_last_inventory_price(self, general_object_id: int) -> float:
+        """Retourne le dernier prix de revient connu pour un objet."""
+        last_movement = self.get_last_inventory_movement(general_object_id)
+        if last_movement and last_movement.price_at_movement is not None:
+            return float(last_movement.price_at_movement)
+
+        obj = self.session.get(GeneralObjects, general_object_id)
+        if obj is None:
+            return 0.0
+        return float(obj.purchase_price or 0.0)
+
+    def get_available_quantity(self, general_object_id: int) -> int:
+        """Calcule la quantité réellement disponible en stock pour un objet."""
+        last_inventory = self.get_last_inventory_movement(general_object_id)
+        if last_inventory is None:
+            return 0
+
+        qty = int(last_inventory.quantity)
+        reference_ts = last_inventory.movement_timestamp
+
+        stmt = select(InventoryMovements).where(
+            InventoryMovements.general_object_id == general_object_id,
+            InventoryMovements.movement_timestamp >= reference_ts,
+        )
+        movements = self.session.execute(stmt).scalars().all()
+        for movement in movements:
+            if movement.movement_type == "in":
+                qty += int(movement.quantity)
+            elif movement.movement_type == "out":
+                qty -= int(movement.quantity)
+            elif movement.movement_type == "reserved":
+                qty -= int(movement.quantity)
+        return max(qty, 0)
+
     def get_average_price(self, general_object_id: int) -> float:
         """
         Récupère le dernier prix moyen d'achat pour un objet donné.
@@ -377,7 +418,7 @@ class InventoryRepository(BaseRepository):
             last_movement_date = datetime.strptime('1990-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
         else:
             qty_at_movement = last_movement.quantity
-            costs_at_movement = last_movement.price_at_movement * qty_at_movement
+            costs_at_movement = float(last_movement.price_at_movement or 0.0) * qty_at_movement
             last_movement_date = last_movement.movement_timestamp
         avg_price = costs_at_movement / qty_at_movement if qty_at_movement > 0 else 0.0
         stmt = select(InventoryMovements).where(
@@ -388,7 +429,10 @@ class InventoryRepository(BaseRepository):
         all_ordered_since_last_movement = self.session.execute(stmt).scalars().all()
         if all_ordered_since_last_movement:
             total_qty = sum(m.quantity for m in all_ordered_since_last_movement)
-            total_cost = sum(m.quantity * m.unit_price for m in all_ordered_since_last_movement)
+            total_cost = sum(
+                m.quantity * float(m.price_at_movement or 0.0)
+                for m in all_ordered_since_last_movement
+            )
             avg_price = (total_cost + costs_at_movement) \
                             / (total_qty + qty_at_movement) if total_qty > 0 else avg_price
         return avg_price

@@ -12,6 +12,7 @@ from app_front.config import get, post, INVENTORY
 from app_front.config import db_conf
 from db_models.objects import GeneralObjects, Books, OtherObjects, Suppliers
 from db_models.repositories.objects import ObjectsRepository
+from db_models.repositories.stocks.inventory import InventoryRepository
 
 # =========================================================================== #
 #  Helpers HTTP – uniquement pour les opérations lourdes (FastAPI)            #
@@ -249,5 +250,9 @@ def search_object_by_name(
     ) -> Sequence[GeneralObjects]:
     """Rechercher les objets dans la base par nom, éventuellement filtrés par fournisseur."""
     repo = ObjectsRepository(db_conf.get_main_session())
+    inventory_repo = InventoryRepository(db_conf.get_main_session())
     items = repo.get_by_name(name, supplier_id=supplier_id)
+    for item in items:
+        item.inventory_price = inventory_repo.get_last_inventory_price(item.id)
+        item.available_quantity = inventory_repo.get_available_quantity(item.id)
     return items

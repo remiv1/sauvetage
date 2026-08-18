@@ -196,6 +196,7 @@ def reservation_download_slip(order_id: int):
             }
         )
 
+    reservation_context = order.reservation_context or {}
     pdf_stream, filename = create_pdf_from_template(
         "pdf/reservation_slip.html",
         {
@@ -204,6 +205,7 @@ def reservation_download_slip(order_id: int):
                 "supplier_name": order.supplier.name if order.supplier else "-",
                 "state": order.order_state,
             },
+            "reservation_context": reservation_context,
             "lines": lines,
             "total_ht": f"{total_ht:.2f} EUR",
             "qr_code_data_uri": qr_code_data_uri,

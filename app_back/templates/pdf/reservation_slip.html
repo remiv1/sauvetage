@@ -138,6 +138,15 @@
                     <div class="chip">Validation retour par QRCode</div>
                     <div class="meta">Ref. {{ order.reference }} | Etat <span class="state">{{ order.state }}</span></div>
                     <div class="meta">Fournisseur : {{ order.supplier_name }}</div>
+                    {% if reservation_context and reservation_context.notes %}
+                    <div class="meta">Notes : {{ reservation_context.notes }}</div>
+                    {% endif %}
+                    {% if reservation_context and reservation_context.location %}
+                    <div class="meta">Localisation : {{ reservation_context.location }}</div>
+                    {% endif %}
+                    {% if reservation_context and reservation_context.responsible_name %}
+                    <div class="meta">Responsable : {{ reservation_context.responsible_name }}</div>
+                    {% endif %}
                 </div>
             </div>
         </div>

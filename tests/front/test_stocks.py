@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from db_models.objects import VatRate
-from db_models.objects import GeneralObjects
+from db_models.objects import VatRate, GeneralObjects, OrderInLine, InventoryMovements, OrderIn
+from db_models.repositories.stocks.orders import OrderRepository
 
 # +================================================================================================+
 # |                          Gestion des tests de routes_htmx_search                               |
@@ -19,6 +19,29 @@ def test_cleared_authenticated(client_all):
 
     # Devrait retourner 200 (succès) au lieu de 302 (redirect)
     assert response.status_code == 200
+
+
+def test_create_reservation_with_context(client_all, supplier, db_session_main):    # pylint: disable=W0613
+    """Une réservation doit conserver notes, localisation et responsable dans le contexte métier."""
+    notes = "Vente déportée - Péraudière"
+    location = "Montrottier"
+    manager = "Jean Dupont"
+    response = client_all.post(
+        "/stock/htmx/reservations/section/create",
+        data={
+            "supplier_id": supplier.id,
+            "supplier_name": supplier.name,
+            "reservation_notes": notes,
+            "reservation_location": location,
+            "reservation_responsible_name": manager,
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert notes in response.get_data(as_text=True)
+    assert location in response.get_data(as_text=True)
+    assert manager in response.get_data(as_text=True)
 
 
 def test_cleared_unauthenticated(client):
@@ -532,6 +555,83 @@ def test_cancel_order(client_all, order_in):   # pylint: disable=redefined-outer
     reponse = client_all.get(f"/stock/htmx/orders/cancel/{order_id}")
     assert reponse.status_code == 200
     assert reponse.text.startswith("<!-- template canceled.html -->")
+
+
+def test_create_reservation_line(client_all, order_in, book_object, db_session_main):   # pylint: disable=redefined-outer-name, unused-argument
+    """Une ligne de réservation doit être créée même sans TVA affichée dans le formulaire."""
+    order_id = order_in.id
+    initial_line_count = len(order_in.orderin_lines)
+
+    response = client_all.post(
+        f"/stock/htmx/reservations/{order_id}/line/create",
+        data={
+            "order_id": order_id,
+            "general_object_id": book_object.id,
+            "quantity": "3",
+            "unit_price": "12.50",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.text.startswith("<!-- template view.html -->")
+    assert "Test Book" in response.get_data(as_text=True)
+
+    saved_line = db_session_main.query(OrderInLine).filter_by(
+        order_in_id=order_id,
+        general_object_id=book_object.id,
+    ).first()
+    assert saved_line is not None
+    assert saved_line.qty_ordered == 3
+    assert saved_line.unit_price == 12.5
+    assert len(order_in.orderin_lines) == initial_line_count + 1
+
+
+def test_delete_reservation_line_reintegrates_stock(db_session_main, supplier, general_object):
+    """La suppression d'une ligne de réservation doit compenser le mouvement "reserved"."""
+    order = OrderIn(
+        order_ref="RES-000001",
+        supplier_id=supplier.id,
+        reservation_context={"notes": "test"},
+        order_state="draft",
+    )
+    db_session_main.add(order)
+    db_session_main.flush()
+
+    movement = InventoryMovements(
+        general_object_id=general_object.id,
+        movement_type="reserved",
+        quantity=3,
+        price_at_movement=12.5,
+        source="stock",
+        destination="reserve",
+        notes="Réservation test",
+    )
+    db_session_main.add(movement)
+    db_session_main.flush()
+
+    line = OrderInLine(
+        order_in_id=order.id,
+        general_object_id=general_object.id,
+        inventory_movement_id=movement.id,
+        qty_ordered=3,
+        qty_received=0,
+        unit_price=12.5,
+        vat_rate=0,
+        line_state="pending",
+    )
+    db_session_main.add(line)
+    db_session_main.flush()
+
+    repo = OrderRepository(db_session_main)
+    repo.delete_order_in_line_db(line.id)
+
+    assert db_session_main.get(OrderInLine, line.id) is None
+    compensations = db_session_main.query(InventoryMovements).filter_by(
+        general_object_id=general_object.id,
+        movement_type="reserved",
+    ).all()
+    assert any(m.quantity == -3 for m in compensations)
+
 
 def test_new_order_line(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument
     """

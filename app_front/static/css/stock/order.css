@@ -76,7 +76,7 @@
   color: #fff;
 }
 .btn-primary:hover {
-  background: rgb(0, 4.3243243243, 60);
+  background: rgb(0%, 1.6958134605%, 23.5294117647%);
 }
 
 .btn-secondary {
@@ -92,7 +92,7 @@
   color: #fff;
 }
 .btn-danger:hover {
-  background: rgb(141.2, 0, 13.9648351648);
+  background: rgb(55.3725490196%, 0%, 5.476405947%);
 }
 
 /* ── Tableaux ────────────────────────────────────────────────────────────── */
@@ -430,7 +430,7 @@
   color: #fff;
 }
 .btn-success:hover {
-  background: rgb(0, 68.2, 15.6422018349);
+  background: rgb(0%, 26.7450980392%, 6.134196798%);
 }
 .btn-success:disabled {
   opacity: 0.5;
@@ -585,6 +585,98 @@
 /* ============================================================================ */
 /* receive_line.html — Modale de réception de ligne de commande               */
 /* ============================================================================ */
+#reservation-context-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+#reservation-context-modal.is-open {
+  display: flex;
+}
+#reservation-context-modal .reservation-context-dialog {
+  width: min(90vw, 760px);
+  max-width: 760px;
+  margin: 0;
+}
+#reservation-context-modal .reservation-context-content {
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+#reservation-context-modal .reservation-context-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+#reservation-context-modal .reservation-context-body {
+  padding: 2rem;
+}
+#reservation-context-modal .reservation-context-body .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+#reservation-context-modal .reservation-context-body .col-md-12,
+#reservation-context-modal .reservation-context-body .col-md-6 {
+  flex: 1 1 100%;
+}
+#reservation-context-modal .reservation-context-body .col-md-6 {
+  min-width: 220px;
+}
+#reservation-context-modal .reservation-context-body .form-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #404040;
+}
+#reservation-context-modal .reservation-context-body .form-control {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #c0c0c0;
+  border-radius: 5px;
+  font-family: "Asap", sans-serif;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+#reservation-context-modal .reservation-context-body .form-control:focus {
+  outline: none;
+  border-color: #00086f;
+  box-shadow: 0 0 0 2px rgba(0, 8, 111, 0.12);
+}
+#reservation-context-modal .reservation-context-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-top: 1px solid #e0e0e0;
+  background: #f5f5f5;
+}
+#reservation-context-modal .modal-title {
+  margin: 0;
+  color: #00086f;
+  font-size: 1.2rem;
+}
+#reservation-context-modal .btn-close {
+  border: none;
+  background: transparent;
+  color: #606060;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 #receive-line-modal:empty {
   display: none;
 }

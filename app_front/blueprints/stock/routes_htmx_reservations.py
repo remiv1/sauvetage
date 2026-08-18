@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request
 from app_front.blueprints.stock.forms import (
     OrderInCreateForm,
     OrderInLineForm,
+    ReservationContextForm,
 )
 from app_front.blueprints.stock.utils import (
     get_supplier_orders,
@@ -16,6 +17,7 @@ from app_front.blueprints.stock.utils import (
     cancel_supplier_order,
     confirm_supplier_order,
     return_reservation,
+    save_reservation_context,
 )
 
 bp_stock_htmx_reservations = Blueprint(
@@ -34,6 +36,17 @@ SECTION_CONFIRMED = "htmx_templates/stock/orders/sections/confirmed.html"
 NEW_LINE = "htmx_templates/stock/orders/fragments/new_line.html"
 
 CTX = {"reservation": True}
+
+
+def get_reservation_context_form(order=None):
+    """Retourne le formulaire de contexte avec les valeurs existantes."""
+    context = order.reservation_context or {} if order else {}
+    form_data = {
+        "reservation_notes": context.get("notes", ""),
+        "reservation_location": context.get("location", ""),
+        "reservation_responsible_name": context.get("responsible_name", ""),
+    }
+    return ReservationContextForm(data=form_data)
 
 
 @bp_stock_htmx_reservations.get("/cleared")
@@ -56,7 +69,14 @@ def new_reservation_section():
     if form.validate_on_submit():
         reservation_id = create_order_in_db(form, reservation=True)
         order = get_order_by_id(reservation_id)
-        return render_template(SECTION_VIEW, view_state="new", order=order, **CTX)
+        reservation_context_form = get_reservation_context_form(order)
+        return render_template(
+            SECTION_VIEW,
+            view_state="new",
+            order=order,
+            reservation_context_form=reservation_context_form,
+            **CTX,
+        )
     return render_template(SECTION_NEW, form=form, **CTX)
 
 
@@ -64,7 +84,14 @@ def new_reservation_section():
 def edit_reservation(order_id: int):
     """Retourne la vue d'édition d'une réservation (HTMX)."""
     order = get_order_by_id(order_id)
-    return render_template(SECTION_VIEW, order=order, view_state="edit", **CTX)
+    reservation_context_form = get_reservation_context_form(order)
+    return render_template(
+        SECTION_VIEW,
+        order=order,
+        view_state="edit",
+        reservation_context_form=reservation_context_form,
+        **CTX,
+    )
 
 
 @bp_stock_htmx_reservations.get("/view/<int:order_id>")
@@ -75,16 +102,45 @@ def view_reservation(order_id: int):
     return render_template(SECTION_VIEW, order=order, view_state="view", modal=modal, **CTX)
 
 
+@bp_stock_htmx_reservations.post("/<int:order_id>/context")
+def update_reservation_context_route(order_id: int):
+    """Met à jour le contexte métier associé à la réservation."""
+    form = ReservationContextForm()
+    if form.validate_on_submit():
+        save_reservation_context(order_id, form)
+    order = get_order_by_id(order_id)
+    reservation_context_form = get_reservation_context_form(order)
+    return render_template(
+        SECTION_VIEW,
+        order=order,
+        view_state="edit",
+        reservation_context_form=reservation_context_form,
+        **CTX,
+    )
+
+
 @bp_stock_htmx_reservations.route("/<int:order_id>/line/create", methods=["GET", "POST"])
 def new_reservation_line(order_id: int):
     """Formulaire d'ajout d'une ligne de réservation (HTMX)."""
     form = OrderInLineForm()
     form.order_id.data = str(order_id)
-    # Les champs unit_price et vat_rate ne sont pas affichés pour les réservations
+
+    # La TVA n'est pas affichée dans le flux réservation, mais elle est utilisée
+    # en interne pour la logique d'inventaire. On la normalise en 0 si elle est absente.
+    if request.method == "POST" and not form.vat_rate.data:
+        form.vat_rate.data = "0"
+
     if form.validate_on_submit():
         edit_order_in_line_db(form, action="create", order_id=order_id, reservation=True)
         order = get_order_by_id(order_id)
-        return render_template(SECTION_VIEW, order=order, view_state="new", **CTX)
+        reservation_context_form = get_reservation_context_form(order)
+        return render_template(
+            SECTION_VIEW,
+            order=order,
+            view_state="new",
+            reservation_context_form=reservation_context_form,
+            **CTX,
+        )
     return render_template(NEW_LINE, form=form, view_state="create", **CTX)
 
 

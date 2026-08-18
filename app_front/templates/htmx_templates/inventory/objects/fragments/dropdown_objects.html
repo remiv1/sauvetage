@@ -7,6 +7,8 @@
         <li class="dropdown-item"
             data-object-id="{{ i.id }}"
             data-object-name="{{ i.name }}"
+            data-inventory-price="{{ i.inventory_price | float if i.inventory_price is defined else 0 }}"
+            data-available-quantity="{{ i.available_quantity if i.available_quantity is defined else 0 }}"
             data-purchase-price="{{ i.purchase_price | float if i.purchase_price else 0 }}"
             data-vat-rate="{{ i.vat_rate.rate | float if i.vat_rate else 0 }}"
             style="cursor:pointer">
@@ -20,15 +22,34 @@
         item.addEventListener('click', function() {
             var objId = this.dataset.objectId;
             var objName = this.dataset.objectName;
+            var inventoryPrice = this.dataset.inventoryPrice;
+            var availableQty = this.dataset.availableQuantity;
             var purchasePrice = this.dataset.purchasePrice;
             var vatRate = this.dataset.vatRate;
             var idField = document.getElementById('general_object_id');
             var nameField = document.getElementById('object-wrapper');
             var priceField = document.getElementById('unit_price');
+            var quantityField = document.getElementById('quantity');
             var vatField = document.getElementById('vat_rate');
             if (idField) idField.value = objId;
             if (nameField) nameField.value = objName;
-            if (priceField && purchasePrice) priceField.value = purchasePrice;
+            if (priceField) {
+                priceField.value = inventoryPrice || purchasePrice || 0;
+            }
+            if (quantityField) {
+                const maxQty = Number(availableQty || 0);
+                quantityField.min = '0';
+                quantityField.max = maxQty > 0 ? String(maxQty) : '';
+                if (!quantityField.value || Number(quantityField.value) > maxQty) {
+                    quantityField.value = maxQty > 0 ? '1' : '';
+                }
+                const stockHelp = document.getElementById('quantity-stock-help');
+                if (stockHelp) {
+                    stockHelp.textContent = `Stock disponible : ${maxQty}`;
+                    stockHelp.classList.toggle('text-danger', maxQty === 0);
+                    stockHelp.classList.toggle('text-muted', maxQty !== 0);
+                }
+            }
             if (vatField && vatRate) vatField.value = vatRate;
             var results = document.getElementById('article-search-results');
             if (results) results.innerHTML = '';

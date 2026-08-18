@@ -4,16 +4,20 @@ Utilise un advisory lock PostgreSQL pour garantir qu'un seul processus
 exécute les migrations Alembic, même quand Gunicorn forke plusieurs workers
 qui importent tous ce module simultanément.
 """
+from logging import getLogger
 from datetime import datetime, timezone
 from collections import namedtuple
 import subprocess
 from os import getenv
 from urllib.parse import quote
+
 import psycopg2
 from sqlalchemy import select
+
 from db_models.objects.vat import VatRate
 from app_back.db_connection import config as db_config
 
+logger = getLogger(__name__)
 
 # Identifiant arbitraire pour le verrou consultatif PostgreSQL.
 # Tous les workers utilisant le même ID partagent le même verrou.
@@ -54,17 +58,17 @@ def _build_dsn() -> str:
 def _run_alembic(cmd: list, timeout: int = 300):
     """Exécute une commande Alembic dans un sous-processus."""
     try:
-        print(f"[migrations] Running: {' '.join(cmd)}")
+        logger.info("[migrations] Running: %s", ' '.join(cmd))
         proc = subprocess.run(
             cmd, capture_output=True, text=True, timeout=timeout, check=False
         )
         if proc.stdout:
-            print(proc.stdout)
+            logger.info(proc.stdout)
         if proc.returncode != 0 and proc.stderr:
-            print(f"[migrations] stderr: {proc.stderr}")
+            logger.exception("[migrations] stderr: %s", proc.stderr)
         return proc.returncode, proc.stdout, proc.stderr
     except subprocess.SubprocessError as e:
-        print(f"[migrations] Subprocess error: {e}")
+        logger.exception("[migrations] Subprocess error: %s", e)
         return 255, "", str(e)
 
 
@@ -96,34 +100,34 @@ def run_startup_tasks(timeout: int = 300) -> None:
 
         if got_lock:
             # Ce worker est le premier — il exécute les migrations
-            print("[migrations] Advisory lock obtenu — lancement des migrations")
+            logger.info("[migrations] Advisory lock obtenu — lancement des migrations")
             ret_main = _run_alembic(MAIN["command"], timeout=timeout)
-            print(f"[migrations] Migration main terminée (code={ret_main[0]})")
+            logger.info("[migrations] Migration main terminée (code=%s)", ret_main[0])
 
             ret_users = _run_alembic(SECURE["command"], timeout=timeout)
-            print(f"[migrations] Migration users terminée (code={ret_users[0]})")
+            logger.info("[migrations] Migration users terminée (code=%s)", ret_users[0])
 
             # Initialisation des données de référence (TVA, etc.)
             with db_config.main_session_ctx() as session:
                 ensure_vat(session)
-            print("[migrations] Données de référence initialisées")
+            logger.info("[migrations] Données de référence initialisées")
 
             # Libération explicite du lock
             cur.execute("SELECT pg_advisory_unlock(%s)", (ADVISORY_LOCK_ID,))
-            print("[migrations] Advisory lock libéré")
+            logger.info("[migrations] Advisory lock libéré")
         else:
             # Un autre worker migre — on attend qu'il finisse
-            print("[migrations] Un autre worker exécute les migrations — attente...")
+            logger.info("[migrations] Un autre worker exécute les migrations — attente...")
             cur.execute("SELECT pg_advisory_lock(%s)", (ADVISORY_LOCK_ID,))
             # Le lock est obtenu = l'autre worker a fini et relâché
             cur.execute("SELECT pg_advisory_unlock(%s)", (ADVISORY_LOCK_ID,))
-            print("[migrations] Migrations terminées par un autre worker — on continue")
+            logger.info("[migrations] Migrations terminées par un autre worker — on continue")
 
         cur.close()
     except psycopg2.Error as e:
-        print(f"[migrations] Erreur PostgreSQL lors du verrouillage : {e}")
+        logger.exception("[migrations] Erreur PostgreSQL lors du verrouillage : %s", e)
         # Fallback : on tente quand même la migration (mieux que ne rien faire)
-        print("[migrations] Fallback — tentative de migration sans verrou")
+        logger.info("[migrations] Fallback — tentative de migration sans verrou")
         _run_alembic(MAIN["command"], timeout=timeout)
         _run_alembic(SECURE["command"], timeout=timeout)
         with db_config.main_session_ctx() as session:
@@ -156,9 +160,9 @@ def ensure_vat(session):
                 date_start=datetime.now(timezone.utc),
             )
             session.add(new_rate)
-            print(f"[migrations] Ajout du taux de TVA manquant : {new_rate}")
+            logger.info("[migrations] Ajout du taux de TVA manquant : %s", new_rate)
     try:
         session.commit()
     except db_config.SQLAlchemyError as e:
         session.rollback()
-        print(f"[migrations] Erreur lors de l'ajout des taux de TVA : {e}")
+        logger.exception("[migrations] Erreur lors de l'ajout des taux de TVA : %s", e)

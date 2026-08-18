@@ -662,6 +662,112 @@
 /* ============================================================================ */
 /* receive_line.html — Modale de réception de ligne de commande               */
 /* ============================================================================ */
+#reservation-context-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+
+    &.is-open {
+        display: flex;
+    }
+
+    .reservation-context-dialog {
+        width: min(90vw, 760px);
+        max-width: 760px;
+        margin: 0;
+    }
+
+    .reservation-context-content {
+        width: 100%;
+        background: #fff;
+        border-radius: variables.$radius-sm;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+    }
+
+    .reservation-context-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: variables.$space-md variables.$space-lg;
+        border-bottom: 1px solid variables.$gray-200;
+    }
+
+    .reservation-context-body {
+        padding: variables.$space-lg;
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: variables.$space-md;
+        }
+
+        .col-md-12,
+        .col-md-6 {
+            flex: 1 1 100%;
+        }
+
+        .col-md-6 {
+            min-width: 220px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: variables.$space-xs;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: variables.$gray-700;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: variables.$space-sm variables.$space-md;
+            border: 1px solid variables.$gray-300;
+            border-radius: variables.$radius-xs;
+            font-family: variables.$font-primary;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+
+            &:focus {
+                outline: none;
+                border-color: variables.$primary-color;
+                box-shadow: 0 0 0 2px rgba(variables.$primary-color, 0.12);
+            }
+        }
+    }
+
+    .reservation-context-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: variables.$space-sm;
+        padding: variables.$space-md variables.$space-lg;
+        border-top: 1px solid variables.$gray-200;
+        background: variables.$gray-100;
+    }
+
+    .modal-title {
+        margin: 0;
+        color: variables.$primary-color;
+        font-size: 1.2rem;
+    }
+
+    .btn-close {
+        border: none;
+        background: transparent;
+        color: variables.$gray-600;
+        font-size: 1.4rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+}
+
 #receive-line-modal {
     &:empty {
         display: none;

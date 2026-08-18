@@ -36,7 +36,7 @@ class OrderRepository(BaseRepository):
         ).scalars().all()
         for movement in inventory_movements:
             note = f"Compensation du mouvement #{movement.id} lié à la commande annulée #{order_id}"
-            source = f"Compensation annulation commande #{order_id}"
+            source = f"Compensation annulation Réservation/Commande #{order_id}"
             compensation = InventoryMovements(
                 general_object_id=movement.general_object_id,
                 movement_type=movement.movement_type,
@@ -314,21 +314,39 @@ class OrderRepository(BaseRepository):
                 f"Erreur lors de la mise à jour de la réf. externe : {exc}"
             ) from exc
 
+    def update_reservation_context(
+            self,
+            order_id: int,
+            reservation_context: dict[str, Any]
+        ) -> None:
+        """Met à jour le contexte métier spécifique à une réservation."""
+        order = self.session.get(OrderIn, order_id)
+        if order is None:
+            raise ValueError(f"Réservation {order_id} introuvable")
+        if not order.order_ref.startswith("RES-"):
+            raise ValueError(f"La commande {order_id} n'est pas une réservation")
+        order.reservation_context = reservation_context or {}
+        try:
+            self.session.commit()
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise RuntimeError(
+                f"Erreur lors de la mise à jour du contexte réservation : {exc}"
+            ) from exc
+
     # ── CRUD lignes de commande ───────────────────────────────────────────
 
     def _create_reservation_line(self, new_line: OrderInLine) -> Any:
-        """Création d'une ligne de réservation"""
+        """Création d'une ligne de réservation."""
         obj = self.session.get(GeneralObjects, new_line.general_object_id)
         if obj is None:
             raise ValueError(f"Objet {new_line.general_object_id} introuvable")
         order = self.session.get(OrderIn, new_line.order_in_id)
         if order is None:
             raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
-        price = float(obj.purchase_price) if obj.purchase_price else 0.0
-        vat_rate = obj.get_current_vat_rate() if obj.get_current_vat_rate() is not None else 20.0
         order_details = Order(
-            price=price,
-            vat_rate=vat_rate,
+            price=float(new_line.unit_price or 0.0),
+            vat_rate=0.0,
             source="stock",
             destination="reserve",
             movement_type="reserved",
@@ -434,6 +452,9 @@ class OrderRepository(BaseRepository):
     def delete_order_in_line_db(self, line_id: int) -> int:
         """Supprime une ligne de commande fournisseur en base.
 
+        La suppression d'une ligne doit également compenser le mouvement d'inventaire
+        associé pour réintégrer correctement le stock.
+
         Args:
             line_id: L'identifiant de la ligne de commande à supprimer.
 
@@ -444,6 +465,11 @@ class OrderRepository(BaseRepository):
         line = self.session.get(OrderInLine, line_id)
         if line is None:
             raise ValueError(f"Ligne de commande {line_id} introuvable")
+
+        movement_id = line.inventory_movement_id
+        if movement_id is not None:
+            self._compensate_inventory_movements({movement_id}, line.order_in_id)
+            self.session.flush()
 
         self.session.delete(line)
 

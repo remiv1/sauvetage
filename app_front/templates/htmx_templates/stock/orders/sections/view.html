@@ -38,7 +38,7 @@
     {# ── Informations de la commande / réservation ───────────────────────── #}
     <div class="order-info-section">
         <div class="info-group">
-            <span class="info-label">{{ 'Identifiant réservation' if reservation else 'Identifiant commande' }} :</span>
+            <span class="info-label">{{ '#Réservation' if reservation else '#Commande' }}&nbsp:</span>
             <span class="info-value" id="order-id">
                 {% if order.id %}
                     {{ order.id }}
@@ -48,14 +48,14 @@
             </span>
         </div>
         <div class="info-group">
-            <span class="info-label">Fournisseur :</span>
+            <span class="info-label">Fournisseur&nbsp:</span>
             <span class="info-value" id="supplier-name">
                 {{ order.supplier.name or '—' }}
             </span>
         </div>
         {% if not reservation %}
         <div class="info-group">
-            <span class="info-label">Réf. externe :</span>
+            <span class="info-label">Réf. externe&nbsp:</span>
             {% if view_state == 'receipt' and not order.external_ref %}
             <span class="info-value" id="external-ref">
                 <form class="d-inline"
@@ -64,7 +64,7 @@
                       hx-swap="innerHTML">
                     {{ ext_ref_form.hidden_tag() }}
                     <input type="text" name="external_ref" class="form-control form-control-sm d-inline-block"
-                           style="width: auto; min-width: 150px;" id="external_ref"
+                           style="width: auto; min-width: 150px;" id=""
                            value="{{ order.external_ref or '' }}"
                            placeholder="Réf. fournisseur">
                     <button type="submit" class="btn btn-sm btn-outline-primary" title="Enregistrer">
@@ -77,6 +77,26 @@
                 {{ order.external_ref or '—' }}
             </span>
             {% endif %}
+        </div>
+        {% endif %}
+        {% if reservation and view_state == 'view' %}
+        <div class="info-group">
+            <span class="info-label">Notes&nbsp:</span>
+            <span class="info-value" id="reservation-notes">
+                {{ order.reservation_context.notes if order.reservation_context and order.reservation_context.notes else '—' }}
+            </span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Lieu&nbsp:</span>
+            <span class="info-value" id="reservation-location">
+                {{ order.reservation_context.location if order.reservation_context and order.reservation_context.location else '—' }}
+            </span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Resp.&nbsp:</span>
+            <span class="info-value" id="reservation-responsible">
+                {{ order.reservation_context.responsible_name if order.reservation_context and order.reservation_context.responsible_name else '—' }}
+            </span>
         </div>
         {% endif %}
         <div class="info-group">
@@ -95,6 +115,15 @@
                 {% endif %}
             </span>
         </div>
+        {% if reservation and view_state in ['edit', 'new'] %}
+        <div class="info-group">
+            <button type="button"
+                    class="btn btn-sm btn-primary"
+                    data-open-reservation-context-modal>
+                {{ 'Renseigner le contexte' if view_state == 'new' else 'Modifier le contexte' }}
+            </button>
+        </div>
+        {% endif %}
         {% if not reservation %}
         <div class="info-group">
             <span class="info-label">Envoi :</span>
@@ -111,6 +140,80 @@
         </div>
         {% endif %}
     </div>
+
+    {% if reservation and (view_state == 'edit' or view_state == 'new') %}
+    <div id="reservation-context-modal"
+         class="reservation-context-modal"
+         tabindex="-1"
+         role="dialog"
+         data-initial-mode="{{ view_state }}"
+         aria-hidden="{{ 'false' if view_state == 'new' else 'true' }}">
+        <div class="modal-dialog reservation-context-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content reservation-context-content">
+                <div class="modal-header reservation-context-header">
+                    <h3 class="modal-title">Contexte de la réservation</h3>
+                    <button type="button"
+                            class="btn-close"
+                            data-close-reservation-context-modal
+                            aria-label="Fermer"></button>
+                </div>
+                <form id="reservation-context-form"
+                      method="post"
+                      hx-post="{{ url_for('stock_htmx_reservations.update_reservation_context_route', order_id=order.id) }}"
+                      hx-target="#orders-management"
+                      hx-swap="innerHTML">
+                    <div class="modal-body reservation-context-body">
+                        {{ reservation_context_form.hidden_tag() }}
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                {{ reservation_context_form.reservation_notes.label(class="form-label") }}
+                                {{ reservation_context_form.reservation_notes(class="form-control", rows=4) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ reservation_context_form.reservation_location.label(class="form-label") }}
+                                {{ reservation_context_form.reservation_location(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ reservation_context_form.reservation_responsible_name.label(class="form-label") }}
+                                {{ reservation_context_form.reservation_responsible_name(class="form-control") }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer reservation-context-footer">
+                        <button type="button" class="btn btn-secondary" data-close-reservation-context-modal>Fermer</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+    (() => {
+        const modal = document.getElementById('reservation-context-modal');
+        if (!modal) return;
+
+        const openButtons = document.querySelectorAll('[data-open-reservation-context-modal]');
+        const closeButtons = document.querySelectorAll('[data-close-reservation-context-modal]');
+
+        const setModalState = (visible) => {
+            modal.classList.toggle('is-open', visible);
+            modal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        };
+
+        openButtons.forEach((button) => {
+            button.addEventListener('click', () => setModalState(true));
+        });
+
+        closeButtons.forEach((button) => {
+            button.addEventListener('click', () => setModalState(false));
+        });
+
+        const initialMode = modal.dataset.initialMode || 'edit';
+        setModalState(initialMode === 'new');
+    })();
+    </script>
 
     {# ── Tableau des lignes ──────────────────────────────────────────────── #}
     <div class="order-lines-section">

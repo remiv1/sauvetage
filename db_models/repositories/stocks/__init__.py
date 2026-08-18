@@ -7,15 +7,16 @@ Utilisation :
 from db_models.repositories.stocks.inventory import InventoryRepository
 from db_models.repositories.stocks.orders import OrderRepository
 from db_models.repositories.stocks.dilicom import DilicomReferencialRepository
+from db_models.repositories.stocks.stock import StockRepository as BaseStockRepository
 
 
-class StockRepository(OrderRepository, InventoryRepository):
-    """Façade regroupant les fonctionnalités stock : commandes et inventaire.
+class StockRepository(OrderRepository, InventoryRepository, BaseStockRepository):
+    """Façade regroupant les fonctionnalités stock : commandes, inventaire et réservation.
 
-    Hérite de OrderRepository et InventoryRepository pour maintenir la
-    rétrocompatibilité avec le code existant qui utilise StockRepository.
+    Les méthodes de commande/inventaire restent prioritaires pour préserver le
+    contrat métier attendu par les routes, tandis que le dépôt de base apporte les
+    calculs spécifiques de stock et de prix d'inventaire.
     """
-
     pass    # pylint: disable=unnecessary-pass
 
 

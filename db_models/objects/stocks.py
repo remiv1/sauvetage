@@ -3,7 +3,7 @@
 from typing import Dict, Any
 from datetime import timezone, datetime
 from decimal import Decimal
-from sqlalchemy import Integer, String, ForeignKey, Numeric, Boolean
+from sqlalchemy import Integer, String, ForeignKey, Numeric, Boolean, JSON
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
@@ -34,6 +34,11 @@ class OrderIn(WorkingBase, QueryMixin):
         nullable=False,
         comment="Valeur totale de la commande",
     )
+    reservation_context: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Contexte métier spécifique aux réservations (notes, localisation, responsable)",
+    )
     # État de la commande : 'draft', 'sended', 'received', 'cancelled'
     order_state: Mapped[str] = mapped_column(
         String, default="draft", nullable=False, comment="État de la commande"
@@ -62,6 +67,7 @@ class OrderIn(WorkingBase, QueryMixin):
                 if isinstance(self.value, (int, float, Decimal))
                 else None
             ),
+            "reservation_context": self.reservation_context or {},
             "order_state": self.order_state,
         }
 

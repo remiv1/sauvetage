@@ -31,8 +31,19 @@ class OrderInCreateForm(FlaskForm):
     supplier_name = StringField(
         "Nom du fournisseur (auto-complete)", validators=[DataRequired()]
     )
+    reservation_notes = TextAreaField("Notes de réservation")
+    reservation_location = StringField("Localisation")
+    reservation_responsible_name = StringField("Nom du responsable")
     submit = SubmitField("Créer la commande")
 
+
+class ReservationContextForm(FlaskForm):
+    """Formulaire dédié au contexte métier d'une réservation."""
+
+    reservation_notes = TextAreaField("Notes de réservation")
+    reservation_location = StringField("Localisation")
+    reservation_responsible_name = StringField("Nom du responsable")
+    submit = SubmitField("Enregistrer le contexte")
 
 
 class OrderInLineForm(FlaskForm):
@@ -42,38 +53,33 @@ class OrderInLineForm(FlaskForm):
     general_object_id = HiddenField("ID objet", validators=[DataRequired()])
     quantity = StringField("Quantité", validators=[DataRequired()])
     unit_price = StringField("Prix unitaire", validators=[DataRequired()])
-    vat_rate = StringField(VAT_RATE, validators=[DataRequired()])
+    vat_rate = StringField(VAT_RATE, validators=[Optional()])
     submit = SubmitField("Ajouter à la commande")
 
     def validate_form_data(self, reservation: bool = False) -> OrderTuple:
         """
-        Valide si les données sont complètes pour être utilisées.
+        Valide les données brutes du formulaire sans injecter de logique métier.
 
-        Return:
-            OrderTuple: Un namedtuple contenant les données validées
-            (order_id, general_object_id, quantity, unit_price, vat_rate).
-        Raises:
-            TypeError: Si les données du formulaire sont invalides.
-            ValueError: Si les données du formulaire sont incomplètes.
+        La validation métier des quantités et prix selon l'inventaire est gérée dans
+        le dépôt et le service de réservation, afin de garder le formulaire simple
+        et réutilisable.
         """
         try:
             order_id = int(self.order_id.data or 0)
             general_object_id = int(self.general_object_id.data or 0)
             quantity = int(self.quantity.data or 0)
-            if not reservation:
-                unit_price = float(self.unit_price.data or 0)
-                vat_rate = float(self.vat_rate.data or 0)
-                ok = (
-                    order_id != 0
-                    and general_object_id != 0
-                    and quantity > 0
-                    and unit_price != 0
-                    and vat_rate != 0
-                )
-            else:
-                unit_price = None
-                vat_rate = None
-                ok = order_id != 0 and general_object_id != 0 and quantity > 0
+            unit_price = float(self.unit_price.data or 0)
+
+            vat_value = self.vat_rate.data if self.vat_rate.data not in (None, "") else "0"
+            vat_rate = float(vat_value or 0)
+
+            ok = (
+                order_id != 0
+                and general_object_id != 0
+                and quantity > 0
+                and unit_price >= 0
+                and (not reservation or True)
+            )
             if not ok:
                 raise ValueError("Remplir tous les champs du formulaire.")
             return OrderTuple(order_id, general_object_id, quantity, unit_price, vat_rate)
