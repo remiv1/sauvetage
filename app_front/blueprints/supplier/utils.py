@@ -105,8 +105,15 @@ def update_supplier_data(supplier_id: int, data: Dict[str, Any]) -> Dict[str, An
     """
     session = db_conf.get_main_session()
     repo = SuppliersRepository(session)
+    current_supplier = repo.get_by_id(supplier_id)
+    if current_supplier is None:
+        raise ValueError("Fournisseur introuvable")
+
+    payload = dict(data)
+    payload.setdefault("is_active", current_supplier.is_active)
+
     supplier = repo.update_supplier(
-        supplier=Suppliers.from_dict({**data}),
+        supplier=Suppliers.from_dict(payload),
         existing_id=supplier_id,
     )
     return supplier.to_dict()

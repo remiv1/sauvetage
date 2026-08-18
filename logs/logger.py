@@ -318,6 +318,8 @@ class MongoForwardHandler(logging.Handler):
         """Rediriger le log vers MongoDBLogger"""
         if record.name.startswith("pymongo"):
             return
+        if record.name.startswith("fontTools"):
+            return
 
         is_dilicom_business_log = (
             record.name.startswith("dilicom_parser")
@@ -401,6 +403,13 @@ def setup_logging():
     # éviter les doublons si reload Uvicorn/Gunicorn
     if any(isinstance(h, MongoForwardHandler) for h in root_logger.handlers):
         return
+
+    # Les logs de fontTools sont très verbeux et n'ont pas de valeur métier.
+    # Ils sont utilisés uniquement pour le rendu PDF et polluent fortement les journaux.
+    fonttools_logger = logging.getLogger("fontTools")
+    fonttools_logger.setLevel(logging.CRITICAL)
+    fonttools_logger.propagate = False
+
     handler = MongoForwardHandler(get_logger())
     root_logger.setLevel(LOG_LEVEL)
     root_logger.addHandler(handler)

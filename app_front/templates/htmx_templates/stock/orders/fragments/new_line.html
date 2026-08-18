@@ -1,5 +1,6 @@
 <!-- template new_line.html -->
 {% set reservation = reservation|default(false) %}
+{% set reservation_flag = 'true' if reservation else 'false' %}
 {# ── Modale de création de ligne de commande / réservation ────────────── #}
 <div class="modal show" id="order-line-modal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -45,7 +46,7 @@
                                {% endif %}
                                placeholder="Saisissez l'ID ou le nom de l'article"
                                required
-                               hx-get="{{ url_for('inventory_htmx.get_items_search', supplier_id=order.supplier_id) if order else url_for('inventory_htmx.get_items_search') }}"
+                               hx-get="{{ url_for('inventory_htmx.get_items_search', supplier_id=order.supplier_id, reservation=reservation_flag) if order else url_for('inventory_htmx.get_items_search', reservation=reservation_flag) }}"
                                hx-trigger="input changed delay:500ms"
                                hx-target="#article-search-results"
                                hx-swap="innerHTML"

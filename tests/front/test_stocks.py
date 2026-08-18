@@ -114,6 +114,36 @@ def test_supplier_object_filter_for_order_line(client_all, supplier, db_session_
     assert "Objet fournisseur secondaire" not in response.get_data(as_text=True)
 
 
+def test_order_object_dropdown_does_not_limit_quantity_like_reservation(
+        client_all,
+        supplier,
+        db_session_main,
+    ):
+    """
+    Le choix d'un article pour une commande fournisseur ne doit pas imposer un stock max réservé.
+    """
+    obj = GeneralObjects(
+        supplier_id=supplier.id,
+        general_object_type="generic",
+        ean13="9780000000003",
+        name="Objet commande fournisseur",
+        description="Objet de commande fournisseur",
+        price=10.0,
+    )
+    db_session_main.add(obj)
+    db_session_main.commit()
+
+    response = client_all.get(
+        f"/inventory/htmx/objects/get?object-wrapper=Objet commande&supplier_id={supplier.id}",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "quantityField.max =" not in body
+    assert "reservationMode" in body
+
+
 def test_object_autocomplete(client_all,
                          db_session_main,      # pylint: disable=redefined-outer-name, unused-argument
                          dilicom_referencial):   # pylint: disable=redefined-outer-name, unused-argument
@@ -701,6 +731,33 @@ def test_confirm_order_mail_choice(client_all, order_in):   # pylint: disable=re
     assert response.status_code == 200
     assert "Envoyer par email" in response.get_data(as_text=True)
     assert "Télécharger le bon de commande" in response.get_data(as_text=True)
+
+
+def test_send_order_mail_success_and_failure_states(client_all, order_in, monkeypatch):  # pylint: disable=redefined-outer-name, unused-argument
+    """
+    La route d'envoi mail doit remonter le statut et proposer le téléchargement en cas d'échec.
+    """
+    order_id = order_in.id
+
+    monkeypatch.set(
+        "app_front.blueprints.stock.routes_htmx_orders.send_order_by_mail",
+        lambda order: True,
+    )
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/send-mail")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Email envoyé" in body
+    assert "Télécharger le bon de commande" in body
+
+    monkeypatch.set(
+        "app_front.blueprints.stock.routes_htmx_orders.send_order_by_mail",
+        lambda order: False,
+    )
+    response = client_all.post(f"/stock/htmx/orders/{order_id}/send-mail")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Échec de l'envoi" in body
+    assert "Le bon de commande reste disponible au téléchargement" in body
 
 
 def test_receipt_order(client_all, order_in):   # pylint: disable=redefined-outer-name, unused-argument

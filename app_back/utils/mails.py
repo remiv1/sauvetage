@@ -1,16 +1,22 @@
 """Module utilitaire pour l'envoi d'e-mails."""
 
-from typing import List, Dict, Optional
+import logging
 import re
+import smtplib
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email.utils import formataddr
-from email import encoders
-import smtplib
+from email.utils import formataddr, parseaddr
+from typing import Any, Dict, List, Optional
+
 from jinja2 import Environment, FileSystemLoader
+
 from app_back.config.mails import MailConfig
 from .documents import TEMPLATES_DIR
+
+logger = logging.getLogger(__name__)
+
 
 def send_mail(
     to: List[str],
@@ -19,8 +25,8 @@ def send_mail(
     data: Dict,
     cc: Optional[List[str]] = None,
     bcc: Optional[List[str]] = None,
-    attachments: Optional[List[Dict[str, str]]] = None
-) -> None:
+    attachments: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
     """
     Envoie un email basé sur un template + données, avec pièces jointes optionnelles.
     Args:
@@ -53,7 +59,17 @@ def send_mail(
     )
 
     # 4. Envoyer via SMTP
-    smtp_send(message)
+    result = smtp_send(message)
+    logger.info(
+        "Envoi mail terminé - destinataires=%s, sujet=%s, template=%s, pièces_jointes=%s, " +
+        "smtp_result=%s",
+        to,
+        subject,
+        template_name,
+        len(attachments or []),
+        result,
+    )
+    return result
 
 def strip_html(html: str) -> str:
     """Supprime les balises HTML pour générer une version texte du contenu."""
@@ -90,6 +106,12 @@ def build_mime_message(
     if bcc:
         message['Bcc'] = ', '.join(bcc)
     message['Subject'] = subject
+    sender_name, sender_email = parseaddr(MailConfig.mail_default_sender)
+    if not sender_email:
+        sender_email = MailConfig.smtp_username
+    if not sender_name:
+        sender_name = "Editions Sauvetage"
+    message['From'] = formataddr((sender_name, sender_email))
 
     # Ajouter les parties texte et HTML
     message.attach(MIMEText(text_body, 'plain'))
@@ -113,16 +135,17 @@ def build_mime_message(
 
     return message
 
-def smtp_send(message: MIMEMultipart) -> None:
+def smtp_send(message: MIMEMultipart) -> Dict[str, Any]:
     """
-    Envoie le message MIME via SMTP.
-    Cette fonction doit être implémentée pour se connecter à votre serveur SMTP
-    et envoyer le message. Vous pouvez utiliser smtplib ou une bibliothèque tierce.
+    Envoie le message MIME via SMTP et retourne le résultat réel de l'API SMTP.
+    Le succès de sendmail ne garantit pas la livraison au destinataire final,
+    seulement que le serveur SMTP a accepté le message pour la file d'envoi.
     """
-    # Exemple d'implémentation avec smtplib (à adapter selon votre configuration)
-
-    sender_email = MailConfig.smtp_username
-    sender_name = MailConfig.mail_default_sender
+    sender_name, sender_email = parseaddr(MailConfig.mail_default_sender)
+    if not sender_email:
+        sender_email = MailConfig.smtp_username
+    if not sender_name:
+        sender_name = "Editions Sauvetage"
     smtp_server = MailConfig.smtp_server
     smtp_port = MailConfig.smtp_port
     smtp_username = MailConfig.smtp_username
@@ -133,13 +156,50 @@ def smtp_send(message: MIMEMultipart) -> None:
         recipients += message['Cc'].split(', ')
     if message.get('Bcc'):
         recipients += message['Bcc'].split(', ')
+    recipients = [recipient for recipient in recipients if recipient]
 
+    logger.info(
+        "Tentative d'envoi SMTP - serveur=%s:%s, destinataires=%s, expéditeur=%s",
+        smtp_server,
+        smtp_port,
+        recipients,
+        formataddr((sender_name, sender_email)),
+    )
 
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.sendmail(
-            formataddr((sender_name, sender_email)),
+    try:
+        if MailConfig.smtp_use_ssl:
+            smtp_client = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        else:
+            smtp_client = smtplib.SMTP(smtp_server, smtp_port)
+
+        with smtp_client as server:
+            if MailConfig.smtp_use_tls and not MailConfig.smtp_use_ssl:
+                server.starttls()
+            if smtp_username and smtp_password:
+                server.login(smtp_username, smtp_password)
+            smtp_result = server.sendmail(
+                formataddr((sender_name, sender_email)),
+                recipients,
+                message.as_string(),
+            )
+            logger.info(
+                "SMTP a accepté la commande d'envoi - destinataires=%s, result=%s, "
+                "note=ce retour confirme l'acceptation par le relay SMTP, pas la livraison finale",
+                recipients,
+                smtp_result,
+            )
+            return {
+                "status": "accepted_by_smtp",
+                "delivery_status": "smtp_accepted_not_confirmed",
+                "recipients": recipients,
+                "result": smtp_result,
+                "message": "Le message a été accepté par le serveur SMTP ; " + \
+                    "la livraison finale dans la messagerie du destinataire n'est pas confirmée " + \
+                    "par ce retour.",
+            }
+    except Exception:
+        logger.exception(
+            "Erreur SMTP réelle lors de l'envoi à %s",
             recipients,
-            message.as_string()
         )
+        raise

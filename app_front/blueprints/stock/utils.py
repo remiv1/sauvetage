@@ -2,9 +2,10 @@
 
 import logging
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
 from sqlalchemy import select, distinct, text
 
-from app_front.config import db_conf
+from app_front.config import MAILS, db_conf, post
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
     OrderInCreateForm,
@@ -89,17 +90,42 @@ def send_order_by_edi(order: Any) -> bool:
     return False
 
 
-def send_order_by_mail(order: Any) -> bool:
-    """Placeholder d'envoi de commande par email.
+def send_order_by_mail(order: Any) -> str | bool:
+    """Demande au backend de générer le PDF et d'envoyer le bon de commande par mail.
 
-    À remplacer par l'implémentation réelle d'envoi du bon de commande par mail.
+    Retourne soit un statut métier explicite (`success`, `accepted_by_smtp`) soit `False`
+    si le backend a refusé l'envoi. Le statut `accepted_by_smtp` ne confirme pas la
+    livraison réelle dans la messagerie du fournisseur.
     """
-    # TODO: Implémenter l'envoi réel par email ici.
-    logger.warning(
-        "Placeholder MAIL appelé pour la commande %s : intégration non implémentée.",
-        getattr(order, "id", None),
-    )
-    return False
+    supplier = getattr(order, "supplier", None)
+    supplier_email = str(getattr(supplier, "contact_email", "") or "").strip()
+    if not supplier_email:
+        logger.warning(
+            "Impossible d'envoyer le bon de commande %s : aucun email fournisseur renseigné.",
+            getattr(order, "id", None),
+        )
+        return False
+
+    try:
+        payload = {
+            "order_id": getattr(order, "id", None),
+            "supplier_email": supplier_email,
+            "supplier_name": getattr(supplier, "name", "Fournisseur") or "Fournisseur",
+            "order_ref": getattr(order, "order_ref", "") or f"CMD-{getattr(order, 'id', 0)}",
+        }
+        response = post(MAILS["send_supplier_order"], payload)
+        status = response.get("status") if isinstance(response, dict) else None
+        if status in {"success", "accepted_by_smtp"}:
+            return status
+        return False
+    except Exception as exc:  # pragma: no cover - sécurité si le service back est indisponible
+        logger.exception(
+            "Échec de la demande d'envoi du bon de commande %s par email au fournisseur %s : %s",
+            getattr(order, "id", None),
+            supplier_email,
+            exc,
+        )
+        return False
 
 
 def get_vat_rates() -> List[tuple]:

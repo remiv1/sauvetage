@@ -33,6 +33,7 @@ DILICOM: Dict[str, Any] = {
 }
 MAILS: Dict[str, str] = {
     "create": f"{API_URL}/mails/create",
+    "send_supplier_order": f"{API_URL}/mails/send-order",
 }
 DOCUMENTS: Dict[str, str] = {
     "create": f"{API_URL}/documents/create",

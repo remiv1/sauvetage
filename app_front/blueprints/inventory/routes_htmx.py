@@ -25,8 +25,13 @@ def get_items_search():
     name = request.args.get("object-wrapper", "").strip()
     supplier_id_raw = request.args.get("supplier_id", "").strip()
     supplier_id = int(supplier_id_raw) if supplier_id_raw else None
+    reservation = request.args.get("reservation", "false").strip().lower() == "true"
     object_list = search_object_by_name(name, supplier_id=supplier_id)
-    return render_template(DROPDOWN_OBJECT_TEMPLATE, items=object_list)
+    return render_template(
+        DROPDOWN_OBJECT_TEMPLATE,
+        items=object_list,
+        reservation=reservation,
+    )
 
 
 @bp_inventory_htmx.post("/objects/select")

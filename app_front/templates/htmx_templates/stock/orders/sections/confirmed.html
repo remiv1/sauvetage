@@ -88,10 +88,12 @@
             <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
                 {% if order_dispatch['code'] == 'MAIL' %}
                 <button class="btn btn-primary"
+                        data-mail-send-btn
                         hx-post="{{ url_for('stock_htmx_orders.send_order_mail', order_id=order.id) }}"
                         hx-target="#orders-management"
                         hx-swap="innerHTML">
-                    Envoyer par email
+                    <span class="mail-send-text">Envoyer par email</span>
+                    <span id="mail-send-spinner" class="ms-2 d-none" style="display:inline-block;width:1rem;height:1rem;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;"></span>
                 </button>
                 {% endif %}
                 <a class="btn btn-secondary" href="{{ url_for('stock.order_download_slip', order_id=order.id) }}" target="_blank" rel="noopener noreferrer">
@@ -104,6 +106,19 @@
                     Retourner aux commandes
                 </button>
             </div>
+            {% if mail_status is defined %}
+            <div class="mt-3 text-center small">
+                {% if mail_status_code == 'accepted_by_smtp' %}
+                <div class="text-warning">Email accepté par le serveur SMTP.</div>
+                <div class="mt-1">La réception effective dans la messagerie du destinataire n'est pas confirmée par ce retour.</div>
+                {% elif mail_status %}
+                <div class="text-success">Email envoyé.</div>
+                {% else %}
+                <div class="text-warning">Échec de l'envoi.</div>
+                <div class="mt-1">Le bon de commande reste disponible au téléchargement.</div>
+                {% endif %}
+            </div>
+            {% endif %}
             {% else %}
             <div class="mt-3 d-flex justify-content-center gap-2">
                 <button class="btn btn-primary"
@@ -118,3 +133,33 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+(() => {
+    const button = document.querySelector('[data-mail-send-btn]');
+    if (!button) {
+        return;
+    }
+    const spinner = document.getElementById('mail-send-spinner');
+    const text = button.querySelector('.mail-send-text');
+
+    const setLoading = (loading) => {
+        if (spinner) {
+            spinner.classList.toggle('d-none', !loading);
+        }
+        button.disabled = loading;
+        if (text) {
+            text.textContent = loading ? 'Envoi en cours...' : 'Envoyer par email';
+        }
+    };
+
+    button.addEventListener('htmx:beforeRequest', () => setLoading(true));
+    button.addEventListener('htmx:afterRequest', () => setLoading(false));
+})();
+</script>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>

@@ -116,6 +116,7 @@ def supplier_edit_submit(supplier_id: int):
     """Traite la soumission du formulaire d'édition (HTMX)."""
     form = SupplierEditForm()
     if form.validate_on_submit():
+        current_supplier = get_supplier_by_id(supplier_id) or {}
         data = {
             "name": form.supplier_name.data,
             "gln13": form.gln13.data,
@@ -128,7 +129,7 @@ def supplier_edit_submit(supplier_id: int):
             "web_site": form.web_site.data,
             "collect_days": _serialize_collect_days(form.collect_days.data),
             "cutoff_time": _serialize_cutoff_time(form.cutoff_time.data),
-            "is_active": form.is_active.data,
+            "is_active": current_supplier.get("is_active", True),
             "edi_active": form.edi_active.data,
         }
         try:

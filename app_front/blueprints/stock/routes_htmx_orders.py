@@ -171,13 +171,19 @@ def confirm_order(order_id: int):
 def send_order_mail(order_id: int):
     """Déclenche l'envoi du bon de commande par email pour un fournisseur mail."""
     order = get_order_by_id(order_id)
-    send_order_by_mail(order)
+    mail_status = send_order_by_mail(order)
     order_dispatch = dispatch_supplier_order(order)
+    mail_status_code = None
+    if isinstance(mail_status, str):
+        mail_status_code = mail_status
+        mail_status = mail_status in {"success", "accepted_by_smtp"}
     return render_template(
         SECTION_CONFIRMED,
         order=order,
         order_dispatch=order_dispatch,
-        mail_sent=True,
+        mail_sent=mail_status,
+        mail_status=mail_status,
+        mail_status_code=mail_status_code,
     )
 
 

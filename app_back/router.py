@@ -6,6 +6,7 @@ from app_back.v1 import (
     inventory_router,
     dilicom_router,
     documents_router,
+    mails_router,
     woo_commerce_router,
 )
 
@@ -14,4 +15,5 @@ v1_api_router.include_router(user_router)
 v1_api_router.include_router(inventory_router)
 v1_api_router.include_router(dilicom_router)
 v1_api_router.include_router(documents_router)
+v1_api_router.include_router(mails_router)
 v1_api_router.include_router(woo_commerce_router)

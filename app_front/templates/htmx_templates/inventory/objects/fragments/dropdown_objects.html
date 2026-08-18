@@ -18,6 +18,8 @@
 </ul>
 <script>
 (function() {
+    const reservationMode = {{ 'true' if reservation else 'false' }};
+
     document.querySelectorAll('#objects-results .dropdown-item').forEach(function(item) {
         item.addEventListener('click', function() {
             var objId = this.dataset.objectId;
@@ -37,17 +39,21 @@
                 priceField.value = inventoryPrice || purchasePrice || 0;
             }
             if (quantityField) {
-                const maxQty = Number(availableQty || 0);
                 quantityField.min = '0';
-                quantityField.max = maxQty > 0 ? String(maxQty) : '';
-                if (!quantityField.value || Number(quantityField.value) > maxQty) {
-                    quantityField.value = maxQty > 0 ? '1' : '';
-                }
-                const stockHelp = document.getElementById('quantity-stock-help');
-                if (stockHelp) {
-                    stockHelp.textContent = `Stock disponible : ${maxQty}`;
-                    stockHelp.classList.toggle('text-danger', maxQty === 0);
-                    stockHelp.classList.toggle('text-muted', maxQty !== 0);
+                quantityField.max = '';
+
+                if (reservationMode) {
+                    const maxQty = Number(availableQty || 0);
+                    quantityField.max = maxQty > 0 ? String(maxQty) : '';
+                    if (!quantityField.value || Number(quantityField.value) > maxQty) {
+                        quantityField.value = maxQty > 0 ? '1' : '';
+                    }
+                    const stockHelp = document.getElementById('quantity-stock-help');
+                    if (stockHelp) {
+                        stockHelp.textContent = `Stock disponible : ${maxQty}`;
+                        stockHelp.classList.toggle('text-danger', maxQty === 0);
+                        stockHelp.classList.toggle('text-muted', maxQty !== 0);
+                    }
                 }
             }
             if (vatField && vatRate) vatField.value = vatRate;
