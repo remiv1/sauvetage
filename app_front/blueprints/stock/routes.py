@@ -1,5 +1,6 @@
 """Blueprint pour les fonctionnalités de gestion des stocks"""
 
+from datetime import datetime
 from pathlib import Path
 import toml
 
@@ -107,6 +108,7 @@ def order_download_slip(order_id: int):
                 "external_ref": order.external_ref or "-",
                 "supplier_name": order.supplier.name if order.supplier else "-",
                 "state": order.order_state,
+                "date": datetime.now().strftime("%d/%m/%Y"),
             },
             "company": {
                 "name": company.get("name", "-"),
@@ -120,6 +122,7 @@ def order_download_slip(order_id: int):
             },
             "lines": lines,
             "total_ht": f"{total_ht:.2f} EUR",
+            "internal": True,
             "qr_code_data_uri": qr_code_data_uri,
         },
         fallback_filename=f"{order.order_ref}.pdf",

@@ -51,7 +51,6 @@ def send_mail(
     message = build_mime_message(
         to=to,
         cc=cc,
-        bcc=bcc,
         subject=subject,
         html_body=html_body,
         text_body=text_body,
@@ -59,7 +58,7 @@ def send_mail(
     )
 
     # 4. Envoyer via SMTP
-    result = smtp_send(message)
+    result = smtp_send(message, bcc=bcc)
     logger.info(
         "Envoi mail terminé - destinataires=%s, sujet=%s, template=%s, pièces_jointes=%s, " +
         "smtp_result=%s",
@@ -80,7 +79,6 @@ def strip_html(html: str) -> str:
 def build_mime_message(
     to: List[str],
     cc: Optional[List[str]],
-    bcc: Optional[List[str]],
     subject: str,
     html_body: str,
     text_body: str,
@@ -103,8 +101,6 @@ def build_mime_message(
     message['To'] = ', '.join(to)
     if cc:
         message['Cc'] = ', '.join(cc)
-    if bcc:
-        message['Bcc'] = ', '.join(bcc)
     message['Subject'] = subject
     sender_name, sender_email = parseaddr(MailConfig.mail_default_sender)
     if not sender_email:
@@ -113,29 +109,33 @@ def build_mime_message(
         sender_name = "Editions Sauvetage"
     message['From'] = formataddr((sender_name, sender_email))
 
-    # Ajouter les parties texte et HTML
-    message.attach(MIMEText(text_body, 'plain'))
-    message.attach(MIMEText(html_body, 'html'))
+    alternative = MIMEMultipart("alternative")
+    alternative.attach(MIMEText(text_body, "plain", "utf-8"))
+    alternative.attach(MIMEText(html_body, "html", "utf-8"))
+    message.attach(alternative)
 
     # Ajouter les pièces jointes
     if attachments:
         for attachment in attachments:
-            part = MIMEBase('application', 'octet-stream')
+            content_type = attachment.get('content_type', 'application/octet-stream')
+            maintype, separator, subtype = content_type.partition('/')
+            if not separator or not maintype or not subtype:
+                maintype, subtype = 'application', 'octet-stream'
+            part = MIMEBase(maintype, subtype)
             part.set_payload(attachment['content'])
             encoders.encode_base64(part)
             part.add_header(
                 'Content-Disposition',
                 f'attachment; filename="{attachment["filename"]}"'
                 )
-            part.add_header(
-                'Content-Type',
-                attachment.get('content_type', 'application/octet-stream')
-                )
             message.attach(part)
 
     return message
 
-def smtp_send(message: MIMEMultipart) -> Dict[str, Any]:
+def smtp_send(
+    message: MIMEMultipart,
+    bcc: Optional[List[str]] = None,
+) -> Dict[str, Any]:
     """
     Envoie le message MIME via SMTP et retourne le résultat réel de l'API SMTP.
     Le succès de sendmail ne garantit pas la livraison au destinataire final,
@@ -146,6 +146,10 @@ def smtp_send(message: MIMEMultipart) -> Dict[str, Any]:
         sender_email = MailConfig.smtp_username
     if not sender_name:
         sender_name = "Editions Sauvetage"
+
+    display_from = formataddr((sender_name, sender_email))
+    envelope_from = MailConfig.smtp_username or sender_email
+
     smtp_server = MailConfig.smtp_server
     smtp_port = MailConfig.smtp_port
     smtp_username = MailConfig.smtp_username
@@ -154,16 +158,17 @@ def smtp_send(message: MIMEMultipart) -> Dict[str, Any]:
     recipients += message['To'].split(', ')
     if message.get('Cc'):
         recipients += message['Cc'].split(', ')
-    if message.get('Bcc'):
-        recipients += message['Bcc'].split(', ')
+    recipients += bcc or []
     recipients = [recipient for recipient in recipients if recipient]
 
     logger.info(
-        "Tentative d'envoi SMTP - serveur=%s:%s, destinataires=%s, expéditeur=%s",
+        "Tentative d'envoi SMTP - serveur=%s:%s, destinataires=%s, expéditeur_affiché=%s, "
+        "mail_from=%s",
         smtp_server,
         smtp_port,
         recipients,
-        formataddr((sender_name, sender_email)),
+        display_from,
+        envelope_from,
     )
 
     try:
@@ -178,7 +183,7 @@ def smtp_send(message: MIMEMultipart) -> Dict[str, Any]:
             if smtp_username and smtp_password:
                 server.login(smtp_username, smtp_password)
             smtp_result = server.sendmail(
-                formataddr((sender_name, sender_email)),
+                envelope_from,
                 recipients,
                 message.as_string(),
             )

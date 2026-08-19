@@ -120,13 +120,16 @@
                 <div class="left-text">
                     <h1>Bon de commande fournisseur</h1>
                     <div class="meta">Ref. {{ order.reference }} | Ref. ext. {{ order.external_ref }} | Etat {{ order.state }}</div>
+                    <div class="meta">Date : {{ order.date }}</div>
                     <div class="meta">Fournisseur : {{ order.supplier_name }}</div>
                 </div>
             </div>
         </div>
+        {% if internal %}
         <div class="right">
             <img class="qr" src="{{ qr_code_data_uri }}" alt="QR commande fournisseur">
         </div>
+        {% endif %}
     </div>
 
     <table style="margin: 0 0 4mm 0; border: 0.3mm solid #111; background: #f8f8f8;">
@@ -172,6 +175,8 @@
     </table>
 
     <div class="total">Total HT : {{ total_ht }}</div>
+    {% if internal %}
     <div class="note">Conservez ce bon de commande pour traçabilité des stocks et traitement des réceptions.</div>
+    {% endif %}
 </body>
 </html>

@@ -20,3 +20,12 @@ class MailSchema(BaseModel):
     bcc: Optional[List[EmailStr]] = None
 
     attachments: Optional[List[AttachmentSchema]] = None
+
+
+class SupplierOrderMailSchema(BaseModel):
+    """Schéma de la demande d'envoi d'un bon de commande fournisseur."""
+
+    order_id: int
+    supplier_email: EmailStr | None = None
+    supplier_name: str | None = None
+    order_ref: str | None = None

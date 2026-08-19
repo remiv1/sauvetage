@@ -739,7 +739,7 @@ def test_send_order_mail_success_and_failure_states(client_all, order_in, monkey
     """
     order_id = order_in.id
 
-    monkeypatch.set(
+    monkeypatch.setattr(
         "app_front.blueprints.stock.routes_htmx_orders.send_order_by_mail",
         lambda order: True,
     )
@@ -749,7 +749,7 @@ def test_send_order_mail_success_and_failure_states(client_all, order_in, monkey
     assert "Email envoyé" in body
     assert "Télécharger le bon de commande" in body
 
-    monkeypatch.set(
+    monkeypatch.setattr(
         "app_front.blueprints.stock.routes_htmx_orders.send_order_by_mail",
         lambda order: False,
     )

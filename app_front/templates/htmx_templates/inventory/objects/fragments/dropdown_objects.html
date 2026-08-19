@@ -40,11 +40,10 @@
             }
             if (quantityField) {
                 quantityField.min = '0';
-                quantityField.max = '';
 
                 if (reservationMode) {
                     const maxQty = Number(availableQty || 0);
-                    quantityField.max = maxQty > 0 ? String(maxQty) : '';
+                    quantityField.setAttribute('max', maxQty > 0 ? String(maxQty) : '');
                     if (!quantityField.value || Number(quantityField.value) > maxQty) {
                         quantityField.value = maxQty > 0 ? '1' : '';
                     }
@@ -54,6 +53,8 @@
                         stockHelp.classList.toggle('text-danger', maxQty === 0);
                         stockHelp.classList.toggle('text-muted', maxQty !== 0);
                     }
+                } else {
+                    quantityField.removeAttribute('max');
                 }
             }
             if (vatField && vatRate) vatField.value = vatRate;
