@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks
 from app_back.db_connection import config
+from db_models.repositories.orders.woo import OrdersWooRepository
 from db_models.services.woo_commerce.products import WCProductsService
 
 
@@ -63,6 +64,17 @@ def _run_sync_tags() -> None:
         session.close()
 
 
+def _run_sync_orders() -> None:
+    """Tâche exécutée en arrière-plan : synchronise les commandes vers/depuis WooCommerce."""
+    session = next(config.get_main_session())
+    try:
+        repo = OrdersWooRepository(session)
+        result = repo.run_full_sync()
+        logger.info("Synchronisation WooCommerce commandes terminée : %s", result)
+    finally:
+        session.close()
+
+
 @router.post("/sync-tags", status_code=202)
 def sync_tags(background_tasks: BackgroundTasks):
     """Déclenche la synchronisation des tags vers WooCommerce en arrière-plan."""
@@ -78,3 +90,18 @@ def sync_catalog(background_tasks: BackgroundTasks):
     """
     background_tasks.add_task(_run_sync_catalog)
     return {"status": "synchronisation démarrée"}
+
+
+@router.post("/sync-orders")
+def sync_orders():
+    """Déclenche la synchronisation des commandes WooCommerce et retourne le résultat."""
+    session = next(config.get_main_session())
+    try:
+        repo = OrdersWooRepository(session)
+        result = repo.run_full_sync()
+        return {
+            "status": "synchronisation commandes terminée",
+            "result": result,
+        }
+    finally:
+        session.close()

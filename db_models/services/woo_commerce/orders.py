@@ -17,10 +17,10 @@ import requests
 import tenacity
 from requests import Response
 from sqlalchemy.orm import Session
-from db_models.repositories import CustomersRepository, OrdersRepository
+from db_models.repositories.customers import CustomersRepository
+from db_models.repositories.orders.repository import OrdersRepository
 from db_models.objects import Customers, Order, OrderLine
 from db_models.services.woo_commerce.base import WCBase
-from db_models.services.woo_commerce.customers import WCCustomersService
 from db_models.services.woo_commerce.products import WCProductsService
 from db_models.services.woo_commerce.utils import _serialize_decimals
 
@@ -150,6 +150,7 @@ class WCOrdersService(WCBase):
             order_repo (OrdersRepository): Repo pour accéder aux commandes locales.
             customer_repo (CustomersRepository): Repo pour accéder aux clients locaux.
         """
+        from db_models.services.woo_commerce.customers import WCCustomersService  # pylint: disable=import-outside-toplevel
         super().__init__(session, separated_keys)
         self.customer_repo = CustomersRepository(session)
         self.order_repo = OrdersRepository(session)
@@ -396,22 +397,72 @@ class WCOrdersService(WCBase):
         logger.warning("Erreur WooCommerce (commande %d) : %s", order.id, error_msg)
         return False, error_msg
 
-    def _fetch_wc_orders(self, status: list[str] | None) -> list[WCData]:
-        """Récupère les données brutes des commandes depuis l'API WooCommerce.
+    def _fetch_wc_orders(
+        self,
+        status: list[str] | None = None,
+        *,
+        created_via: str | None = None,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        orderby: str = "date",
+        order: str = "desc",
+        page_size: int = 100,
+    ) -> list[WCData]:
+        """Récupère les commandes WooCommerce avec pagination et filtres métier.
 
-        Args:
-            status (list[str] | None): Filtres de statut à transmettre à l'API.
-
-        Returns:
-            list[WCData]: Données brutes WooCommerce, ou [] en cas d'erreur.
+        L'API WooCommerce accepte les filtres de statut, `created_via`, `after`/
+        `before` et le tri sur la date de création. On boucle par lots de 100
+        pour éviter de couper les résultats sur des volumes importants.
         """
-        params: dict[str, list[str]] = {}
+        params: dict[str, Any] = {
+            "per_page": page_size,
+            "page": 1,
+            "orderby": orderby,
+            "order": order,
+        }
         if status:
-            params['status'] = status
+            params["status"] = status
+        if created_via:
+            params["created_via"] = created_via
+        if after:
+            params["after"] = after.isoformat()
+        if before:
+            params["before"] = before.isoformat()
+
+        all_orders: list[WCData] = []
         try:
-            return _call_api(self.api_read.get, 'orders', params=params).json()
+            while True:
+                page_response = _call_api(self.api_read.get, 'orders', params=params).json()
+                if not page_response:
+                    logger.info(
+                        "WooCommerce : aucune commande reçue pour la page %d "
+                        "(created_via=%s).",
+                        params["page"],
+                        created_via,
+                    )
+                    break
+                logger.info(
+                    "WooCommerce : %d commande(s) reçue(s) page %d "
+                    "(created_via=%s, après=%s, avant=%s).",
+                    len(page_response),
+                    params["page"],
+                    created_via,
+                    params.get("after"),
+                    params.get("before"),
+                )
+                all_orders.extend(page_response)
+                if len(page_response) < page_size:
+                    break
+                params["page"] += 1
+            logger.info(
+                "WooCommerce : %d commande(s) récupérée(s) au total "
+                "(created_via=%s).",
+                len(all_orders),
+                created_via,
+            )
+            return all_orders
         except Exception:  # pylint: disable=broad-except
-            logger.error("Impossible de récupérer les commandes depuis WooCommerce.")
+            logger.exception("Impossible de récupérer les commandes depuis WooCommerce.")
             return []
 
     def _resolve_customer_cache(self, wc_orders: list[WCData]) -> dict[int, Customers]:
@@ -440,14 +491,35 @@ class WCOrdersService(WCBase):
         if missing_wpwc_ids:
             try:
                 include_str = ','.join(str(i) for i in sorted(missing_wpwc_ids))
+                logger.info(
+                    "WooCommerce : récupération de %d client(s) absent(s) localement.",
+                    len(missing_wpwc_ids),
+                )
                 wc_customers: list[WCData] = _call_api(
                     self.api_read.get, 'customers', params={'include': include_str}
                 ).json()
+                logger.info(
+                    "WooCommerce : %d client(s) reçu(s) dans la réponse groupée.",
+                    len(wc_customers),
+                )
                 for wc_cust in wc_customers:
+                    wc_customer_id = wc_cust.get("id")
+                    if wc_customer_id is None:
+                        logger.error(
+                            "WooCommerce : client ignoré dans la réponse groupée, identifiant absent."
+                        )
+                        continue
                     local = self.customer_repo.create_from_woo_commerce(wc_cust)
-                    customer_cache[int(wc_cust['id'])] = local
+                    customer_cache[int(wc_customer_id)] = local
+                    logger.info(
+                        "WooCommerce : client %s créé localement sous l'identifiant %d.",
+                        wc_customer_id,
+                        local.id,
+                    )
+                for wpwc_id in missing_wpwc_ids - customer_cache.keys():
+                    self._fetch_and_create_customer(wpwc_id, customer_cache)
             except Exception:  # pylint: disable=broad-except
-                logger.error(
+                logger.exception(
                     "Impossible de récupérer %d clients manquants depuis WooCommerce.",
                     len(missing_wpwc_ids),
                 )
@@ -456,6 +528,38 @@ class WCOrdersService(WCBase):
             logger.warning("Client WC %s introuvable, commandes associées ignorées.", wpwc_id)
 
         return customer_cache
+
+    def _fetch_and_create_customer(
+        self,
+        wpwc_id: int,
+        customer_cache: dict[int, Customers],
+    ) -> None:
+        """Récupère individuellement un client absent de la réponse groupée WooCommerce."""
+        try:
+            response = _call_api(self.api_read.get, f"customers/{wpwc_id}")
+            if response.status_code != 200:
+                logger.error(
+                    "WooCommerce : client %s introuvable via l'endpoint individuel "
+                    "(HTTP %d) : %s",
+                    wpwc_id,
+                    response.status_code,
+                    _safe_log_text(response.text),
+                )
+                return
+            wc_customer: WCData = response.json()
+            local = self.customer_repo.create_from_woo_commerce(wc_customer)
+            customer_cache[wpwc_id] = local
+            logger.info(
+                "WooCommerce : client %s créé localement sous l'identifiant %d "
+                "après récupération individuelle.",
+                wpwc_id,
+                local.id,
+            )
+        except Exception:  # pylint: disable=broad-except
+            logger.exception(
+                "WooCommerce : échec de la récupération individuelle du client %s.",
+                wpwc_id,
+            )
 
     @staticmethod
     def _restore_line_snapshot(order: Order, snapshot: dict[int, int | None]) -> None:

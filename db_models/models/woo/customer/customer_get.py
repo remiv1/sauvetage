@@ -42,7 +42,7 @@ class MetaDatum(BaseModel):
     """Données méta du client."""
     id: int | None
     key: str
-    value: str | CustomerType = ""
+    value: Any = ""
 
 
 class CustomerType(str, Enum):
@@ -115,10 +115,11 @@ class WCCustomerGet(BaseModel):
         self.meta_data.append(MetaDatum(id=None, key='_billing_wooccm12', value=value))
 
     def get_customer_type(self) -> str:
-        """Retourne le type de client."""
-        return next(
+        """Retourne le type client normalisé pour l'ERP."""
+        customer_type = next(
             (meta.value for meta in self.meta_data if meta.key == '_billing_wooccm10'), ""
-        ).lower()
+        )
+        return "pro" if str(customer_type).lower() == "professionnel" else "part"
 
     def get_company_name(self) -> str:
         """Retourne le nom de l'entreprise du client."""
@@ -156,7 +157,7 @@ class WCCustomerGet(BaseModel):
         """
         Convertit les données de base du client en un format structuré pour l'ERP,
         """
-        if self.get_customer_type() == 'professionnel':
+        if self.get_customer_type() == 'pro':
             part = None
             pro = {
                 'company_name': self.get_company_name(),

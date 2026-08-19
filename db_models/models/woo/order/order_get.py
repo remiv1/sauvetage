@@ -110,7 +110,7 @@ class LineItem(BaseModel):
     - taxes (list[Tax]): Liste des taxes associées à cet élément de ligne.
     - meta_data (list[MetaDatum]): Liste des métadonnées associées à cet élément de ligne.
     - sku (str): Référence SKU du produit ou de la variation.
-    - price (int): Prix unitaire de cet élément de ligne.
+    - price (float): Prix unitaire de cet élément de ligne.
     """
     id: int
     name: str
@@ -125,7 +125,7 @@ class LineItem(BaseModel):
     taxes: list[Tax]
     meta_data: list[MetaDatum]
     sku: str
-    price: int
+    price: float
 
 
 class TaxLine(BaseModel):
@@ -234,8 +234,8 @@ class WCOrderGet(BaseModel):
     - payment_method (str): Méthode de paiement utilisée pour la commande.
     - payment_method_title (str): Titre de la méthode de paiement utilisée pour la commande.
     - transaction_id (str): Identifiant de la transaction de paiement associée à la commande.
-    - date_paid (str): Date de paiement de la commande au format ISO 8601.
-    - date_paid_gmt (str): Date de paiement de la commande en GMT au format ISO 8601.
+    - date_paid (str | None): Date de paiement de la commande au format ISO 8601.
+    - date_paid_gmt (str | None): Date de paiement de la commande en GMT au format ISO 8601.
     - date_completed (None): Date de complétion de la commande (si applicable) au format ISO 8601.
     - date_completed_gmt (None): Date GMT de complétion de la commande au format ISO 8601.
     - cart_hash (str): Hash du panier utilisé pour la commande.
@@ -277,8 +277,8 @@ class WCOrderGet(BaseModel):
     payment_method: str
     payment_method_title: str
     transaction_id: str
-    date_paid: str
-    date_paid_gmt: str
+    date_paid: str | None
+    date_paid_gmt: str | None
     date_completed: None
     date_completed_gmt: None
     cart_hash: str

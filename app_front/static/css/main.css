@@ -121,7 +121,7 @@ form input[type=submit] {
 }
 form button:hover,
 form input[type=submit]:hover {
-  background: rgb(0, 4.3243243243, 60);
+  background: rgb(0%, 1.6958134605%, 23.5294117647%);
 }
 
 .alert {
@@ -130,13 +130,13 @@ form input[type=submit]:hover {
   margin-bottom: 1rem;
 }
 .alert.alert-success {
-  background: rgb(58, 255, 103.1834862385);
+  background: rgb(22.7450980392%, 100%, 40.4641122504%);
 }
 .alert.alert-danger {
-  background: rgb(255, 131, 143.2637362637);
+  background: rgb(100%, 51.3725490196%, 56.1818573583%);
 }
 .alert.alert-error {
-  background: rgb(255, 131, 143.2637362637);
+  background: rgb(100%, 51.3725490196%, 56.1818573583%);
 }
 
 .form-error {
@@ -161,7 +161,7 @@ form input[type=submit]:hover {
   color: white;
 }
 .btn.btn-primary:hover {
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
 }
 
 .bg-primary {
@@ -749,7 +749,7 @@ textarea {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
   border: 3px solid #f5f5f5;
   display: flex;
   align-items: center;
@@ -766,8 +766,8 @@ textarea {
   right: 0;
   min-width: 180px;
   background: #fff;
-  color: rgb(0, 4.3243243243, 60);
-  border: 2px solid rgb(0, 11.6756756757, 162);
+  color: rgb(0%, 1.6958134605%, 23.5294117647%);
+  border: 2px solid rgb(0%, 4.5786963434%, 63.5294117647%);
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   padding: 0.7rem 0;
@@ -789,7 +789,7 @@ textarea {
   transition: background 0.15s, color 0.15s;
 }
 .userbar__item:hover {
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
   color: #fff;
 }
 
@@ -802,8 +802,8 @@ textarea {
   position: relative;
 }
 .menu__toggle {
-  background: rgb(0, 4.3243243243, 60);
-  border: 1px solid rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 1.6958134605%, 23.5294117647%);
+  border: 1px solid rgb(0%, 4.5786963434%, 63.5294117647%);
   padding: 1rem;
   border-radius: 10px;
   cursor: pointer;
@@ -827,14 +827,14 @@ textarea {
   margin-left: auto; /* Pousse le ::after à droite */
 }
 .menu__toggle:hover {
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
 }
 .menu__list {
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
-  background: rgb(0, 4.3243243243, 60);
-  border: 1px solid rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 1.6958134605%, 23.5294117647%);
+  border: 1px solid rgb(0%, 4.5786963434%, 63.5294117647%);
   border-radius: 10px;
   padding: 0.5rem 0;
   margin: 0;
@@ -849,7 +849,7 @@ textarea {
   cursor: pointer;
 }
 .menu__list__item:hover {
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
   color: #f5f5f5;
   border-radius: 5px;
 }
@@ -864,7 +864,7 @@ textarea {
   cursor: pointer;
 }
 .menu--open .menu__list__item:hover {
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
   color: #f5f5f5;
   border-radius: 10px;
 }
@@ -885,7 +885,7 @@ textarea {
   transition: background 0.15s, color 0.15s;
 }
 .dropdown-item:hover {
-  background: rgb(0, 11.6756756757, 162);
+  background: rgb(0%, 4.5786963434%, 63.5294117647%);
   color: #f5f5f5;
   border-radius: 10px;
 }
@@ -988,6 +988,31 @@ textarea {
   cursor: not-allowed;
 }
 
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline-block;
+}
+
+.order-sync-spinner {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 /* Points d'état pour email / téléphone et largeur des colonnes */
 .status-dot {
   height: 10px;

@@ -159,13 +159,15 @@ class Customers(WorkingBase, QueryMixin):
             None
         ) if self.emails else None
         phone = next(
-            (p.phone_number for p in self.phones if p.is_active),
+            (p.phone_number for p in self.phones if p.is_active and len(p.phone_number) > 0),
             None
         ) if self.phones else None
         mobile = next(
             (p.phone_number for p in self.phones if p.is_active),
             None
         ) if self.phones else None
+        phone = self._normalize_henrri_phone(phone)
+        mobile = self._normalize_henrri_phone(mobile)
 
         if self.pro:
             siret = self.pro.siret_number
@@ -220,6 +222,14 @@ class Customers(WorkingBase, QueryMixin):
                 "address": address_payload,
             }
         return customer
+
+    @staticmethod
+    def _normalize_henrri_phone(phone: str | None) -> str | None:
+        """Retourne un téléphone compatible avec les contraintes de l'API Henrri."""
+        if not phone:
+            return None
+        normalized = "".join(char for char in phone if char.isdigit() or char in "+-()")
+        return normalized if any(char.isdigit() for char in normalized) else None
 
     def _get_names(self) -> tuple[str | None, str | None]:
         first_name = self.part.first_name if self.part else None

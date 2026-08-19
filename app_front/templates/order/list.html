@@ -104,6 +104,15 @@
         <a href="{{ url_for('order_htmx_create.create_page') }}" class="btn btn-primary">
             {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Nouvelle commande
         </a>
+        <button type="button"
+                class="btn btn-site-internet"
+                hx-post="{{ url_for('order.order_sync_wc_orders') }}"
+                hx-disabled-elt="this"
+                hx-swap="none"
+                hx-indicator="#order-sync-spinner">
+            <span id="order-sync-spinner" class="htmx-indicator order-sync-spinner" aria-hidden="true"></span>
+            <span class="order-sync-label">Synchroniser les commandes</span>
+        </button>
     </div>
 
     {# ── Tableau (chargé via HTMX au load) ──────────────────────────────── #}

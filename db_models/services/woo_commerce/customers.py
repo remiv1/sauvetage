@@ -4,13 +4,16 @@ Ce module fournit des méthodes pour récupérer, créer et mettre à jour les c
 ainsi que pour synchroniser les données des clients entre WooCommerce et la base de données locale.
 """
 
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Optional, Any
 import logging
 from sqlalchemy.orm import Session
 from db_models.objects import Customers
 from db_models.models.woo import WCCustomerGet
-from db_models.repositories import CustomersRepository, OrdersRepository
+from db_models.repositories import CustomersRepository
 from db_models.services.woo_commerce.base import WCBase
+
+if TYPE_CHECKING:
+    from db_models.repositories.orders.repository import OrdersRepository
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,7 @@ class WCCustomersService(WCBase):
             customer_repo (CustomersRepository): Repo pour accéder aux clients locaux.
         """
         super().__init__(session, separated_keys)
+        from db_models.repositories.orders.repository import OrdersRepository  # pylint: disable=import-outside-toplevel
         self.order_repo = OrdersRepository(session)
         self.customer_repo = CustomersRepository(session)
 

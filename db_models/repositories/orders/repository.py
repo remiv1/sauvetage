@@ -11,11 +11,11 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.sql import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from db_models.repositories.base_repo import BaseRepository
-from db_models.repositories import (
+from db_models.repositories.customers import (
     CustomersRepository,
-    ObjectsRepository,
     CustomerAddressesRepository,
 )
+from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.objects import (
     Order,
     OrderLine,
@@ -25,19 +25,38 @@ from db_models.objects import (
     CustomerAddresses,
     ObjectPrices,
 )
+from db_models.objects.vat import VatRate
 from db_models.models.woo.order import WCOrderGet
 
 
 class OrdersRepository(BaseRepository):
-    """Dépôt de données pour les commandes. Contient les méthodes pour interagir avec les
-    données des commandes, notamment la création, la mise à jour, la suppression et la
-    récupération des commandes."""
+    """Dépôt local des commandes.
+
+    Ce repository ne fait pas l'appel HTTP WooCommerce : il gère uniquement la
+    persistance locale, le mapping depuis les payloads WooCommerce vers l'entité
+    Order, ainsi que les opérations métier de l'ERP local.
+    """
 
     def __init__(self, session):
         super().__init__(session)
         self.customer_repo = CustomersRepository(self.session)
         self.object_repo = ObjectsRepository(self.session)
         self.customer_address_repo = CustomerAddressesRepository(self.session)
+
+    def _get_vat_rate_from_wpwc_tax_class(self, tax_class: str) -> float:
+        """Résout le taux de TVA local actif correspondant à une classe WooCommerce."""
+        vat_rate = self.session.execute(
+            select(VatRate).where(
+                VatRate.wpwc_slug == tax_class,
+                VatRate.date_start <= datetime.now(timezone.utc),
+                (VatRate.date_end.is_(None)) | (VatRate.date_end > datetime.now(timezone.utc)),
+            )
+        ).scalar_one_or_none()
+        if vat_rate is None:
+            raise ValueError(
+                f"Classe de TVA WooCommerce '{tax_class}' introuvable dans le référentiel local."
+            )
+        return float(vat_rate.rate)
 
     # ── Lecture ──────────────────────────────────────────────
 
@@ -200,7 +219,12 @@ class OrdersRepository(BaseRepository):
             ) from e
 
     def create_from_woo_commerce(self, wc_order: dict, customer_id: int) -> Order:
-        """Crée une commande à partir des données d'une commande WooCommerce.
+        """Crée une commande locale à partir d'un payload WooCommerce.
+
+        Cette méthode est un transformateur de données local : elle ne récupère pas
+        les commandes depuis l'API, elle transforme uniquement un payload WC déjà
+        obtenu par le service ou le repository Woo dédié.
+
         Args:
             wc_order: Dictionnaire contenant les données de la commande WooCommerce.
             customer_id: Identifiant du client local associé à la commande.
@@ -228,6 +252,10 @@ class OrdersRepository(BaseRepository):
         # Conversion du dictionnaire en objet Order local
         wpwc_order_dict["customer_id"] = customer_id
         order = Order().from_dict(wpwc_order_dict)
+        order.wpwc_id = wpwc_order_model.id
+        order.create_source = wpwc_order_dict["create_source"]
+        order.update_source = wpwc_order_dict["update_source"]
+        order.last_synced_at = datetime.now(timezone.utc)
 
         # Gestion des addresses de facturation et de livraison
         local_addresses = self.customer_address_repo.get_by_customer_id(customer_id)
@@ -249,7 +277,11 @@ class OrdersRepository(BaseRepository):
 
             # Création de la ligne de commande locale en passant par un dictionnaire intermédiaire
             line_dict = wpwc_order_model.to_dict_for_erp_orderline(line)
+            line_dict["vat_rate"] = self._get_vat_rate_from_wpwc_tax_class(line.tax_class)
             line_object = OrderLine().from_dict(line_dict)
+            line_object.wpwc_id = line.id
+            line_object.create_source = line_dict["create_source"]
+            line_object.update_source = line_dict["update_source"]
             line_object.general_object = local_product
             order.order_lines.append(line_object)
         self.session.add(order)
@@ -263,6 +295,58 @@ class OrdersRepository(BaseRepository):
             raise ValueError(
                 f"Erreur lors de la création de la commande depuis WooCommerce : {e.orig}"
             ) from e
+
+    def update_from_woo_commerce(
+        self,
+        order: Order,
+        wc_order: dict,
+        customer_id: int,
+    ) -> Order:
+        """Met à jour une commande locale à partir d'un payload WooCommerce.
+
+        Les lignes sont rapprochées par leur `wpwc_id`. Les lignes absentes
+        localement sont ajoutées, sans supprimer de lignes ERP existantes.
+        """
+        wpwc_order_model = WCOrderGet(**wc_order)
+        wpwc_order_dict = wpwc_order_model.to_dict_for_erp_order()
+        order.customer_id = customer_id
+        order.status = wpwc_order_dict["status"]
+        order.update_source = wpwc_order_dict["update_source"]
+        order.last_synced_at = datetime.now(timezone.utc)
+
+        local_lines = {
+            line.wpwc_id: line for line in order.order_lines if line.wpwc_id is not None
+        }
+        for wc_line in wpwc_order_model.line_items:
+            line_dict = wpwc_order_model.to_dict_for_erp_orderline(wc_line)
+            line_dict["vat_rate"] = self._get_vat_rate_from_wpwc_tax_class(wc_line.tax_class)
+            local_product = self.object_repo.get_by_wpwc_id(int(wc_line.product_id))
+            if not local_product:
+                raise ValueError(
+                    f"Produit avec ID WooCommerce {wc_line.product_id} introuvable."
+                )
+            local_line = local_lines.get(wc_line.id)
+            if local_line is None:
+                local_line = OrderLine().from_dict(line_dict)
+                local_line.wpwc_id = wc_line.id
+                local_line.create_source = line_dict["create_source"]
+                order.order_lines.append(local_line)
+            else:
+                local_line.quantity = line_dict["quantity"]
+                local_line.unit_price = line_dict["unit_price"]
+                local_line.discount = line_dict["discount"]
+                local_line.vat_rate = line_dict["vat_rate"]
+                local_line.update_source = line_dict["update_source"]
+            local_line.general_object = local_product
+
+        try:
+            self.session.commit()
+            return order
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise ValueError(
+                f"Erreur lors de la mise à jour de la commande depuis WooCommerce : {exc}"
+            ) from exc
 
     def update_delivery_address(
         self,

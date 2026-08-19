@@ -86,7 +86,9 @@ def build_env():
 
 
 def configure_dilicom_cron() -> None:
-    """Configure les tâches cron du conteneur pour l'envoi des référentiels et le fetch des retours."""
+    """
+    Configure les tâches cron du conteneur pour l'envoi des référentiels et le fetch des retours.
+    """
     cron_post = os.getenv("DILICOM_POST_CRON", "0 22 * * *")
     cron_fetch = os.getenv("DILICOM_FETCH_CRON", "0 6-12 * * *")
     cron_path = "/etc/cron.d/dilicom-cron"
@@ -111,6 +113,43 @@ def configure_dilicom_cron() -> None:
             f"{cron_fetch} root /usr/local/bin/run-dilicom-cron.sh fetch >> {log_file} 2>&1\n"
         )
     os.chmod(cron_path, 0o644)
+
+
+def configure_woocommerce_orders_cron() -> None:
+    """Configure le cron des commandes WooCommerce entre 7h et 19h, toutes les 2h."""
+    cron_path = "/etc/cron.d/woocommerce-orders-cron"
+    log_dir = "/var/log/woocommerce"
+    log_file = f"{log_dir}/orders-sync.log"
+    api_url = os.getenv("API_URL", "http://localhost:8000/api/v1")
+    cron_schedule = os.getenv("WOOCOMMERCE_ORDERS_CRON", "0 7-19/2 * * *")
+
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except PermissionError:
+        log_dir = "/tmp/woocommerce"
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = f"{log_dir}/orders-sync.log"
+        print(
+            "[BOOTSTRAP] Permission refusée pour /var/log/woocommerce ;"
+            "logs du cron WooCommerce redirigés vers /tmp/woocommerce"
+        )
+
+    try:
+        with open(cron_path, "w", encoding="utf-8") as cron_file:
+            cron_file.write("SHELL=/bin/bash\n")
+            cron_file.write(
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n"
+            )
+            endpoint = f"{api_url}/woo-commerce/background/sync-orders"
+            cron_file.write(
+                f"{cron_schedule} root curl -fsS -X POST '{endpoint}' >> {log_file} 2>&1\n"
+            )
+        os.chmod(cron_path, 0o644)
+    except PermissionError:
+        print(
+            "[BOOTSTRAP] Permission refusée pour /etc/cron.d ;"
+            "cron WooCommerce non installé dans cet environnement."
+        )
 
 
 def start_gunicorn():
@@ -158,9 +197,11 @@ if __name__ == "__main__":
     build_env()
     wait_for("db-main", 5432)
 
-    # Configurer les tâches cron du conteneur pour Dilicom.
+    # Configurer les tâches cron du conteneur pour Dilicom et WooCommerce.
     print("[BOOTSTRAP] Configuration du cron Dilicom")
     configure_dilicom_cron()
+    print("[BOOTSTRAP] Configuration du cron WooCommerce orders")
+    configure_woocommerce_orders_cron()
     subprocess.Popen(["cron", "-f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Lancer Gunicorn dans le process principal

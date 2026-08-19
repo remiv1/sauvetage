@@ -1,7 +1,7 @@
 """Repository pour les opérations sur les clients."""
 
 from typing import Tuple, Sequence, Optional, Any
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.sql import Select, and_
 from db_models.repositories.base_repo import BaseRepository
@@ -19,6 +19,9 @@ UPDATE_FIELDS = {
     "part": ("civil_title", "first_name", "last_name", "date_of_birth"),
     "pro": ("company_name", "siret_number", "vat_number"),
 }
+
+TECHNICAL_SIRET_PREFIX = "999999"
+TECHNICAL_SIRET_SUFFIX_LENGTH = 8
 
 class CustomersRepository(BaseRepository):
     """Repository pour les opérations sur les clients."""
@@ -217,8 +220,10 @@ class CustomersRepository(BaseRepository):
         woo_customer = WCCustomerGet(**wpwc_customer_data)
         cust: Customers = Customers().from_dict(woo_customer.to_dict_customer_for_erp())
         c_part, c_pro = woo_customer.to_dict_customer_part_pro_for_erp()
-        cust_part = CustomerParts().from_dict(c_part if c_part else {})
-        cust_pro = CustomerPros().from_dict(c_pro if c_pro else {})
+        if c_pro is not None and not c_pro.get("siret_number"):
+            c_pro["siret_number"] = self._get_next_technical_siret()
+        cust_part = CustomerParts().from_dict(c_part) if c_part is not None else None
+        cust_pro = CustomerPros().from_dict(c_pro) if c_pro is not None else None
         ad = [CustomerAddresses().from_dict(addr) \
               for addr in woo_customer.to_dict_customer_address_for_erp()]
         for address in woo_customer.to_dict_customer_address_for_erp():
@@ -227,8 +232,10 @@ class CustomersRepository(BaseRepository):
         mail = CustomerMails().from_dict(woo_customer.to_dict_customer_mail_for_erp())
 
         # Association des objets liés au client
-        cust.part = cust_part
-        cust.pro = cust_pro
+        if cust_part is not None:
+            cust.part = cust_part
+        if cust_pro is not None:
+            cust.pro = cust_pro
         cust.addresses = ad
         if ph:
             cust.phones = [ph]
@@ -240,6 +247,19 @@ class CustomersRepository(BaseRepository):
             self.session.rollback()
             raise ValueError(str(exc)) from exc
         return cust
+
+    def _get_next_technical_siret(self) -> str:
+        """Génère le prochain SIRET technique réservé aux professionnels incomplets."""
+        max_siret = self.session.execute(
+            select(func.max(CustomerPros.siret_number)).where(
+                CustomerPros.siret_number.like(f"{TECHNICAL_SIRET_PREFIX}%")
+            )
+        ).scalar_one()
+        next_suffix = int(max_siret[-TECHNICAL_SIRET_SUFFIX_LENGTH:]) + 1 if max_siret else 1
+        max_suffix = 10 ** TECHNICAL_SIRET_SUFFIX_LENGTH - 1
+        if next_suffix > max_suffix:
+            raise ValueError("Plage des SIRET techniques épuisée.")
+        return f"{TECHNICAL_SIRET_PREFIX}{next_suffix:0{TECHNICAL_SIRET_SUFFIX_LENGTH}d}"
 
 class CustomerAddressesRepository(BaseRepository):
     """Repository pour les opérations sur les adresses des clients."""

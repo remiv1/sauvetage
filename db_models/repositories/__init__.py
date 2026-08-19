@@ -18,7 +18,6 @@ from .customers import (
     CustomerPhonesRepository,
 )
 from .invoices import InvoiceRepository
-from .orders import OrdersRepository
 from .shipments import ShipmentsRepository
 from .suppliers import SuppliersRepository
 from .sync_log import SyncLogRepository
@@ -42,7 +41,6 @@ __all__ = [
     "CustomerMailsRepository",
     "CustomerPhonesRepository",
     "InvoiceRepository",
-    "OrdersRepository",
     "ShipmentsRepository",
     "SuppliersRepository",
     "SyncLogRepository",

@@ -56,6 +56,21 @@ def order_wc_push(order_id: int):
     return resp
 
 
+@bp_order.post("/sync-wc-orders")
+def order_sync_wc_orders():
+    """Déclenche la synchronisation WooCommerce des commandes et attend son résultat."""
+    from app_front.config import post, WOO_COMMERCE  # pylint: disable=import-outside-toplevel
+    try:
+        result = post(WOO_COMMERCE["sync_orders"], {})
+    except RuntimeError as exc:
+        return make_response(str(exc), 500)
+
+    response = make_response("", 204)
+    response.headers["HX-Trigger"] = "refreshOrderTable"
+    response.headers["X-Sync-Result"] = str(result.get("result", {}))
+    return response
+
+
 def _format_address(address: dict | None) -> str:
     """Formate une adresse lisible pour le bon PDF."""
     if not address:
