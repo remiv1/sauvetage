@@ -15,7 +15,7 @@ from wtforms import (
     SelectMultipleField,
     widgets,
 )
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional
 
 
 class LoginForm(FlaskForm):
@@ -82,7 +82,7 @@ class UserEditForm(FlaskForm):
 class UserPasswordChangeForm(FlaskForm):
     """Formulaire de changement de mot de passe pour les utilisateurs."""
 
-    old_password = PasswordField("Ancien mot de passe", validators=[DataRequired()])
+    old_password = PasswordField("Ancien mot de passe", validators=[Optional()])
     new_password = PasswordField("Nouveau mot de passe", validators=[DataRequired()])
     new_password_confirm = PasswordField(
         "Confirmer le mot de passe", validators=[DataRequired()]

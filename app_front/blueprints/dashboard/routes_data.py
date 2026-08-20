@@ -196,7 +196,13 @@ def _build_stock_snapshot(
     ).label("stock_qty")
 
     stmt = (
-        select(go.id, go.general_object_type, go.price, go.name, qty_expr)
+        select(
+            go.id,
+            go.general_object_type,
+            go.price.label("price"),
+            go.name,
+            qty_expr,
+        )
         .outerjoin(latest_inv_qty, go.id == latest_inv_qty.c.general_object_id)
         .outerjoin(in_after, go.id == in_after.c.general_object_id)
         .outerjoin(out_after, go.id == out_after.c.general_object_id)
@@ -367,8 +373,11 @@ def commandes():
     """
     status_filter = request.args.get("status")
     search = request.args.get("search")
-    page = max(int(request.args.get("page", 1) or 1), 1)
-    per_page = max(min(int(request.args.get("per_page", 25) or 25), 100), 1)
+    try:
+        page = max(int(request.args.get("page", 1) or 1), 1)
+        per_page = max(min(int(request.args.get("per_page", 25) or 25), 100), 1)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Les paramètres de pagination doivent être numériques."}), 400
     bounds = _period_bounds(request.args.get("start_date"), request.args.get("range", ""))
 
     session = db_conf.get_main_session()

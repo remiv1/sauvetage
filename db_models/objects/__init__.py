@@ -18,7 +18,7 @@ from .stocks import OrderIn, OrderInLine, DilicomReferencial
 from .inventory import InventoryMovements
 from .invoices import Invoice, InvoiceLine, InvoiceSyncLog
 from .shipments import Shipment, ShipmentLine
-from .users import Users, UsersPasswords
+from .users import Users, UsersPasswords, UserSession
 from .objects import (
     GeneralObjects,
     ObjectPrices,
@@ -58,6 +58,7 @@ __all__ = [
     "ShipmentLine",
     "Users",
     "UsersPasswords",
+    "UserSession",
     "GeneralObjects",
     "ObjectPrices",
     "ObjectVariations",

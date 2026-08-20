@@ -91,6 +91,9 @@ class Users(SecureBase, QueryMixin):
     passwords = relationship(
         "UsersPasswords", back_populates="user", cascade=CASCADE_OPTIONS
     )
+    sessions = relationship(
+        "UserSession", back_populates="user", cascade=CASCADE_OPTIONS
+    )
 
     def __repr__(self) -> str:
         return (
@@ -114,6 +117,57 @@ class Users(SecureBase, QueryMixin):
     def from_dict(cls, data: Dict[str, Any]) -> "Users":
         """Crée un objet User à partir d'un dictionnaire."""
         return cls(**data)
+
+
+class UserSession(SecureBase):
+    """Session authentifiée associée à un utilisateur."""
+
+    __tablename__ = "user_sessions"
+    __table_args__ = {"schema": "auth_schema"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Identifiant unique de la session",
+    )
+    token_hash: Mapped[str] = mapped_column(
+        String(64),
+        unique=True,
+        nullable=False,
+        comment="Empreinte SHA-256 du jeton de session",
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("auth_schema.users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Identifiant de l'utilisateur associé",
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        comment="Date d'expiration absolue de la session",
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de dernière activité de la session",
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Date de révocation de la session",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de création de la session",
+    )
+
+    user = relationship("Users", back_populates="sessions")
 
 
 class UsersPasswords(SecureBase):

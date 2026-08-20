@@ -176,7 +176,7 @@ def toggle_user_active(username: str) -> Dict[str, Any]:
 
 def get_logs_stats(year: Optional[int] = None) -> Dict[str, Any]:
     """Retourne des statistiques sur les logs de l'année courante (ou celle spécifiée)."""
-    from app_front.config.db_conf import get_mongo_db
+    from app_front.config.db_conf import get_mongo_db   # pylint: disable=C0415
     target_year = str(year) if year else datetime.now().strftime("%Y")
     db = get_mongo_db()
     if db is None:
@@ -213,7 +213,7 @@ def get_logs_recent(
     year: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Retourne les logs récents paginés depuis MongoDB."""
-    from app_front.config.db_conf import get_mongo_db
+    from app_front.config.db_conf import get_mongo_db   # pylint: disable=C0415
     db = get_mongo_db()
     if db is None:
         return {"items": [], "total": 0, "page": page, "per_page": per_page}
@@ -263,7 +263,7 @@ def get_log_by_id(
     year: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """Retourne un log unique par son ObjectId MongoDB."""
-    from app_front.config.db_conf import get_mongo_db
+    from app_front.config.db_conf import get_mongo_db   # pylint: disable=C0415
     db = get_mongo_db()
     if db is None:
         return None

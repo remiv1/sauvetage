@@ -11,14 +11,24 @@ def parse_junit_xml(xml_file: str) -> dict: # pylint: disable=redefined-outer-na
     """Parse JUnit XML file and extract test results."""
     tree = ET.parse(xml_file)
     root = tree.getroot()
+    suites = [root] if root.tag == "testsuite" else root.findall("./testsuite")
+    total = sum(int(suite.get("tests", 0)) for suite in suites)
+    failures = sum(
+        int(suite.get("failures", 0)) + int(suite.get("errors", 0))
+        for suite in suites
+    )
+    skipped = sum(int(suite.get("skipped", 0)) for suite in suites)
+    timestamp = root.get("timestamp")
+    if timestamp is None and suites:
+        timestamp = suites[0].get("timestamp")
 
     results = { # pylint: disable=redefined-outer-name
         "tests": [],
         "suite_name": root.get("name", "Test Suite"),
-        "timestamp": root.get("timestamp", datetime.now().isoformat()),
-        "total": int(root.get("tests", 0)),
-        "failures": int(root.get("failures", 0)),
-        "skipped": int(root.get("skipped", 0)),
+        "timestamp": timestamp or datetime.now().isoformat(),
+        "total": total,
+        "failures": failures,
+        "skipped": skipped,
         "passed": 0,
     }
 

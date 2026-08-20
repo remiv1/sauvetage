@@ -13,8 +13,8 @@ from logs.logger import FilterExtras, setup_logging
 
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
-LOG_LEVEL = getenv("LOG_LEVEL", "info").upper()
 DILICOM_OPERATION = "opération dilicom"
+logger = logging.getLogger("app_back")
 
 # Exécution des migrations avec advisory lock PostgreSQL.
 # Chaque worker Gunicorn importe ce module, mais seul le premier
@@ -26,7 +26,7 @@ run_startup_tasks(timeout=300)
 async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined-outer-name
     """Gère les événements de démarrage et d'arrêt de l'application."""
     setup_logging()
-    logging.getLogger("app_back").info("Démarrage de Sauvetage Backend API...")
+    logger.info("Démarrage de Sauvetage Backend API...")
     logging.getLogger("pymongo").setLevel(logging.WARNING)
     logging.getLogger("pymongo.topology").setLevel(logging.WARNING)
     logging.getLogger("pymongo.connection").setLevel(logging.WARNING)
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):   # pylint: disable=unused-argument, redefined
         ))
 
     yield
-    logging.getLogger("app_back").info("Arrêt de Sauvetage Backend API...")
+    logger.info("Arrêt de Sauvetage Backend API...")
 
 # Create FastAPI app
 app = FastAPI(

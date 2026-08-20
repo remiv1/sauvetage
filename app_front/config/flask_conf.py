@@ -40,7 +40,12 @@ from logs.logger import MongoForwardHandler, logging, LOG_LEVEL, get_logger
 # Configuration
 DEBUG = getenv("DEBUG", "false").lower() == "true"
 
-FLASK_SECRET_KEY = getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
+FLASK_SECRET_KEY = getenv("FLASK_SECRET_KEY")
+if not FLASK_SECRET_KEY:
+    if DEBUG:
+        FLASK_SECRET_KEY = "dev-secret-key-change-in-production"
+    else:
+        raise RuntimeError("FLASK_SECRET_KEY doit être défini hors mode DEBUG.")
 BLUEPRINTS: List[Blueprint] = [
     bp_customer,
     bp_customer_data,

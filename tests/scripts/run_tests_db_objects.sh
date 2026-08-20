@@ -8,11 +8,15 @@ TESTS_DIR="${1:-$(cd "$(dirname "$0")" && pwd)}"
 SCRIPT_DIR="${TESTS_DIR}/scripts"
 JUNIT_FILE="$TESTS_DIR/reports/junit/unit_db/$(date +%y-%m-%d-%H-%M)_test_results.xml"
 REPORT_FILE="$TESTS_DIR/reports/unit_db/$(date +%y-%m-%d-%H-%M)_test_report_db_objects.md"
+COVERAGE_DIR="$TESTS_DIR/reports/coverage"
+mkdir -p "$(dirname "$JUNIT_FILE")" "$TESTS_DIR/reports/unit_db" "$COVERAGE_DIR"
 
 echo "🧪 Running pytest for db_objects/ (junit -> $JUNIT_FILE)"
 # Run pytest and capture exit code
-pytest -v --tb=short --disable-warnings --log-cli-level=INFO "$TESTS_DIR/db_objects/" --junitxml="$JUNIT_FILE"
+set +e
+COVERAGE_FILE="$COVERAGE_DIR/.coverage" coverage run --parallel-mode -m pytest -v --tb=short --disable-warnings --log-cli-level=INFO "$TESTS_DIR/db_objects/" --junitxml="$JUNIT_FILE"
 RC=$?
+set -e
 
 # Format the XML file with proper indentation if xmllint is available
 if command -v xmllint &> /dev/null; then

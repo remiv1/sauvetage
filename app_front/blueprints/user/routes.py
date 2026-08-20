@@ -8,7 +8,7 @@
 """
 
 from urllib.parse import unquote
-from flask import Blueprint, redirect, url_for, flash, session, request
+from flask import Blueprint, redirect, url_for, flash, session, request, abort
 from app_front.blueprints.user.forms import (
     LoginForm,
     UserCreateForm,
@@ -18,6 +18,7 @@ from app_front.blueprints.user.forms import (
 from app_front.blueprints.user.utils import (
     check_no_users,
     log_user,
+    revoke_session,
     create_user,
     change_password,
     modify_user,
@@ -29,6 +30,31 @@ from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
 from logs.log_actions import log_user_action
 
 bp_user = Blueprint("user", __name__, url_prefix="/user")
+LOGIN_ENDPOINT = "user.login"
+
+
+def _can_change_password(username: str) -> tuple[bool, bool]:
+    """Retourne les droits de changement pour l'utilisateur courant."""
+    current_username = session.get("username")
+    permissions = session.get("permissions", "")
+    is_administrator = ADMIN in permissions or SUPER_ADMIN in permissions
+    is_own_password = current_username == username
+    return is_own_password, is_administrator
+
+
+def _is_valid_password_change(
+    old_password: str | None,
+    new_password: str | None,
+    new_password_confirm: str | None,
+    is_own_password: bool,
+) -> bool:
+    """Vérifie les données minimales du changement de mot de passe."""
+    return bool(
+        new_password
+        and new_password == new_password_confirm
+        and new_password.strip()
+        and (not is_own_password or old_password)
+    )
 
 
 @bp_user.route("/login", methods=["GET", "POST"])
@@ -67,6 +93,13 @@ def login():
                 },
             )
         else:
+            session_token = data.get("session_token")
+            if not isinstance(session_token, str) or not session_token:
+                flash("La création de session a échoué.", "danger")
+                return render_page("login", form=form, first_user=no_users)
+            session.clear()
+            session.permanent = True
+            session["auth_token"] = session_token
             session["username"] = username
             session["email"] = email
             session["permissions"] = permissions
@@ -131,6 +164,9 @@ def register():
 def logout():
     """Route pour la déconnexion de l'utilisateur connecté."""
     username = session.get("username", "")
+    session_token = session.get("auth_token")
+    if isinstance(session_token, str):
+        revoke_session(session_token)
     log_user_action(
         user_id=username,
         action="GET",
@@ -144,7 +180,7 @@ def logout():
     )
     session.clear()
     flash("Déconnexion réussie.", "success")
-    return redirect(url_for("user.login"))
+    return redirect(url_for(LOGIN_ENDPOINT))
 
 
 @bp_user.route("/change-password/<username>", methods=["GET", "POST"])
@@ -153,22 +189,30 @@ def chg_pwd(username):
     """Route pour changer le mot de passe d'un utilisateur spécifique."""
     form = UserPasswordChangeForm()
     username = unquote(username)
+    is_own_password, is_administrator = _can_change_password(username)
+    if not is_own_password and not is_administrator:
+        abort(403, description="Vous ne pouvez modifier que votre propre mot de passe.")
+
     if form.validate_on_submit():
         old_password = form.old_password.data
         new_password = form.new_password.data
         new_password_confirm = form.new_password_confirm.data
-        if (
-            (new_password != new_password_confirm)
-            or (new_password is None)
-            or (old_password is None)
-            or (new_password.strip() == "")
+        if not _is_valid_password_change(
+            old_password, new_password, new_password_confirm, is_own_password
         ):
-            message = "Les nouveaux mots de passe ne correspondent pas ou sont vides."
+            message = "Les informations de changement de mot de passe sont invalides."
             flash(message, "danger")
             return render_page("change_password", form=form, username=username)
+        session_token = session.get("auth_token")
+        if not isinstance(session_token, str) or not session_token:
+            session.clear()
+            return redirect(url_for(LOGIN_ENDPOINT))
         try:
             ok = change_password(
-                username=username, old_password=old_password, new_password=new_password
+                username=username,
+                old_password=old_password,
+                new_password=new_password,  # type: ignore
+                session_token=session_token,
             )
             if not ok:
                 message = (
@@ -176,8 +220,9 @@ def chg_pwd(username):
                 )
                 flash(message, "danger")
                 return render_page("change_password", form=form, username=username)
+            session.clear()
             flash("Mot de passe changé avec succès.", "success")
-            return redirect(url_for("home"))
+            return redirect(url_for(LOGIN_ENDPOINT))
         except (ValueError, KeyError) as e:
             flash(str(e), "danger")
     else:

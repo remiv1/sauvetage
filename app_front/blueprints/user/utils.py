@@ -36,6 +36,28 @@ def log_user(username: str, password: str) -> dict:
     return data
 
 
+def validate_session(session_token: str) -> dict:
+    """Valide une session utilisateur auprès du backend."""
+    response = requests.post(
+        USERS["validate_session"], json={"session_token": session_token}, timeout=10
+    )
+    if response.status_code // 100 != 2:
+        message = f"Erreur lors de la validation de la session : {response.text}"
+        raise requests.RequestException(message)
+    return response.json()
+
+
+def revoke_session(session_token: str) -> bool:
+    """Révoque une session utilisateur auprès du backend."""
+    response = requests.post(
+        USERS["logout"], json={"session_token": session_token}, timeout=10
+    )
+    if response.status_code // 100 != 2:
+        message = f"Erreur lors de la déconnexion : {response.text}"
+        raise requests.RequestException(message)
+    return bool(response.json().get("revoked", False))
+
+
 def create_user(username: str, email: str, password: str, permissions: str) -> bool:
     """Création d'un nouvel utilisateur."""
     body = {
@@ -51,12 +73,18 @@ def create_user(username: str, email: str, password: str, permissions: str) -> b
     return True
 
 
-def change_password(username: str, old_password: str, new_password: str) -> bool:
+def change_password(
+    username: str,
+    old_password: str | None,
+    new_password: str,
+    session_token: str,
+) -> bool:
     """Change le mot de passe d'un utilisateur spécifique."""
     body = {
         "username": username,
         "old_password": old_password,
         "new_password": new_password,
+        "session_token": session_token,
     }
     response = requests.post(USERS["change_password"], json=body, timeout=10)
     if response.status_code // 100 != 2:

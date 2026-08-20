@@ -2,7 +2,8 @@
 
 from typing import Any
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import requests
 from jinja2 import TemplateError
 from flask import (
     Flask,
@@ -13,14 +14,17 @@ from flask import (
     url_for,
     make_response,
     send_from_directory,
+    abort,
 )
 from flask.typing import ResponseReturnValue
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy.exc import SQLAlchemyError
 from app_front.utils.pages import render_page
 from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
 from app_front.utils.router import is_allowed
 from app_front.blueprints.stock.utils import get_supplier_order_dispatch
+from app_front.blueprints.user.utils import validate_session
 from app_front.config.flask_conf import (
     DEBUG,
     LOG_LEVEL,
@@ -34,6 +38,14 @@ from app_front.config.db_conf import _SessionMain
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 app.config["DEBUG"] = DEBUG
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = not DEBUG
+# CSRF protection must stay enabled for authenticated state-changing requests.
+app.config["WTF_CSRF_ENABLED"] = True
+CSRFProtect(app)
 app.jinja_env.filters["supplier_order_dispatch"] = get_supplier_order_dispatch
 
 # Enregistrement des blueprints
@@ -53,12 +65,12 @@ app.wsgi_app = ProxyFix(
 log = f"""
 [MAIN] Application Flask initialisée avec succès
 [MAIN] Configuration :
-- DEBUG: {DEBUG}
-- LOG_LEVEL: {LOG_LEVEL}
-- DATABASE_URL: ***
-- MONGODB_URL: ***
-- FLASK_SECRET_KEY: {'***'}
-- BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
+    - DEBUG: {DEBUG}
+    - LOG_LEVEL: {LOG_LEVEL}
+    - DATABASE_URL: ***
+    - MONGODB_URL: ***
+    - FLASK_SECRET_KEY: ***
+    - BLUEPRINTS: {[bp.name for bp in BLUEPRINTS]}
 """
 setup_logging()
 logger = logging.getLogger("app_front")
@@ -68,15 +80,31 @@ logger.info(msg=log, extra={"level": LOG_LEVEL, "action": "app_start"})
 @app.before_request
 def before_request():
     """Fonction exécutée avant chaque requête"""
-    # Si l'utilisateur est déjà connecté, ne pas rediriger
-    if "username" in session:
-        return None
-    # Vérifier si la page demandée est autorisée sans authentification
+    # Vérifier les routes autorisées sans authentification avant tout appel au backend.
     if is_allowed(request.path):
         return None
-    # Sinon, rediriger vers la page de connexion
-    logger.debug("Redirection vers la page de connexion")
-    return redirect(url_for("user.login"))
+
+    session_token = session.get("auth_token")
+    if not isinstance(session_token, str) or not session_token:
+        session.clear()
+        logger.debug("Redirection vers la page de connexion")
+        return redirect(url_for("user.login"))
+
+    try:
+        authentication = validate_session(session_token)
+    except requests.RequestException:
+        logger.exception("Impossible de valider la session auprès du backend")
+        abort(503)
+
+    if not authentication.get("valid", False):
+        session.clear()
+        logger.info("Session invalide ou expirée")
+        return redirect(url_for("user.login"))
+
+    session["username"] = authentication["username"]
+    session["email"] = authentication["email"]
+    session["permissions"] = authentication["permissions"]
+    return None
 
 
 @app.teardown_appcontext
@@ -241,6 +269,9 @@ def error_handler(_error: Any) -> ResponseReturnValue:   # pylint: disable=unuse
 @app.errorhandler(504)
 def internal_error(_error: Any) -> ResponseReturnValue:
     """Gestion des erreurs 500 avec rendu HTML convivial ou JSON pour les requêtes XHR/HTMX."""
+    code = getattr(_error, "code", 500)
+    if not isinstance(code, int):
+        code = 500
     logger.error(
         msg=f"Internal server error: {request.path}",
         extra={
@@ -248,7 +279,7 @@ def internal_error(_error: Any) -> ResponseReturnValue:
             "action": request.method,
             "log_type": "logs",
             "user_id": session.get("username"),
-            "status_code": 500,
+            "status_code": code,
             "ip_address": get_client_ip(request),
             "obj_metadata": get_request_log_metadata(request),
         }
@@ -264,16 +295,16 @@ def internal_error(_error: Any) -> ResponseReturnValue:
 
     if not (is_htmx or is_xhr or accepts_json):
         try:
-            html = render_page("error/5xx", code=500, message=message)
-            return html, 500
+            html = render_page("error/5xx", code=code, message=message)
+            return html, code
         except TemplateError:
             # si rendu échoue pour des erreurs de template, fallback en JSON
             pass    # pylint: disable=unnecessary-pass
 
     payload = {
         "status": "error",
-        "code": 500,
+        "code": code,
         "message": message,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    return make_response(jsonify(payload), 500)
+    return make_response(jsonify(payload), code)

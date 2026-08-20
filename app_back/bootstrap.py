@@ -4,7 +4,6 @@ import os
 import time
 import subprocess
 import socket
-import signal
 import urllib.parse
 
 
@@ -39,7 +38,8 @@ def build_env():
     Construit les URLs de connexion aux bases de données à partir des variables d'environnement
     individuelles. Si les URLs complètes ne sont pas déjà définies, elles sont construites
     automatiquement en utilisant les variables d'environnement spécifiques à chaque base de données.
-    Les mots de passe sont correctement encodés en URL pour éviter les problèmes avec les caractères spéciaux.
+    Les mots de passe sont correctement encodés en URL pour éviter les problèmes avec les caractères
+    spéciaux.
     return :
         - None. Les URLs sont définies dans les variables d'environnement.
     """
@@ -112,7 +112,7 @@ def configure_dilicom_cron() -> None:
         cron_file.write(
             f"{cron_fetch} root /usr/local/bin/run-dilicom-cron.sh fetch >> {log_file} 2>&1\n"
         )
-    os.chmod(cron_path, 0o644)
+    os.chmod(cron_path, 0o640)
 
 
 def configure_woocommerce_orders_cron() -> None:
@@ -144,7 +144,7 @@ def configure_woocommerce_orders_cron() -> None:
             cron_file.write(
                 f"{cron_schedule} root curl -fsS -X POST '{endpoint}' >> {log_file} 2>&1\n"
             )
-        os.chmod(cron_path, 0o644)
+        os.chmod(cron_path, 0o640)
     except PermissionError:
         print(
             "[BOOTSTRAP] Permission refusée pour /etc/cron.d ;"
@@ -161,6 +161,7 @@ def start_gunicorn():
     return :
         - None. Gunicorn est lancé en tant que processus séparé.
     """
+    log_level = os.getenv("LOG_LEVEL", "info")
     print("[BOOTSTRAP] Démarrage de Gunicorn")
     subprocess.run([
         "gunicorn",
@@ -169,30 +170,14 @@ def start_gunicorn():
         "--worker-class", "uvicorn.workers.UvicornWorker",
         "--access-logfile", "-",
         "--error-logfile", "-",
-        "--log-level", "info",
+        "--log-level", log_level,
         "app_back.main:app"
     ],
     check=True)
 
 
-def sigterm_handler(signum, frame):
-    """
-    Gestionnaire de signal pour SIGTERM. Ce gestionnaire est appelé lorsque le processus reçoit
-    un signal de terminaison (SIGTERM). Il affiche un message de log indiquant que le signal
-    a été reçu et que le processus va se terminer proprement.
-    param :
-        - signum: Le numéro du signal reçu (ex: signal.SIGTERM).
-        - frame: Le contexte d'exécution actuel (non utilisé dans ce gestionnaire).
-    return :
-        - None. Le processus se termine après l'exécution de ce gestionnaire.
-    """
-    print("[BOOTSTRAP] Signal SIGTERM reçu, arrêt du backend Sauvetage")
-    exit(0)
-
-
 if __name__ == "__main__":
     print("[BOOTSTRAP] Initialisation du backend Sauvetage")
-    signal.signal(signal.SIGTERM, sigterm_handler)
 
     build_env()
     wait_for("db-main", 5432)

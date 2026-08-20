@@ -75,7 +75,7 @@ class UsersRepository(BaseRepository):
         """
         return self._hasher.hash(password)
 
-    def validate_password(self, user: Users, password: str) -> bool:
+    def validate_password(self, user: Users | None, password: str | None) -> bool:
         """Valide un mot de passe pour un utilisateur donné.
         Args:
             user (Users): L'utilisateur pour lequel valider le mot de passe.
@@ -83,6 +83,8 @@ class UsersRepository(BaseRepository):
         Returns:
             bool: True si le mot de passe est valide, False sinon.
         """
+        if user is None or password is None:
+            return False
         active_pwd = next((pwd for pwd in user.passwords if pwd.to_date is None), None)
         if not active_pwd:
             return False
@@ -122,9 +124,9 @@ class UsersRepository(BaseRepository):
         Returns:
             None
         """
+        user.nb_failed_logins += 1
         if user.nb_failed_logins >= 3:
             user.is_locked = True
-        user.nb_failed_logins += 1
         try:
             self.session.commit()
         except Exception as exc:

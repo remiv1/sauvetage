@@ -15,7 +15,7 @@ from config.logs.config_loader import get_log_types
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
-class MongoDBLogger:
+class MongoDBLogger:    # pylint: disable=too-many-instance-attributes
     """
     Gestionnaire de logs MongoDB.
     
@@ -68,7 +68,7 @@ class MongoDBLogger:
             logging.info("Connecté à MongoDB")
 
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logging.error("Erreur de connexion MongoDB: %s", e)
+            logging.exception("Erreur de connexion MongoDB: %s", e)
             raise
 
     def _get_collection_name(self) -> str:
@@ -141,7 +141,7 @@ class MongoDBLogger:
             return str(result.inserted_id)  # type: ignore
 
         except PyMongoError as e:
-            logging.error("Erreur lors de l'enregistrement du log: %s", e)
+            logging.exception("Erreur lors de l'enregistrement du log: %s", e)
             raise
 
     def log_user_action(    # pylint: disable=too-many-arguments
@@ -275,7 +275,7 @@ class MongoDBLogger:
                 .limit(limit)
             )  # type: ignore
         except PyMongoError as e:
-            logging.error("Erreur lors de la recherche: %s", e)
+            logging.exception("Erreur lors de la recherche: %s", e)
             return []
 
     def close(self) -> None:
@@ -336,7 +336,9 @@ class MongoForwardHandler(logging.Handler):
             metadata: Dict[str, Any] = {
                 "logger": record.name,
                 "level": record.levelname,
-                "source": "dilicom_parser" if record.name.startswith("dilicom_parser") else "application",
+                "source": "dilicom_parser" \
+                    if record.name.startswith("dilicom_parser") \
+                    else "application",
             }
             if isinstance(obj_metadata, dict):
                 metadata.update(obj_metadata)
@@ -407,7 +409,7 @@ def setup_logging():
     # Les logs de fontTools sont très verbeux et n'ont pas de valeur métier.
     # Ils sont utilisés uniquement pour le rendu PDF et polluent fortement les journaux.
     fonttools_logger = logging.getLogger("fontTools")
-    fonttools_logger.setLevel(logging.CRITICAL)
+    fonttools_logger.setLevel(logging.WARNING)
     fonttools_logger.propagate = False
 
     handler = MongoForwardHandler(get_logger())

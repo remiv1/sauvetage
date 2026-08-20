@@ -112,6 +112,7 @@ def ensure_mongo_patches():
 @pytest.fixture(autouse=True)
 def patch_requests_to_fastapi():
     """Patch requests AVANT import Flask/FastAPI."""
+    global _fastapi_proxy  # pylint: disable=global-statement
     API_BASE = "http://app-back:8000"  # pylint: disable=invalid-name
 
     from requests.sessions import Session   # pylint: disable=import-outside-toplevel
@@ -252,4 +253,5 @@ def fastapi_test_client(db_session_main, db_session_users_shared):
         _fastapi_proxy = client_fastapi
         yield client_fastapi
 
+    _fastapi_proxy = None
     fastapi_app.dependency_overrides.clear()

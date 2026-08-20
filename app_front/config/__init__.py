@@ -5,11 +5,14 @@ from os import getenv
 import requests
 
 _TIMEOUT = 30  # secondes
+PROTOCOLE = "http"  # pas de protocole HTTPS si un seul pod.
 
-API_URL = getenv("API_URL", "http://app-back:8000/api/v1")
+API_URL = getenv("API_URL", f"{PROTOCOLE}://app-back:8000/api/v1")
 USERS: Dict[str, str] = {
     "no_users": f"{API_URL}/users/no-user",
     "login": f"{API_URL}/users/login",
+    "validate_session": f"{API_URL}/users/validate-session",
+    "logout": f"{API_URL}/users/logout",
     "create": f"{API_URL}/users/create",
     "change_password": f"{API_URL}/users/change-password",
     "search": f"{API_URL}/users/search",

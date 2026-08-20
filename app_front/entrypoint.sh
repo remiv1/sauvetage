@@ -61,8 +61,13 @@ PYTHON_EOF
 fi
 
 if [ -z "$FLASK_SECRET_KEY" ]; then
-    echo "[ENTRYPOINT] AVERTISSEMENT: FLASK_SECRET_KEY non défini, utilisation de la clé de développement"
-    export FLASK_SECRET_KEY="dev-secret-key-change-in-production"
+    if [ "${DEBUG:-false}" = "true" ]; then
+        echo "[ENTRYPOINT] AVERTISSEMENT: FLASK_SECRET_KEY non défini en mode DEBUG"
+        export FLASK_SECRET_KEY="dev-secret-key-change-in-production"
+    else
+        echo "[ENTRYPOINT] ERREUR: FLASK_SECRET_KEY doit être défini hors mode DEBUG"
+        exit 1
+    fi
 fi
 
 # Affichage de la configuration

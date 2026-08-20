@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app_back.db_connection import config
 from db_models.objects import Users, UsersPasswords
 from db_models.repositories.user import UsersRepository
+from db_models.repositories.user_session import UserSessionsRepository
 
 
 def verify_admin_access() -> bool:
@@ -57,24 +58,69 @@ async def log_user(
     user_obj = UsersRepository(session)
     user = user_obj.get_by_username(username)
     ok = user_obj.validate_password(user=user, password=clear_password)
-
+    valid = bool(user is not None and user.is_active and not user.is_locked and ok)
+    if user is None:
+        raise ValueError(f"Utilisateur non trouvé : {username}")
     return_dict: Dict[str, Any] = {
-        "valid": (user is not None and not user.is_locked and ok),
+        "valid": valid,
         "username": user.username if user else None,
-        "permissions": user.permissions if (user and ok) else None,
-        "mail": user.email if (user and ok) else None,
+        "permissions": user.permissions if valid else None,
+        "email": user.email if valid else None,
     }
     if user and user.is_locked:
         return_dict["error"] = "Compte vérouillé après 3 erreurs de connexion."
-    elif user and ok:
+    elif user and not user.is_active:
+        return_dict["error"] = "Compte utilisateur désactivé."
+    elif valid:
         user_obj.reset_failed_logins(user)
+        return_dict["session_token"] = UserSessionsRepository(session).create(user)
     elif user:
         user_obj.add_failed_login(user)
+        if user.is_locked:
+            UserSessionsRepository(session).revoke_for_user(user)
         return_dict["error"] = "Mot de passe incorrect."
     else:
         return_dict["error"] = f"Utilisateur non trouvé : {username}"
 
     return return_dict
+
+
+@router.post("/validate-session")
+async def validate_session(
+    request: Request,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
+    """Valide une session active et retourne les données d'autorisation à jour."""
+    data = await request.json()
+    token = data.get("session_token")
+    if not isinstance(token, str):
+        return {"valid": False}
+
+    user_session = UserSessionsRepository(session).validate(token)
+    if user_session is None:
+        return {"valid": False}
+
+    user = user_session.user
+    return {
+        "valid": True,
+        "username": user.username,
+        "email": user.email,
+        "permissions": user.permissions,
+    }
+
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    session: Annotated[Session, Depends(config.get_secure_session)],
+):
+    """Révoque la session associée au jeton fourni."""
+    data = await request.json()
+    token = data.get("session_token")
+    revoked = False
+    if isinstance(token, str):
+        revoked = UserSessionsRepository(session).revoke(token)
+    return {"revoked": revoked}
 
 
 @router.get("/no-user")
@@ -125,7 +171,13 @@ async def create_user(
     return {"valid": True, "message": f"Utilisateur {username} créé avec succès."}
 
 
-@router.post("/change-password")
+@router.post(
+    "/change-password",
+    responses={
+        401: {"description": "Session utilisateur absente ou invalide."},
+        403: {"description": "Action non autorisée pour cet utilisateur."},
+    },
+)
 async def change_password(
     request: Request,
     session: Annotated[Session, Depends(config.get_secure_session)],
@@ -135,19 +187,37 @@ async def change_password(
     username = data.get("username")
     old_password = data.get("old_password")
     new_password = data.get("new_password")
+    session_token = data.get("session_token")
+
+    if not isinstance(session_token, str):
+        raise HTTPException(status_code=401, detail="Session utilisateur requise.")
+    actor_session = UserSessionsRepository(session).validate(session_token)
+    if actor_session is None:
+        raise HTTPException(status_code=401, detail="Session utilisateur invalide.")
 
     user_obj = UsersRepository(session)
     user = user_obj.get_by_username(username)
     if not user:
         raise ValueError(f"Utilisateur non trouvé : {username}")
-    auth = user_obj.validate_password(user=user, password=old_password)
-    if not auth:
+
+    actor = actor_session.user
+    is_own_password = actor.id == user.id
+    is_administrator = "1" in actor.permissions or "9" in actor.permissions
+    if not is_own_password and not is_administrator:
+        raise HTTPException(
+            status_code=403,
+            detail="Vous ne pouvez modifier que votre propre mot de passe.",
+        )
+    if is_own_password and not user_obj.validate_password(user=user, password=old_password):
         raise ValueError("Mot de passe actuel incorrect.")
+    if not isinstance(new_password, str) or not new_password:
+        raise ValueError("Le nouveau mot de passe est requis.")
     ok = user_obj.new_password(user=user, password=new_password)
     if not ok:
         raise ValueError(
             "Échec du changement de mot de passe. Vérifiez les informations fournies."
         )
+    UserSessionsRepository(session).revoke_for_user(user)
     return {
         "valid": True,
         "message": f"Mot de passe changé avec succès pour l'utilisateur {username}.",
