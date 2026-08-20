@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="32" time="3.241" timestamp="2026-08-20T18:26:36.566526+02:00" hostname="sauvetage">
+    <testcase classname="tests.back.test_dilicom_import" name="test_price_ht_uses_taxable_amount_when_present" time="0.119"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_reproduces_dif499492052_price_year_and_metadata" time="0.152"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_dilicom_real_file_extracts_language_collection_dimensions_and_weight_metadata" time="0.037"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_dilicom_extracts_bnf_metadata_when_present" time="0.022"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_get_values_from_onix_returns_sqlalchemy_object_price" time="0.024"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_save_or_update_from_object_keeps_taxable_amount_and_vat_rate_id" time="0.582"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_dilicom_service_uses_cached_vat_rates" time="0.012"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_update_status_handles_already_created_reference" time="0.013"/>
+    <testcase classname="tests.back.test_dilicom_import" name="test_save_or_update_from_object_is_idempotent_on_same_ean" time="0.041"/>
+    <testcase classname="tests.back.test_documents_api" name="test_create_document_logs_exception_and_raises_500" time="0.002"/>
+    <testcase classname="tests.back.test_mails_api" name="test_send_mail_payload_returns_smtp_acceptance" time="0.060"/>
+    <testcase classname="tests.back.test_mails_api" name="test_send_mail_payload_rejects_invalid_base64_attachment" time="0.001"/>
+    <testcase classname="tests.back.test_mails_api" name="test_send_mail_payload_returns_502_on_smtp_error" time="0.003"/>
+    <testcase classname="tests.back.test_mails_api" name="test_build_supplier_order_mail_returns_500_when_pdf_generation_fails" time="0.004"/>
+    <testcase classname="tests.back.test_mails_api" name="test_build_supplier_order_mail_uses_company_config_and_order_date" time="0.004"/>
+    <testcase classname="tests.back.test_mails_api" name="test_send_supplier_order_mail_returns_404_when_order_is_missing" time="0.001"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_get_security_token_requires_configured_token" time="0.002"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_get_security_token_returns_configured_token" time="0.001"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_build_dsn_encodes_migration_credentials" time="0.001"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_run_alembic_returns_subprocess_result" time="0.002"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_run_alembic_handles_subprocess_error" time="0.002"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_run_startup_tasks_migrates_when_lock_is_obtained" time="0.007"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_run_startup_tasks_falls_back_when_postgres_lock_fails" time="0.006"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_ensure_vat_adds_only_missing_rates" time="0.005"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_access_control_validates_token_and_ip" time="0.001"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_access_control_rejects_invalid_requests[internal_request0-False-403]" time="0.001"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_access_control_rejects_invalid_requests[internal_request1-True-400]" time="0.001"/>
+    <testcase classname="tests.back.test_security_migration_decorators" name="test_access_control_rejects_invalid_requests[internal_request2-True-403]" time="0.001"/>
+    <testcase classname="tests.back.test_vat_sync" name="test_new_vat_rate_closes_superseded_rate_at_its_effective_time" time="0.009"/>
+    <testcase classname="tests.back.test_vat_sync" name="test_vat_slug_duplicates_are_rejected_before_woocommerce_sync" time="0.004"/>
+    <testcase classname="tests.back.test_vat_sync" name="test_vat_sync_is_skipped_when_woocommerce_already_matches" time="0.004"/>
+    <testcase classname="tests.back.test_vat_sync" name="test_vat_slug_change_triggers_woocommerce_resynchronization" time="0.005"/>
+  </testsuite>
+</testsuites>

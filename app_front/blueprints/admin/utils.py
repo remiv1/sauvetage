@@ -8,9 +8,10 @@ import requests
 from bson import ObjectId
 from bson.errors import InvalidId
 from sqlalchemy import select, func
-from app_front.config import db_conf, USERS
+from app_front.config import db_conf, USERS, WOO_COMMERCE
 from config.logs.config_loader import get_log_types
 from db_models.objects.vat import VatRate
+from db_models.services.vat import close_superseded_vat_rates
 
 
 # ── TVA — accès direct SQLAlchemy ─────────────────────────────────────────────
@@ -88,6 +89,10 @@ def create_vat_rate(data: Dict[str, Any]) -> Dict[str, Any]:
         date_end=date_end,
     )
     session.add(rate)
+    session.flush()
+    close_superseded_vat_rates(session, rate.code, date_start, rate.id)
+    session.commit()
+    _reconcile_vat_rates()
     return {"id": rate.id, "valid": True}
 
 
@@ -110,6 +115,10 @@ def update_vat_rate(vat_id: int, data: Dict[str, Any]) -> bool:
     rate.label = str(data["label"])
     rate.date_start = date_start
     rate.date_end = date_end
+    session.flush()
+    close_superseded_vat_rates(session, rate.code, date_start, rate.id)
+    session.commit()
+    _reconcile_vat_rates()
     return True
 
 
@@ -120,7 +129,20 @@ def close_vat_rate(vat_id: int) -> bool:
     if rate is None:
         return False
     rate.date_end = datetime.now(timezone.utc)
+    session.commit()
+    _reconcile_vat_rates()
     return True
+
+
+def _reconcile_vat_rates() -> None:
+    """Demande au backend de rapprocher les taux actifs avec WooCommerce."""
+    try:
+        response = requests.post(WOO_COMMERCE["reconcile_vat_rates"], timeout=30)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise ValueError(
+            "Taux de TVA enregistré, mais synchronisation WooCommerce impossible."
+        ) from exc
 
 
 # ── Utilisateurs — via API FastAPI ────────────────────────────────────────────

@@ -25,6 +25,18 @@ def update_vat_rates(specific: bool = False, specific_name: Optional[str] = None
     else:
         wc_service.export_vat_rates()
 
+
+@router.post("/reconcile-vat-rates")
+def reconcile_vat_rates():
+    """Vérifie les slugs actifs et synchronise WooCommerce lorsqu'un écart existe."""
+    session = next(config.get_main_session())
+    try:
+        wc_service = WCProductsService(session, separated_keys=True)
+        synchronized = wc_service.export_vat_rates()
+        return {"synchronized": synchronized}
+    finally:
+        session.close()
+
 @router.post("/update-tags")
 def update_tags():
     """Lit les tags WooCommerce et met à jour les tags locaux."""

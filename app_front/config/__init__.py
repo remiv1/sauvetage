@@ -44,6 +44,7 @@ DOCUMENTS: Dict[str, str] = {
 WOO_COMMERCE: Dict[str, str] = {
     "sync_catalog": f"{API_URL}/woo-commerce/background/sync-catalog",
     "sync_orders": f"{API_URL}/woo-commerce/background/sync-orders",
+    "reconcile_vat_rates": f"{API_URL}/woo-commerce/background/reconcile-vat-rates",
 }
 
 def post(path: str, payload: Dict[str, Any] | List[Any]) -> Dict[str, Any]:

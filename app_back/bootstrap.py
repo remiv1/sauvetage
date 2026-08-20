@@ -116,12 +116,13 @@ def configure_dilicom_cron() -> None:
 
 
 def configure_woocommerce_orders_cron() -> None:
-    """Configure le cron des commandes WooCommerce entre 7h et 19h, toutes les 2h."""
+    """Configure les crons WooCommerce de commandes et de rapprochement TVA."""
     cron_path = "/etc/cron.d/woocommerce-orders-cron"
     log_dir = "/var/log/woocommerce"
     log_file = f"{log_dir}/orders-sync.log"
     api_url = os.getenv("API_URL", "http://localhost:8000/api/v1")
     cron_schedule = os.getenv("WOOCOMMERCE_ORDERS_CRON", "0 7-19/2 * * *")
+    vat_cron_schedule = os.getenv("WOOCOMMERCE_VAT_CRON", "0 3 * * *")
 
     try:
         os.makedirs(log_dir, exist_ok=True)
@@ -141,8 +142,12 @@ def configure_woocommerce_orders_cron() -> None:
                 "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n"
             )
             endpoint = f"{api_url}/woo-commerce/background/sync-orders"
+            vat_endpoint = f"{api_url}/woo-commerce/background/reconcile-vat-rates"
             cron_file.write(
                 f"{cron_schedule} root curl -fsS -X POST '{endpoint}' >> {log_file} 2>&1\n"
+            )
+            cron_file.write(
+                f"{vat_cron_schedule} root curl -fsS -X POST '{vat_endpoint}' >> {log_file} 2>&1\n"
             )
         os.chmod(cron_path, 0o640)
     except PermissionError:

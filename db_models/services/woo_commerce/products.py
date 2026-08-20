@@ -13,6 +13,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Optional, Sequence, Callable
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_, and_
@@ -789,7 +790,14 @@ class WCProductsService(WCBase):
                     "name": v.label,
                     "class": target_class,
                 }
-                data["update"].append(t)
+                v.wpwc_id = t["id"]
+                is_unchanged = (
+                    float(matched.get("rate", 0)) == float(v.rate)
+                    and matched.get("name") == v.label
+                    and matched.get("class") == target_class
+                )
+                if not is_unchanged:
+                    data["update"].append(t)
                 wpwc_vat_ids.discard(int(t["id"]))
             else:
                 t = {
@@ -834,7 +842,27 @@ class WCProductsService(WCBase):
                     )
         self.session.flush()
 
-    def export_vat_rates(self, name: Optional[str] = None) -> None:
+    @staticmethod
+    def _validate_current_vat_slugs(vat_rates: Sequence[VatRate]) -> None:
+        """Vérifie qu'une seule TVA en vigueur utilise chaque slug WooCommerce."""
+        rates_by_slug: dict[str, list[VatRate]] = {}
+        for vat_rate in vat_rates:
+            slug = vat_rate.wpwc_slug or slugify(vat_rate.label)
+            rates_by_slug.setdefault(slug, []).append(vat_rate)
+        duplicates = {
+            slug: rates
+            for slug, rates in rates_by_slug.items()
+            if len(rates) > 1
+        }
+        if not duplicates:
+            return
+        details = ", ".join(
+            f"{slug} ({', '.join(str(rate.id) for rate in rates)})"
+            for slug, rates in duplicates.items()
+        )
+        raise ValueError(f"Slugs WooCommerce dupliqués pour les TVA en vigueur : {details}.")
+
+    def export_vat_rates(self, name: Optional[str] = None) -> bool:
         """
         Exporte les taux de TVA vers WooCommerce.
         - Crée d'abord les classes de taxe WC manquantes (une par taux, slug dérivé du label).
@@ -845,13 +873,25 @@ class WCProductsService(WCBase):
         Arguments:
             name (str, optional): Le nom du taux de TVA à exporter. Si None, exporte tous les taux.
         """
-        stmt = select(VatRate).where(or_(VatRate.date_end == None, VatRate.date_end > func.now()))  # pylint: disable=singleton-comparison, not-callable
+        now = datetime.now(timezone.utc)
+        stmt = select(VatRate).where(
+            VatRate.date_start <= now,
+            or_(
+                VatRate.date_end == None,  # pylint: disable=singleton-comparison
+                VatRate.date_end > now,
+            ),
+        )
         if name:
             stmt = stmt.where(VatRate.label == name)
         vat_rates = self.session.execute(stmt).scalars().all()
+        self._validate_current_vat_slugs(vat_rates)
         self._ensure_wc_tax_classes(vat_rates)
         wpwc_vat_rates: list[dict[str, Any]] = self.api_read.get("taxes").json()
         data = self.__diff_vat_rates(vat_rates, wpwc_vat_rates)
+        if not any(data.values()):
+            self.session.commit()
+            logger.info("Export taux de TVA ignoré : WooCommerce est déjà à jour.")
+            return False
         try:
             returns: dict[str, list[dict[str, Any]]] = (
                 self.api_write.post("taxes/batch", data=data).json()
@@ -868,7 +908,7 @@ class WCProductsService(WCBase):
                     error_message=str(exc)
                 )
             self.session.commit()
-            return
+            return False
         self._apply_vat_returns(returns, vat_rates)
         self.session.commit()
         logger.info(
@@ -877,6 +917,7 @@ class WCProductsService(WCBase):
             len(returns.get("update", [])),
             len(returns.get("delete", [])),
         )
+        return True
 
     def ensure_vat_rates(self) -> None:
         """

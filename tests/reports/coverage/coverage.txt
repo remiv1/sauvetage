@@ -1,6 +1,6 @@
 Name                                                     Stmts   Miss Branch BrPart  Cover
 ------------------------------------------------------------------------------------------
-app_back/bootstrap.py                                       71     71      8      0     0%
+app_back/bootstrap.py                                       74     74      8      0     0%
 app_back/config/__init__.py                                  0      0      0      0   100%
 app_back/config/mails.py                                    11      0      0      0   100%
 app_back/config/security.py                                  6      0      2      0   100%
@@ -31,18 +31,18 @@ app_back/v1/schems/inventory.py                             76      0      0    
 app_back/v1/schems/mails.py                                 19      0      0      0   100%
 app_back/v1/user.py                                        193     85     54     14    53%
 app_back/v1/woocommerce/__init__.py                          6      0      0      0   100%
-app_back/v1/woocommerce/background_transactions.py          64     41      2      0    35%
+app_back/v1/woocommerce/background_transactions.py          72     47      2      0    34%
 app_back/v1/woocommerce/media.py                            25     13      2      0    44%
 app_back/v1/woocommerce/orders.py                            0      0      0      0   100%
 app_front/__init__.py                                        0      0      0      0   100%
 app_front/blueprints/__init__.py                            26      0      0      0   100%
 app_front/blueprints/admin/__init__.py                       0      0      0      0   100%
-app_front/blueprints/admin/forms.py                         32      0      0      0   100%
+app_front/blueprints/admin/forms.py                         34      0      0      0   100%
 app_front/blueprints/admin/routes.py                        46     18      8      1    57%
 app_front/blueprints/admin/routes_htmx_logs.py              44     25      6      0    38%
-app_front/blueprints/admin/routes_htmx_users.py            115     77     16      0    29%
+app_front/blueprints/admin/routes_htmx_users.py            142    100     28      0    25%
 app_front/blueprints/admin/routes_htmx_vat.py               98     65     16      0    29%
-app_front/blueprints/admin/utils.py                        162    141     62      0     9%
+app_front/blueprints/admin/utils.py                        179    156     62      0    10%
 app_front/blueprints/customer/__init__.py                    0      0      0      0   100%
 app_front/blueprints/customer/forms.py                      34      0      0      0   100%
 app_front/blueprints/customer/routes.py                     50      6     10      4    83%
@@ -145,7 +145,7 @@ db_models/objects/shipments.py                              41      3      0    
 db_models/objects/stocks.py                                 78     17      4      0    74%
 db_models/objects/suppliers.py                              34      3      0      0    91%
 db_models/objects/users.py                                  63      3      0      0    95%
-db_models/objects/vat.py                                    29      7      4      0    67%
+db_models/objects/vat.py                                    29      2      4      1    91%
 db_models/repositories/__init__.py                          19      0      0      0   100%
 db_models/repositories/base_repo.py                         12      4      0      0    67%
 db_models/repositories/customers.py                        257    130     80     21    47%
@@ -192,11 +192,12 @@ db_models/services/objects.py                               22      5     12    
 db_models/services/pictures.py                              47     30      8      1    33%
 db_models/services/user.py                                  45     45      0      0     0%
 db_models/services/utils.py                                  9      0      0      0   100%
+db_models/services/vat.py                                   15      1      6      2    86%
 db_models/services/woo_commerce/__init__.py                  4      0      0      0   100%
 db_models/services/woo_commerce/base.py                     19      4      2      1    76%
 db_models/services/woo_commerce/customers.py               113     93     40      1    14%
 db_models/services/woo_commerce/orders.py                  243    124     84     17    45%
-db_models/services/woo_commerce/products.py                412    242    130      9    39%
+db_models/services/woo_commerce/products.py                435    217    138     12    48%
 db_models/services/woo_commerce/utils.py                    48     20     30      5    53%
 ------------------------------------------------------------------------------------------
-TOTAL                                                    11312   4608   2546    459    55%
+TOTAL                                                    11407   4626   2572    465    55%
