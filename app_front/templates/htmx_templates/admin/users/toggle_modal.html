@@ -1,22 +1,25 @@
-{# Modale de confirmation toggle lock / active #}
-<button class="modal-overlay" tabindex="0"
-        onclick="if(event.target===this)this.remove()"
-        onkeydown="if(event.key==='Escape')this.remove()">
+{# Modale de confirmation de changement d'état #}
+<dialog id="modal-user-toggle" class="modal-overlay" aria-labelledby="modal-user-toggle-title">
     <div class="modal-box modal-confirm">
         <div class="modal-header">
-            <h3>
+            <h3 id="modal-user-toggle-title">
                 {% if action == 'lock' %}
                     Verrouillage du compte
+                {% elif action == 'unlock' %}
+                    Déverrouillage du compte
                 {% else %}
                     Statut du compte
                 {% endif %}
             </h3>
-            <button class="btn-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            <button type="button" class="btn-close" aria-label="Fermer la modale"
+                    onclick="document.getElementById('modal-user-toggle').close()">&times;</button>
         </div>
         <div class="modal-body">
             {% if action == 'lock' %}
-            <p>Voulez-vous basculer le <strong>verrou</strong> du compte <strong>{{ username }}</strong> ?</p>
-            <p class="text-muted">Si le compte est verrouillé, il sera déverrouillé. Le compteur d'échecs sera remis à zéro.</p>
+            <p>Voulez-vous verrouiller le compte <strong>{{ username }}</strong> ?</p>
+            {% elif action == 'unlock' %}
+            <p>Voulez-vous déverrouiller le compte <strong>{{ username }}</strong> ?</p>
+            <p class="text-muted">Le compteur d'échecs sera remis à zéro.</p>
             {% else %}
             <p>Voulez-vous basculer le statut <strong>actif/inactif</strong> du compte <strong>{{ username }}</strong> ?</p>
             <p class="text-muted">Un compte inactif ne peut plus se connecter.</p>
@@ -24,23 +27,41 @@
 
             <div class="modal-buttons">
                 <button type="button" class="btn btn-secondary"
-                        onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-                {% if action == 'lock' %}
-                <button class="btn btn-danger"
-                        hx-post="{{ url_for('admin_users.users_toggle_lock', username=username) }}"
-                        hx-target="closest .modal-overlay"
-                        hx-swap="outerHTML">
-                    Confirmer
-                </button>
+                    onclick="document.getElementById('modal-user-toggle').close()">Annuler</button>
+                {% if action in ('lock', 'unlock') %}
+                <form hx-post="{{ url_for('admin_users.users_toggle_lock', username=username) }}"
+                    hx-target="#users-modal-container"
+                    hx-swap="innerHTML">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Confirmer</button>
+                </form>
                 {% else %}
-                <button class="btn btn-danger"
-                        hx-post="{{ url_for('admin_users.users_toggle_active', username=username) }}"
-                        hx-target="closest .modal-overlay"
-                        hx-swap="outerHTML">
-                    Confirmer
-                </button>
+                <form hx-post="{{ url_for('admin_users.users_toggle_active', username=username) }}"
+                    hx-target="#users-modal-container"
+                    hx-swap="innerHTML">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Confirmer</button>
+                </form>
                 {% endif %}
             </div>
         </div>
     </div>
-</button>
+</dialog>
+
+<script>
+(function() {
+    const dialog = document.getElementById('modal-user-toggle');
+    if (!dialog) {
+        return;
+    }
+    dialog.addEventListener('close', () => {
+        dialog.remove();
+    });
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+    dialog.showModal();
+})();
+</script>

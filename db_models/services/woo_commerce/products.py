@@ -29,6 +29,7 @@ from db_models.services.woo_commerce.utils import _merge_attribute_lists
 _FRONT_BASE_URL = os.environ.get("FRONT_BASE_URL", "")
 
 logger = logging.getLogger(__name__)
+PROTOCOL = "http"
 
 object_type_mapping = {
     "book": [20],
@@ -204,7 +205,8 @@ class WCProductsService(WCBase):
         restent transmises telles quelles.
         """
         file_link = media.file_link or ""
-        is_local = bool(media.is_local) or not file_link.startswith(("http://", "https://"))
+        is_local = bool(media.is_local) \
+            or not file_link.startswith((f"{PROTOCOL}://", f"{PROTOCOL}s://"))
         if not is_local:
             return file_link
 

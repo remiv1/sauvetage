@@ -604,7 +604,7 @@ details[open] > .accordion-toggle {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -615,6 +615,18 @@ details[open] > .accordion-toggle {
   cursor: default;
   // Empêche les div de s'étirer sur toute la hauteur
   align-content: center;
+}
+
+dialog.modal-overlay {
+  max-width: none;
+  max-height: none;
+  height: 100dvh;
+  margin: 0;
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+  }
 }
 
 .modal-box {

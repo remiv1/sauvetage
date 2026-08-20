@@ -1,7 +1,8 @@
 """Routes HTMX pour la gestion des utilisateurs (admin — super-admin uniquement)."""
 
 import json
-from flask import Blueprint, render_template, request, make_response
+import requests
+from flask import Blueprint, render_template, request, make_response, session
 from app_front.utils.decorators import permission_required, SUPER_ADMIN
 from app_front.blueprints.admin.forms import UserCreateAdminForm, UserEditPermissionsForm
 from app_front.blueprints.admin.utils import (
@@ -9,7 +10,7 @@ from app_front.blueprints.admin.utils import (
     toggle_user_lock,
     toggle_user_active,
 )
-from app_front.blueprints.user.utils import create_user, modify_user
+from app_front.blueprints.user.utils import change_password, create_user, modify_user
 
 bp_admin_users = Blueprint("admin_users", __name__, url_prefix="/admin/htmx/users")
 
@@ -32,6 +33,59 @@ PERMISSION_LABELS = {
     "8": "Direction",
     "9": "Super Admin",
 }
+
+
+def _render_user_edit_modal(
+    form: UserEditPermissionsForm, username: str, can_change_password: bool
+) -> str:
+    return render_template(
+        USERS_EDIT_MODAL,
+        form=form,
+        user={"username": username},
+        permission_labels=PERMISSION_LABELS,
+        can_change_password=can_change_password,
+    )
+
+
+def _validate_new_password(
+    form: UserEditPermissionsForm, can_change_password: bool
+) -> bool:
+    new_password = form.new_password.data or ""
+    new_password_confirm = form.new_password_confirm.data or ""
+    if not new_password and not new_password_confirm:
+        return True
+    if not can_change_password:
+        form.new_password.errors = [
+            "Utilisez votre page de profil pour modifier votre propre mot de passe."
+        ]
+        return False
+    if not new_password.strip() or new_password != new_password_confirm:
+        form.new_password_confirm.errors = [
+            "Les mots de passe doivent être identiques et non vides."
+        ]
+        return False
+    return True
+
+
+def _update_user_from_form(username: str, form: UserEditPermissionsForm) -> None:
+    permissions_str = "".join(sorted(form.permissions.data or []))
+    modify_user(
+        username=username,
+        email=form.email.data,          # type: ignore
+        permissions=permissions_str,
+    )
+    new_password = form.new_password.data or ""
+    if not new_password:
+        return
+    session_token = session.get("auth_token")
+    if not isinstance(session_token, str) or not session_token:
+        raise ValueError("Session utilisateur invalide.")
+    change_password(
+        username=username,
+        old_password=None,
+        new_password=new_password,
+        session_token=session_token,
+    )
 
 
 @bp_admin_users.get("/table")
@@ -122,7 +176,8 @@ def users_edit_form(username: str):
         USERS_EDIT_MODAL,
         form=form,
         user=user_data,
-        permission_labels=PERMISSION_LABELS
+        permission_labels=PERMISSION_LABELS,
+        can_change_password=user_data.get("username") != session.get("username"),
         )
 
 
@@ -131,38 +186,29 @@ def users_edit_form(username: str):
 def users_edit_submit(username: str):
     """Traite la modification des permissions d'un utilisateur."""
     form = UserEditPermissionsForm()
-    if form.validate_on_submit():
-        permissions_str = "".join(sorted(form.permissions.data or []))
-        try:
-            modify_user(
-                username=username,
-                email=form.email.data,          # type: ignore
-                permissions=permissions_str,
-            )
-        except (ValueError, TypeError) as exc:
+    can_change_password = username != session.get("username")
+    if not form.validate_on_submit() or not _validate_new_password(
+        form, can_change_password
+    ):
+        return _render_user_edit_modal(form, username, can_change_password), 422
+    try:
+        _update_user_from_form(username, form)
+    except (ValueError, TypeError, requests.RequestException) as exc:
+        if form.new_password.data:
+            form.new_password.errors = list(form.new_password.errors) + [str(exc)]
+        else:
             form.email.errors = list(form.email.errors) + [str(exc)]
-            return render_template(
-                USERS_EDIT_MODAL,
-                form=form,
-                user={"username": username},
-                permission_labels=PERMISSION_LABELS
-                ), 422
-        response = make_response("", 200)
-        response.headers["HX-Trigger"] = json.dumps(USER_UPDATED_TRIGGER)
-        return response
-    return render_template(
-        USERS_EDIT_MODAL,
-        form=form,
-        user={"username": username},
-        permission_labels=PERMISSION_LABELS
-        ),422
+        return _render_user_edit_modal(form, username, can_change_password), 422
+    response = make_response("", 200)
+    response.headers["HX-Trigger"] = json.dumps(USER_UPDATED_TRIGGER)
+    return response
 
 
 @bp_admin_users.get("/toggle-modal/<username>/<action>")
 @permission_required(SUPER_ADMIN)
 def users_toggle_modal(username: str, action: str):
     """Modale de confirmation de toggle lock ou active."""
-    if action not in ("lock", "active"):
+    if action not in ("lock", "unlock", "active"):
         return "<p>Action invalide.</p>", 400
     return render_template(USERS_TOGGLE_MODAL, username=username, action=action)
 

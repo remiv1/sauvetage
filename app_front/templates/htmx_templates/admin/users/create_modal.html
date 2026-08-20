@@ -54,11 +54,15 @@
 (function() {
     const dialog = document.getElementById('modal-user-create');
     if (dialog) {
+        dialog.addEventListener('close', () => {
+            dialog.remove();
+        });
         dialog.addEventListener('click', (e) => {
             if (e.target === dialog) {
                 dialog.close();
             }
         });
+        dialog.showModal();
     }
 })();
 </script>

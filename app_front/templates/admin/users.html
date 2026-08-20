@@ -81,9 +81,9 @@
     {# Actions #}
     <div class="section-actions">
         <button class="btn btn-primary"
-                hx-get="{{ url_for('admin_users.users_create_form') }}"
-                hx-target="body"
-                hx-swap="beforeend">
+            hx-get="{{ url_for('admin_users.users_create_form') }}"
+            hx-target="#users-modal-container"
+            hx-swap="innerHTML">
             {% with height=24 %}{% include "svg/plus.html" %}{% endwith %} Créer un utilisateur
         </button>
     </div>
@@ -95,5 +95,6 @@
          hx-swap="innerHTML">
         <div class="loading-indicator"><p>Chargement…</p></div>
     </div>
+    <div id="users-modal-container"></div>
 </div>
 {% endblock %}

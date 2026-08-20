@@ -99,4 +99,8 @@ class UserEditPermissionsForm(FlaskForm):
 
     email = EmailField("Email", validators=[DataRequired()])
     permissions = MultiCheckboxField("Permissions", choices=PERMISSION_CHOICES)
+    new_password = PasswordField("Nouveau mot de passe", validators=[Optional()])
+    new_password_confirm = PasswordField(
+        "Confirmer le nouveau mot de passe", validators=[Optional()]
+    )
     submit = SubmitField("Enregistrer")

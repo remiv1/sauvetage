@@ -59,22 +59,22 @@
                     <div class="actions-cell">
                         <button class="action-icon action-edit" title="Modifier les permissions"
                                 hx-get="{{ url_for('admin_users.users_edit_form', username=item.username) }}"
-                                hx-target="body"
-                                hx-swap="beforeend">
+                                hx-target="#users-modal-container"
+                                hx-swap="innerHTML">
                             {% include "svg/edit.html" %}
                         </button>
                         <button class="action-icon action-toggle"
                                 title="{{ 'Déverrouiller' if item.is_locked else 'Verrouiller' }}"
-                                hx-get="{{ url_for('admin_users.users_toggle_modal', username=item.username, action='lock') }}"
-                                hx-target="body"
-                                hx-swap="beforeend">
+                                hx-get="{{ url_for('admin_users.users_toggle_modal', username=item.username, action='unlock' if item.is_locked else 'lock') }}"
+                                hx-target="#users-modal-container"
+                                hx-swap="innerHTML">
                             {% include "svg/toggle-io.html" %}
                         </button>
                         <button class="action-icon {{ 'action-deactivate' if item.is_active else 'action-activate' }}"
                                 title="{{ 'Désactiver' if item.is_active else 'Activer' }}"
                                 hx-get="{{ url_for('admin_users.users_toggle_modal', username=item.username, action='active') }}"
-                                hx-target="body"
-                                hx-swap="beforeend">
+                                hx-target="#users-modal-container"
+                                hx-swap="innerHTML">
                             {% include "svg/eye.html" %}
                         </button>
                     </div>

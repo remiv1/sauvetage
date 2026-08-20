@@ -214,7 +214,7 @@ details[open] > .accordion-toggle {
   color: #fff;
 }
 .btn-primary:hover {
-  background: rgb(0, 4.3243243243, 60);
+  background: rgb(0%, 1.6958134605%, 23.5294117647%);
 }
 
 .btn-secondary {
@@ -230,7 +230,7 @@ details[open] > .accordion-toggle {
   color: #fff;
 }
 .btn-danger:hover {
-  background: rgb(131, 0, 12.956043956);
+  background: rgb(51.3725490196%, 0%, 5.0808015514%);
 }
 
 .btn-link {
@@ -620,7 +620,7 @@ details[open] > .accordion-toggle {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -630,6 +630,17 @@ details[open] > .accordion-toggle {
   width: 100%;
   cursor: default;
   align-content: center;
+}
+
+dialog.modal-overlay {
+  max-width: none;
+  max-height: none;
+  height: 100dvh;
+  margin: 0;
+}
+dialog.modal-overlay::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
 }
 
 .modal-box {
