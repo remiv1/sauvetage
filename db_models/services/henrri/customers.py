@@ -9,7 +9,7 @@ Classes:
 """
 
 from typing import Any, Sequence
-from henrri_connect.models import Customer, CustomerRequest
+from henrri_connect.models import Contact, Customer, CustomerRequest
 from .base import HenrriService
 
 class HenrriCustomersService(HenrriService):
@@ -72,6 +72,63 @@ class HenrriCustomersService(HenrriService):
         if response.id is None:
             raise ValueError("Le client n'a pas pu étre créé.")
         return response.id
+
+    def upsert_customer(
+        self,
+        customer: Customer | Any,
+        henrri_id: str | int | None = None,
+    ) -> Customer:
+        """Crée (POST) ou met à jour (PUT) un client sur Henrri.
+
+        Arguments:
+            customer: Le client local ou le modèle SDK Henrri.
+            henrri_id: L'identifiant Henrri connu, ou None pour une création.
+
+        Returns:
+            Customer: Le client créé ou mis à jour, tel que retourné par Henrri.
+
+        Raises:
+            ValueError: Si Henrri ne retourne pas d'identifiant.
+        """
+        remote_customer = self._as_customer(customer)
+        if henrri_id is None:
+            response = self.client.customers.add(remote_customer)
+        else:
+            response = self.client.customers.modify(int(henrri_id), remote_customer)
+        if response.id is None:
+            raise ValueError("Le client Henrri n'a pas d'identifiant après synchronisation.")
+        return response
+
+    def upsert_contact(
+        self,
+        customer_id: int,
+        contact: Contact,
+        contact_id: int | None = None,
+    ) -> Contact:
+        """Crée ou met à jour le contact associé à un client Henrri.
+
+        Args:
+            customer_id: Identifiant du client Henrri propriétaire du contact.
+            contact: Données du contact à envoyer.
+            contact_id: Identifiant Henrri du contact, ou None pour une création.
+
+        Returns:
+            Contact: Le contact tel que retourné par Henrri.
+
+        Raises:
+            ValueError: Si Henrri ne retourne pas d'identifiant de contact.
+        """
+        if contact_id is None:
+            response = self.client.customers.add_contact(customer_id, contact)
+        else:
+            response = self.client.customers.modify_contact(
+                customer_id,
+                contact_id,
+                contact,
+            )
+        if response.id is None:
+            raise ValueError("Le contact Henrri n'a pas d'identifiant après synchronisation.")
+        return response
 
     def create_customers_batch(self, customers: Sequence[Customer | Any]) -> Sequence[Customer]:
         """

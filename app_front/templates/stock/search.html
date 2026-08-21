@@ -124,7 +124,7 @@
                 hx-post="{{ url_for('stock.wc_sync_catalog') }}"
                 hx-disabled-elt="this"
                 hx-swap="none">
-            Synchroniser le catalogue SI
+            {% with height=18 %}{% include "svg/sync_double_arrow.html" %}{% endwith %}
         </button>
     </div>
 

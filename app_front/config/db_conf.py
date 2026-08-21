@@ -2,17 +2,38 @@
 
 from typing import Optional
 from os import getenv
+from urllib.parse import quote
 from flask import current_app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-DATABASE_URL = getenv(
-    "DATABASE_URL", "postgresql://app:pwd@db-main:5432/sauvetage_main"
+
+def _build_database_url(user: str, password: str, host: str, port: str, db_name: str) -> str:
+    """Construit une URL PostgreSQL correcte depuis les variables d'environnement."""
+    return (
+        f"postgresql://{user}:{quote(password, safe='')}@{host}:{port}/{db_name}"
+    )
+
+
+DATABASE_URL = getenv("DATABASE_URL") or _build_database_url(
+    getenv("POSTGRES_USER_APP", "app"),
+    getenv("POSTGRES_PASSWORD_APP", "pwd"),
+    getenv("POSTGRES_HOST", "db-main"),
+    getenv("POSTGRES_PORT", "5432"),
+    getenv("POSTGRES_DB_MAIN", "sauvetage_main"),
 )
-SECURE_DATABASE_URL = getenv(
-    "SECURE_DATABASE_URL", "postgresql://app:pwd@db-secure:5432/sauvetage_secure"
+SECURE_DATABASE_URL = (
+    getenv("DATABASE_SECURE_URL")
+    or getenv("SECURE_DATABASE_URL")
+    or _build_database_url(
+        getenv("POSTGRES_USER_SECURE", "secure"),
+        getenv("POSTGRES_PASSWORD_SECURE", "pwd"),
+        getenv("POSTGRES_HOST", "db-main"),
+        getenv("POSTGRES_PORT", "5432"),
+        getenv("POSTGRES_DB_USERS", "sauvetage_users"),
+    )
 )
 MONGODB_URL = getenv("MONGODB_URL", "mongodb://app:pwd@db-logs:27017/sauvetage_logs")
 MONGO_DB_NAME = getenv("MONGO_DB_LOGS", "sauvetage_logs")

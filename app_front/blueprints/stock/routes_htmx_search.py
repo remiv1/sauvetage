@@ -34,7 +34,7 @@ from app_front.blueprints.stock.utils import (
     create_variation_for_object,
     update_variation_for_object,
     delete_variation_for_object,
-    push_product_wc,
+    push_product_partners,
 )
 
 bp_stock_htmx_search = Blueprint(
@@ -518,11 +518,11 @@ def variation_delete(object_id: int, variation_id: int):
     )
 
 
-@bp_stock_htmx_search.post("/object/<int:object_id>/wc-push")
-def product_wc_push(object_id: int):
-    """Pousse un produit vers le Site Internet (WooCommerce) et demande un refresh du tableau."""
+@bp_stock_htmx_search.post("/object/<int:object_id>/partners-push")
+def product_partners_push(object_id: int):
+    """Pousse un produit vers WooCommerce et Henrri, puis demande un refresh du tableau."""
     try:
-        push_product_wc(object_id)
+        push_product_partners(object_id)
         notif = (
             '<div id="wc-push-notification" hx-swap-oob="true">'
             '<div class="alert alert-success wc-push-notif">'
@@ -533,11 +533,11 @@ def product_wc_push(object_id: int):
         response.headers["HX-Trigger"] = "refreshTable"
         return response
     except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Erreur push WooCommerce produit %d : %s", object_id, exc)
+        logger.exception("Erreur sync partenaires produit %d : %s", object_id, exc)
         notif = (
             f'<div id="wc-push-notification" hx-swap-oob="true">'
             f'<div class="alert alert-danger wc-push-notif">'
-            f'Erreur lors de l\'envoi vers le Site Internet : {exc}'
+            f'Erreur lors de l\'envoi vers les partenaires : {exc}'
             f'</div></div>'
         )
         return make_response(notif, 200)

@@ -5,12 +5,14 @@ from unittest.mock import MagicMock, patch
 from flask import Flask
 import pytest
 from henrri_connect.models import (
+    Address,
+    Contact,
     Customer,
     Document,
     DocumentLine,
     Item as HenriItem,
 )
-from app_front.blueprints.customer.routes import customer_wc_push
+from app_front.blueprints.customer.routes import customer_partners_push
 from app_front.blueprints.order import utils as order_utils
 from app_front.blueprints.order.routes import order_wc_push
 from app_front.blueprints.order.utils_henrri import (
@@ -70,6 +72,27 @@ def test_customer_to_dict_henrri_contract_for_individual(
     Customer(**payload_dict)
 
 
+def test_customer_to_dict_henrri_includes_id_for_update(individual_customer: Customers) -> None:
+    """Le payload Henrri doit inclure l'identifiant client lors d'une mise à jour."""
+    customer = individual_customer
+    customer.henrri_id = "456"
+
+    payload = customer.to_dict_henrri()
+
+    assert payload["id"] == 456
+    Customer(**payload)
+
+
+def test_customer_to_dict_henrri_omits_contact_when_requested(
+    individual_customer: Customers,
+) -> None:
+    """Le payload client seul ne doit pas inclure de contact."""
+    payload = individual_customer.to_dict_henrri(with_contact=False)
+
+    assert "contacts" not in payload
+    Customer(**payload)
+
+
 def test_invoice_to_dict_henrri_contract(
     henri_invoice_context: tuple[Customers, Order, Invoice, InvoiceLine, OrderLine],
 ) -> None:
@@ -79,9 +102,10 @@ def test_invoice_to_dict_henrri_contract(
     payload = invoice.to_dict_henrri()
 
     assert payload["document_type_id"] == 1
-    assert payload["customer_id"] == 1
+    assert payload["customer_id"] == 9
     assert payload["customer"]["type"] == "individual"
     assert payload["customer_address"]["city"] == "Paris"
+    assert payload["customer_address"]["post_code"] == "75002"
     assert payload["price_before_tax"] == 150.0
     assert payload["tax_amount"] == 30.0
     assert payload["price_after_tax"] == 180.0
@@ -89,13 +113,14 @@ def test_invoice_to_dict_henrri_contract(
 
 
 def test_henri_product_contract(henri_book_product: GeneralObjects) -> None:    # pylint: disable=W0621
-    """Le payload produit Henri doit respecter le contrat Item du SDK."""
+    """Le payload produit Henrri utilise le nom comme description d'article."""
     obj = henri_book_product
 
     payload = obj.to_dict_henrri()
 
     assert payload["reference"] == "9781234567890"
-    assert payload["description"] == "Description produit Henri"
+    assert payload["description"] == obj.name
+    assert payload["description"] != obj.description
     assert payload["vat_percent"] == 20.0
     assert payload["selling_price_without_tax"] == 19.99
     assert payload["selling_price_with_tax"] == 23.988
@@ -135,9 +160,37 @@ def test_henri_invoice_orchestrates_customer_product_and_document(
     line = henri_sync_context["line"]
 
     mock_hcs = MagicMock()
-    mock_hcs.create_customer.return_value = 5001
+    mock_hcs.upsert_customer.return_value = Customer(
+        id=5001,
+        name="Julie Benoit",
+        address=Address(
+            id=701,
+            city="Lille",
+            post_code="59000",
+            is_post_code_shared=False,
+        ),
+        contacts=[
+            Contact(
+                id=801,
+                first_name="Julie",
+                last_name="Benoit",
+            ),
+        ],
+    )
+    mock_hcs.upsert_contact.return_value = Contact(
+        id=801,
+        first_name="Julie",
+        last_name="Benoit",
+    )
     mock_hps = MagicMock()
-    mock_hps.create_product.return_value = 8001
+    mock_hps.upsert_product.return_value = HenriItem(
+        id=8001,
+        vat_percent=20.0,
+        creation_date="2026-08-14",
+        is_tax_included=False,
+        purchase_price=0.0,
+        is_a_group=False,
+    )
     mock_hds = MagicMock()
     remote_customer_payload = customer.to_dict_henrri() # type: ignore
     remote_customer_payload["contacts"][0]["role"] = "administrateur"
@@ -195,14 +248,6 @@ def test_henri_invoice_orchestrates_customer_product_and_document(
     })
 
     with patch(
-            "app_front.blueprints.order.utils_henrri.check_customer",
-            return_value=False,
-        ), \
-         patch(
-            "app_front.blueprints.order.utils_henrri.check_product",
-            return_value=False,
-        ), \
-         patch(
             "app_front.blueprints.order.utils_henrri.HenrriCustomersService",
             return_value=mock_hcs
         ), \
@@ -216,12 +261,14 @@ def test_henri_invoice_orchestrates_customer_product_and_document(
         ):
         document, synced_invoice = create_invoice(invoice)  # type: ignore
 
-    assert synced_invoice.customer.henrri_id == 5001
+    assert synced_invoice.customer.henrri_id == "5001"
+    assert synced_invoice.customer.addresses[0].henrri_id == 701
+    assert synced_invoice.customer.part.contact_henrri_id == 801
     assert product.henrri_id == 8001    # type: ignore
     assert document.id == 9001
     assert line.henrri_id == 1001   # type: ignore
-    assert mock_hcs.create_customer.call_count == 1
-    assert mock_hps.create_product.call_count == 1
+    assert mock_hcs.upsert_customer.call_count == 1
+    assert mock_hps.upsert_product.call_count == 1
     assert mock_hds.add_line.call_count == 1
     mock_hds.finalize_document.assert_called_once_with(9001)
 
@@ -238,7 +285,24 @@ def test_create_invoice_does_not_send_lines_when_creating_henrri_document(
     product.henrri_id = None    # type: ignore
 
     mock_hcs = MagicMock()
+    mock_hcs.upsert_customer.return_value = Customer(
+        id=5001,
+        name="Julie Benoit",
+        address=Address(
+            id=701,
+            is_post_code_shared=False,
+        ),
+        contacts=[Contact(id=801)],
+    )
     mock_hps = MagicMock()
+    mock_hps.upsert_product.return_value = HenriItem(
+        id=8001,
+        vat_percent=20.0,
+        creation_date="2026-08-14",
+        is_tax_included=False,
+        purchase_price=0.0,
+        is_a_group=False,
+    )
     mock_hds = MagicMock()
     mock_hds.create_document.return_value = Document(**{
         "id": 901,
@@ -290,14 +354,6 @@ def test_create_invoice_does_not_send_lines_when_creating_henrri_document(
         "user_can_validate": True,
     })
     with patch(
-            "app_front.blueprints.order.utils_henrri.check_customer",
-            return_value=False,
-        ), \
-         patch(
-            "app_front.blueprints.order.utils_henrri.check_product",
-            return_value=False,
-        ), \
-         patch(
             "app_front.blueprints.order.utils_henrri.HenrriCustomersService",
             return_value=mock_hcs,
         ), \
@@ -385,15 +441,39 @@ def test_sync_invoice_with_henrri_logs_failed_status_when_sync_fails() -> None:
     assert "Échec réseau Henrri" in str(invoice_repo.add_sync_log.call_args.kwargs["error_message"])
 
 
-def test_customer_wc_push_returns_http_error_when_sync_fails() -> None:
-    """Un push WooCommerce en échec doit renvoyer un statut HTTP d'erreur et non un 204."""
+def test_customer_partners_push_uses_partner_sync_for_both_targets() -> None:
+    """
+    Le point d'entrée client doit déclencher le push multi-partenaires.
+    """
     app = Flask(__name__)
     app.secret_key = "test-secret"
-    with app.test_request_context("/customer/42/wc-push", method="POST") as request_ctx:
+    with app.test_request_context("/customer/42/partners-push", method="POST") as request_ctx:
+        request_ctx.session["permissions"] = "3"    # type: ignore
+        request_ctx.session["username"] = "alice"    # type: ignore
+        with patch(
+            "app_front.blueprints.customer.routes.push_customer_partners",
+            return_value=(True, None),
+        ) as mock_push, patch(
+            "app_front.blueprints.customer.routes.log_client_event"
+        ), patch(
+            "app_front.blueprints.customer.routes.url_for",
+            return_value="/customer/42",
+        ):
+            response = customer_partners_push(42)
+
+    assert response.status_code == 204
+    mock_push.assert_called_once_with(42)
+
+
+def test_customer_partners_push_returns_http_error_when_sync_fails() -> None:
+    """Un push partenaires en échec doit renvoyer un statut HTTP d'erreur et non un 204."""
+    app = Flask(__name__)
+    app.secret_key = "test-secret"
+    with app.test_request_context("/customer/42/partners-push", method="POST") as request_ctx:
         request_ctx.session["permissions"] = "3"    # type: ignore
         request_ctx.session["username"] = "alice"   # type: ignore
         with patch(
-            "app_front.blueprints.customer.routes.push_customer_wc",
+            "app_front.blueprints.customer.routes.push_customer_partners",
             return_value=(False, "Erreur WooCommerce"),
         ), patch(
             "app_front.blueprints.customer.routes.log_client_event"
@@ -401,7 +481,7 @@ def test_customer_wc_push_returns_http_error_when_sync_fails() -> None:
             "app_front.blueprints.customer.routes.url_for",
             return_value="/customer/42",
         ):
-            response = customer_wc_push(42)
+            response = customer_partners_push(42)
 
     assert response.status_code == 500
     assert response.get_data(as_text=True) == "Erreur WooCommerce"
@@ -480,35 +560,59 @@ def test_check_customer_returns_false_when_customer_lookup_fails() -> None:
         assert check_customer("999") is False
 
 
-def test_create_invoice_reuses_existing_remote_customer_and_product(
+def test_create_invoice_updates_known_customer_product_and_document(
     henri_sync_context: dict[str, object],
 ) -> None:
-    """Le flux doit réutiliser le client et le produit déjà connus par la fixture Henri."""
+    """Des entités déjà connues chez Henrri doivent être mises à jour (PUT) et non recréées."""
     customer = henri_sync_context["customer"]
-    customer.id = 81    # type: ignore
+    customer.henrri_id = "81"   # type: ignore
     product = henri_sync_context["product"]
-    product.id = 81 # type: ignore
+    product.henrri_id = 82  # type: ignore
     invoice = henri_sync_context["invoice"]
+    invoice.henrri_id = "9001"  # type: ignore
+    line = henri_sync_context["line"]
+    line.henrri_id = None   # type: ignore
 
     mock_hcs = MagicMock()
+    mock_hcs.upsert_customer.return_value = Customer(
+        id=81,
+        name="Julie Benoit",
+        address=Address(
+            id=701,
+            is_post_code_shared=False,
+        ),
+        contacts=[Contact(id=801)]
+    )
     mock_hps = MagicMock()
+    mock_hps.upsert_product.return_value = HenriItem(
+        id=82,
+        vat_percent=20.0,
+        creation_date="2026-08-14",
+        is_tax_included=False,
+        purchase_price=0.0,
+        is_a_group=False,
+    )
     mock_hds = MagicMock()
-    mock_hds.create_document.return_value = Document(**{
+    mock_hds.get_document.return_value = Document(**{
         "id": 9001,
         "identity": "INV-SYNC",
         "document_type_id": 1,
         "finalized": False,
-        "title": "Facture de la commande du 2026-08-14",
-        "subtitle": "Facture Editions Sauvetage du 2026-08-14",
         "price_before_tax": 42.0,
         "tax_amount": 8.4,
         "price_after_tax": 50.4,
-        "due_label": "2026-09-12",
-        "date": "2026-08-14",
-        "validated": True,
-        "validation_date": "2026-08-14",
-        "customer_id": 1,
-        "customer": Customer(**customer.to_dict_henrri()),  # type: ignore
+        "customer_id": 81,
+        "user_can_validate": True,
+    })
+    mock_hds.modify_document.return_value = Document(**{
+        "id": 9001,
+        "identity": "INV-SYNC",
+        "document_type_id": 1,
+        "finalized": False,
+        "price_before_tax": 42.0,
+        "tax_amount": 8.4,
+        "price_after_tax": 50.4,
+        "customer_id": 81,
         "user_can_validate": True,
     })
     mock_hds.add_line.return_value = DocumentLine(**{
@@ -517,17 +621,10 @@ def test_create_invoice_reuses_existing_remote_customer_and_product(
         "reference": "ART-SYNC",
         "description": "Livre sync",
         "selling_price_without_tax": 42.0,
-        "purchasing_price_without_tax": 0.0,
         "vat_percent": 20.0,
         "quantity": 1.0,
         "is_tax_included": False,
-        "total_without_tax": 42.0,
-        "total_with_tax": 50.4,
         "are_elements_of_group_shown": False,
-        "is_a_group": False,
-        "does_group_own_different_vat": False,
-        "is_member_of_a_group": False,
-        "is_adjustment_of_group": False,
         "type_id": 3,
     })
     mock_hds.finalize_document.return_value = Document(**{
@@ -535,26 +632,14 @@ def test_create_invoice_reuses_existing_remote_customer_and_product(
         "identity": "INV-SYNC",
         "document_type_id": 1,
         "finalized": True,
-        "title": "Facture de la commande du 2026-08-14",
         "price_before_tax": 42.0,
         "tax_amount": 8.4,
         "price_after_tax": 50.4,
-        "due_label": "2026-09-12",
-        "date": "2026-08-14",
-        "validated": True,
-        "customer_id": 1,
+        "customer_id": 81,
         "user_can_validate": True,
     })
 
     with patch(
-            "app_front.blueprints.order.utils_henrri.check_customer",
-            return_value=True,
-        ), \
-         patch(
-            "app_front.blueprints.order.utils_henrri.check_product",
-            return_value=True,
-        ), \
-         patch(
             "app_front.blueprints.order.utils_henrri.HenrriCustomersService",
             return_value=mock_hcs,
         ), \
@@ -570,8 +655,64 @@ def test_create_invoice_reuses_existing_remote_customer_and_product(
 
     assert document.id == 9001
     assert synced_invoice.customer.henrri_id == "81"
-    assert product.id == 81 # type: ignore
-    assert product.henrri_id == "81"    # type: ignore
-    mock_hcs.create_customer.assert_not_called()
-    mock_hps.create_product.assert_not_called()
+    assert product.henrri_id == 82  # type: ignore
+    assert mock_hcs.upsert_customer.call_args.args[1] == "81"
+    assert mock_hps.upsert_product.call_args.args[1] == 82
+    mock_hds.create_document.assert_not_called()
+    mock_hds.modify_document.assert_called_once()
     mock_hds.add_line.assert_called_once()
+
+
+def test_create_invoice_leaves_finalized_remote_document_untouched(
+    henri_sync_context: dict[str, object],
+) -> None:
+    """Une facture déjà finalisée chez Henrri ne doit être ni modifiée ni refinalisée."""
+    customer = henri_sync_context["customer"]
+    customer.henrri_id = "81"   # type: ignore
+    product = henri_sync_context["product"]
+    product.henrri_id = 82  # type: ignore
+    invoice = henri_sync_context["invoice"]
+    invoice.henrri_id = "9500"  # type: ignore
+
+    mock_hcs = MagicMock()
+    mock_hcs.upsert_customer.return_value = Customer(id=81, name="Julie Benoit")
+    mock_hps = MagicMock()
+    mock_hps.upsert_product.return_value = HenriItem(
+        id=82,
+        vat_percent=20.0,
+        creation_date="2026-08-14",
+        is_tax_included=False,
+        purchase_price=0.0,
+        is_a_group=False,
+    )
+    mock_hds = MagicMock()
+    mock_hds.get_document.return_value = Document(**{
+        "id": 9500,
+        "identity": "INV-FINAL",
+        "document_type_id": 1,
+        "finalized": True,
+        "price_before_tax": 42.0,
+        "tax_amount": 8.4,
+        "price_after_tax": 50.4,
+        "customer_id": 81,
+        "user_can_validate": True,
+    })
+
+    with patch(
+            "app_front.blueprints.order.utils_henrri.HenrriCustomersService",
+            return_value=mock_hcs,
+        ), \
+         patch(
+            "app_front.blueprints.order.utils_henrri.HenrriProductsService",
+            return_value=mock_hps,
+        ), \
+         patch(
+            "app_front.blueprints.order.utils_henrri.HenrriDocumentsService",
+            return_value=mock_hds,
+        ):
+        document, _ = create_invoice(invoice)   # type: ignore
+
+    assert document.finalized is True
+    mock_hds.modify_document.assert_not_called()
+    mock_hds.add_line.assert_not_called()
+    mock_hds.finalize_document.assert_not_called()

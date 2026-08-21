@@ -272,7 +272,7 @@
   transition: background 0.2s;
 }
 .btn-delete:hover {
-  background: rgb(131, 0, 12.956043956);
+  background: rgb(51.3725490196%, 0%, 5.0808015514%);
 }
 
 .btn-cancel {
@@ -412,6 +412,21 @@
 
 .hidden {
   display: none;
+}
+
+/* ── Modale de confirmation ──────────────────────────────────────────────── */
+.confirm-modal {
+  max-width: 460px;
+}
+.confirm-modal__message {
+  margin: 0;
+  color: #404040;
+}
+.confirm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0 2rem 2rem;
 }
 
 /* ── Notifications ───────────────────────────────────────────────────────── */
@@ -846,3 +861,5 @@
     padding: 0.25rem 0.5rem;
   }
 }
+
+/*# sourceMappingURL=customer.css.map */

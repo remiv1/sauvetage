@@ -12,7 +12,7 @@ from app_front.blueprints.customer.utils.users import (
     form_to_dict,
     create_from_dict,
     get_customer,
-    push_customer_wc,
+    push_customer_partners,
 )
 from app_front.utils.decorators import permission_required, COMMERCIAL, COMPTA, DIRECTION
 from app_front.utils.request_meta import get_client_ip, get_request_log_metadata
@@ -69,25 +69,28 @@ def view(customer_id: int):
     return render_page("customer_view", customer=customer)
 
 
-@bp_customer.post("/<int:customer_id>/wc-push")
+@bp_customer.post("/<int:customer_id>/partners-push")
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
-def customer_wc_push(customer_id: int):
-    """Pousse un client vers WooCommerce (création ou mise à jour)."""
-    success, error_message = push_customer_wc(customer_id)
+def customer_partners_push(customer_id: int):
+    """Pousse un client vers WooCommerce et Henrri dans la même opération."""
+    success, error_message = push_customer_partners(customer_id)
     status_code = 204 if success else 500
     log_payload = get_request_log_metadata(request) or {}
     if error_message:
         log_payload["error"] = error_message
     log_client_event(
         client_id=str(customer_id),
-        event="wc_push",
+        event="partners_push",
         user_id=session.get("username"),
         ip_address=get_client_ip(request),
         status_code=status_code,
         obj_metadata=log_payload,
     )
     if not success:
-        return make_response(error_message or "Erreur de synchronisation WooCommerce", status_code)
+        return make_response(
+            error_message or "Erreur de synchronisation vers les partenaires",
+            status_code
+        )
     response = make_response("", status_code)
     response.headers["HX-Redirect"] = url_for("customer.view", customer_id=customer_id)
     return response

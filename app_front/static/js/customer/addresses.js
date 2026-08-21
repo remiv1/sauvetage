@@ -4,7 +4,7 @@
  * Affiche les éléments actifs et inactifs dans des sections séparées.
  */
 
-import { fetchJson, patchJson, postJson, serializeForm, showNotification } from './functions.js';
+import { confirmModal, fetchJson, patchJson, postJson, serializeForm, showNotification } from './functions.js';
 
 /* ── Icônes SVG (inline, 16×16) ──────────────────────────────────────────── */
 const ICON = {
@@ -117,7 +117,11 @@ function createAddressCard(addr) {
     card.querySelector('[data-action="edit"]')?.addEventListener('click', () => enterEditMode(card, addr));
 
     card.querySelector('[data-action="deactivate"]')?.addEventListener('click', async () => {
-        if (!confirm(`Supprimer l'adresse « ${addr.address_name} » ?`)) return;
+        const confirmed = await confirmModal(
+            `Supprimer l'adresse « ${addr.address_name} » ?`,
+            { title: 'Supprimer une adresse', confirmLabel: 'Supprimer' }
+        );
+        if (!confirmed) return;
         const result = await patchJson(
             `/customer/data/${globalThis.CUSTOMER_ID}/address/${addr.id}`,
             { is_active: false }

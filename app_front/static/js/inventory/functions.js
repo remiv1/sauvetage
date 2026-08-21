@@ -2,6 +2,8 @@
  * Fonctions utilitaires partagées pour le module inventory.
  */
 
+import { jsonHeaders } from '../common/csrf.js';
+
 /**
  * Effectue une requête GET JSON.
  * @param {string} url - URL de l'endpoint à appeler.
@@ -29,7 +31,7 @@ export async function postJson(url, body, headers = {}) {
     try {
         const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...headers },
+            headers: jsonHeaders(headers),
             body: JSON.stringify(body),
         });
         const data = await res.json();

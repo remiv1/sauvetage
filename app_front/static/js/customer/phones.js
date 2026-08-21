@@ -4,7 +4,7 @@
  * Affiche les éléments actifs et inactifs dans des sections séparées.
  */
 
-import { fetchJson, patchJson, postJson, serializeForm, showNotification } from './functions.js';
+import { confirmModal, fetchJson, patchJson, postJson, serializeForm, showNotification } from './functions.js';
 
 /* ── Icônes SVG (inline, 16×16) ──────────────────────────────────────────── */
 const ICON = {
@@ -108,7 +108,11 @@ function createPhoneCard(phone) {
     card.querySelector('[data-action="edit"]')?.addEventListener('click', () => enterEditMode(card, phone));
 
     card.querySelector('[data-action="deactivate"]')?.addEventListener('click', async () => {
-        if (!confirm(`Supprimer le téléphone « ${phone.phone_number} » ?`)) return;
+        const confirmed = await confirmModal(
+            `Supprimer le téléphone « ${phone.phone_number} » ?`,
+            { title: 'Supprimer un téléphone', confirmLabel: 'Supprimer' }
+        );
+        if (!confirmed) return;
         const result = await patchJson(
             `/customer/data/${globalThis.CUSTOMER_ID}/phone/${phone.id}`,
             { is_active: false }

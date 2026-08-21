@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks
 from app_back.db_connection import config
 from db_models.repositories.orders.woo import OrdersWooRepository
+from db_models.services.sync import sync_all_customers, sync_all_products
 from db_models.services.woo_commerce.products import WCProductsService
 
 
@@ -58,11 +59,21 @@ def import_vat_slugs():
 
 
 def _run_sync_catalog() -> None:
-    """Tâche exécutée en arrière-plan : synchronise le catalogue vers WooCommerce."""
+    """Tâche exécutée en arrière-plan : synchronise le catalogue vers WooCommerce et Henrri."""
     session = next(config.get_main_session())
     try:
-        wc_service = WCProductsService(session, separated_keys=True)
-        wc_service.export_all_products()
+        results = sync_all_products(session)
+        logger.info("Synchronisation catalogue partenaires terminée : %s", results)
+    finally:
+        session.close()
+
+
+def _run_sync_customers() -> None:
+    """Tâche exécutée en arrière-plan : synchronise les clients vers WooCommerce et Henrri."""
+    session = next(config.get_main_session())
+    try:
+        results = sync_all_customers(session)
+        logger.info("Synchronisation clients partenaires terminée : %s", results)
     finally:
         session.close()
 
@@ -96,12 +107,19 @@ def sync_tags(background_tasks: BackgroundTasks):
 
 @router.post("/sync-catalog", status_code=202)
 def sync_catalog(background_tasks: BackgroundTasks):
-    """Déclenche la synchronisation du catalogue produits vers WooCommerce en arrière-plan.
+    """Déclenche la synchronisation du catalogue produits vers WooCommerce et Henrri.
 
     Retourne immédiatement 202 Accepted pendant que la tâche s'exécute.
     """
     background_tasks.add_task(_run_sync_catalog)
     return {"status": "synchronisation démarrée"}
+
+
+@router.post("/sync-customers", status_code=202)
+def sync_customers(background_tasks: BackgroundTasks):
+    """Déclenche la synchronisation des clients vers WooCommerce et Henrri."""
+    background_tasks.add_task(_run_sync_customers)
+    return {"status": "synchronisation des clients démarrée"}
 
 
 @router.post("/sync-orders")

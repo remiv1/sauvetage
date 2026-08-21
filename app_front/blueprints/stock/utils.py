@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from sqlalchemy import select, distinct, text
 
-from app_front.config import MAILS, db_conf, post
+from app_front.config import MAILS, WOO_COMMERCE, db_conf, post
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
     OrderInCreateForm,
@@ -29,6 +29,7 @@ from db_models.repositories.stocks import (
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.objects.variations import VariationsRepository
 from db_models.repositories.tags import TagsRepository
+from db_models.services.henrri import sync_product_to_henrri
 from db_models.services.woo_commerce.products import WCProductsService
 
 logger = logging.getLogger("stock_utils")
@@ -118,7 +119,7 @@ def send_order_by_mail(order: Any) -> str | bool:
         if status in {"success", "accepted_by_smtp"}:
             return status
         return False
-    except Exception as exc:  # pragma: no cover - sécurité si le service back est indisponible
+    except Exception as exc:
         logger.exception(
             "Échec de la demande d'envoi du bon de commande %s par email au fournisseur %s : %s",
             getattr(order, "id", None),
@@ -683,18 +684,22 @@ def delete_variation_for_object(variation_id: int) -> bool:
     return True
 
 
-def push_product_wc(object_id: int) -> None:
-    """Pousse un produit vers WooCommerce (création ou mise à jour).
+def push_product_partners(object_id: int) -> None:
+    """Pousse un produit vers WooCommerce et Henrri selon le workflow multi-partenaires.
 
     Args:
         object_id: Identifiant local du produit (GeneralObjects).
     """
     session = db_conf.get_main_session()
-    svc = WCProductsService(session)
-    svc.update_product(object_id)
+    product = ObjectsRepository(session).get_by_ref(object_id, only_actives=False)
+    if product is None:
+        raise ValueError(f"Produit {object_id} introuvable.")
+
+    WCProductsService(session).update_product(object_id)
+    sync_product_to_henrri(product)
+    session.commit()
 
 
 def trigger_catalog_wc_sync() -> None:
     """Déclenche la synchronisation globale du catalogue vers WooCommerce via app-back."""
-    from app_front.config import post, WOO_COMMERCE # pylint: disable=import-outside-toplevel
     post(WOO_COMMERCE["sync_catalog"], {})

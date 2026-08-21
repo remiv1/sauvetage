@@ -13,6 +13,7 @@
             data-vat-rate="{{ i.vat_rate.rate | float if i.vat_rate else 0 }}"
             style="cursor:pointer">
             {{ i.name }}
+            <small class="text-muted"> — EAN : {{ i.ean13 }}</small>
         </li>
     {% endfor %}
 </ul>

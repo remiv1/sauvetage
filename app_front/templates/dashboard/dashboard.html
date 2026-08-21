@@ -1,6 +1,16 @@
 {% extends layout.extend_layout %}
 {% block content %}
     <div class="dashboard-container">
+        <div class="h2-header">
+            <div class="header-top">
+                <a href="{{ url_for('home') }}" class="btn btn-back"
+                   title="Retour à l'accueil">
+                    {% include "svg/back.html" %}
+                </a>
+                <h2>Tableau de bord</h2>
+            </div>
+        </div>
+
         <div class="tabs-row">
             <button class="tab active" data-target="orders">Commandes</button>
             <button class="tab" data-target="stocks">Stocks</button>

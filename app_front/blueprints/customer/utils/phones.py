@@ -7,6 +7,13 @@ from db_models.repositories.customers import (
 )
 from app_front.config import db_conf
 
+# Champs modifiables depuis l'API : évite toute affectation de masse (id, customer_id, dates...)
+_ALLOWED_FIELDS = ("phone_name", "phone_number", "is_active")
+
+
+def _filter_fields(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: value for key, value in data.items() if key in _ALLOWED_FIELDS}
+
 
 def get_phones(customer_id: int) -> List[Dict[str, Any]]:
     """Récupère la liste des téléphones d'un client.
@@ -31,6 +38,7 @@ def add_phone(customer_id: int, phone_data: Dict[str, Any]) -> Dict[str, Any] | 
         Dict[str, Any] | None: Les données du téléphone ajouté ou None si échec.
     """
     repo = CustomerPhonesRepository(db_conf.get_main_session())
+    phone_data = _filter_fields(phone_data)
     phone_data["customer_id"] = customer_id
     phone = repo.add_phone(phone_data)
     if not phone:
@@ -52,7 +60,7 @@ def update_phone(
     """
     repo = CustomerPhonesRepository(db_conf.get_main_session())
     try:
-        phone = repo.update_phone(customer_id, phone_id, phone_data, only_active=False)
+        phone = repo.update_phone(customer_id, phone_id, _filter_fields(phone_data), only_active=False)
         return phone.to_dict()
     except ValueError as e:
         raise ValueError(f"Téléphone #{phone_id} introuvable.") from e

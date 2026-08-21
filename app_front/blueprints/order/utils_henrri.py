@@ -16,12 +16,14 @@ Exceptions:
 """
 import logging
 from typing import Any
-from henrri_connect.models import Document, DocumentLine, Item, Customer
+from henrri_connect.models import Document, DocumentLine
 from henrri_connect.exc import HenrriError
 from db_models.services.henrri import (
     HenrriProductsService,
     HenrriCustomersService,
     HenrriDocumentsService,
+    sync_customer_to_henrri,
+    sync_product_to_henrri,
 )
 from db_models.objects.invoices import Invoice
 
@@ -101,6 +103,10 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
     """
     Crée une facture chez Henrri à partir des données en base métier.
 
+    Le client, les produits et le document sont créés (POST) ou mis à jour (PUT)
+    selon la présence d'un identifiant Henrri. Une facture déjà finalisée chez
+    Henrri n'est pas modifiée.
+
     Arguments:
         invoice: L'objet Invoice contenant les données de la facture.
 
@@ -114,110 +120,111 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
     hps = HenrriProductsService()
     hds = HenrriDocumentsService()
 
-    # ——— 1. Validation des clients ———
+    # ——— Synchronisation du client et des produits ———
+    _sync_customer_step(invoice, hcs)
+    _sync_products_step(invoice, hps)
+
+    # ——— Création (POST) ou mise à jour (PUT) de la facture ———
     try:
-        if invoice.customer.henrri_id is None:
-            if invoice.customer.id is not None:
-                candidate_customer_id = str(invoice.customer.id)
-                if check_customer(candidate_customer_id):
-                    invoice.customer.henrri_id = candidate_customer_id
-                else:
-                    customer = Customer(**invoice.customer.to_dict_henrri())
-                    henrri_id = hcs.create_customer(customer)
-                    invoice.customer.henrri_id = henrri_id
-            else:
-                customer = Customer(**invoice.customer.to_dict_henrri())
-                henrri_id = hcs.create_customer(customer)
-                invoice.customer.henrri_id = henrri_id
+        document_id, remote_document = _upsert_henrri_document(invoice, hds)
+    except HenrriSyncError:
+        raise
     except Exception as e:
         _log_henrri_business_error(
             invoice=invoice,
-            message="Erreur lors de la création du client Henrri",
+            message="Erreur lors de la création de la facture Henrri",
+            exc=e,
+            step="document",
+        )
+        raise HenrriSyncError(
+            f"Échec création facture: {e}",
+            status_code=_extract_status_code(e),
+            details=_extract_error_details(e),
+            step="document",
+        ) from e
+
+    if remote_document is not None and remote_document.finalized:
+        logger.info(
+            "Facture Henrri %s déjà finalisée, aucune modification appliquée",
+            document_id,
+        )
+        return remote_document, invoice
+
+    _create_missing_lines(invoice, hds, document_id)
+
+    # ——— Finalisation de la facture ———
+    try:
+        finalized = hds.finalize_document(document_id)
+    except Exception as e:
+        _log_henrri_business_error(
+            invoice=invoice,
+            message="Erreur lors de la finalisation de la facture Henrri %s",
+            exc=e,
+            step="finalize",
+        )
+        raise HenrriSyncError(
+            f"Échec finalisation facture: {e}",
+            status_code=_extract_status_code(e),
+            details=_extract_error_details(e),
+            step="finalize",
+        ) from e
+
+    return finalized, invoice
+
+
+def _sync_customer_step(invoice: Invoice, hcs: HenrriCustomersService) -> None:
+    """Synchronise le client de la facture chez Henrri (POST ou PUT)."""
+    try:
+        sync_customer_to_henrri(invoice.customer, hcs)
+    except Exception as e:
+        _log_henrri_business_error(
+            invoice=invoice,
+            message="Erreur lors de la synchronisation du client Henrri",
             exc=e,
             step="customer",
         )
         raise HenrriSyncError(
-            f"Échec création client: {e}",
+            f"Échec synchronisation client: {e}",
             status_code=_extract_status_code(e),
             details=_extract_error_details(e),
             step="customer",
         ) from e
 
-    # ——— 2. Création des produits ———
+
+def _sync_products_step(invoice: Invoice, hps: HenrriProductsService) -> None:
+    """Synchronise les produits facturés chez Henrri (POST ou PUT)."""
     seen = set()
     for line in invoice.lines:
         product = line.order_line.general_object
-        if product not in seen:
-            seen.add(product)
-            if product.henrri_id is None:
-                try:
-                    if product.id is not None:
-                        candidate_product_id = str(product.id)
-                        if check_product(candidate_product_id):
-                            product.henrri_id = candidate_product_id
-                        else:
-                            henrri_item = Item(**product.to_dict_henrri())
-                            product_id = hps.create_product(henrri_item)
-                            product.henrri_id = product_id
-                    else:
-                        henrri_item = Item(**product.to_dict_henrri())
-                        product_id = hps.create_product(henrri_item)
-                        product.henrri_id = product_id
-                except Exception as e:
-                    _log_henrri_business_error(
-                        invoice=invoice,
-                        message="Erreur création produit %s Henrri: %s",
-                        exc=e,
-                        step="product",
-                        product_id=product.id,
-                    )
-                    raise HenrriSyncError(
-                        f"Échec création produit {product.id}: {e}",
-                        status_code=_extract_status_code(e),
-                        details=_extract_error_details(e),
-                        step="product",
-                    ) from e
-
-    # ——— 3. Création de la facture (non finalisée, sans lignes) ———
-    # Ou récupération si elle existe déjà
-    if invoice.henrri_id:
-        # La facture existe déjà, on la récupère depuis Henrri
-        logger.debug("Facture %s déjà créée sur Henrri, relance des lignes", invoice.henrri_id)
-        document_id = int(invoice.henrri_id)
-    else:
+        if product in seen:
+            continue
+        seen.add(product)
         try:
-            henrri_doc = _build_henrri_document_for_creation(invoice)
-            logger.debug("Création de la facture: %s", henrri_doc)
-            created = hds.create_document(henrri_doc)
+            sync_product_to_henrri(product, hps)
         except Exception as e:
             _log_henrri_business_error(
                 invoice=invoice,
-                message="Erreur lors de la création de la facture Henrri",
+                message="Erreur synchronisation produit %s Henrri: %s",
                 exc=e,
-                step="document",
+                step="product",
+                product_id=product.id,
             )
             raise HenrriSyncError(
-                f"Échec création facture: {e}",
+                f"Échec synchronisation produit {product.id}: {e}",
                 status_code=_extract_status_code(e),
                 details=_extract_error_details(e),
-                step="document",
+                step="product",
             ) from e
 
-        if created.id is None:
-            raise HenrriSyncError(
-                "Facture créée mais sans ID",
-                step="document",
-                details={"created": str(created)},
-            )
 
-        invoice.henrri_id = str(created.id)
-        document_id = created.id
-
-    # ——— 4. Création des lignes via l'endpoint dédié ———
-    # (seulement si elles n'existent pas déjà)
+def _create_missing_lines(
+    invoice: Invoice,
+    hds: HenrriDocumentsService,
+    document_id: int,
+) -> None:
+    """Crée chez Henrri les lignes de facture qui n'y sont pas encore."""
     for local_line in invoice.lines:
         if local_line.henrri_id:
-            # Ligne déjà créée sur Henrri, on la saute
             logger.debug("Ligne %s déjà créée sur Henrri", local_line.reference)
             continue
 
@@ -246,24 +253,30 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
             )
         local_line.henrri_id = created_line.id
 
-    # ——— 5. Finalisation de la facture ———
-    try:
-        finalized = hds.finalize_document(document_id)
-    except Exception as e:
-        _log_henrri_business_error(
-            invoice=invoice,
-            message="Erreur lors de la finalisation de la facture Henrri %s",
-            exc=e,
-            step="finalize",
-        )
-        raise HenrriSyncError(
-            f"Échec finalisation facture: {e}",
-            status_code=_extract_status_code(e),
-            details=_extract_error_details(e),
-            step="finalize",
-        ) from e
 
-    return finalized, invoice
+def _upsert_henrri_document(
+    invoice: Invoice,
+    hds: HenrriDocumentsService,
+) -> tuple[int, Document | None]:
+    """Crée la facture chez Henrri, ou met à jour son en-tête si elle existe déjà."""
+    if not invoice.henrri_id:
+        created = hds.create_document(_build_henrri_document_for_creation(invoice))
+        if created.id is None:
+            raise HenrriSyncError(
+                "Facture créée mais sans ID",
+                step="document",
+                details={"created": str(created)},
+            )
+        invoice.henrri_id = str(created.id)
+        return created.id, created
+
+    document_id = int(invoice.henrri_id)
+    existing = hds.get_document(document_id)
+    if existing.finalized:
+        return document_id, existing
+
+    updated = hds.modify_document(document_id, _build_henrri_document_for_creation(invoice))
+    return document_id, updated
 
 
 def _extract_status_code(exc: Exception) -> int | None:

@@ -7,6 +7,13 @@ from db_models.repositories.customers import (
 )
 from app_front.config import db_conf
 
+# Champs modifiables depuis l'API : évite toute affectation de masse (id, customer_id, dates...)
+_ALLOWED_FIELDS = ("email_name", "email", "is_active")
+
+
+def _filter_fields(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: value for key, value in data.items() if key in _ALLOWED_FIELDS}
+
 
 def get_emails(customer_id: int) -> List[Dict[str, Any]]:
     """Récupère la liste des emails d'un client.
@@ -31,6 +38,7 @@ def add_email(customer_id: int, email_data: Dict[str, Any]) -> Dict[str, Any] | 
         Dict[str, Any] | None: Les données de l'email ajouté ou None si échec.
     """
     repo = CustomerMailsRepository(db_conf.get_main_session())
+    email_data = _filter_fields(email_data)
     email_data["customer_id"] = customer_id
     email = repo.add_email(email_data)
     if not email:
@@ -52,7 +60,7 @@ def update_email(
     """
     repo = CustomerMailsRepository(db_conf.get_main_session())
     try:
-        email = repo.update_email(customer_id, email_id, email_data, only_active=False)
+        email = repo.update_email(customer_id, email_id, _filter_fields(email_data), only_active=False)
         return email.to_dict()
     except ValueError as e:
         raise ValueError(f"E-mail #{email_id} introuvable.") from e

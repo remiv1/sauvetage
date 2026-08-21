@@ -8,17 +8,23 @@
             {# ── Affichage (lecture seule) ── #}
             <div id="info-display">
                 <div class="customer-header-row">
-                    <h2 class="customer-container__title">
-                        {% if customer.customer_type == 'part' and customer.part %}
-                            {{ customer.part.civil_title | default('') | capitalize }}
-                            {{ customer.part.first_name }}
-                            {{ customer.part.last_name }}
-                        {% elif customer.customer_type == 'pro' and customer.pro %}
-                            {{ customer.pro.company_name }}
-                        {% else %}
-                            Client #{{ customer.id }}
-                        {% endif %}
-                    </h2>
+                    <div class="customer-header-left">
+                        <a href="{{ url_for('customer.index') }}" class="btn btn-back"
+                           title="Retour à la gestion des clients">
+                            {% include "svg/back.html" %}
+                        </a>
+                        <h2 class="customer-container__title">
+                            {% if customer.customer_type == 'part' and customer.part %}
+                                {{ customer.part.civil_title | default('') | capitalize }}
+                                {{ customer.part.first_name }}
+                                {{ customer.part.last_name }}
+                            {% elif customer.customer_type == 'pro' and customer.pro %}
+                                {{ customer.pro.company_name }}
+                            {% else %}
+                                Client #{{ customer.id }}
+                            {% endif %}
+                        </h2>
+                    </div>
                     <div class="customer-actions">
                         <button class="icon-btn icon-btn--edit" id="btn-edit-info"
                                 title="Modifier les informations">
@@ -53,20 +59,18 @@
                     <div class="meta-item">
                         {# Badge synchronisation Site Internet #}
                         {% if customer.wpwc_id %}
+                        <strong>Identifiant Site Internet :</strong>
                             {% if customer.wpwc_sync_status == 'success' %}
-                            <strong>Identifiant Site Internet :</strong>
                             <span class="badge badge-wc badge-wc--synced"
                                   title="Synchronisé le {{ customer.wpwc_sync_at }} ({{ customer.wpwc_sync_operation }})">
                                 {{ customer.wpwc_id }}
                             </span>
                             {% elif customer.wpwc_sync_status == 'failed' %}
-                            <strong>Identifiant Site Internet :</strong>
                             <span class="badge badge-wc badge-wc--error"
                                   title="Erreur sync ({{ customer.wpwc_sync_at }}) : {{ customer.wpwc_sync_error }}">
                                 {{ customer.wpwc_id }} — Erreur
                             </span>
                             {% else %}
-                            <strong>Identifiant Site Internet :</strong>
                             <span class="badge badge-wc badge-wc--pending"
                                   title="Synchronisation en attente">
                                 {{ customer.wpwc_id }} — En attente
@@ -86,10 +90,40 @@
                         {% endif %}
                     </div>
                     <div class="meta-item">
+                        {# Badge synchronisation Henrri #}
+                        {% if customer.henrri_id %}
+                            {% if customer.henrri_sync_status == 'failed' %}
+                            <strong>Identifiant Henrri :</strong>
+                            <span class="badge badge-wc badge-wc--error"
+                                  title="Erreur sync ({{ customer.henrri_sync_at }}) : {{ customer.henrri_sync_error }}">
+                                {{ customer.henrri_id }} — Erreur
+                            </span>
+                            {% else %}
+                            <strong>Identifiant Henrri :</strong>
+                            <span class="badge badge-wc badge-wc--synced"
+                                  title="Synchronisé le {{ customer.henrri_sync_at | default('—') }} ({{ customer.henrri_sync_operation | default('—') }})">
+                                {{ customer.henrri_id }}
+                            </span>
+                            {% endif %}
+                        {% else %}
+                            <strong>Identifiant Henrri :</strong>
+                            {% if customer.henrri_sync_status == 'failed' %}
+                            <span class="badge badge-wc badge-wc--error"
+                                  title="Dernier envoi en échec ({{ customer.henrri_sync_at }}) : {{ customer.henrri_sync_error }}">
+                                Henrri — Échec
+                            </span>
+                            {% else %}
+                            <span class="badge badge-wc badge-wc--none" title="Non envoyé sur Henrri">
+                                Henrri — Non envoyé
+                            </span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="meta-item">
                         <button class="btn btn-site-internet"
-                                hx-post="{{ url_for('customer.customer_wc_push', customer_id=customer.id) }}"
+                                hx-post="{{ url_for('customer.customer_partners_push', customer_id=customer.id) }}"
                                 hx-disabled-elt="this">
-                            {% if customer.wpwc_id %}Resynchroniser sur le Site Internet{% else %}Envoyer sur le Site Internet{% endif %}
+                            {% with height=18 %}{% include "svg/sync_double_arrow.html" %}{% endwith %}
                         </button>
                     </div>
                 </div>

@@ -2,6 +2,8 @@
  * Fonctions utilitaires partagées pour le module customer.
  */
 
+import { jsonHeaders } from '../common/csrf.js';
+
 /**
  * Effectue une requête GET et retourne la réponse JSON.
  * @param {string} url - L'URL à interroger.
@@ -40,7 +42,7 @@ export async function postJson(url, body) {
     try {
         const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: jsonHeaders(),
             body: JSON.stringify(body),
         });
         const data = await res.json();
@@ -61,7 +63,7 @@ export async function patchJson(url, body) {
     try {
         const res = await fetch(url, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: jsonHeaders(),
             body: JSON.stringify(body),
         });
         const data = await res.json();
@@ -104,6 +106,69 @@ export function serializeForm(form) {
         data[key] = value;
     }
     return data;
+}
+
+/**
+ * Affiche une modale de confirmation et attend la réponse de l'utilisateur.
+ * @param {string} message - Le message de confirmation à afficher.
+ * @param {object} [options] - Options d'affichage.
+ * @param {string} [options.title='Confirmation'] - Le titre de la modale.
+ * @param {string} [options.confirmLabel='Confirmer'] - Le libellé du bouton de validation.
+ * @param {boolean} [options.danger=true] - Applique le style « action destructive ».
+ * @returns {Promise<boolean>} True si l'utilisateur confirme, false sinon.
+ */
+export function confirmModal(message, options = {}) {
+    const { title = 'Confirmation', confirmLabel = 'Confirmer', danger = true } = options;
+
+    return new Promise((resolve) => {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'modal-dialog';
+        dialog.innerHTML = `
+            <div class="modal-dialog-inner confirm-modal">
+                <div class="modal-header">
+                    <h3></h3>
+                    <button type="button" class="btn-close" data-action="cancel" aria-label="Fermer">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-modal__message"></p>
+                </div>
+                <div class="confirm-modal__actions">
+                    <button type="button" class="btn btn-cancel btn-sm" data-action="cancel">Annuler</button>
+                    <button type="button" class="btn btn-sm" data-action="confirm"></button>
+                </div>
+            </div>
+        `;
+
+        // textContent (et non innerHTML) pour neutraliser toute injection depuis les données client
+        dialog.querySelector('.modal-header h3').textContent = title;
+        dialog.querySelector('.confirm-modal__message').textContent = message;
+
+        const btnConfirm = dialog.querySelector('[data-action="confirm"]');
+        btnConfirm.textContent = confirmLabel;
+        btnConfirm.classList.add(danger ? 'btn-delete' : 'btn-primary');
+
+        let settled = false;
+        const close = (result) => {
+            if (settled) return;
+            settled = true;
+            dialog.close();
+            dialog.remove();
+            resolve(result);
+        };
+
+        dialog.querySelectorAll('[data-action="cancel"]').forEach(
+            (btn) => btn.addEventListener('click', () => close(false))
+        );
+        btnConfirm.addEventListener('click', () => close(true));
+        dialog.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            close(false);
+        });
+
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        btnConfirm.focus();
+    });
 }
 
 // Considère certaines valeurs (ex: 'N/A') comme absentes

@@ -288,7 +288,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
         now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         return {
             "reference": self.ean13,
-            "description": self.description or self.name,
+            "description": self.name,
             "is_tax_included": False,
             "selling_price_without_tax": float(price_without_tax),
             "selling_price_with_tax": float(

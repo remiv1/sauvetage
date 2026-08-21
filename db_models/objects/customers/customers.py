@@ -146,14 +146,22 @@ class Customers(WorkingBase, QueryMixin):
             ),
         }
 
-    def to_dict_henrri(self) -> dict[str, Any]:
-        """Convertit l'objet Customer en dictionnaire Henrri."""
+    def to_dict_henrri(self, with_contact: bool = True) -> dict[str, Any]:
+        """Convertit l'objet Customer en dictionnaire Henrri.
+
+        Args:
+            with_contact: Inclut le contact dans le payload lorsque True.
+
+        Returns:
+            dict[str, Any]: Dictionnaire client au format attendu par Henrri.
+
+        Raises:
+            ValueError: Si aucune adresse de facturation active n'est disponible
+                ou si celle-ci est incomplète.
+        """
         date_now = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
-        address = next(
-            (addr for addr in self.addresses if addr.is_active),
-            self.addresses[0] if self.addresses else None
-        )
-        address_payload = address.to_dict_henrri() if address else None
+        address = self.get_henrri_billing_address()
+        address_payload = address.to_dict_henrri()
         email = next(
             (e.email for e in self.emails if e.is_active),
             None
@@ -169,26 +177,17 @@ class Customers(WorkingBase, QueryMixin):
         phone = self._normalize_henrri_phone(phone)
         mobile = self._normalize_henrri_phone(mobile)
 
+        if self.henrri_id is not None:
+            customer_id = int(self.henrri_id)
+        else:
+            customer_id = None
+
         if self.pro:
             siret = self.pro.siret_number
             customer = {
-                "id": self.id,
                 "name": self.full_name,
                 "type": "professional",
                 "company_identifier_type": "Siret" if siret and len(siret) == 14 else "Unknown",
-                "contacts": [
-                    {
-                        "first_name": "",
-                        "last_name": self.pro.company_name,
-                        "email": email,
-                        "id": self.pro.contact_henrri_id,
-                        "is_primary": True,
-                        "mobile": mobile,
-                        "phone": phone,
-                        "role": "administrateur",
-                        "show_on_document": True,
-                    },
-                ],
                 "creation_date": date_now,
                 "siret": siret,
                 "trade_name": self.pro.company_name,
@@ -199,29 +198,78 @@ class Customers(WorkingBase, QueryMixin):
                 "address": address_payload,
             }
         else:
-            first_name, last_name = self._get_names()
             customer = {
-                "id": self.id,
                 "name": self.full_name,
                 "type": "individual",
-                "contacts": [
-                    {
-                        "first_name": first_name,
-                        "last_name": last_name,
-                        "email": email,
-                        "id": self.part.contact_henrri_id if self.part else None,
-                        "is_primary": True,
-                        "mobile": mobile,
-                        "phone": phone,
-                        "role": "administrateur",
-                        "show_on_document": True,
-                    },
-                ],
                 "creation_date": date_now,
                 "customer_type_alert_enabled": False,
                 "address": address_payload,
             }
+
+        if customer_id is not None:
+            customer["id"] = customer_id
+        if with_contact:
+            customer["contacts"] = [self._build_henrri_contact(email, phone, mobile)]
         return customer
+
+    def _build_henrri_contact(
+        self,
+        email: str | None,
+        phone: str | None,
+        mobile: str | None,
+    ) -> dict[str, Any]:
+        """Construit le contact principal dans le format attendu par Henrri."""
+        if self.pro:
+            first_name = ""
+            last_name = self.pro.company_name
+            contact_id = self.pro.contact_henrri_id
+        else:
+            first_name, last_name = self._get_names()
+            contact_id = self.part.contact_henrri_id if self.part else None
+
+        return {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "id": contact_id,
+            "is_primary": True,
+            "mobile": mobile,
+            "phone": phone,
+            "role": "administrateur",
+            "show_on_document": True,
+        }
+
+    def get_henrri_billing_address(self) -> "CustomerAddresses":
+        """Retourne l'adresse de facturation active et complète du client.
+
+        Returns:
+            CustomerAddresses: L'adresse de facturation prête à être envoyée chez Henrri.
+
+        Raises:
+            ValueError: Si aucune adresse n'est à la fois de facturation, active et complète.
+        """
+        address = next(
+            (
+                addr
+                for addr in (self.addresses or [])
+                if addr.is_billing
+                and addr.is_active
+                and all(
+                    (
+                        (getattr(addr, "address_line1", "") or "").strip(),
+                        (getattr(addr, "city", "") or "").strip(),
+                        (getattr(addr, "postal_code", "") or "").strip(),
+                    )
+                )
+            ),
+            None,
+        )
+        if address is None:
+            raise ValueError(
+                f"Client {self.id} sans adresse de facturation active et complète "
+                "(rue, ville, code postal), synchronisation Henrri impossible."
+            )
+        return address
 
     @staticmethod
     def _normalize_henrri_phone(phone: str | None) -> str | None:

@@ -253,7 +253,7 @@ details[open] > .accordion-toggle {
   cursor: default;
 
   &--synced {
-    background: color.adjust(#d77dc5, $lightness: 40%);
+    background: color.adjust(v.$color-success, $lightness: 40%);
     color: #1a0015;
   }
 

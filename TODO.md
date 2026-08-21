@@ -18,41 +18,57 @@
 - [x] Créer l'interface dashboard (dashboard_sprint)
 - [x] Créer l'interface clients (customers_sprint)
 - [x] Créer l'interface d'accueil (home_sprint)
-- [ ] Créer l'interface catalogue/stocks/inventaires (inventory_sprint)
-  - [ ] Créer les formulaires htmx pour création de commandes et retours de commandes.
-  - [ ] Créer les formulaires pour l'ajout de lignes de commandes et de retours de commandes.
-  - [ ] Créer la logique d'ajout de formulaires dynamiques avec htmx.
-- [ ] Gérer les produits/clients sur Henrri lors de la création d'une facture client.
-- [ ] Gestion plus fine des sessions Flask pour les déconnexions, les expirations, etc.
-- [ ] Création du tableau de bord
+- [x] Créer l'interface catalogue/stocks/inventaires (inventory_sprint)
+  - [x] Créer les formulaires htmx pour création de commandes et retours de commandes.
+  - [x] Créer les formulaires pour l'ajout de lignes de commandes et de retours de commandes.
+  - [x] Créer la logique d'ajout de formulaires dynamiques avec htmx.
+- [x] Gérer les produits/clients sur Henrri lors de la création d'une facture client.
+- [x] Gestion plus fine des sessions Flask pour les déconnexions, les expirations, etc.
+- [x] Création du tableau de bord
 
 ## Validation des cas d'usage
 
-- [ ] Création d'un client particulier
-  - [ ] Adresse
-  - [ ] Mail
-  - [ ] Téléphone
-- [ ] Création d'un client professionnel
-  - [ ] Adresse
-  - [ ] Mail
-  - [ ] Téléphone
+- [X] Création d'un client particulier
+  - [X] Adresse
+  - [X] Mail
+  - [X] Téléphone
+- [X] Création d'un client professionnel
+  - [X] Adresse
+  - [X] Mail
+  - [X] Téléphone
 - [ ] Création de produits
   - [ ] Création d'un livre
   - [ ] Création d'un objet
   - [ ] Synchronisation WooCommerce
 - [ ] Création d'une commande client
-  - [ ] Ajout de lignes de commandes
-  - [ ] Validation de la commande
-  - [ ] Facturation client Partielle
-  - [ ] Facturation client Totale
-  - [ ] Expédition de la commande
-  - [ ] Annulation de la commande
+  - [X] Ajout de lignes de commandes
+  - [X] Validation de la commande
+  - [X] Facturation client Partielle
+  - [X] Facturation client Totale
+  - [X] Expédition de la commande
+  - [X] Annulation de la commande
   - [ ] Retour de la commande
 - [ ] Création d'une commande fournisseur
-  - [ ] Ajout de lignes de commandes
-  - [ ] Validation de la commande
+  - [X] Ajout de lignes de commandes
+  - [X] Validation de la commande
     - [ ] Réception DILICOM
     - [ ] Réception message DILICOM
-  - [ ] Création d'une réservation de stock
-  - [ ] Retour de la réservation de stock
-- [ ] Gestion d'un inventaire
+  - [X] Création d'une réservation de stock
+  - [X] Retour de la réservation de stock
+- [X] Gestion d'un inventaire
+
+## Validation du staging
+
+- [ ] Voir les erreur lors du push de la commande vers WooCommerce
+- [ ] Problèmes de création de tags depuis la fiche produit
+- [ ] Problèmes de synchro diffuseurs sur les réceptions ONIX
+- [ ] Problèmes de miniatures images sur les fiches produits
+- [ ] Décalage des mouvements de stocks sur ISBN 9782740315736 lors d'ajout/suppression de réservations
+- [ ] Sur les commandes clients, il faut ajouter la possibilité de faire :
+  - [ ] une modification de ligne de commande
+  - [ ] la création d'un bon de commande/Devis
+- [ ] Sur les commandes fournisseurs, lors de la récupération d'un produit, il faut récupérer le prix de vente pour l'affichage ainsi que le taux de TVA.
+- [ ] Voir pourquoi lors de l'inventaire, lors de l'existance de qté négative, le stock est mis à jour à 0.
+- [ ] Bug sur la création d'un fournisseur.
+- [ ] Le formulaire de création d'objet est différent de celui de modification d'objet, il faut unifier les deux.
+- [ ] Revoir la gestion des variations produits lors des synchronisations WooCommerce, il faut que les variations soient créées sur WooCommerce si elles n'existent pas.

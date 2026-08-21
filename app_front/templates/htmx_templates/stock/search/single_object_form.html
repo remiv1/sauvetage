@@ -19,6 +19,24 @@
         </div>
         <div class="modal-body">
             {{ render_flash_messages() }}
+            {% if obj %}
+            <div class="partner-ids">
+                <span><strong>Identifiant Site Internet :</strong>
+                    {% if obj.wpwc_id %}
+                    <span class="badge badge-wc badge-wc--synced">{{ obj.wpwc_id }}</span>
+                    {% else %}
+                    <span class="badge badge-wc badge-wc--none">Non envoyé</span>
+                    {% endif %}
+                </span>
+                <span><strong>Identifiant Henrri :</strong>
+                    {% if obj.henrri_id %}
+                    <span class="badge badge-wc badge-wc--synced">{{ obj.henrri_id }}</span>
+                    {% else %}
+                    <span class="badge badge-wc badge-wc--none">Non envoyé</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
             {# Partie qui s'affiche une fois l'objet créé #}
             {% if form_state == 'created' %}
                 <div class="object-created-msg">
@@ -73,6 +91,7 @@
                             {% if obj %}
                             <input type="hidden" id="object_id" name="object_id" value="{{ obj.id }}">
                             {% endif %}
+                            <label for="supplier_name" style="display:block;">Fournisseur</label>
                             <input type="text" id="supplier_name"
                                    name="supplier_name"
                                    class="form-control"
@@ -97,6 +116,7 @@
                     {# Type d'objet #}
                     <div class="form-group">
                         {{ form.general_object_type.label(class="form-label") }}
+                        <label for="general_object_type" style="display:block;">Type d'objet</label>
                         <select name="general_object_type" id="general_object_type"
                                 class="form-control"
                                 {% if disabled %}disabled{% endif %}

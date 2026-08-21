@@ -1,10 +1,100 @@
 # Rapport qualitatif -- Projet Sauvetage
 
-Date : 18 mai 2026
+Date : 21 août 2026
 
-Resume : rapport qualitatif complet couvrant l'etat du code, les decisions architecturales et structurelles, et la qualite globale depuis le debut du projet. Ce rapport integre une mise a jour couvrant 74 commits supplementaires deposes entre le 01/04/2026 et le 18/05/2026 sur les branches `administration_sprint`, `customer_order_sprint`, `dilicom_sprint` et `woocommerce_sprint` (325 fichiers, +32 036 / -2 184 lignes).
+Resume : rapport qualitatif complet couvrant l'etat du code, les decisions architecturales et structurelles, et la qualite globale depuis le debut du projet. Ce rapport integre une mise a jour couvrant 73 commits supplementaires presents sur `main` entre le 19/05/2026 et le 20/08/2026 (340 fichiers, +35 079 / -7 128 lignes).
 
 ---
+
+## Mise a jour -- Evolutions du 19/05/2026 au 21/08/2026
+
+### Vue d'ensemble de la periode
+
+| Indicateur | Valeur |
+| --- | --- |
+| Commits depuis la derniere mise a jour | 73 |
+| Fichiers modifies | 340 |
+| Evolutions | +35 079 / -7 128 lignes |
+| Branche courante | `main` |
+| Dernier commit | `87f9af2`, 20/08/2026 |
+| Fichiers Python | 268 |
+| Templates HTML | 143 |
+| Fichiers SCSS | 26 |
+| Tests dans la derniere campagne | 222 (32 back, 109 front, 81 db_objects) |
+| Couverture globale mesuree | 55 % |
+
+### Integration Henrri
+
+L'integration Henrri est passee du socle de services a une fonctionnalite metier exploitable :
+
+- services pour les clients, produits, documents et factures dans `db_models/services/henrri/` ;
+- routes et transactions FastAPI pour la mise a jour des produits ;
+- synchronisation des donnees de facture, telechargement des PDF et rattachement des factures aux clients ;
+- migrations dediees aux relations facture/client, aux identifiants de contact et aux evolutions du schema ;
+- adaptation des commandes et de l'interface de consultation des documents.
+
+La couverture des nouveaux services reste toutefois faible (23 % pour les modules clients et documents, 35 % pour les produits). L'integration est donc fonctionnellement avancee, mais doit encore etre consolidee par des tests de cas d'erreur et de synchronisation.
+
+### WooCommerce et modele produit
+
+Le socle WooCommerce a ete enrichi et relie aux repositories metier :
+
+- prise en charge des retours, des notifications, du renouvellement des tokens medias et de la synchronisation des clients et commandes ;
+- gestion des tags actifs et ajout du slug WooCommerce sur les taux de TVA ;
+- mise a jour des repositories clients et commandes pour l'integration ;
+- ajout des modeles de livres, objets generaux, medias et variations ;
+- gestion de l'historique des prix des objets avec migration et interface de saisie/recherche ;
+- ajout de la gestion des prix et de `ProxyFix` pour les requetes passant par le proxy.
+
+Les modules WooCommerce restent volumineux et partiellement couverts : 48 % pour les produits, 45 % pour les commandes et 14 % pour les clients dans le dernier rapport de couverture. La couverture de cette integration demeure une priorite.
+
+### Exploitation, sauvegardes et traitements planifies
+
+La robustesse de l'exploitation a progresse de maniere significative :
+
+- remplacement d'APScheduler par des taches cron pour les traitements Dilicom ;
+- traitement Dilicom en arriere-plan et declenchement manuel ;
+- systeme de sauvegarde/restauration PostgreSQL, MongoDB et fichiers distants ;
+- journaux detailles, gestion des erreurs et chiffrement des archives de sauvegarde ;
+- configuration de logs harmonisee dans les conteneurs front et back ;
+- prise en charge de Let's Encrypt et du stockage ACME dans Traefik ;
+- nettoyage et restauration de migrations initiales pour stabiliser l'historique Alembic.
+
+### Fonctionnalites metier et administration
+
+- Les widgets du dashboard disposent maintenant d'endpoints implementes et de donnees reelles ; les trois TODO precedemment signales dans `dashboard/routes_data.py` ne sont plus presents.
+- Les formulaires d'administration permettent la gestion des mots de passe lors de l'edition des utilisateurs.
+- Les modales et l'affichage detaille des logs ont ete ameliores.
+- Les emails des commandes fournisseurs ont ete ajoutes, avec evolution des templates et refactoring de l'envoi.
+- Le contexte de reservation de `OrderIn` est maintenant stocke en JSONB.
+- La journalisation couvre davantage les actions utilisateur, client et metier, avec metadonnees de requete.
+
+### Tests et qualite
+
+La couverture de test a ete formalisee et elargie :
+
+- les tests backend FastAPI sont maintenant presents pour Dilicom, les documents, les emails, la securite des migrations et la synchronisation TVA ;
+- des tests unitaires couvrent notamment la creation de documents, le filtrage d'objets fournisseur et les contrats de payloads Henrri ;
+- la derniere campagne du 20/08/2026 est verte : 222 tests reussis, aucun echec ;
+- des rapports Markdown/XML et un rapport de couverture HTML/JSON/XML sont versionnes dans `tests/reports/` ;
+- la couverture globale est maintenant mesuree a 55 %, ce qui fournit une base de pilotage, mais reste sous l'objectif de 60 % fixe dans la roadmap.
+
+La couverture n'est donc plus inconnue et les tests backend ne sont plus absents, mais aucun pipeline CI/CD ne lance encore automatiquement ces controles.
+
+### Dette technique et risques persistants
+
+| Item | Statut au 21/08/2026 |
+| --- | --- |
+| TODO du dashboard | ✅ Traites |
+| Tests des routes backend | ✅ Amorces et campagne verte |
+| Mesure de couverture | ✅ Configuree (55 %) |
+| Tests WooCommerce | ⚠️ Partiels, couverture faible sur les services |
+| `print()` de debug | ❌ Encore presents dans la recherche stock, le fournisseur, le bootstrap backend et Dilicom |
+| Pipeline CI/CD | ❌ Toujours absent |
+| En-tetes HTTP CSP, HSTS, X-Frame-Options | ❌ Toujours absents des configurations verifiees |
+| `except Exception` trop larges | ⚠️ A reevaluer dans les repositories et services |
+
+Les priorites suivantes sont recommandees : augmenter la couverture des services Henrri et WooCommerce, supprimer les `print()` restants au profit du logging applicatif, ajouter un utilisateur non-root aux images, puis retablir un pipeline CI executant tests, couverture, lint et scan des dependances.
 
 ## Mise a jour -- Sprint du 01/04/2026 au 18/05/2026
 
@@ -327,4 +417,4 @@ Ces `print()` polluent les logs Gunicorn et peuvent exposer des informations sen
 
 ---
 
-**Derniere mise a jour** : 18 mai 2026 *(rapport initial : 31 mars 2026)*
+**Derniere mise a jour** : 21 août 2026 *(rapport initial : 31 mars 2026)*

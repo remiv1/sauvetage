@@ -172,6 +172,31 @@ class CustomersRepository(BaseRepository):
         return customer
 
 
+    def set_active(self, customer_id: int, is_active: bool) -> Customers:
+        """Active ou désactive (soft-delete) une fiche client.
+        Args:
+            customer_id (int): L'ID du client à modifier.
+            is_active (bool): True pour activer, False pour désactiver.
+        Returns:
+            Customers: Le client mis à jour.
+        Raises:
+            ValueError: Si le client n'existe pas ou si le commit échoue.
+        """
+        customer = self.get_by_id(customer_id, complete=True)
+        if not customer:
+            raise ValueError(f"Client #{customer_id} introuvable.")
+
+        customer.is_active = is_active
+
+        try:
+            self.session.commit()
+        except Exception as exc:
+            self.session.rollback()
+            raise ValueError(str(exc)) from exc
+
+        return customer
+
+
     def create(self, customer_data: dict) -> Customers:
         """Crée un nouveau client à partir d'un dictionnaire de données.
         Args:

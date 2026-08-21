@@ -5,8 +5,8 @@
 
 import { setupAddresses } from './addresses.js';
 import { setupEmails } from './emails.js';
+import { confirmModal, patchJson, postJson, serializeForm, showNotification, updateFormCell } from './functions.js';
 import { setupPhones } from './phones.js';
-import { postJson, patchJson, showNotification, serializeForm, updateFormCell } from './functions.js';
 
 /**
  * Mapping des civilités pour l'affichage.
@@ -183,7 +183,15 @@ function setupToggleStatus() {
         const action = isActive ? 'deactivate' : 'activate';
         const label = isActive ? 'désactiver' : 'activer';
 
-        if (!confirm(`Voulez-vous ${label} ce client ?`)) return;
+        const confirmed = await confirmModal(
+            `Voulez-vous ${label} ce client ?`,
+            {
+                title: isActive ? 'Désactiver le client' : 'Activer le client',
+                confirmLabel: isActive ? 'Désactiver' : 'Activer',
+                danger: isActive,
+            }
+        );
+        if (!confirmed) return;
 
         const result = await postJson(
             `/customer/data/${globalThis.CUSTOMER_ID}/${action}`,

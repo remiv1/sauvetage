@@ -845,15 +845,15 @@ def search_customers_for_dropdown(query: str) -> List[Dict[str, Any]]:
 
 # ── Recherche objets (pour autocomplete) ─────────────────────────────────
 
-def get_objects_by_name(name: str) -> Optional[Sequence[GeneralObjects]]:
-    """Récupère un objet général par son nom pour l'autocomplete.
+def get_objects_by_name(query: str) -> Optional[Sequence[GeneralObjects]]:
+    """Récupère des objets par titre ou EAN13 pour l'autocomplete.
 
     Returns:
         Liste de dicts avec id et name, ou None.
     """
     session = db_conf.get_main_session()
     repo = ObjectsRepository(session)
-    results = repo.get_by_name(name)
+    results = repo.get_by_name_or_ean(query)
     if results is None:
         return None
     return results

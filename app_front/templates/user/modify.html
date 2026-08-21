@@ -7,6 +7,15 @@
 {% block content %}
 {% from 'common/macros.html' import render_field_errors %}
     <div class="register-container mt-3">
+        <div class="h2-header">
+            <div class="header-top">
+                <a href="{{ url_for('home') }}" class="btn btn-back"
+                   title="Retour à l'accueil">
+                    {% include "svg/back.html" %}
+                </a>
+                <h2>Mon profil</h2>
+            </div>
+        </div>
         <h2 class="register-container__title">Modification de compte</h2>
         <form class="register-container__form" method="POST">
             {{ form.hidden_tag() }}

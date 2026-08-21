@@ -7,6 +7,24 @@ from db_models.repositories.customers import (
 )
 from app_front.config import db_conf
 
+# Champs modifiables depuis l'API : évite toute affectation de masse (id, customer_id, dates...)
+_ALLOWED_FIELDS = (
+    "address_name",
+    "address_line1",
+    "address_line2",
+    "city",
+    "state",
+    "postal_code",
+    "country",
+    "is_billing",
+    "is_shipping",
+    "is_active",
+)
+
+
+def _filter_fields(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: value for key, value in data.items() if key in _ALLOWED_FIELDS}
+
 
 def get_addresses(customer_id: int) -> List[Dict[str, Any]] | None:
     """
@@ -36,6 +54,7 @@ def add_address(
         Dict[str, Any] | None: Les données des adresses du client mis à jour ou None si introuvable.
     """
     repo = CustomerAddressesRepository(db_conf.get_main_session())
+    address_data = _filter_fields(address_data)
     address_data["customer_id"] = customer_id
     address = repo.add_address(address_data)
     if not address:
@@ -57,7 +76,12 @@ def update_address(
         Dict[str, Any] | None: Les données des adresses du client mis à jour ou None si introuvable.
     """
     repo = CustomerAddressesRepository(db_conf.get_main_session())
-    address = repo.update_address(customer_id, address_id, address_data, only_active=False)
+    address = repo.update_address(
+        customer_id,
+        address_id,
+        _filter_fields(address_data),
+        only_active=False,
+    )
     if not address:
         return None
 

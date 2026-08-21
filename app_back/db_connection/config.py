@@ -2,16 +2,37 @@
 
 from contextlib import contextmanager
 from os import getenv
+from urllib.parse import quote
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import SQLAlchemyError  # pylint: disable=unused-import
 
-SECURE_DATABASE_URL = getenv(
-    "DATABASE_SECURE_URL", "postgresql://app:pwd@db-secure:5432/sauvetage_secure"
+
+def _build_database_url(user: str, password: str, host: str, port: str, db_name: str) -> str:
+    """Construit une URL PostgreSQL correcte depuis les variables d'environnement."""
+    return (
+        f"postgresql://{user}:{quote(password, safe='')}@{host}:{port}/{db_name}"
+    )
+
+
+SECURE_DATABASE_URL = (
+    getenv("DATABASE_SECURE_URL")
+    or getenv("SECURE_DATABASE_URL")
+    or _build_database_url(
+        getenv("POSTGRES_USER_SECURE", "secure"),
+        getenv("POSTGRES_PASSWORD_SECURE", "pwd"),
+        getenv("POSTGRES_HOST", "db-main"),
+        getenv("POSTGRES_PORT", "5432"),
+        getenv("POSTGRES_DB_USERS", "sauvetage_users"),
+    )
 )
-DATABASE_URL = getenv(
-    "DATABASE_URL", "postgresql://app:pwd@db-main:5432/sauvetage_main"
+DATABASE_URL = getenv("DATABASE_URL") or _build_database_url(
+    getenv("POSTGRES_USER_APP", "app"),
+    getenv("POSTGRES_PASSWORD_APP", "pwd"),
+    getenv("POSTGRES_HOST", "db-main"),
+    getenv("POSTGRES_PORT", "5432"),
+    getenv("POSTGRES_DB_MAIN", "sauvetage_main"),
 )
 
 _engine_main = create_engine(

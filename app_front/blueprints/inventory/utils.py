@@ -245,13 +245,13 @@ def search_objects_info(q: dict[str, str]) -> List[str]:
 
 
 def search_object_by_name(
-        name: str,
+        query: str,
         supplier_id: Optional[int] = None
     ) -> Sequence[GeneralObjects]:
-    """Rechercher les objets dans la base par nom, éventuellement filtrés par fournisseur."""
+    """Rechercher les objets par titre ou EAN13, éventuellement par fournisseur."""
     repo = ObjectsRepository(db_conf.get_main_session())
     inventory_repo = InventoryRepository(db_conf.get_main_session())
-    items = repo.get_by_name(name, supplier_id=supplier_id)
+    items = repo.get_by_name_or_ean(query, supplier_id=supplier_id)
     for item in items:
         item.inventory_price = inventory_repo.get_last_inventory_price(item.id)
         item.available_quantity = inventory_repo.get_available_quantity(item.id)

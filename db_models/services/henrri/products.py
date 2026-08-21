@@ -71,6 +71,32 @@ class HenrriProductsService(HenrriService):
             raise ValueError("Le produit n'a pas pu étre créé.")
         return response.id
 
+    def upsert_product(
+        self,
+        product: Item | Any,
+        henrri_id: str | int | None = None,
+    ) -> Item:
+        """Crée (POST) ou met à jour (PUT) un produit sur Henrri.
+
+        Arguments:
+            product: Le produit local ou le modèle SDK Henrri.
+            henrri_id: L'identifiant Henrri connu, ou None pour une création.
+
+        Returns:
+            Item: Le produit créé ou mis à jour, tel que retourné par Henrri.
+
+        Raises:
+            ValueError: Si Henrri ne retourne pas d'identifiant.
+        """
+        remote_product = self._as_item(product)
+        if henrri_id is None:
+            response = self.client.items.add(remote_product)
+        else:
+            response = self.client.items.modify(int(henrri_id), remote_product)
+        if response.id is None:
+            raise ValueError("Le produit Henrri n'a pas d'identifiant après synchronisation.")
+        return response
+
     def create_products_batch(self, products: Sequence[Item | Any]) -> Sequence[Item]:
         """
         Crée plusieurs produits en une seule requête sur Henrri.

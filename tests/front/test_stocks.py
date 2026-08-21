@@ -114,6 +114,64 @@ def test_supplier_object_filter_for_order_line(client_all, supplier, db_session_
     assert "Objet fournisseur secondaire" not in response.get_data(as_text=True)
 
 
+def test_supplier_object_search_uses_exact_ean13(client_all, supplier, db_session_main):
+    """Une saisie de treize chiffres doit chercher l'EAN13 exact chez le fournisseur."""
+    own_obj = GeneralObjects(
+        supplier_id=supplier.id,
+        general_object_type="generic",
+        ean13="1234567890128",
+        name="Article avec EAN généré",
+        description="Objet test",
+        price=10.0,
+    )
+    db_session_main.add(own_obj)
+    db_session_main.commit()
+
+    response = client_all.get(
+        f"/inventory/htmx/objects/get?object-wrapper=1234567890128&supplier_id={supplier.id}",
+        follow_redirects=True,
+    )
+
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "Article avec EAN généré" in body
+    assert "EAN : 1234567890128" in body
+
+
+def test_supplier_object_search_keeps_supplier_filter_for_ean13(
+    client_all,
+    supplier,
+    db_session_main,
+):
+    """Un EAN13 connu chez un autre fournisseur ne doit pas être sélectionnable."""
+    other_supplier = supplier.__class__(
+        name="Fournisseur EAN externe",
+        gln13="9876543210987",
+        contact_email="ean@fournisseur.test",
+    )
+    db_session_main.add(other_supplier)
+    db_session_main.flush()
+    db_session_main.add(
+        GeneralObjects(
+            supplier_id=other_supplier.id,
+            general_object_type="generic",
+            ean13="1234567890129",
+            name="Article externe",
+            description="Objet test",
+            price=10.0,
+        )
+    )
+    db_session_main.commit()
+
+    response = client_all.get(
+        f"/inventory/htmx/objects/get?object-wrapper=1234567890129&supplier_id={supplier.id}",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert "Article externe" not in response.get_data(as_text=True)
+
+
 def test_order_object_dropdown_does_not_limit_quantity_like_reservation(
         client_all,
         supplier,

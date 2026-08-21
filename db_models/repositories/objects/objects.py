@@ -124,6 +124,30 @@ class ObjectsRepository(BaseRepository):
         stmt = stmt.order_by(self.model.name).limit(10)
         return self.session.execute(stmt).unique().scalars().all()
 
+    def get_by_name_or_ean(
+        self,
+        query: str,
+        supplier_id: Optional[int] = None,
+    ) -> Sequence["GeneralObjects"]:
+        """Recherche des objets par EAN13 exact ou par nom.
+
+        Une saisie composée de treize chiffres est considérée comme un EAN13.
+        Toute autre saisie conserve la recherche partielle par nom.
+        """
+        normalized_query = query.strip()
+        if len(normalized_query) == 13 and normalized_query.isdigit():
+            stmt = self._get_global_select().where(
+                self.model.ean13 == normalized_query
+            )
+        else:
+            stmt = self._get_global_select().where(
+                self.model.name.ilike(f"%{normalized_query.lower()}%")
+            )
+        if supplier_id is not None:
+            stmt = stmt.where(self.model.supplier_id == supplier_id)
+        stmt = stmt.order_by(self.model.name).limit(10)
+        return self.session.execute(stmt).unique().scalars().all()
+
     def get_vat_rate(self, object_id: int) -> Optional[float]:
         """Récupère le taux de TVA du prix courant d'un objet à partir de son id."""
         stmt = (

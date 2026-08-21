@@ -100,6 +100,9 @@ class Invoice(WorkingBase, QueryMixin):
 
         Returns:
             dict[str, Any]: Dictionnaire représentant la facture chez Henrri.
+
+        Raises:
+            ValueError: Si le client n'est pas encore synchronisé chez Henrri.
         """
         now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         due_datetime = str(
@@ -110,7 +113,12 @@ class Invoice(WorkingBase, QueryMixin):
             if self.order and self.order.created_at
             else now_datetime
         )
-        customer_payload = self.customer.to_dict_henrri() if self.customer else {}
+        if self.customer is None or self.customer.henrri_id is None:
+            raise ValueError(
+                f"Facture {self.reference} : le client doit être synchronisé "
+                "chez Henrri avant la création du document."
+            )
+        customer_payload = self.customer.to_dict_henrri()
         customer_address = customer_payload.get("address") or {}
         document_type = {
             "document_kind": "invoice",
@@ -121,7 +129,6 @@ class Invoice(WorkingBase, QueryMixin):
             "is_visible": True,
         }
         invoice = {
-            "id": self.id,
             "identity": self.reference,
             "finalized": False,
             "document_type_id": 1,
@@ -135,12 +142,14 @@ class Invoice(WorkingBase, QueryMixin):
             "date": now_datetime,
             "validated": True,
             "validation_date": now_datetime,
-            "customer_id": self.customer_id,
+            "customer_id": int(self.customer.henrri_id),
             "customer": customer_payload,
             "customer_address": customer_address,
             "lines": [line.to_dict_henrri() for line in self.lines] if self.lines else [],
             "bank_account_label": "Banque",
         }
+        if self.henrri_id:
+            invoice["id"] = int(self.henrri_id)
         return invoice
 
     @classmethod
@@ -211,9 +220,14 @@ class InvoiceLine(WorkingBase, QueryMixin):
             if self.order_line and self.order_line.general_object
             else None
         )
+        document_id = (
+            int(self.invoice.henrri_id)
+            if self.invoice and self.invoice.henrri_id
+            else None
+        )
         payload: dict[str, Any] = {
             "id": self.henrri_id,
-            "document_id": self.invoice_id,
+            "document_id": document_id,
             "reference": self.reference,
             "description": self.description,
             "selling_price_without_tax": float(self.unit_price),

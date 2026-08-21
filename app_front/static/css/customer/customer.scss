@@ -443,6 +443,23 @@
     display: none;
 }
 
+/* ── Modale de confirmation ──────────────────────────────────────────────── */
+.confirm-modal {
+    max-width: 460px;
+
+    &__message {
+        margin: 0;
+        color: variables.$gray-700;
+    }
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: variables.$space-sm;
+        padding: 0 variables.$space-lg variables.$space-lg;
+    }
+}
+
 /* ── Notifications ───────────────────────────────────────────────────────── */
 .fade-alert {
     transition: opacity 0.4s ease;

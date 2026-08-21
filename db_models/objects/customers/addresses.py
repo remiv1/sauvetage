@@ -133,15 +133,40 @@ class CustomerAddresses(WorkingBase, QueryMixin):
         }
 
     def to_dict_henrri(self) -> dict[str, Any]:
-        """Convertit l'objet CustomerAddress en dictionnaire Henrri."""
-        return {
-            "id": self.henrri_id,
-            "address": self.address_line1 + "\n" + self.address_line2,
-            "city": self.city,
-            "post_code": self.postal_code,
-            "is_post_code_shared": True,
-            "country": self.country,
+        """Convertit l'objet CustomerAddress en dictionnaire Henrri.
+
+        Returns:
+            dict[str, Any]: Dictionnaire d'adresse au format attendu par Henrri.
+
+        Raises:
+            ValueError: Si la rue, la ville ou le code postal sont absents.
+        """
+        lines = [line.strip() for line in (self.address_line1, self.address_line2) if line]
+        street = "\n".join(line for line in lines if line)
+        missing = [
+            label
+            for label, value in (
+                ("rue", street),
+                ("ville", (self.city or "").strip()),
+                ("code postal", (self.postal_code or "").strip()),
+            )
+            if not value
+        ]
+        if missing:
+            raise ValueError(
+                f"Adresse {self.id} incomplète pour Henrri : {', '.join(missing)} manquant(s)."
+            )
+
+        payload: dict[str, Any] = {
+            "address": street,
+            "city": self.city.strip(),
+            "post_code": self.postal_code.strip(),
+            "is_post_code_shared": False,
+            "country": (self.country or "France").strip(),
         }
+        if self.henrri_id is not None:
+            payload["id"] = self.henrri_id
+        return payload
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "CustomerAddresses":

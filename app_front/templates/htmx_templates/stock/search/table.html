@@ -70,7 +70,7 @@
                                 hx-get="{{ url_for('stock_htmx_search.dilicom_modal', object_id=item.id) }}"
                                 hx-target="#dilicom-modal-container"
                                 hx-swap="innerHTML">
-                            <span class="action-letter">D</span>
+                            {% include "svg/dilicom.html" %}
                         </button>
                         {# Bouton Voir #}
                         <button class="action-icon action-view"
@@ -96,13 +96,13 @@
                                 hx-swap="innerHTML">
                             {% include "svg/del.html" %}
                         </button>
-                        {# Bouton Site Internet (WooCommerce) #}
+                        {# Bouton synchronisation partenaires (WooCommerce + Henrri) #}
                         <button class="action-icon action-wc"
-                                title="{{ 'Resynchroniser sur le Site Internet' if item.wpwc_id else 'Envoyer sur le Site Internet' }}"
-                                hx-post="{{ url_for('stock_htmx_search.product_wc_push', object_id=item.id) }}"
+                                title="{{ 'Resynchroniser vers les partenaires' if item.wpwc_id else 'Envoyer vers les partenaires' }}"
+                                hx-post="{{ url_for('stock_htmx_search.product_partners_push', object_id=item.id) }}"
                                 hx-disabled-elt="this"
                                 hx-swap="none">
-                            <span class="action-letter">SI</span>
+                            {% with height=18 %}{% include "svg/sync_double_arrow.html" %}{% endwith %}
                         </button>
                     </div>
                 </td>

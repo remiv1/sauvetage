@@ -89,6 +89,24 @@ class HenrriDocumentsService(HenrriService):
         """Récupère un document Henrri par son identifiant."""
         return self.client.documents.get(document_id)
 
+    def modify_document(self, document_id: int, document: Document | Any) -> Document:
+        """Met à jour l'en-tête d'un document Henrri non finalisé.
+
+        Arguments:
+            document_id: L'identifiant Henrri du document.
+            document: Le document local ou le modèle SDK Henrri mis à jour.
+
+        Returns:
+            Document: Le document mis à jour.
+
+        Raises:
+            ValueError: Si le document fourni est marqué comme finalisé.
+        """
+        remote_document = self._as_document(document)
+        if remote_document.finalized:
+            raise ValueError("Impossible de modifier une facture finalisée")
+        return self.client.documents.modify(document_id, remote_document)
+
     def add_line(self, document_id: int, line: DocumentLine | Any) -> DocumentLine:
         """
         Ajoute une ligne à un document existant sur Henrri.

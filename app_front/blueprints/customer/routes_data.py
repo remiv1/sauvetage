@@ -22,6 +22,7 @@ from app_front.blueprints.customer.utils.users import (
     get_customers_by_name,
     multi_search_filter,
     get_customer as util_get_customer,
+    set_customer_active,
     update_customer_info,
 )
 from app_front.blueprints.customer.utils.addresses import (
@@ -281,11 +282,9 @@ def update_phone(customer_id: int, phone_id: int):
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def activate(customer_id: int):
     """Active un client."""
-    customer = util_get_customer(customer_id)
-    if not customer:
+    updated = set_customer_active(customer_id, True)
+    if not updated:
         raise ValueError(_NO_CUSTOMER_ERROR)
-    customer["is_active"] = True
-    updated = update_customer_info(customer_id, {"is_active": True})
     return jsonify(updated)
 
 
@@ -293,9 +292,7 @@ def activate(customer_id: int):
 @permission_required([COMMERCIAL, COMPTA, DIRECTION], _and=False)
 def deactivate(customer_id: int):
     """Désactive un client."""
-    customer = util_get_customer(customer_id)
-    if not customer:
+    updated = set_customer_active(customer_id, False)
+    if not updated:
         raise ValueError(_NO_CUSTOMER_ERROR)
-    customer["is_active"] = False
-    updated = update_customer_info(customer_id, {"is_active": False})
     return jsonify(updated)

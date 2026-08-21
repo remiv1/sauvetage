@@ -98,6 +98,8 @@ flowchart TB
 - Applique un rate-limit strict sur `/user/login` (5 req / 10 min).
 - Route tout le trafic HTTPS vers **app-front** (Flask).
 
+> [Accès à la documentation](./proxy/README.md)
+
 #### app_front — Flask
 
 - Rendu HTML server-side et fragments HTMX.
@@ -106,6 +108,8 @@ flowchart TB
 - Administration : utilisateurs, rôles, TVA, consultation des logs.
 - Service d'images par jeton (`GET /woocommerce/media/<token>`) pour WooCommerce.
 - Connexion : base principale PostgreSQL en lecture/écriture, MongoDB pour les logs.
+
+> [Accès à la documentation](./app_front/README.md)
 
 #### app_back — FastAPI
 
@@ -120,11 +124,15 @@ Réservé aux opérations **longues, sécurisées ou sensibles**. Toutes les rou
 | `/api/v1/woo-commerce` | Synchronisation produits WooCommerce | principale |
 | `POST /api/v1/woo-commerce/media/.../access` | Création de jetons images (usage unique, 1 h) | principale |
 
+> [Accès à la documentation](./app_back/README.md)
+
 #### db_models — couche partagée
 
 - Package Python monté dans les deux conteneurs (`app-front` et `app-back`).
 - Modèles SQLAlchemy, repositories, services métier.
 - Pipeline de traitement image : compression WebP, resize max 800 x 1200, qualité itérative jusqu'à < 100 Ko.
+
+> [Accès à la documentation](./db_models/README.md)
 
 #### PostgreSQL — db-main
 
@@ -185,8 +193,8 @@ gantt
     Analyse :a2, after a1, 10d
     Développement :crit, a3, after a2, 120d
     section Tests
-    Tests unitaires :a4, after a3, 15d
-    Tests d'intégration :a5, after a4, 15d
+    Tests unitaires :a4, after a2, 160d
+    Tests d'intégration :a5, after a2, 160d
     section Déploiement
     Déploiement :a6, after a5, 10d
     Recette :a7, after a6, 7d

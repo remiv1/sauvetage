@@ -1,5 +1,7 @@
 # Proxy interne pour les services réseaux sur serveur local
 
+[← Retour à la documentation principale](../README.md)
+
 Le réseau étant interne sans domaine publique, il n'y aura pas possibilité d'utiliser Let's Encrypt pour les certificats SSL. On procèdera donc à un CA interne avec OpenSSL.
 
 ## Process

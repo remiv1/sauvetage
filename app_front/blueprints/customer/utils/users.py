@@ -12,7 +12,7 @@ from db_models.objects import (
     CustomerPros,
 )
 from db_models.repositories.customers import CustomersRepository
-from db_models.services.woo_commerce.customers import WCCustomersService
+from db_models.services.sync import sync_customer as sync_customer_partners
 from app_front.blueprints.customer.forms import CustomerMainForm
 from app_front.config import db_conf
 
@@ -60,29 +60,37 @@ def get_customer(customer_id: int) -> Dict[str, Any] | None:
     if not customer:
         return None
     data = customer.to_dict()
-    # Enrichissement avec les données de synchronisation WooCommerce
-    last_sync = None
-    if customer.sync_logs:
-        wpwc_logs = [log for log in customer.sync_logs if log.external_system == "wpwc"]
-        if wpwc_logs:
-            last_sync = max(wpwc_logs, key=lambda log: log.synced_at)
-    if last_sync:
-        data["wpwc_sync_status"] = last_sync.sync_status
-        data["wpwc_sync_operation"] = last_sync.operation
-        data["wpwc_sync_at"] = last_sync.synced_at.strftime("%d/%m/%Y %H:%M")
-        data["wpwc_sync_error"] = last_sync.error_message
-    else:
-        data["wpwc_sync_status"] = None
-        data["wpwc_sync_operation"] = None
-        data["wpwc_sync_at"] = None
-        data["wpwc_sync_error"] = None
+    # Enrichissement avec les données de synchronisation des partenaires
+    data.update(_extract_sync_data(customer, "wpwc"))
+    data.update(_extract_sync_data(customer, "henrri"))
     return data
 
 
-def push_customer_wc(customer_id: int) -> tuple[bool, str | None]:
-    """Pousse un client vers WooCommerce (création ou mise à jour).
+def _extract_sync_data(customer: Customers, external_system: str) -> Dict[str, Any]:
+    """Retourne l'état de la dernière synchronisation d'un client vers un partenaire."""
+    logs = [
+        log
+        for log in (customer.sync_logs or [])
+        if log.external_system == external_system
+    ]
+    last_sync = max(logs, key=lambda log: log.synced_at) if logs else None
+    if last_sync is None:
+        return {
+            f"{external_system}_sync_status": None,
+            f"{external_system}_sync_operation": None,
+            f"{external_system}_sync_at": None,
+            f"{external_system}_sync_error": None,
+        }
+    return {
+        f"{external_system}_sync_status": last_sync.sync_status,
+        f"{external_system}_sync_operation": last_sync.operation,
+        f"{external_system}_sync_at": last_sync.synced_at.strftime("%d/%m/%Y %H:%M"),
+        f"{external_system}_sync_error": last_sync.error_message,
+    }
 
-    Enregistre un CustomerSyncLog et commite la session.
+
+def push_customer_partners(customer_id: int) -> tuple[bool, str | None]:
+    """Pousse un client vers WooCommerce et Henrri dans la même opération.
 
     Returns:
         (success, error_message)
@@ -91,17 +99,25 @@ def push_customer_wc(customer_id: int) -> tuple[bool, str | None]:
     repo = CustomersRepository(session)
     customer = repo.get_by_id(customer_id, complete=True)
     if customer is None:
-        logger.exception("Client #%d introuvable pour push WooCommerce.", customer_id)
+        logger.exception("Client #%d introuvable pour push multi-partenaires.", customer_id)
         return False, "Client introuvable"
-    svc = WCCustomersService(session)
-    success, error = svc.push_customer(customer)
+
+    results = sync_customer_partners(session, customer)
+    errors = [result.error for result in results if result.status == "error"]
     try:
         session.commit()
     except Exception as exc:  # pylint: disable=broad-except
         session.rollback()
-        logger.exception("Erreur commit après push WC (client %d) : %s", customer_id, exc)
+        logger.exception(
+            "Erreur commit après push multi-partenaires (client %d) : %s",
+            customer_id,
+            exc,
+        )
         return False, str(exc)
-    return success, error
+
+    if errors:
+        return False, "; ".join(error for error in errors if error)
+    return True, None
 
 
 def update_customer_info(
@@ -116,6 +132,19 @@ def update_customer_info(
     """
     repo = CustomersRepository(db_conf.get_main_session())
     customer = repo.update_info(customer_id, data)
+    return customer.to_dict()
+
+
+def set_customer_active(customer_id: int, is_active: bool) -> Dict[str, Any] | None:
+    """Active ou désactive (soft-delete) une fiche client.
+    Args:
+        customer_id (int): L'ID du client à modifier.
+        is_active (bool): True pour activer, False pour désactiver.
+    Returns:
+        Dict[str, Any] | None: Les données du client mis à jour ou None si introuvable.
+    """
+    repo = CustomersRepository(db_conf.get_main_session())
+    customer = repo.set_active(customer_id, is_active)
     return customer.to_dict()
 
 
