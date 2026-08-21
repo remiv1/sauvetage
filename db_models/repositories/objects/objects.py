@@ -408,7 +408,8 @@ class ObjectsRepository(BaseRepository):
             self._set_current_price(instance, object_price)
 
         logger.debug(
-            "[ObjectsRepository] objet avant commit: ean13=%s, name=%s, description=%s, book=%s, obj_metadatas=%s, prices=%s, object_price=%s, vat_rate_id=%s",
+            "[ObjectsRepository] objet avant commit: ean13=%s, name=%s, description=%s, book=%s, " +
+            "obj_metadatas=%s, prices=%s, object_price=%s, vat_rate_id=%s",
             getattr(instance, "ean13", None),
             getattr(instance, "name", None),
             getattr(instance, "description", None),

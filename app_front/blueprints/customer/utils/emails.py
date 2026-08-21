@@ -60,7 +60,12 @@ def update_email(
     """
     repo = CustomerMailsRepository(db_conf.get_main_session())
     try:
-        email = repo.update_email(customer_id, email_id, _filter_fields(email_data), only_active=False)
+        email = repo.update_email(
+            customer_id,
+            email_id,
+            _filter_fields(email_data),
+            only_active=False,
+        )
         return email.to_dict()
     except ValueError as e:
         raise ValueError(f"E-mail #{email_id} introuvable.") from e

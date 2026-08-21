@@ -191,7 +191,7 @@ class SuppliersRepository(BaseRepository):
             self.session.commit()
         except IntegrityError as e:
             self.session.rollback()
-            logger.error(
+            logger.exception(
                 "Erreur d'intégrité lors du commit en base de données : %s",
                 e.orig
             )

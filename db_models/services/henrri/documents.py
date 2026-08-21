@@ -158,7 +158,7 @@ class HenrriDocumentsService(HenrriService):
         """
         remote_document = self._as_document(updated_document)
         check = any(
-            line.id is None 
+            line.id is None
             for line in [self._as_document_line(line) for line in updated_lines]
         )
         if check:
