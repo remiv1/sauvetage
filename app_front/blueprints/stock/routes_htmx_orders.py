@@ -32,7 +32,7 @@ NEW_LINE = "htmx_templates/stock/orders/fragments/new_line.html"
 RECEIVE_LINE = "htmx_templates/stock/orders/fragments/receive_line.html"
 SECTION_NEW = "htmx_templates/stock/orders/sections/new.html"
 SECTION_HOME = "htmx_templates/stock/orders/sections/home.html"
-SECTION_CANCELED = "htmx_templates/stock/orders/sections/canceled.html"
+SECTION_CANCELLED = "htmx_templates/stock/orders/sections/cancelled.html"
 SECTION_CONFIRMED = "htmx_templates/stock/orders/sections/confirmed.html"
 UNKNOWN_OBJECT = "<p>Objet introuvable.</p>"
 
@@ -91,8 +91,8 @@ def cancel_order(order_id: int):
     """Annule une commande fournisseur (HTMX)."""
     if request.method == "POST":
         cancel_supplier_order(order_id)
-        return render_template(SECTION_CANCELED, order_id=order_id, deleted=True, mod="order")
-    return render_template(SECTION_CANCELED, order_id=order_id, deleted=False, mod="order")
+        return render_template(SECTION_CANCELLED, order_id=order_id, deleted=True, mod="order")
+    return render_template(SECTION_CANCELLED, order_id=order_id, deleted=False, mod="order")
 
 
 @bp_stock_htmx_orders.route("/<int:order_id>/line/create", methods=["GET", "POST"])
@@ -124,10 +124,10 @@ def edit_order_line(order_id: int, line_id: int, action: str):
     # Gestion de la méthode POST pour les actions d'édition ou de suppression
     if request.method == "POST":
 
-        # If deletion was requested, return the canceled fragment indicating success
+        # If deletion was requested, return the cancelled fragment indicating success
         if action == "delete":
             line_id = edit_order_in_line_db(form, action=action, line_id=line_id, order_id=order_id)
-            return render_template(SECTION_CANCELED, deleted=True, line_id=line_id)
+            return render_template(SECTION_CANCELLED, deleted=True, line_id=line_id)
 
         # Gestion de l'action d'édition
         edit_order_in_line_db(form, action=action, line_id=line_id, order_id=order_id)
@@ -144,7 +144,7 @@ def edit_order_line(order_id: int, line_id: int, action: str):
 
     # Gestion de la méthode GET pour l'action de suppression
     if action == "delete":
-        return render_template(SECTION_CANCELED, line_id=line_id)
+        return render_template(SECTION_CANCELLED, line_id=line_id)
 
     # Gestion de la méthode GET pour l'action d'édition
     order = get_order_by_id(order_id)

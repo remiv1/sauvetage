@@ -258,6 +258,7 @@ class CreateObjectForm(FlaskForm):
     object_tags = FieldList(FormField(TagForm), min_entries=0)  # type: ignore[arg-type]
     obj_metadatas = FormField(MetadataForm)  # type: ignore[arg-type]
     media_files = FieldList(FormField(MediaFileForm), min_entries=0)  # type: ignore[arg-type]
+    variations = FieldList(FormField(VariationForm), min_entries=0)  # type: ignore[arg-type]
     submit = SubmitField("Valider")
 
     def validate_prices(self, field: FieldList):
@@ -292,6 +293,7 @@ class CreateObjectForm(FlaskForm):
         self._populate_object_tags(obj.object_tags)
         self._populate_obj_metadatas(obj.obj_metadatas)
         self._populate_media_files(obj.media_files)
+        self._populate_variations(obj.object_variations)
 
     def _populate_prices(self, prices: Any, fallback_price: Any = None):
         """Remplit l'historique des prix à partir de l'objet persistant."""
@@ -371,6 +373,22 @@ class CreateObjectForm(FlaskForm):
             inner["file_type"].data = mf.file_type or ""
             inner["alt_text"].data = mf.alt_text or ""
             inner["file_link"].data = mf.file_link or ""
+
+    def _populate_variations(self, variations: Any):
+        while len(self.variations) > 0:
+            self.variations.pop_entry()
+        for variation in variations:
+            inner = self.variations.append_entry().form  # type: ignore[attr-defined]
+            inner["id"].data = str(variation.id)
+            inner["name"].data = variation.name or ""
+            inner["description"].data = variation.description or ""
+            inner["price"].data = str(variation.price) if variation.price is not None else ""
+            inner["purchase_price"].data = (
+                str(variation.purchase_price)
+                if variation.purchase_price is not None
+                else ""
+            )
+            inner["is_active"].data = variation.is_active
 
 
 class ReceiveLineForm(FlaskForm):

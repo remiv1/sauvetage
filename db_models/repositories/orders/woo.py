@@ -8,8 +8,9 @@ import logging
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from db_models.objects import Customers, Order
+from db_models.objects import Customers, Order, OrderAlert
 from db_models.repositories.orders.repository import OrdersRepository
+from db_models.repositories.sync_log import SyncLogRepository
 from db_models.services.woo_commerce.orders import WCOrdersService
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ class OrdersWooRepository:
     def __init__(self, session: Session):
         self.session = session
         self.order_repo = OrdersRepository(session)
+        self.sync_log_repo = SyncLogRepository(session)
         self.service = WCOrdersService(session, separated_keys=True)
 
     def _one_month_ago(self) -> datetime:
@@ -225,13 +227,9 @@ class OrdersWooRepository:
                     order.id,
                 )
                 return "created", order
-            order = self.order_repo.update_from_woo_commerce(
-                existing,
-                wc_order,
-                customer.id,
-            )
+            order = self._sync_existing_order_status(existing, wc_order)
             logger.info(
-                "Synchronisation site WooCommerce : commande %s mise à jour localement "
+                "Synchronisation site WooCommerce : statut de la commande %s mis à jour "
                 "(identifiant local %d).",
                 wpwc_id,
                 order.id,
@@ -243,6 +241,80 @@ class OrdersWooRepository:
                 wpwc_id,
             )
             return "failed", None
+
+    def _sync_existing_order_status(self, order: Order, wc_order: dict) -> Order:
+        """Applique les seuls événements WooCommerce autorisés sur une commande ERP."""
+        wc_status = str(wc_order.get("status") or "").lower()
+        order.last_synced_at = datetime.now(timezone.utc)
+        order.update_source = "woo_commerce"
+        operation, message = self._process_wc_status(order, wc_status)
+
+        self.sync_log_repo.log_order(
+            order_id=order.id,
+            external_id=str(order.wpwc_id),
+            sync_direction="inbound",
+            operation=operation,
+            sync_status="success",
+            error_message=message,
+        )
+        return order
+
+    def _process_wc_status(self, order: Order, wc_status: str) -> tuple[str, str]:
+        """Traite un statut WooCommerce sans modifier les données de commande ERP."""
+        if wc_status == "cancelled":
+            return self._process_cancellation(order)
+        if wc_status == "refunded":
+            return self._process_refund(order)
+        known_statuses = {
+            "processing": ("payment_received", "Paiement client reçu sur WooCommerce."),
+            "completed": ("completion_received", "Commande marquée terminée sur WooCommerce."),
+        }
+        return known_statuses.get(
+            wc_status,
+            ("status_observed", f"Statut WooCommerce observé : {wc_status or 'inconnu'}."),
+        )
+
+    def _process_cancellation(self, order: Order) -> tuple[str, str]:
+        """Annule une commande non facturée ou crée l'alerte d'avoir nécessaire."""
+        if order.status == "draft":
+            order.status = "cancelled"
+            for line in order.order_lines:
+                if line.status == "draft":
+                    line.status = "cancelled"
+            return "customer_cancellation", "Annulation cliente appliquée à la commande non facturée."
+        self._create_alert_if_absent(
+            order,
+            code="credit_note_required",
+            message=(
+                "La cliente a annulé cette commande sur le site après facturation. "
+                "Créer un avoir dans Henrri avant tout remboursement."
+            ),
+        )
+        return "cancellation_alert", "Annulation cliente reçue après facturation ou expédition."
+
+    def _process_refund(self, order: Order) -> tuple[str, str]:
+        """Crée l'alerte de rapprochement nécessaire après un remboursement WooCommerce."""
+        self._create_alert_if_absent(
+            order,
+            code="refund_reconciliation_required",
+            message=(
+                "Un remboursement est signalé sur WooCommerce. Vérifier le rapprochement "
+                "avec un éventuel avoir Henrri."
+            ),
+        )
+        return "refund_alert", "Remboursement signalé par WooCommerce."
+
+    def _create_alert_if_absent(self, order: Order, *, code: str, message: str) -> None:
+        """Crée une alerte ouverte si le même événement n'est pas déjà signalé."""
+        alert = self.session.execute(
+            select(OrderAlert).where(
+                OrderAlert.order_id == order.id,
+                OrderAlert.code == code,
+                OrderAlert.is_resolved.is_(False),
+            )
+        ).scalar_one_or_none()
+        if alert is None:
+            self.session.add(OrderAlert(order_id=order.id, code=code, message=message))
 
     def push_recent_local_orders_without_wpwc_id(self) -> list[Order]:
         """Pousse vers WooCommerce les commandes locales récentes non synchronisées."""

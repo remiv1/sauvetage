@@ -1,7 +1,55 @@
 """Test pour les commandes de bout en bout."""
 
+from unittest.mock import MagicMock
+
 from sqlalchemy.orm import Session, joinedload
 from db_models.objects import Order, OrderLine, Invoice, Shipment, InvoiceLine, ShipmentLine
+from db_models.repositories.orders.repository import OrdersRepository
+
+
+def test_cancel_order_cancels_lines_and_releases_reservations() -> None:
+    """L'annulation complète doit restituer chaque réservation dans une transaction."""
+    session = MagicMock()
+    repository = OrdersRepository(session)
+    order = Order(
+        id=7,
+        reference="CMD-2608-00007",
+        customer_id=1,
+        status="draft",
+        create_source="test",
+    )
+    order.order_lines = [
+        OrderLine(
+            id=1,
+            order_id=7,
+            general_object_id=10,
+            quantity=2,
+            status="draft",
+            unit_price=12,
+            discount=0,
+            vat_rate=20,
+            create_source="test",
+        ),
+        OrderLine(
+            id=2,
+            order_id=7,
+            general_object_id=11,
+            quantity=3,
+            status="invoiced",
+            unit_price=8,
+            discount=0,
+            vat_rate=20,
+            create_source="test",
+        ),
+    ]
+
+    repository.cancel_order(order, update_source="backoffice")
+
+    assert order.status == "cancelled"
+    assert all(line.status == "cancelled" for line in order.order_lines)
+    movements = [call.args[0] for call in session.add.call_args_list]
+    assert [movement.quantity for movement in movements] == [-2, -3]
+    session.commit.assert_called_once()
 
 
 def test_create_order_with_invoice_and_shipment(

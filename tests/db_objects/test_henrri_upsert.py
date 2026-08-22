@@ -131,11 +131,13 @@ def test_sync_customer_persists_all_returned_identifiers() -> None:
             post_code="59000",
             is_post_code_shared=False,
         ),
-    )
-    service.upsert_contact.return_value = Contact(
-        id=801,
-        first_name="Julie",
-        last_name="Benoit",
+        contacts=[
+            Contact(
+                id=801,
+                first_name="Julie",
+                last_name="Benoit",
+            )
+        ],
     )
 
     sync_customer_to_henrri(customer, service)
@@ -143,6 +145,7 @@ def test_sync_customer_persists_all_returned_identifiers() -> None:
     assert customer.henrri_id == "5001"
     assert customer.addresses[0].henrri_id == 701
     assert customer.part.contact_henrri_id == 801
+    service.upsert_contact.assert_not_called()
 
 
 def test_sync_customer_sends_full_address() -> None:
@@ -159,8 +162,8 @@ def test_sync_customer_sends_full_address() -> None:
     assert sent_customer.address.address == "15 rue de la Paix"
     assert sent_customer.address.city == "Lille"
     assert sent_customer.address.post_code == "59000"
-    assert sent_customer.contacts is None
-    service.upsert_contact.assert_called_once()
+    assert len(sent_customer.contacts) == 1
+    service.upsert_contact.assert_not_called()
 
 
 def test_sync_customer_updates_contact_separately() -> None:
@@ -173,6 +176,8 @@ def test_sync_customer_updates_contact_separately() -> None:
 
     sync_customer_to_henrri(customer, service)
 
+    sent_customer = service.upsert_customer.call_args.args[0]
+    assert sent_customer.contacts is None
     assert service.upsert_contact.call_args.args[0] == 81
     assert service.upsert_contact.call_args.args[2] == 801
 

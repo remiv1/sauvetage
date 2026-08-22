@@ -25,3 +25,15 @@ def test_customer_payload_and_repo_match_woo_customer_id(wc_customer_part) -> No
     found = repo.get_by_wpwc_id("42")
 
     assert found is customer
+
+
+def test_professional_customer_payload_uses_string_names(wc_customer_pro) -> None:
+    """Un client professionnel doit fournir des noms texte à WooCommerce."""
+    payload = wc_customer_pro.to_dict_for_wpwc()
+
+    assert payload["first_name"] == ""
+    assert payload["last_name"] == "ACME"
+    assert payload["billing"]["first_name"] == ""
+    assert payload["billing"]["last_name"] == "ACME"
+    assert payload["shipping"]["first_name"] == ""
+    assert payload["shipping"]["last_name"] == "ACME"

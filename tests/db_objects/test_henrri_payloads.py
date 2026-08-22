@@ -49,6 +49,19 @@ def test_customer_to_dict_henrri_contract_for_professional(
     Customer(**payload)
 
 
+def test_customer_to_dict_henrri_normalizes_empty_professional_vat_number(
+        professional_customer: Customers,
+    ) -> None:
+    """Une TVA professionnelle vide doit être transmise comme valeur nulle à Henrri."""
+    professional_customer.pro.vat_number = ""
+
+    payload = professional_customer.to_dict_henrri()
+
+    assert payload["ict"] is None
+    assert payload["vat_number"] is None
+    Customer(**payload)
+
+
 def test_customer_to_dict_henrri_contract_for_individual(
         individual_customer: Customers
     ) -> None:

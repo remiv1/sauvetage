@@ -9,6 +9,7 @@ from app_front.blueprints.order.utils import (
     get_order_by_id,
     get_customer_order_addresses,
     update_order_delivery_address,
+    create_return_order,
     search_customers_for_dropdown,
     invoice_order,
     retry_henrri_invoice,
@@ -31,6 +32,20 @@ ARTICLE_DROPDOWN = "htmx_templates/order/create/article_dropdown.html"
 ADDRESS_SELECTOR = "htmx_templates/order/create/address_selector.html"
 _EDIT_ORDER_ROUTE = "order_htmx_create.edit_order"
 _VIEW_ORDER_ROUTE = "order.order_view"
+
+
+@bp_order_htmx_create.post("/return/<int:order_id>")
+def create_return_order_route(order_id: int):
+    """Crée la commande de retour issue d'une annulation cliente après facturation."""
+    try:
+        return_order = create_return_order(order_id)
+    except ValueError as exc:
+        return f"<p class='error'>{exc}</p>", 422
+    response = make_response("", 200)
+    response.headers["HX-Redirect"] = url_for(
+        _VIEW_ORDER_ROUTE, order_id=return_order.id
+    )
+    return response
 
 
 # ── Page de création ─────────────────────────────────────────────────────
@@ -160,7 +175,7 @@ def invoice_order_route(order_id: int):
     line_items = []
     for i, lid in enumerate(line_ids):
         qty = quantities[i] if i < len(quantities) else 0
-        if qty > 0:
+        if qty != 0:
             line_items.append({"order_line_id": lid, "quantity": qty})
 
     if not line_items:
@@ -208,7 +223,7 @@ def ship_order_route(order_id: int):
     line_items = []
     for i, lid in enumerate(line_ids):
         qty = quantities[i] if i < len(quantities) else 0
-        if qty > 0:
+        if qty != 0:
             line_items.append({"order_line_id": lid, "quantity": qty})
 
     if not line_items:

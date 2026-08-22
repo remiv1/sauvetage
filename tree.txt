@@ -332,7 +332,7 @@
 │   │   │   │   │   │   ├── new_line.html
 │   │   │   │   │   │   └── receive_line.html
 │   │   │   │   │   └── sections
-│   │   │   │   │       ├── canceled.html
+│   │   │   │   │       ├── cancelled.html
 │   │   │   │   │       ├── confirmed.html
 │   │   │   │   │       ├── home.html
 │   │   │   │   │       ├── new.html
@@ -343,7 +343,7 @@
 │   │   │   │   │   │   ├── new_return.html
 │   │   │   │   │   │   └── new_table.html
 │   │   │   │   │   └── sections
-│   │   │   │   │       ├── canceled.html
+│   │   │   │   │       ├── cancelled.html
 │   │   │   │   │       ├── home.html
 │   │   │   │   │       ├── new.html
 │   │   │   │   │       └── view.html

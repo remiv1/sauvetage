@@ -27,8 +27,73 @@ from db_models.objects import (
     VatRate,
 )
 from db_models.repositories.customers import CustomersRepository
+from db_models.services.woo_commerce.customers import WCCustomersService
 from db_models.services.woo_commerce.orders import WCOrdersService, _match_line_to_wc
 from db_models.services.woo_commerce.products import WCProductsService
+
+
+def test_wc_customer_sync_links_existing_customer_by_email() -> None:
+    """Un client WooCommerce existant doit être rattaché à son identifiant distant."""
+    service = object.__new__(WCCustomersService)
+    service.api_read = MagicMock()
+    service.api_write = MagicMock()
+    service.customer_repo = MagicMock()
+    customer = MagicMock(id=11)
+    customer.get_wpwc_mail.return_value = "e.torresani@mail.com"
+    service.api_read.get.return_value = MagicMock(
+        status_code=200,
+        json=MagicMock(return_value=[{"id": 42}]),
+    )
+    service.customer_repo.update_info.return_value = customer
+
+    result = service.create_wpwc_customer_if_not_exists(customer)
+
+    assert result is customer
+    service.api_write.post.assert_not_called()
+    service.customer_repo.update_info.assert_called_once_with(11, {"wpwc_id": 42})
+
+
+def test_wc_customer_sync_creates_and_links_missing_customer() -> None:
+    """Un client absent de WooCommerce doit être créé puis rattaché à son identifiant."""
+    service = object.__new__(WCCustomersService)
+    service.api_read = MagicMock()
+    service.api_write = MagicMock()
+    service.customer_repo = MagicMock()
+    customer = MagicMock(id=11)
+    customer.get_wpwc_mail.return_value = "e.torresani@mail.com"
+    customer.to_dict_for_wpwc.return_value = {"email": "e.torresani@mail.com"}
+    service.api_read.get.return_value = MagicMock(
+        status_code=200,
+        json=MagicMock(return_value=[]),
+    )
+    service.api_write.post.return_value = MagicMock(
+        status_code=201,
+        json=MagicMock(return_value={"id": 43}),
+    )
+    service.customer_repo.update_info.return_value = customer
+
+    result = service.create_wpwc_customer_if_not_exists(customer)
+
+    assert result is customer
+    service.api_write.post.assert_called_once_with(
+        "customers", data={"email": "e.torresani@mail.com"}
+    )
+    service.customer_repo.update_info.assert_called_once_with(11, {"wpwc_id": 43})
+
+
+def test_customer_repository_updates_partner_identifiers() -> None:
+    """Les identifiants partenaires doivent être enregistrés sur le client principal."""
+    session = MagicMock()
+    repository = CustomersRepository(session)
+    customer = Customers(id=11, customer_type="part")
+    customer.part = CustomerParts(customer_id=11, first_name="Etienne", last_name="Torresani")
+    repository.get_by_id = MagicMock(return_value=customer)  # type: ignore[method-assign]
+
+    updated = repository.update_info(11, {"wpwc_id": 42, "henrri_id": "3035"})
+
+    assert updated.wpwc_id == 42
+    assert updated.henrri_id == "3035"
+    session.commit.assert_called_once()
 
 def test_general_object_payload_uses_wc_tax_slug(
         book_product: GeneralObjects    # pylint: disable=W0621
@@ -441,6 +506,65 @@ def test_order_payload_uses_wc_customer_and_line_contract(
     assert payload["metadata"]["_billing_wooccm10"] == "Professionnel"
 
 
+def test_cancelled_order_payload_updates_status_without_zeroing_lines(
+        wc_customer_pro: Customers,
+    ) -> None:
+    """Une annulation doit changer le statut WC sans altérer la quantité des lignes."""
+    product = GeneralObjects(
+        id=12,
+        supplier_id=1,
+        general_object_type="book",
+        ean13="9784444444444",
+        name="Produit annulé",
+        description="Commandable",
+        wpwc_id=120,
+    )
+    line = OrderLine(
+        id=7,
+        order_id=1,
+        general_object_id=12,
+        quantity=2,
+        status="cancelled",
+        unit_price=16.0,
+        discount=0,
+        vat_rate=20.0,
+        create_source="test",
+        general_object=product,
+        wpwc_id=70,
+    )
+    order = Order(
+        id=1,
+        reference="CMD-2401-00002",
+        customer_id=999,
+        status="cancelled",
+        create_source="test",
+        customer=wc_customer_pro,
+        order_lines=[line],
+    )
+
+    payload = order.to_dict_for_woo_commerce()
+
+    assert payload["status"] == "cancelled"
+    assert payload["line_items"] == [{"name": "Produit annulé", "product_id": 120,
+                                       "quantity": 2, "subtotal": "32.0", "total": "32.0",
+                                       "id": 70}]
+
+
+def test_returned_order_payload_uses_refunded_status(wc_customer_pro: Customers) -> None:
+    """Une commande retournée doit être synchronisée comme remboursée dans WooCommerce."""
+    order = Order(
+        id=1,
+        reference="RET-2401-00001",
+        customer_id=999,
+        status="returned",
+        create_source="test",
+        customer=wc_customer_pro,
+        order_lines=[],
+    )
+
+    assert order.to_dict_for_woo_commerce()["status"] == "refunded"
+
+
 def test_match_line_to_wc_uses_product_and_variation_ids() -> None:
     """
     L'appariement d'une ligne locale à la ligne WooCommerce doit se faire sur
@@ -590,8 +714,8 @@ def test_wc_orders_service_creates_missing_remote_customer_when_local_customer_e
     service.customer_service.create_wpwc_customer_if_not_exists.assert_called_once_with(customer)
 
 
-def test_wc_orders_service_syncs_line_ids_from_wc_payload() -> None:
-    """Le synchroniseur de lignes doit réassocier les wpwc_id via (product_id, variation_id)."""
+def test_wc_orders_service_preserves_existing_line_ids() -> None:
+    """Le synchroniseur conserve la liaison WooCommerce déjà connue d'une ligne."""
     service = object.__new__(WCOrdersService)
     product = GeneralObjects(
         id=8,
@@ -645,10 +769,10 @@ def test_wc_orders_service_syncs_line_ids_from_wc_payload() -> None:
                 "variation_id": 201,
             },
         ],
-        clear_all_canceled=False,
+        clear_all_cancelled=False,
     )
 
-    assert line.wpwc_id == 77
+    assert line.wpwc_id == 999
 
 
 def test_wc_product_update_fails_when_woo_returns_no_wc_id(caplog) -> None:

@@ -11,7 +11,7 @@
             Livre
         </button>
         {% endif %}
-        {% if form_state in ['view', 'edit'] and obj %}
+        {% if form_state != 'view' or obj %}
         <button type="button" class="tab-btn {{ '' if object_type == 'book' else 'active' }}"
                 data-tab="tab-variations">
             Variations
@@ -40,6 +40,7 @@
                 <div class="form-group">
                     {{ form.book.author.label(class="form-label") }}
                     <div class="autocomplete-wrapper">
+                        <label for="book-author" style="display:none;">Auteur</label>
                         <input type="text" name="book-author" id="book-author"
                                class="form-control ac-input" placeholder="Auteur…"
                                data-ac-field="author"
@@ -56,6 +57,7 @@
                 <div class="form-group">
                     {{ form.book.editor.label(class="form-label") }}
                     <div class="autocomplete-wrapper">
+                        <label for="book-editor" style="display:none;">Éditeur</label>
                         <input type="text" name="book-editor" id="book-editor"
                                class="form-control ac-input" placeholder="Éditeur…"
                                data-ac-field="editor"
@@ -72,6 +74,7 @@
                 <div class="form-group">
                     {{ form.book.diffuser.label(class="form-label") }}
                     <div class="autocomplete-wrapper">
+                        <label for="book-diffuser" style="display:none;">Diffuseur</label>
                         <input type="text" name="book-diffuser" id="book-diffuser"
                                class="form-control ac-input" placeholder="Diffuseur…"
                                data-ac-field="diffuser"
@@ -88,6 +91,7 @@
                 <div class="form-group">
                     {{ form.book.genre.label(class="form-label") }}
                     <div class="autocomplete-wrapper">
+                        <label for="book-genre" style="display:none;">Genre</label>
                         <input type="text" name="book-genre" id="book-genre"
                                class="form-control ac-input" placeholder="Genre…"
                                data-ac-field="genre"
@@ -121,7 +125,7 @@
                 {% if form_state == 'view' and obj and obj.object_tags %}
                     {% for ot in obj.object_tags %}
                     <div class="dynamic-list-item">
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" id=""
                                value="{{ ot.tag.name if ot.tag else '' }}" disabled>
                     </div>
                     {% endfor %}
@@ -130,7 +134,7 @@
                     <div class="dynamic-list-item">
                         <input type="hidden" name="object_tags-{{ loop.index0 }}-id" value="{{ ot.id }}">
                         <input type="hidden" name="object_tags-{{ loop.index0 }}-tag_id" value="{{ ot.tag_id }}">
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" id=""
                                value="{{ ot.tag.name if ot.tag else '' }}" disabled style="flex:1">
                         <button type="button"
                                 class="btn btn-sm btn-danger btn-remove-item"
@@ -156,14 +160,14 @@
                     {% for k, v in data.items() %}
                         {% if v is string %}
                         <div class="dynamic-list-item kv-pair">
-                            <input type="text" class="form-control" value="{{ k }}" disabled placeholder="Clé">
-                            <input type="text" class="form-control" value="{{ v }}" disabled placeholder="Valeur">
+                            <input type="text" class="form-control" value="{{ k }}" id="" disabled placeholder="Clé">
+                            <input type="text" class="form-control" value="{{ v }}" id="" disabled placeholder="Valeur">
                         </div>
                         {% elif v is iterable %}
                             {% for val in v %}
                             <div class="dynamic-list-item kv-pair">
-                                <input type="text" class="form-control" value="{{ k }}" disabled placeholder="Clé">
-                                <input type="text" class="form-control" value="{{ val }}" disabled placeholder="Valeur">
+                                <input type="text" class="form-control" value="{{ k }}" id="" disabled placeholder="Clé">
+                                <input type="text" class="form-control" value="{{ val }}" id="" disabled placeholder="Valeur">
                             </div>
                             {% endfor %}
                         {% endif %}
@@ -178,10 +182,10 @@
                             <div class="autocomplete-wrapper" style="flex:1">
                                 <input type="text" name="obj_metadatas-items-{{ idx.value }}-key"
                                        class="form-control ac-input" data-ac-field="metadata_key"
-                                       value="{{ k }}" placeholder="Clé">
+                                       value="{{ k }}" placeholder="Clé" id="">
                                 <div class="search-dropdown"></div>
                             </div>
-                            <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ v }}" placeholder="Valeur">
+                            <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" id="" class="form-control" value="{{ v }}" placeholder="Valeur">
                             <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
                         </div>
                         {% set idx.value = idx.value + 1 %}
@@ -192,10 +196,10 @@
                                 <div class="autocomplete-wrapper" style="flex:1">
                                     <input type="text" name="obj_metadatas-items-{{ idx.value }}-key"
                                            class="form-control ac-input" data-ac-field="metadata_key"
-                                           value="{{ k }}" placeholder="Clé">
+                                           value="{{ k }}" placeholder="Clé" id="">
                                     <div class="search-dropdown"></div>
                                 </div>
-                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" class="form-control" value="{{ val }}" placeholder="Valeur">
+                                <input type="text" name="obj_metadatas-items-{{ idx.value }}-value" id="" class="form-control" value="{{ val }}" placeholder="Valeur">
                                 <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
                             </div>
                             {% set idx.value = idx.value + 1 %}
@@ -207,10 +211,10 @@
                         <div class="autocomplete-wrapper" style="flex:1">
                             <input type="text" name="obj_metadatas-items-0-key"
                                    class="form-control ac-input" data-ac-field="metadata_key"
-                                   placeholder="Clé">
+                                   placeholder="Clé" id="">
                             <div class="search-dropdown"></div>
                         </div>
-                        <input type="text" name="obj_metadatas-items-0-value"
+                        <input type="text" name="obj_metadatas-items-0-value" id=""
                                class="form-control" placeholder="Valeur">
                         <button type="button" class="btn btn-sm btn-danger btn-remove-item"
                                 title="Supprimer">&times;</button>
@@ -232,15 +236,15 @@
                     <div class="dynamic-list-item media-item">
                         <span class="media-type-badge">{{ mf.file_type }}</span>
                         {% if mf.file_type == 'lnk' %}
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" id=""
                                value="{{ mf.file_link }}" disabled placeholder="URL">
                         {% elif mf.file_type == 'img' %}
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" id=""
                                value="{{ mf.file_link }}" disabled placeholder="Fichier">
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" id=""
                                value="{{ mf.alt_text }}" disabled placeholder="Texte alt.">
                         {% else %}
-                        <input type="text" class="form-control"
+                        <input type="text" class="form-control" id=""
                                value="{{ mf.file_link }}" disabled placeholder="Nom">
                         {% endif %}
                     </div>
@@ -251,7 +255,7 @@
                     {% for mf in obj.media_files %}
                     <div class="dynamic-list-item media-item">
                         <select name="media_files-{{ loop.index0 }}-file_type"
-                                class="form-control media-type-select">
+                                class="form-control media-type-select" id="">
                             <option value="">-- Type --</option>
                             <option value="lnk" {{ 'selected' if mf.file_type == 'lnk' else '' }}>
                                 Lien
@@ -267,7 +271,7 @@
                         <div class="media-fields">
                             <input type="hidden" value="{{ mf.id }}"
                                    name="media_files-{{ loop.index0 }}-id">
-                            <input type="text" class="form-control"
+                            <input type="text" class="form-control" id=""
                                    name="media_files-{{ loop.index0 }}-file_link"
                                    value="{{ mf.file_link }}" placeholder="URL du lien">
                         </div>
@@ -290,7 +294,7 @@
                                 name="media_files-{{ loop.index0 }}-file_data"
                                 class="form-control media-replace-input"
                                 accept="image/*">
-                            <input type="text" class="form-control"
+                            <input type="text" class="form-control" id=""
                                    name="media_files-{{ loop.index0 }}-alt_text"
                                    value="{{ mf.alt_text }}" placeholder="Texte alt.">
                         </div>
@@ -298,7 +302,7 @@
                         <div class="media-fields">
                             <input type="hidden" value="{{ mf.id }}"
                                    name="media_files-{{ loop.index0 }}-id">
-                            <input type="text" class="form-control"
+                            <input type="text" class="form-control" id=""
                                    name="media_files-{{ loop.index0 }}-file_link"
                                    value="{{ mf.file_link }}" placeholder="Nom">
                         </div>
@@ -320,14 +324,51 @@
         </div>
 
         {# ── Onglet Variations ───────────────────────────────────────────── #}
-        {% if form_state in ['view', 'edit'] and obj %}
-        <div class="tab-panel {{ 'active' if object_type != 'book' else '' }}"
-             id="tab-variations"
-             hx-get="/stock/htmx/search/object/{{ obj.id }}/variations?form_state={{ form_state }}"
-             hx-trigger="intersect once"
-             hx-target="#tab-variations"
-             hx-swap="innerHTML">
-            <p class="text-muted">Chargement des variations…</p>
+        {% if form_state != 'view' or obj %}
+        <div class="tab-panel {{ 'active' if object_type != 'book' else '' }}" id="tab-variations">
+            {% if form_state == 'view' %}
+                {% if obj.object_variations %}
+                <table class="stock-table table table-sm table-striped w-100">
+                    <thead>
+                        <tr><th>Nom</th><th>Prix</th><th>Actif</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for variation in obj.object_variations %}
+                        <tr>
+                            <td>{{ variation.name }}</td>
+                            <td>{{ variation.price }}</td>
+                            <td>{{ 'Oui' if variation.is_active else 'Non' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">Aucune variation pour cet objet.</p>
+                {% endif %}
+            {% else %}
+            <div id="variations-list" class="dynamic-list">
+                {% for variation in form.variations %}
+                <div class="dynamic-list-item variation-item">
+                    {{ variation.form.id() }}
+                    <input type="text" name="{{ variation.form.name.name }}" class="form-control" id=""
+                           value="{{ variation.form.name.data or '' }}" placeholder="Nom de la variation" required>
+                    <input type="text" name="{{ variation.form.description.name }}" class="form-control" id=""
+                           value="{{ variation.form.description.data or '' }}" placeholder="Description">
+                    <input type="number" name="{{ variation.form.price.name }}" class="form-control" id=""
+                           value="{{ variation.form.price.data or '' }}" placeholder="Prix de vente" step="0.01" required>
+                    <input type="number" name="{{ variation.form.purchase_price.name }}" class="form-control" id=""
+                           value="{{ variation.form.purchase_price.data or '' }}" placeholder="Prix d'achat" step="0.01">
+                    <label class="form-check-label">
+                        {{ variation.form.is_active(checked=variation.form.is_active.data) }} Active
+                    </label>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary btn-add-variation">
+                + Ajouter une variation
+            </button>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -613,6 +654,24 @@
                     fields.innerHTML = '';
                 }
             });
+        });
+    }
+
+    var addVariationBtn = container.querySelector('.btn-add-variation');
+    if (addVariationBtn) {
+        addVariationBtn.addEventListener('click', function() {
+            var list = document.getElementById('variations-list');
+            var idx = list.querySelectorAll('.variation-item').length;
+            var div = document.createElement('div');
+            div.className = 'dynamic-list-item variation-item';
+            div.innerHTML = '<input type="hidden" name="variations-' + idx + '-id" value="">'
+                          + '<input type="text" name="variations-' + idx + '-name" class="form-control" placeholder="Nom de la variation" required>'
+                          + '<input type="text" name="variations-' + idx + '-description" class="form-control" placeholder="Description">'
+                          + '<input type="number" name="variations-' + idx + '-price" class="form-control" placeholder="Prix de vente" step="0.01" required>'
+                          + '<input type="number" name="variations-' + idx + '-purchase_price" class="form-control" placeholder="Prix d\'achat" step="0.01">'
+                          + '<label class="form-check-label"><input type="checkbox" name="variations-' + idx + '-is_active" checked> Active</label>'
+                          + '<button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Supprimer">&times;</button>';
+            list.appendChild(div);
         });
     }
 

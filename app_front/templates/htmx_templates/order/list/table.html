@@ -56,7 +56,7 @@
                         </a>
                         {% endif %}
                         {# Bouton Annuler #}
-                        {% if item.status not in ('canceled', 'returned', 'shipped') %}
+                        {% if item.status not in ('cancelled', 'returned', 'shipped') %}
                         <button class="action-icon action-cancel"
                                 title="Annuler la commande"
                                 hx-get="{{ url_for('order_htmx_list.order_cancel_modal', order_id=item.id) }}"

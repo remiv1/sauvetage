@@ -36,7 +36,7 @@ STATUS_LABELS = {
     "invoiced": "En cours",
     "partial_shipped": "En cours",
     "shipped": "Expédiée",
-    "canceled": "Annulée",
+    "cancelled": "Annulée",
     "returned": "Retournée",
 }
 
@@ -108,7 +108,7 @@ def _order_total_ttc(order: Order) -> float:
     """Calcule le montant TTC d'une commande à partir des lignes actives."""
     total = 0.0
     for line in (order.order_lines or []):
-        if line.status == "canceled":
+        if line.status == "cancelled":
             continue
         quantity = int(line.quantity or 0)
         unit_price = float(line.unit_price or 0)
@@ -229,7 +229,7 @@ def _availability_for_order(
         stock_by_object: dict[int, dict[str, float | str]]
     ) -> str:
     """Retourne un statut de disponibilité global pour la commande."""
-    active_lines = [line for line in (order.order_lines or []) if line.status != "canceled"]
+    active_lines = [line for line in (order.order_lines or []) if line.status != "cancelled"]
     if not active_lines:
         return "Indisponible"
 
@@ -420,7 +420,7 @@ def commandes():
         int(line.general_object_id)
         for order in orders
         for line in (order.order_lines or [])
-        if line.general_object_id is not None and line.status != "canceled"
+        if line.general_object_id is not None and line.status != "cancelled"
     }
     stock_by_object = _build_stock_snapshot(session, object_ids)
 

@@ -31,7 +31,7 @@ bp_stock_htmx_reservations = Blueprint(
 SECTION_HOME = "htmx_templates/stock/orders/sections/home.html"
 SECTION_VIEW = "htmx_templates/stock/orders/sections/view.html"
 SECTION_NEW = "htmx_templates/stock/orders/sections/new.html"
-SECTION_CANCELED = "htmx_templates/stock/orders/sections/canceled.html"
+SECTION_CANCELLED = "htmx_templates/stock/orders/sections/cancelled.html"
 SECTION_CONFIRMED = "htmx_templates/stock/orders/sections/confirmed.html"
 NEW_LINE = "htmx_templates/stock/orders/fragments/new_line.html"
 
@@ -153,9 +153,9 @@ def delete_reservation_line(order_id: int, line_id: int):
         form = OrderInLineForm()
         edit_order_in_line_db(form, action="delete", line_id=line_id, order_id=order_id)
         return render_template(
-            SECTION_CANCELED, deleted=True, line_id=line_id, mod="line", **CTX
+            SECTION_CANCELLED, deleted=True, line_id=line_id, mod="line", **CTX
         )
-    return render_template(SECTION_CANCELED, line_id=line_id, mod="line", **CTX)
+    return render_template(SECTION_CANCELLED, line_id=line_id, mod="line", **CTX)
 
 
 @bp_stock_htmx_reservations.route("/cancel/<int:order_id>", methods=["GET", "POST"])
@@ -164,11 +164,11 @@ def cancel_reservation(order_id: int):
     if request.method == "POST":
         cancel_supplier_order(order_id, reservation=True)
         return render_template(
-            SECTION_CANCELED, order_id=order_id, deleted=True,
+            SECTION_CANCELLED, order_id=order_id, deleted=True,
             mod="reservation", **CTX
         )
     return render_template(
-        SECTION_CANCELED, order_id=order_id, deleted=False,
+        SECTION_CANCELLED, order_id=order_id, deleted=False,
         mod="reservation", **CTX
     )
 

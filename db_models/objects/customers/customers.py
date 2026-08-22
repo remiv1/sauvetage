@@ -184,6 +184,7 @@ class Customers(WorkingBase, QueryMixin):
 
         if self.pro:
             siret = self.pro.siret_number
+            vat_number = self.pro.vat_number or None
             customer = {
                 "name": self.full_name,
                 "type": "professional",
@@ -192,8 +193,8 @@ class Customers(WorkingBase, QueryMixin):
                 "siret": siret,
                 "trade_name": self.pro.company_name,
                 "company_name": self.pro.company_name,
-                "ict": self.pro.vat_number,
-                "vat_number": self.pro.vat_number,
+                "ict": vat_number,
+                "vat_number": vat_number,
                 "customer_type_alert_enabled": False,
                 "address": address_payload,
             }
@@ -280,9 +281,11 @@ class Customers(WorkingBase, QueryMixin):
         return normalized if any(char.isdigit() for char in normalized) else None
 
     def _get_names(self) -> tuple[str | None, str | None]:
-        first_name = self.part.first_name if self.part else None
-        last_name = self.part.last_name if self.part else None
-        return first_name, last_name
+        if self.pro:
+            return "", self.pro.company_name
+        if self.part:
+            return self.part.first_name, self.part.last_name
+        return None, None
 
     def get_wpwc_mail(self) -> Optional[str]:
         """Récupère l'email du client à utiliser pour WooCommerce."""

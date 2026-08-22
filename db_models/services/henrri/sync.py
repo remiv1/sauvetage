@@ -36,14 +36,18 @@ def sync_customer_to_henrri(
         ValueError: Si le client n'a pas d'adresse de facturation active exploitable.
     """
     hcs = service or HenrriCustomersService()
+    is_creation = customer.henrri_id is None
     remote = hcs.upsert_customer(
-        Customer(**customer.to_dict_henrri(with_contact=False)), customer.henrri_id
+        Customer(**customer.to_dict_henrri(with_contact=is_creation)), customer.henrri_id
     )
     if not remote:
         raise ValueError("Le client Henrri n'a pas été créé ou mis à jour.")
     _apply_henrri_customer_ids(customer, remote)
     if remote.id is None:
         raise ValueError("Le client Henrri n'a pas d'identifiant après synchronisation.")
+    if is_creation:
+        _apply_henrri_contact_id(customer, _get_remote_contact_id(remote))
+        return remote
     remote_contact = hcs.upsert_contact(
         remote.id,
         Contact(**customer.to_dict_henrri()["contacts"][0]),
@@ -86,6 +90,13 @@ def _apply_henrri_customer_ids(customer: Any, remote: Customer) -> None:
                 "de l'identifiant Henrri",
                 customer.id,
             )
+
+
+def _get_remote_contact_id(customer: Customer) -> int | None:
+    """Retourne l'identifiant du contact principal renvoyé par Henrri."""
+    contacts = customer.contacts or []
+    return contacts[0].id if contacts else None
+
 
 def _get_henrri_contact_id(customer: Any) -> int | None:
     """Retourne l'identifiant Henrri du contact local lorsqu'il existe."""

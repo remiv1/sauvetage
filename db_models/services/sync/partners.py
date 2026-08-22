@@ -14,6 +14,7 @@ Fonctions:
 - ``sync_all_products``: Synchronise tous les produits actifs.
 """
 
+import json
 import logging
 from dataclasses import dataclass
 from typing import Sequence
@@ -146,8 +147,12 @@ def _run_target(
     try:
         external_id = action()
     except Exception as exc:  # pylint: disable=broad-except
+        error_message = _format_target_error(target, exc)
         logger.exception(
-            "Échec de synchronisation du client %s vers %s : %s", customer_id, target, exc
+            "Échec de synchronisation du client %s vers %s : %s",
+            customer_id,
+            target,
+            error_message,
         )
         sync_repo.log_customer(
             customer_id=customer_id,
@@ -156,9 +161,9 @@ def _run_target(
             sync_direction="outbound",
             operation=operation,
             sync_status="failed",
-            error_message=str(exc),
+            error_message=error_message,
         )
-        return TargetResult(target=target, status="error", error=str(exc))
+        return TargetResult(target=target, status="error", error=error_message)
 
     sync_repo.log_customer(
         customer_id=customer_id,
@@ -169,6 +174,16 @@ def _run_target(
         sync_status="success",
     )
     return TargetResult(target=target, status="success", external_id=external_id)
+
+
+def _format_target_error(target: str, error: Exception) -> str:
+    """Formate une erreur partenaire avec le détail Henrri lorsque disponible."""
+    message = str(error)
+    body = getattr(error, "body", None)
+    if target != HENRRI or body is None:
+        return message
+    details = json.dumps(body, ensure_ascii=False, default=str)
+    return f"{message} | Détails de validation Henrri : {details[:1000]}"
 
 
 def _run_object_target(

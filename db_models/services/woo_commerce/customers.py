@@ -73,24 +73,31 @@ class WCCustomersService(WCBase):
                 return self.customer_repo.get_by_wpwc_id(customers[0].get('id'))
         return None
 
-    def exists_wpwc_customer(self, email: str) -> bool:
-        """
-        Vérifie si un client avec l'email donné existe dans WooCommerce.
+    def _get_wpwc_customer_id(self, email: str) -> int | str | None:
+        """Retourne l'identifiant WooCommerce associé à une adresse e-mail.
+
         Args:
-            email (str): L'email du client à vérifier.
+            email: L'adresse e-mail du client à rechercher.
+
         Returns:
-            bool: True si le client existe, False sinon.
+            L'identifiant WooCommerce, ou None lorsqu'aucun client ne correspond.
+
+        Raises:
+            ValueError: Si WooCommerce ne répond pas correctement ou retourne un client sans ID.
         """
         response = self.api_read.get("customers", params={"email": email})
-        if response.status_code == 200:
-            customers = response.json()
-            return len(customers) > 0
-        logger.exception(
-            "Erreur lors de la vérification du client WooCommerce : %s - %s",
-            response.status_code,
-            response.text
-        )
-        return False
+        if response.status_code != 200:
+            raise ValueError(
+                "Erreur lors de la recherche du client WooCommerce : "
+                f"{response.status_code} - {response.text}"
+            )
+        customers = response.json()
+        if not customers:
+            return None
+        wpwc_id = customers[0].get("id")
+        if wpwc_id is None:
+            raise ValueError("Le client WooCommerce trouvé ne possède pas d'identifiant.")
+        return wpwc_id
 
     def create_wpwc_customer_if_not_exists(self, customer: Customers) -> Customers:
         """
@@ -107,12 +114,13 @@ class WCCustomersService(WCBase):
                 customer.id
             )
             return customer
-        if self.exists_wpwc_customer(email):
+        if (wpwc_id := self._get_wpwc_customer_id(email)) is not None:
             logger.info(
-                "Le client avec l'email %s existe déjà dans WooCommerce.",
-                email
+                "Le client avec l'email %s existe déjà dans WooCommerce (ID %s).",
+                email,
+                wpwc_id,
             )
-            return customer
+            return self.customer_repo.update_info(customer.id, {"wpwc_id": wpwc_id})
 
         # Convertir les données du client en format compatible avec l'API WooCommerce
         customer_data = customer.to_dict_for_wpwc()
@@ -123,16 +131,14 @@ class WCCustomersService(WCBase):
         # Traitement du retour de l'API
         if response.status_code == 201:
             wc_customer = response.json()
-            data = {
-                'wpwc_id': wc_customer.get('id'),
-            }
-            return self.customer_repo.update_info(customer.id, data)
-        logger.exception(
-            "Erreur lors de la création du client WooCommerce : %s - %s",
-            response.status_code,
-            response.text
+            wpwc_id = wc_customer.get("id")
+            if wpwc_id is None:
+                raise ValueError("Le client WooCommerce créé ne possède pas d'identifiant.")
+            return self.customer_repo.update_info(customer.id, {"wpwc_id": wpwc_id})
+        raise ValueError(
+            "Erreur lors de la création du client WooCommerce : "
+            f"{response.status_code} - {response.text}"
         )
-        return customer
 
     def diff_customer(
             self,

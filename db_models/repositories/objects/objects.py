@@ -271,6 +271,7 @@ class ObjectsRepository(BaseRepository):
             general_object_id=instance.id,
             parent_instance=instance,
         )
+        self._sync_variations_from_form(instance, form.variations)
         self.commit_object()
         return instance.id
 
@@ -292,6 +293,19 @@ class ObjectsRepository(BaseRepository):
             attr_name="prices",
             form_fieldlist=[entry.form for entry in sorted_entries],
             model_class=price_model,
+            session=self.session,
+        )
+
+    def _sync_variations_from_form(
+        self, instance: GeneralObjects, variations: Any
+    ) -> None:
+        """Synchronise les variations de l'objet à partir du formulaire principal."""
+        sync_collection(
+            parent=instance,
+            general_object_id=instance.id,
+            attr_name="object_variations",
+            form_fieldlist=[entry.form for entry in variations],
+            model_class=self.variation_repo.model,
             session=self.session,
         )
 

@@ -245,8 +245,8 @@ def test_wc_orders_service_creates_missing_remote_customer_when_local_customer_e
     service.customer_service.create_wpwc_customer_if_not_exists.assert_called_once_with(customer)
 
 
-def test_wc_orders_service_syncs_line_ids_from_wc_payload() -> None:
-    """Le synchroniseur de lignes doit réassocier les wpwc_id via (product_id, variation_id)."""
+def test_wc_orders_service_preserves_existing_line_ids() -> None:
+    """Le synchroniseur conserve la liaison WooCommerce déjà connue d'une ligne."""
     service = object.__new__(WCOrdersService)
     product = GeneralObjects(
         id=8,
@@ -291,10 +291,10 @@ def test_wc_orders_service_syncs_line_ids_from_wc_payload() -> None:
     service._sync_line_ids(  # pylint: disable=W0212
         order,
         [{"id": 77, "product_id": 101, "variation_id": 201}],
-        clear_all_canceled=False,
+        clear_all_cancelled=False,
     )
 
-    assert line.wpwc_id == 77
+    assert line.wpwc_id == 999
 
 
 def test_wc_orders_service_creates_missing_products_before_push() -> None:

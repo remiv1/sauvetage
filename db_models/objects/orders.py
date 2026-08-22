@@ -3,7 +3,7 @@
 from typing import Any, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, event
+from sqlalchemy import Boolean, String, Integer, ForeignKey, DateTime, Numeric, Text, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
@@ -25,7 +25,7 @@ class Order(WorkingBase, QueryMixin):
     - delivery_address_id (int | None) : ID de l'adresse de livraison.
     - status (str) :
         Statut de la commande (draft, partial_invoiced, invoiced, partial_shipped,
-        shipped, canceled, returned).
+        shipped, cancelled, returned).
     - create_source (str) : Source de création de la commande.
     - created_at (datetime) : Date de création de la commande.
     - update_source (str | None) : Source de la dernière mise à jour de la commande.
@@ -68,8 +68,15 @@ class Order(WorkingBase, QueryMixin):
         nullable=True,
         comment="Adresse de livraison",
     )
+    return_of_order_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.orders.id"),
+        nullable=True,
+        unique=True,
+        comment="Commande d'origine pour une commande de retour",
+    )
     # Sept états principaux : "draft", "partial_invoiced", "invoiced", "partial_shipped", "shipped",
-    # "canceled", "returned". "canceled" (CMD) et "returned" (RET) sont des états finaux,
+    # "cancelled", "returned". "cancelled" (CMD) et "returned" (RET) sont des états finaux,
     # les autres sont des états de travail
     status: Mapped[str] = mapped_column(String(50), nullable=False)
 
@@ -105,6 +112,18 @@ class Order(WorkingBase, QueryMixin):
     delivery_address = relationship(
         "CustomerAddresses", foreign_keys=[delivery_address_id]
     )
+    return_of = relationship(
+        "Order",
+        remote_side=[id],
+        back_populates="return_order",
+        foreign_keys=[return_of_order_id],
+    )
+    return_order = relationship(
+        "Order",
+        back_populates="return_of",
+        foreign_keys=[return_of_order_id],
+        uselist=False,
+    )
     order_lines = relationship(
         "OrderLine", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
@@ -115,6 +134,9 @@ class Order(WorkingBase, QueryMixin):
         "Shipment", back_populates="order", cascade=_ALL_DELETE_ORPHAN
     )
     sync_logs = relationship("OrderSyncLog", back_populates="order", uselist=True)
+    alerts = relationship(
+        "OrderAlert", back_populates="order", cascade=_ALL_DELETE_ORPHAN
+    )
 
     def __repr__(self) -> str:
         return (
@@ -193,6 +215,15 @@ class Order(WorkingBase, QueryMixin):
 
     def to_dict_for_woo_commerce(self) -> dict[str, Any]:
         """Convertit l'objet Order en dictionnaire au format attendu par WooCommerce."""
+        wc_statuses = {
+            "draft": "pending",
+            "partial_invoiced": "completed",
+            "invoiced": "completed",
+            "partial_shipped": "completed",
+            "shipped": "completed",
+            "cancelled": "cancelled",
+            "returned": "refunded",
+        }
         first_name, last_name = self.__get_customer_name_parts()
         email = self.__get_customer_email()
         phone = self.__get_customer_phone()
@@ -223,14 +254,10 @@ class Order(WorkingBase, QueryMixin):
         for line in self.order_lines:
             if not line:
                 continue
-            elif line.status == "canceled":
-                # Ligne annulée localement : demander à WooCommerce de la supprimer
-                if line.wpwc_id:
-                    line_items.append({"id": line.wpwc_id, "quantity": 0})
-            else:
-                line_items.append(line.to_dict_for_woo_commerce())
+            line_items.append(line.to_dict_for_woo_commerce())
         return {
             "customer_id": self.customer.wpwc_id,
+            "status": wc_statuses.get(self.status, "pending"),
             "payment_method": "bacs",
             "payment_method_title": "Direct Bank Transfer",
             "set_paid": False,
@@ -262,7 +289,7 @@ class OrderLine(WorkingBase, QueryMixin):
     - order_id (int) : ID de la commande associée.
     - general_object_id (int) : ID de l'objet général associé à la ligne de commande.
     - quantity (int) : Quantité commandée.
-    - status (str) : Statut de la ligne de commande (draft, invoiced, shipped, canceled, returned).
+    - status (str) : Statut de la ligne de commande (draft, invoiced, shipped, cancelled, returned).
     - unit_price (float) : Prix unitaire HT en euros.
     - discount (float) : Remise en pourcentage.
     - vat_rate (float) : Taux de TVA en pourcentage.
@@ -301,7 +328,7 @@ class OrderLine(WorkingBase, QueryMixin):
     quantity: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="Quantité commandée"
     )
-    # Sept états : draft, invoiced, shipped, canceled, returned
+    # Sept états : draft, invoiced, shipped, cancelled, returned
     # partial_invoiced et partial_shipped sont calculés au niveau de la commande
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="draft", comment="État de la ligne"
@@ -509,3 +536,41 @@ class OrderSyncLog(WorkingBase):
             "error_message": self.error_message,
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
         }
+
+
+class OrderAlert(WorkingBase):
+    """Alerte métier persistante associée à une commande."""
+
+    __tablename__ = "order_alerts"
+    __table_args__ = {"schema": "app_schema"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    order_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.orders.id"),
+        nullable=False,
+        comment="Commande concernée",
+    )
+    code: Mapped[str] = mapped_column(
+        String(100), nullable=False, comment="Code métier de l'alerte"
+    )
+    message: Mapped[str] = mapped_column(
+        Text, nullable=False, comment="Message affiché à l'utilisatrice"
+    )
+    is_resolved: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Alerte traitée",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de création de l'alerte",
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, comment="Date de résolution de l'alerte"
+    )
+
+    order = relationship("Order", back_populates="alerts")

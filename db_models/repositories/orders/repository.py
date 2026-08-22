@@ -17,6 +17,7 @@ from db_models.repositories.customers import (
 )
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.objects import (
+    InventoryMovements,
     Order,
     OrderLine,
     Customers,
@@ -74,6 +75,7 @@ class OrdersRepository(BaseRepository):
                 selectinload(Order.order_lines).joinedload(OrderLine.general_object),
                 selectinload(Order.invoices),
                 selectinload(Order.shipments),
+                selectinload(Order.alerts),
                 joinedload(Order.invoice_address),
                 joinedload(Order.delivery_address),
                 joinedload(Order.customer),
@@ -217,6 +219,56 @@ class OrdersRepository(BaseRepository):
             raise ValueError(
                 f"Erreur lors de la création de la commande : {e.orig}"
             ) from e
+
+    def create_return_order(self, source_order: Order) -> Order:
+        """Crée une commande de retour à partir des lignes facturées de la commande source."""
+        existing_return = self.session.execute(
+            select(Order).where(Order.return_of_order_id == source_order.id)
+        ).scalar_one_or_none()
+        if existing_return is not None:
+            return existing_return
+
+        return_lines = [
+            line
+            for line in source_order.order_lines
+            if line.status in {"invoiced", "shipped"}
+        ]
+        if not return_lines:
+            raise ValueError("La commande ne contient aucune ligne facturée à retourner.")
+
+        return_order = Order(
+            reference="",
+            customer_id=source_order.customer_id,
+            invoice_address_id=source_order.invoice_address_id,
+            delivery_address_id=source_order.delivery_address_id,
+            return_of_order_id=source_order.id,
+            status="draft",
+            create_source="wc_cancellation_return",
+        )
+        for source_line in return_lines:
+            return_order.order_lines.append(
+                OrderLine(
+                    general_object_id=source_line.general_object_id,
+                    object_variation_id=source_line.object_variation_id,
+                    quantity=-abs(source_line.quantity),
+                    unit_price=source_line.unit_price,
+                    discount=source_line.discount,
+                    vat_rate=source_line.vat_rate,
+                    status="draft",
+                    create_source="wc_cancellation_return",
+                )
+            )
+        self.session.add(return_order)
+        self.session.flush()
+        return_order.reference = self.generate_reference(return_order, "RET")
+        try:
+            self.session.commit()
+            return return_order
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise ValueError(
+                f"Erreur lors de la création de la commande de retour : {exc.orig}"
+            ) from exc
 
     def create_from_woo_commerce(self, wc_order: dict, customer_id: int) -> Order:
         """Crée une commande locale à partir d'un payload WooCommerce.
@@ -491,8 +543,49 @@ class OrdersRepository(BaseRepository):
                 f"Erreur lors de la mise à jour du statut : {str(e)}"
             ) from e
 
+    def cancel_order(self, order: Order, update_source: str = "web") -> Order:
+        """Annule une commande, ses lignes et leurs réservations dans une transaction.
+
+        Args:
+            order: La commande à annuler.
+            update_source: Source de la mise à jour.
+
+        Returns:
+            La commande annulée.
+
+        Raises:
+            ValueError: Si l'annulation ne peut pas être enregistrée.
+        """
+        try:
+            for line in order.order_lines or []:
+                if line.status == "cancelled":
+                    continue
+                self.session.add(
+                    InventoryMovements(
+                        general_object_id=line.general_object_id,
+                        movement_type="reserved",
+                        quantity=-line.quantity,
+                        price_at_movement=float(line.unit_price),
+                        source="order",
+                        destination=f"CMD-{order.id}",
+                        notes=f"Annulation réservation commande {order.reference}",
+                    )
+                )
+                line.status = "cancelled"
+                line.update_source = update_source
+
+            order.status = "cancelled"
+            order.update_source = update_source
+            self.session.commit()
+            return order
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise ValueError(
+                f"Erreur lors de l'annulation de la commande : {exc}"
+            ) from exc
+
     def remove_line(self, line: OrderLine) -> bool:
-        """Annule une ligne de commande (soft delete → status 'canceled').
+        """Annule une ligne de commande (soft delete → status 'cancelled').
         Args:
             line: La ligne à annuler.
         Returns:
@@ -501,7 +594,7 @@ class OrdersRepository(BaseRepository):
         if line.status != "draft":
             raise ValueError("Seules les lignes en brouillon peuvent être annulées.")
         try:
-            line.status = "canceled"
+            line.status = "cancelled"
             self.session.commit()
             return True
         except SQLAlchemyError as e:
@@ -523,9 +616,13 @@ class OrdersRepository(BaseRepository):
         Returns:
             bool: True si la ligne a été coupée avec succès.
         """
-        if invoiced_quantity >= order_line.quantity:
+        if (
+            abs(invoiced_quantity) >= abs(order_line.quantity)
+            or invoiced_quantity * order_line.quantity <= 0
+        ):
             raise ValueError(
-                "La quantité facturée doit être inférieure à la quantité commandée."
+                "La quantité facturée doit avoir le même signe et une valeur absolue "
+                "inférieure à la quantité commandée."
             )
 
         new_line = OrderLine(

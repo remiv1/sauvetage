@@ -155,6 +155,7 @@ class CustomersRepository(BaseRepository):
         if not customer:
             raise ValueError(f"Client #{customer_id} introuvable.")
 
+        self._apply_updates(customer, data, ("wpwc_id", "henrri_id"))
         customer_type = customer.customer_type
         target = getattr(customer, customer_type, None)
 

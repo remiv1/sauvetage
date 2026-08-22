@@ -29,13 +29,13 @@ def form_to_dict(form: CustomerMainForm) -> Dict[str, Any]:
             "civil_title": form.civil_title.data,
             "first_name": form.first_name.data,
             "last_name": form.last_name.data,
-            "date_of_birth": form.date_of_birth.data,
+            "date_of_birth": form.date_of_birth.data or None,
         }
     else:
         customer_data["pro"] = {
             "company_name": form.company_name.data,
             "siret_number": form.siret_number.data,
-            "vat_number": form.vat_number.data,
+            "vat_number": form.vat_number.data or None,
         }
     return customer_data
 

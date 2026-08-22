@@ -512,6 +512,46 @@ dialog.modal-overlay {
   }
 }
 
+.cancelled-lines-section {
+  margin-top: v.$space-lg;
+  border-top: 1px solid v.$gray-200;
+  border-bottom: 1px solid v.$gray-200;
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: v.$space-sm;
+    padding: v.$space-sm 0;
+    color: v.$gray-700;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.cancelled-lines-count {
+  min-width: 1.5rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 999px;
+  background: v.$gray-200;
+  color: v.$gray-700;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.cancelled-lines-content {
+  padding-bottom: v.$space-md;
+  overflow-x: auto;
+}
+
+.cancelled-lines-table {
+  margin-top: 0;
+
+  tbody tr {
+    color: v.$gray-600;
+    background: v.$gray-100;
+  }
+}
+
 /* ============================================================================ */
 /* Page de création de commande                                                */
 /* ============================================================================ */

@@ -61,7 +61,7 @@
 
 - [ ] Voir les erreur lors du push de la commande vers WooCommerce
 - [ ] Problèmes de création de tags depuis la fiche produit
-- [ ] Problèmes de synchro diffuseurs sur les réceptions ONIX
+- [!] Problèmes de synchro diffuseurs sur les réceptions ONIX → Mail envoyé à Dilicom
 - [ ] Problèmes de miniatures images sur les fiches produits
 - [ ] Décalage des mouvements de stocks sur ISBN 9782740315736 lors d'ajout/suppression de réservations
 - [ ] Sur les commandes clients, il faut ajouter la possibilité de faire :
@@ -70,5 +70,6 @@
 - [ ] Sur les commandes fournisseurs, lors de la récupération d'un produit, il faut récupérer le prix de vente pour l'affichage ainsi que le taux de TVA.
 - [ ] Voir pourquoi lors de l'inventaire, lors de l'existance de qté négative, le stock est mis à jour à 0.
 - [ ] Bug sur la création d'un fournisseur.
-- [ ] Le formulaire de création d'objet est différent de celui de modification d'objet, il faut unifier les deux.
+- [X] Le formulaire de création d'objet est différent de celui de modification d'objet, il faut unifier les deux.
 - [ ] Revoir la gestion des variations produits lors des synchronisations WooCommerce, il faut que les variations soient créées sur WooCommerce si elles n'existent pas.
+- [ ] Mettre en place tous les tests sur les stocks : commandes, suppression d'une ligne, réservations, annulations, etc.

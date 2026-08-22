@@ -31,7 +31,7 @@ STATUS_LABELS: Dict[str, str] = {
     "invoiced": "Facturée",
     "partial_shipped": "Partiellement expédiée",
     "shipped": "Expédiée",
-    "canceled": "Annulée",
+    "cancelled": "Annulée",
     "returned": "Retournée",
 }
 
@@ -41,7 +41,7 @@ STATUS_BADGE_CLASS: Dict[str, str] = {
     "invoiced": "badge-info",
     "partial_shipped": "badge-warning",
     "shipped": "badge-success",
-    "canceled": "badge-danger",
+    "cancelled": "badge-danger",
     "returned": "badge-danger",
 }
 
@@ -96,7 +96,7 @@ def _order_to_list_dict(order: Order) -> Dict[str, Any]:
     """Convertit une commande en dict pour la vue tableau."""
     total_ht = 0.0
     for line in (order.order_lines or []):
-        if line.status == "canceled":
+        if line.status == "cancelled":
             continue
         price = float(line.unit_price) * line.quantity
         discount_amount = price * float(line.discount) / 100
@@ -127,9 +127,16 @@ def _may_be_invoiced(line: Optional[OrderLine], item: Dict[str, Any]) -> OrderLi
         raise ValueError(f"Ligne {item['order_line_id']} introuvable.")
     if line.status != "draft":
         raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
-    if item["quantity"] > line.quantity or item["quantity"] < 1:
+    if not _has_valid_quantity_sign(line.quantity, item["quantity"]):
         raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
     return line
+
+
+def _has_valid_quantity_sign(available: int, requested: int) -> bool:
+    """Vérifie que la quantité demandée garde le signe et ne dépasse pas le disponible."""
+    if available > 0:
+        return 1 <= requested <= available
+    return available <= requested <= -1
 
 # ── Recherche paginée ────────────────────────────────────────────────────
 
@@ -242,7 +249,10 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
     # Lignes (toutes + actives uniquement)
     all_lines = [_build_order_line_dto(line) for line in (order.order_lines or [])]
     data["all_lines"] = all_lines
-    data["lines"] = [ld for ld in all_lines if ld.get("status") != "canceled"]
+    data["lines"] = [ld for ld in all_lines if ld.get("status") != "cancelled"]
+    data["cancelled_lines"] = [
+        ld for ld in all_lines if ld.get("status") == "cancelled"
+    ]
     data |= _compute_order_totals(data["lines"])
 
     # Documents liés
@@ -254,6 +264,16 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
         s.to_dict()
         for s in ShipmentsRepository(session).get_by_order_id(order_id)
     ]
+    data["alerts"] = [
+        {
+            "code": alert.code,
+            "message": alert.message,
+            "created_at": alert.created_at.strftime("%d/%m/%Y %H:%M"),
+        }
+        for alert in (order.alerts or [])
+        if not alert.is_resolved
+    ]
+    data["is_return"] = order.return_of_order_id is not None
 
     # Flags pour boutons facturer / expédier
     order_lines = order.order_lines or []
@@ -528,7 +548,7 @@ def remove_order_line(order_id: int, line_id: int) -> bool:
 
 
 def cancel_order(order_id: int) -> Dict[str, Any]:
-    """Annule une commande (passe en statut 'canceled').
+    """Annule une commande (passe en statut 'cancelled').
 
     Returns:
         Dict de la commande mise à jour.
@@ -538,10 +558,35 @@ def cancel_order(order_id: int) -> Dict[str, Any]:
     order = repo.get_by_id(order_id)
     if order is None:
         raise ValueError(_ORDER_NOT_FOUND)
-    if order.status in ("canceled", "returned"):
+    if order.status in ("cancelled", "returned"):
         raise ValueError("Commande déjà annulée ou retournée")
-    order = repo.update_order_status(order, "canceled", update_source="backoffice")
+    order = repo.cancel_order(order, update_source="backoffice")
     return _order_to_list_dict(order)
+
+
+def create_return_order(order_id: int) -> Order:
+    """Crée ou retrouve la commande de retour déclenchée par une alerte WooCommerce."""
+    session = db_conf.get_main_session()
+    repo = OrdersRepository(session)
+    source_order = repo.get_by_id(order_id)
+    if source_order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
+    alert = next(
+        (
+            item
+            for item in source_order.alerts
+            if item.code == "credit_note_required" and not item.is_resolved
+        ),
+        None,
+    )
+    if alert is None:
+        raise ValueError("Aucune alerte d'avoir ouverte pour cette commande.")
+
+    return_order = repo.create_return_order(source_order)
+    alert.is_resolved = True
+    alert.resolved_at = datetime.now(timezone.utc)
+    session.commit()
+    return return_order
 
 
 def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
@@ -577,7 +622,7 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
         if line.status != "draft":
             raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
         qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
-        if qty > line.quantity or qty < 1:
+        if not _has_valid_quantity_sign(line.quantity, qty):
             raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
         invoice_lines.append(
             InvoiceLine(
@@ -764,7 +809,7 @@ def ship_order(
         if line.status != "invoiced":
             raise ValueError(f"La ligne {line.id} n'est pas facturée.")
         qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
-        if qty > line.quantity or qty < 1:
+        if not _has_valid_quantity_sign(line.quantity, qty):
             raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
         shipment_lines.append(
             ShipmentLine(
@@ -801,7 +846,7 @@ def ship_order(
 def _recalculate_order_status(order: Order, repo: OrdersRepository) -> None:
     """Recalcule le statut de la commande en fonction des statuts de ses lignes."""
     statuses = {
-        l.status for l in (order.order_lines or []) if l.status != "canceled"
+        l.status for l in (order.order_lines or []) if l.status != "cancelled"
     }
     if not statuses:
         return

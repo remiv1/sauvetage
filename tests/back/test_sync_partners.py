@@ -6,6 +6,14 @@ from db_models.objects import Customers
 from db_models.services.sync import partners
 
 
+class HenrriValidationErrorWithBody(Exception):
+    """Exception Henrri simulée portant le détail de validation de l'API."""
+
+    def __init__(self, message: str, body: dict[str, object]) -> None:
+        super().__init__(message)
+        self.body = body
+
+
 def _customer(**overrides) -> Customers:
     """Construit un client minimal pour les tests de synchronisation."""
     defaults = {"customer_type": "part", "is_active": True}
@@ -75,6 +83,28 @@ def test_sync_customer_logs_update_operation_for_known_partners() -> None:
         for call in mock_repo_cls.return_value.log_customer.call_args_list
     ]
     assert operations == ["update", "update"]
+
+
+def test_sync_customer_logs_henrri_validation_details() -> None:
+    """Le journal Henrri doit conserver le détail retourné par l'API."""
+    customer = _customer(wpwc_id="1234", henrri_id=None)
+    wc_service = MagicMock()
+    wc_service.create_wpwc_customer_if_not_exists.return_value = MagicMock(wpwc_id="1234")
+    validation_body = {"errors": {"contacts": ["Le contact est invalide."]}}
+
+    with patch.object(partners, "SyncLogRepository") as mock_repo_cls, patch.object(
+        partners,
+        "sync_customer_to_henrri",
+        side_effect=HenrriValidationErrorWithBody("HTTP 400", validation_body),
+    ):
+        results = partners.sync_customer(MagicMock(), customer, wc_service=wc_service)
+
+    assert results[1].status == "error"
+    error_message = mock_repo_cls.return_value.log_customer.call_args_list[1].kwargs[
+        "error_message"
+    ]
+    assert "Détails de validation Henrri" in error_message
+    assert "contacts" in error_message
 
 
 def test_sync_all_products_exports_woocommerce_then_henrri() -> None:

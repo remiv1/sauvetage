@@ -10,6 +10,7 @@ Le schéma métier est le suivant :
 """
 
 from datetime import datetime, timezone
+from collections import defaultdict, deque
 from enum import Enum
 from typing import Any, Callable
 import logging
@@ -39,7 +40,7 @@ class OrderStatus(str, Enum):
     DRAFT = "draft"
     INVOICED = "invoiced"
     SHIPPED = "shipped"
-    CANCELED = "canceled"
+    CANCELLED = "cancelled"
     RETURNED = "returned"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -267,9 +268,8 @@ class WCOrdersService(WCBase):
         """Pousse la commande vers WooCommerce (création ou mise à jour).
 
         Comportement des lignes :
-        - Annulées avec wpwc_id présent dans WC : envoyées quantity=0 pour suppression,
-          puis wpwc_id vidé.
-        - Annulées avec wpwc_id absent de WC (déjà supprimé) : ignorées.
+                - Annulées : conservées avec leur quantité et leur wpwc_id ; l'annulation est
+                    portée par le statut global de la commande.
         - Actives sans wpwc_id : créées dans WC, wpwc_id assigné depuis la réponse.
         - Actives avec wpwc_id : mises à jour dans WC.
 
@@ -286,9 +286,6 @@ class WCOrdersService(WCBase):
 
         # Snapshot des wpwc_id avant toute modification (restaurés en cas d'échec)
         wpwc_snapshot = {line.id: line.wpwc_id for line in order.order_lines}
-
-        if operation == "update":
-            self._pre_sync_line_ids(order)
 
         try:
             product_service = getattr(self, "product_service", None)
@@ -506,7 +503,7 @@ class WCOrdersService(WCBase):
                     wc_customer_id = wc_cust.get("id")
                     if wc_customer_id is None:
                         logger.error(
-                            "WooCommerce : client ignoré dans la réponse groupée, identifiant absent."
+                            "WooCommerce : client ignoré dans la réponse groupée, id absent."
                         )
                         continue
                     local = self.customer_repo.create_from_woo_commerce(wc_cust)
@@ -578,35 +575,52 @@ class WCOrdersService(WCBase):
         order: Order,
         wc_lines: list[WCData],
         *,
-        clear_all_canceled: bool,
+        clear_all_cancelled: bool,
     ) -> None:
-        """Synchronise les wpwc_id des lignes locales avec l'état WooCommerce.
+        """Finalise les wpwc_id des lignes locales après un push ERP réussi.
 
         Args:
             order (Order): Commande locale dont les lignes sont à synchroniser.
             wc_lines (list[WCData]): Lignes renvoyées par l'API WooCommerce.
-            clear_all_canceled (bool):
-                - True  : vide le wpwc_id de toutes les lignes annulées (post-push).
-                - False : vide uniquement les wpwc_id stales absents de WC (pré-push).
+            clear_all_cancelled (bool): Vide le wpwc_id des lignes annulées lorsque
+                WooCommerce a confirmé leur suppression.
         """
-        wc_ids = {int(wl["id"]) for wl in wc_lines if wl.get("id")}
-        wc_by_product = _index_wc_lines_by_product(wc_lines)
+        wc_by_product: dict[tuple[int, int], deque[int]] = defaultdict(deque)
+        linked_wc_ids = {
+            line.wpwc_id
+            for line in order.order_lines
+            if line.status != OrderStatus.CANCELLED and line.wpwc_id is not None
+        }
+        for wc_line in wc_lines:
+            if not wc_line.get("id"):
+                continue
+            wc_id = int(wc_line["id"])
+            if wc_id in linked_wc_ids:
+                continue
+            product_key = (
+                int(wc_line.get("product_id") or 0),
+                int(wc_line.get("variation_id") or 0),
+            )
+            wc_by_product[product_key].append(wc_id)
 
         for line in order.order_lines:
-            if line.status == OrderStatus.CANCELED:
-                if line.wpwc_id and (clear_all_canceled or line.wpwc_id not in wc_ids):
+            if line.status == OrderStatus.CANCELLED:
+                if line.wpwc_id and clear_all_cancelled:
                     line.wpwc_id = None
-            else:
-                new_id = _match_line_to_wc(line, wc_by_product)
-                if new_id:
-                    line.wpwc_id = new_id
-                elif line.wpwc_id and line.wpwc_id not in wc_ids:
-                    # ID local obsolète non retrouvé par produit : traiter comme nouvelle ligne
-                    logger.debug(
-                        "Ligne %d (commande %d) : wpwc_id=%d absent de WC → réinitialisé.",
-                        line.id, order.id, line.wpwc_id,
-                    )
-                    line.wpwc_id = None
+                continue
+            if line.wpwc_id is not None:
+                continue
+            if not line.general_object or line.general_object.wpwc_id is None:
+                continue
+            product_key = (
+                int(line.general_object.wpwc_id),
+                int(line.object_variation.wpwc_id)
+                if line.object_variation and line.object_variation.wpwc_id is not None
+                else 0,
+            )
+            available_wc_ids = wc_by_product.get(product_key)
+            if available_wc_ids:
+                line.wpwc_id = available_wc_ids.popleft()
 
     def _pre_sync_line_ids(self, order: Order) -> None:
         """Resynchronise les wpwc_id locaux depuis l'état actuel de WC avant un push.
@@ -626,16 +640,16 @@ class WCOrdersService(WCBase):
         except Exception:  # pylint: disable=broad-except
             return
 
-        self._sync_line_ids(order, wc_lines, clear_all_canceled=False)
+        self._sync_line_ids(order, wc_lines, clear_all_cancelled=False)
 
     def _post_push_sync(self, order: Order, wc_lines: list[WCData]) -> None:
         """Met à jour les wpwc_id locaux après un push réussi.
 
-        - Lignes annulées : wpwc_id vidé (supprimées dans WC via quantity=0 ou déjà absentes).
-        - Lignes actives : wpwc_id assigné/mis à jour depuis la réponse WC.
+        Les lignes annulées conservent leur wpwc_id, car elles restent présentes dans
+        WooCommerce. Les lignes actives reçoivent leur wpwc_id depuis la réponse.
 
         Args:
             order (Order): Commande dont les lignes doivent être synchronisées.
             wc_lines (list[WCData]): Lignes renvoyées par WooCommerce dans la réponse du push.
         """
-        self._sync_line_ids(order, wc_lines, clear_all_canceled=True)
+        self._sync_line_ids(order, wc_lines, clear_all_cancelled=False)
