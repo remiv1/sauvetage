@@ -65,9 +65,9 @@ app_front/blueprints/inventory/utils.py                     78     23     22    
 app_front/blueprints/order/__init__.py                       0      0      0      0   100%
 app_front/blueprints/order/forms.py                         23      0      0      0   100%
 app_front/blueprints/order/routes.py                        71     41     12      2    39%
-app_front/blueprints/order/routes_htmx_create.py           194    139     44      2    25%
-app_front/blueprints/order/routes_htmx_list.py              37     26      8      0    24%
-app_front/blueprints/order/utils.py                        432    279    148     25    33%
+app_front/blueprints/order/routes_htmx_create.py           222    164     52      2    23%
+app_front/blueprints/order/routes_htmx_list.py              40     29     10      0    22%
+app_front/blueprints/order/utils.py                        455    301    162     25    31%
 app_front/blueprints/order/utils_henrri.py                 167     65     42      9    58%
 app_front/blueprints/stock/__init__.py                       0      0      0      0   100%
 app_front/blueprints/stock/forms.py                        234     38     50     12    80%
@@ -77,7 +77,7 @@ app_front/blueprints/stock/routes_htmx_council.py           27     16      4    
 app_front/blueprints/stock/routes_htmx_orders.py           124     18     30     10    81%
 app_front/blueprints/stock/routes_htmx_reservations.py      87     35     14      3    54%
 app_front/blueprints/stock/routes_htmx_return.py            28      7      0      0    75%
-app_front/blueprints/stock/routes_htmx_search.py           278    119     56     16    54%
+app_front/blueprints/stock/routes_htmx_search.py           297    117     62     17    58%
 app_front/blueprints/stock/utils.py                        246     86     52     14    62%
 app_front/blueprints/supplier/__init__.py                    0      0      0      0   100%
 app_front/blueprints/supplier/forms.py                      36      0      0      0   100%
@@ -129,10 +129,10 @@ db_models/objects/customers/phones.py                       26      2      0    
 db_models/objects/customers/pros.py                         24      2      0      0    92%
 db_models/objects/customers/sync_logs.py                    29      3      0      0    90%
 db_models/objects/inventory.py                              30      6      2      0    75%
-db_models/objects/invoices.py                               89      9      4      1    89%
+db_models/objects/invoices.py                               91      9      4      1    89%
 db_models/objects/objects/__init__.py                        9      0      0      0   100%
 db_models/objects/objects/books.py                          30      3      0      0    90%
-db_models/objects/objects/general_objects.py               134     19     26      8    81%
+db_models/objects/objects/general_objects.py               134     20     26      9    79%
 db_models/objects/objects/media.py                          45      8      2      0    79%
 db_models/objects/objects/metadatas.py                      32      4      4      1    86%
 db_models/objects/objects/object_constants.py                3      0      0      0   100%
@@ -140,7 +140,7 @@ db_models/objects/objects/other_objects.py                  26      5      2    
 db_models/objects/objects/sync_logs.py                      22      2      0      0    91%
 db_models/objects/objects/tags.py                           46      8      2      0    79%
 db_models/objects/objects/variations.py                     33      3      0      0    91%
-db_models/objects/orders.py                                159     15     28      5    88%
+db_models/objects/orders.py                                165     18     32      9    85%
 db_models/objects/shipments.py                              41      3      0      0    93%
 db_models/objects/stocks.py                                 78     17      4      0    74%
 db_models/objects/suppliers.py                              34      3      0      0    91%
@@ -161,7 +161,7 @@ db_models/repositories/objects/other_objects.py             47     29     14    
 db_models/repositories/objects/prices.py                    32     17      2      0    44%
 db_models/repositories/objects/variations.py                72     56     16      0    18%
 db_models/repositories/orders/__init__.py                    2      0      0      0   100%
-db_models/repositories/orders/repository.py                253    191     60      3    22%
+db_models/repositories/orders/repository.py                276    210     64      2    22%
 db_models/repositories/orders/woo.py                       160    124     48      2    19%
 db_models/repositories/shipments.py                         37      9      4      1    76%
 db_models/repositories/stocks/__init__.py                    7      0      0      0   100%
@@ -199,8 +199,8 @@ db_models/services/vat.py                                   15      1      6    
 db_models/services/woo_commerce/__init__.py                  4      0      0      0   100%
 db_models/services/woo_commerce/base.py                     19      4      2      1    76%
 db_models/services/woo_commerce/customers.py               118     79     46      6    30%
-db_models/services/woo_commerce/orders.py                  253    136     90     17    43%
+db_models/services/woo_commerce/orders.py                  253    144     90     15    40%
 db_models/services/woo_commerce/products.py                435    217    138     12    48%
 db_models/services/woo_commerce/utils.py                    48     20     30      5    53%
 ------------------------------------------------------------------------------------------
-TOTAL                                                    11797   4703   2670    482    56%
+TOTAL                                                    11901   4782   2708    485    55%

@@ -103,6 +103,9 @@
                                     ) }}
                                     <span class="input-group-text">€</span>
                                 </div>
+                                {% if not reservation %}
+                                    <div id="selling-price-help" class="text-muted small mt-1"></div>
+                                {% endif %}
                                 {% if reservation %}
                                     <div class="text-muted small mt-1">Prix unitaire HT de la réservation.</div>
                                 {% endif %}
