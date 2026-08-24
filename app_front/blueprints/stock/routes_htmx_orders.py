@@ -211,7 +211,12 @@ def receive_order_line_route(order_id: int, line_id: int):
         receive_order_line(line_id, qty_r, qty_c)
         # Recharger la commande après réception pour afficher l'état à jour
         order = get_order_by_id(order_id)
-        return render_template(EDIT_TABLE, order=order, view_state="receipt")
+        return render_template(
+            EDIT_TABLE,
+            order=order,
+            view_state="receipt",
+            ext_ref_form=ExternalRefForm(),
+        )
 
     # Pré-remplir le formulaire
     form.line_id.data = str(line_id)

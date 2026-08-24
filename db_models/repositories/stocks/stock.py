@@ -108,8 +108,9 @@ class StockRepository(BaseRepository):
         qty, timestamp = _last_inventory()
         qty += _sum_by_type("in", timestamp)
         qty -= _sum_by_type("out", timestamp)
-        if not theorical:
-            qty -= _sum_by_type("reserved", timestamp)
+        qty -= _sum_by_type("reserved", timestamp)
+        if theorical:
+            qty += _sum_by_type("pending", timestamp)
 
         return qty
 

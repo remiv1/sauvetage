@@ -3,7 +3,7 @@
 from decimal import Decimal
 from collections import namedtuple
 from typing import Sequence, Any
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 from db_models.objects import (
@@ -11,6 +11,7 @@ from db_models.objects import (
     InventoryMovements,
     OrderIn,
     OrderInLine,
+    OrderInLinePrice,
 )
 from db_models.repositories.base_repo import BaseRepository
 
@@ -22,6 +23,18 @@ class OrderRepository(BaseRepository):
     """Dépôt pour le CRUD et le workflow des commandes fournisseurs."""
 
     # ── Utilitaires internes ──────────────────────────────────────────────
+
+    @staticmethod
+    def _copy_line_prices(line: OrderInLine) -> list[OrderInLinePrice]:
+        """Copie les composantes financières d'une ligne fournisseur."""
+        return [
+            OrderInLinePrice(
+                unit_price=price.unit_price,
+                vat_rate=price.vat_rate,
+                position=price.position,
+            )
+            for price in line.prices
+        ]
 
     def _compensate_inventory_movements(self, movement_ids: set, order_id: int) -> None:
         """Crée des mouvements de compensation inverse pour annuler les mouvements d'inventaire
@@ -104,7 +117,8 @@ class OrderRepository(BaseRepository):
         stmt = (
             select(OrderIn)
             .options(
-                selectinload(OrderIn.supplier), selectinload(OrderIn.orderin_lines)
+                selectinload(OrderIn.supplier),
+                selectinload(OrderIn.orderin_lines).selectinload(OrderInLine.prices),
             )
             .where(OrderIn.order_ref.startswith(prefix))
             .order_by(OrderIn.id.desc())
@@ -132,6 +146,7 @@ class OrderRepository(BaseRepository):
                 selectinload(OrderIn.orderin_lines).selectinload(
                     OrderInLine.general_object
                 ),
+                selectinload(OrderIn.orderin_lines).selectinload(OrderInLine.prices),
             )
             .where(OrderIn.id == order_id)
         )
@@ -272,17 +287,11 @@ class OrderRepository(BaseRepository):
         order = self.session.get(OrderIn, order_id)
         if order is None:
             raise ValueError(f"Commande {order_id} introuvable")
-        stmt = select(
-            func.coalesce(
-                func.sum(
-                    OrderInLine.qty_ordered
-                    * OrderInLine.unit_price
-                    * (1 + OrderInLine.vat_rate / 100)
-                ),
-                0,
-            ).label("total_ttc")
-        ).where(OrderInLine.order_in_id == order_id)
-        total_ttc = self.session.execute(stmt).scalar_one()
+        total_ttc = sum(
+            Decimal(line.qty_ordered) * line.get_unit_price_ttc()
+            for line in order.orderin_lines
+            if line.line_state != "cancelled"
+        )
         order.value = float(total_ttc)
         try:
             self.session.commit()
@@ -345,7 +354,7 @@ class OrderRepository(BaseRepository):
         if order is None:
             raise ValueError(f"Réservation {new_line.order_in_id} introuvable")
         order_details = Order(
-            price=float(new_line.unit_price or 0.0),
+            price=float(new_line.get_unit_price_ht()),
             vat_rate=0.0,
             source="stock",
             destination="reserve",
@@ -357,8 +366,8 @@ class OrderRepository(BaseRepository):
     def _create_return_line(self, new_line: OrderInLine) -> Any:
         """ Création d'une ligne de retour fournisseur """
         return Order(
-            price=float(new_line.unit_price),
-            vat_rate=float(new_line.vat_rate),
+            price=float(new_line.get_unit_price_ht()),
+            vat_rate=0.0,
             source="stock",
             destination="fournisseur",
             movement_type="out",
@@ -369,8 +378,8 @@ class OrderRepository(BaseRepository):
     def _create_order_line(self, new_line: OrderInLine) -> Any:
         """ Création d'une ligne de commande fournisseur classique """
         return Order(
-            price=float(new_line.unit_price),
-            vat_rate=float(new_line.vat_rate),
+            price=float(new_line.get_unit_price_ht()),
+            vat_rate=0.0,
             source="fournisseur",
             destination="stock",
             movement_type="pending",
@@ -397,8 +406,6 @@ class OrderRepository(BaseRepository):
         if action == "create":
             if reservation:
                 order = self._create_reservation_line(new_line)
-                new_line.unit_price = order.price
-                new_line.vat_rate = order.vat_rate
             elif out is True:
                 order = self._create_return_line(new_line)
             else:
@@ -432,12 +439,13 @@ class OrderRepository(BaseRepository):
                 )
             existing_line.general_object_id = new_line.general_object_id
             existing_line.qty_ordered = new_line.qty_ordered
-            existing_line.unit_price = new_line.unit_price
-            existing_line.vat_rate = new_line.vat_rate
+            existing_line.prices.clear()
+            self.session.flush()
+            existing_line.prices = self._copy_line_prices(new_line)
 
             existing_movement.general_object_id = new_line.general_object_id
             existing_movement.quantity = new_line.qty_ordered
-            existing_movement.price_at_movement = new_line.unit_price
+            existing_movement.price_at_movement = float(new_line.get_unit_price_ht())
 
         else:
             raise ValueError(f"Action inconnue : {action}")
@@ -575,7 +583,7 @@ class OrderRepository(BaseRepository):
                 general_object_id=line.general_object_id,
                 movement_type="in",
                 quantity=qty_received,
-                price_at_movement=float(line.unit_price),
+                price_at_movement=float(line.get_unit_price_ht()),
                 source=f"Réception commande #{order_id}",
                 destination="Stock",
                 notes=f"Réception de {qty_received} unité(s) "
@@ -601,9 +609,8 @@ class OrderRepository(BaseRepository):
                 inventory_movement_id=None,
                 qty_ordered=qty_cancelled,
                 qty_received=0,
-                unit_price=line.unit_price,
-                vat_rate=line.vat_rate,
                 line_state="cancelled",
+                prices=self._copy_line_prices(line),
             )
             self.session.add(cancelled_line)
 
@@ -613,7 +620,7 @@ class OrderRepository(BaseRepository):
                 general_object_id=line.general_object_id,
                 movement_type="pending",
                 quantity=qty_remaining,
-                price_at_movement=float(line.unit_price),
+                price_at_movement=float(line.get_unit_price_ht()),
                 source=f"Commande fournisseur #{order_id}",
                 destination="Stock",
                 notes=f"Reste en attente ({qty_remaining} unité(s)) "
@@ -628,9 +635,8 @@ class OrderRepository(BaseRepository):
                 inventory_movement_id=movement_pending.id,
                 qty_ordered=qty_remaining,
                 qty_received=0,
-                unit_price=line.unit_price,
-                vat_rate=line.vat_rate,
                 line_state="pending",
+                prices=self._copy_line_prices(line),
             )
             self.session.add(pending_line)
 

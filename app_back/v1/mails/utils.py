@@ -38,7 +38,7 @@ def _build_order_lines(order: OrderIn) -> tuple[list[dict[str, Any]], float]:
     for line in order.orderin_lines or []:
         if getattr(line, "line_state", None) == "cancelled":
             continue
-        unit_price = float(getattr(line, "unit_price", 0) or 0)
+        unit_price = float(line.get_unit_price_ht())
         quantity = float(getattr(line, "qty_ordered", 0) or 0)
         line_total = quantity * unit_price
         total_ht += line_total
@@ -50,6 +50,13 @@ def _build_order_lines(order: OrderIn) -> tuple[list[dict[str, Any]], float]:
                 "ean13": getattr(general_object, "ean13", None) or "-",
                 "quantity": int(quantity),
                 "unit_price": f"{unit_price:.2f} EUR",
+                "prices": [
+                    {
+                        "unit_price": f"{float(price.unit_price):.2f} EUR",
+                        "vat_rate": f"{float(price.vat_rate):g} %",
+                    }
+                    for price in line.prices
+                ],
                 "line_total_ht": f"{line_total:.2f} EUR",
             }
         )

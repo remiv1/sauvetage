@@ -173,10 +173,12 @@ def prepare_inventory(
         )  # inclure les EAN13 non scannés pour le calcul
 
     for ean in set_eans:
-        real_count = counts.get(ean, 0)
         go = go_by_ean.get(ean)
         title = go.name if go else "(inconnu)"
         stock_th = _compute_theoretical_stock(session, go.id) if go else 0
+        real_count = counts.get(ean, 0)
+        if inventory_type == "complete" and ean not in counts and stock_th < 0:
+            real_count = stock_th
         diff = real_count - stock_th
         results.append(
             ReconciliationLine(

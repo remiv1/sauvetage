@@ -17,6 +17,7 @@ from db_models.objects import (
     Tags,
     OrderIn,
     OrderInLine,
+    OrderInLinePrice,
     GeneralObjects,
     ObjectVariations,
     VatRate,
@@ -315,17 +316,27 @@ def edit_order_in_line_db(
                     raise ValueError(
                         f"Quantité indisponible : {order.qty} > stock disponible ({available_qty})."
                     )
-                unit_price = inventory_repo.get_last_inventory_price(order.general_object_id)
-            else:
-                unit_price = float(form.unit_price.data or 0)
+            unit_price = inventory_repo.get_last_inventory_price(order.general_object_id)
         else:
-            unit_price = order.pu
+            unit_price = sum(price.unit_price for price in order.prices)
         line = OrderInLine(
             order_in_id=order.id,
             general_object_id=order.general_object_id,
             qty_ordered=order.qty,
-            unit_price=unit_price,
-            vat_rate=0.0 if reservation else order.vat_rate,
+            prices=[
+                OrderInLinePrice(
+                    unit_price=unit_price,
+                    vat_rate=0,
+                    position=0,
+                )
+            ] if reservation else [
+                OrderInLinePrice(
+                    unit_price=price.unit_price,
+                    vat_rate=price.vat_rate,
+                    position=position,
+                )
+                for position, price in enumerate(order.prices)
+            ],
         )
         # Si on est en édition, s'assurer que l'ID de la ligne est renseigné
         if action == "edit":

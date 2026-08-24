@@ -93,6 +93,18 @@ def get_supplier_by_id(supplier_id: int) -> Optional[Dict[str, Any]]:
     return supplier_dict
 
 
+def get_supplier_by_gln13(gln13: str) -> Optional[Dict[str, Any]]:
+    """Récupère un fournisseur à partir de son code GLN13.
+
+    Returns:
+        Dict avec les données du fournisseur, ou None.
+    """
+    session = db_conf.get_main_session()
+    repo = SuppliersRepository(session)
+    supplier = repo.get_by_gln13(gln13)
+    return supplier.to_dict() if supplier else None
+
+
 def update_supplier_data(supplier_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
     """Met à jour un fournisseur existant.
 
@@ -162,6 +174,14 @@ def create_supplier(data: Dict[str, Any]) -> Dict[str, Any]:
     )
     if existing:
         return {"id": existing.id, "name": existing.name}
+
+    gln13 = data.get("gln13")
+    if not gln13:
+        raise ValueError("Le code GLN est requis")
+    repo = SuppliersRepository(session)
+    existing_gln13 = repo.get_by_gln13(gln13)
+    if existing_gln13:
+        raise ValueError("Ce code GLN est déjà attribué à un fournisseur")
 
     supplier = Suppliers(
         name=name,

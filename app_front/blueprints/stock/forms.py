@@ -5,6 +5,7 @@ from typing import Any, cast
 from collections import namedtuple
 from flask_wtf import FlaskForm
 from wtforms import (
+    Form,
     StringField,
     IntegerField,
     BooleanField,
@@ -18,10 +19,11 @@ from wtforms import (
     FloatField,
     DateField,
 )
-from wtforms.validators import DataRequired, Optional, NumberRange, ValidationError
+from wtforms.validators import DataRequired, InputRequired, Optional, NumberRange, ValidationError
 
 
-OrderTuple = namedtuple("Order", ["id", "general_object_id", "qty", "pu", "vat_rate"])
+OrderPriceTuple = namedtuple("OrderPrice", ["unit_price", "vat_rate"])
+OrderTuple = namedtuple("Order", ["id", "general_object_id", "qty", "prices"])
 VAT_RATE = "Taux de TVA"
 
 class OrderInCreateForm(FlaskForm):
@@ -46,14 +48,20 @@ class ReservationContextForm(FlaskForm):
     submit = SubmitField("Enregistrer le contexte")
 
 
+class OrderInLinePriceForm(Form):
+    """Composante financière d'une ligne de commande fournisseur."""
+
+    unit_price = FloatField("Prix d'achat HT", validators=[InputRequired(), NumberRange(min=0)])
+    vat_rate = FloatField(VAT_RATE, validators=[InputRequired(), NumberRange(min=0)])
+
+
 class OrderInLineForm(FlaskForm):
     """Formulaire de ligne de commande fournisseur (étape 2)."""
 
     order_id = HiddenField("ID de la commande", validators=[DataRequired()])
     general_object_id = HiddenField("ID objet", validators=[DataRequired()])
     quantity = StringField("Quantité", validators=[DataRequired()])
-    unit_price = StringField("Prix unitaire", validators=[DataRequired()])
-    vat_rate = StringField(VAT_RATE, validators=[Optional()])
+    prices = FieldList(FormField(OrderInLinePriceForm), min_entries=0)
     submit = SubmitField("Ajouter à la commande")
 
     def validate_form_data(self, reservation: bool = False) -> OrderTuple:
@@ -68,21 +76,24 @@ class OrderInLineForm(FlaskForm):
             order_id = int(self.order_id.data or 0)
             general_object_id = int(self.general_object_id.data or 0)
             quantity = int(self.quantity.data or 0)
-            unit_price = float(self.unit_price.data or 0)
-
-            vat_value = self.vat_rate.data if self.vat_rate.data not in (None, "") else "0"
-            vat_rate = float(vat_value or 0)
+            prices = [
+                OrderPriceTuple(
+                    float(entry.form.unit_price.data or 0),
+                    float(entry.form.vat_rate.data or 0),
+                )
+                for entry in self.prices
+            ]
 
             ok = (
                 order_id != 0
                 and general_object_id != 0
                 and quantity > 0
-                and unit_price >= 0
-                and (not reservation or True)
+                and (reservation or bool(prices))
+                and all(price.unit_price >= 0 and price.vat_rate >= 0 for price in prices)
             )
             if not ok:
                 raise ValueError("Remplir tous les champs du formulaire.")
-            return OrderTuple(order_id, general_object_id, quantity, unit_price, vat_rate)
+            return OrderTuple(order_id, general_object_id, quantity, prices)
         except (ValueError, TypeError) as e:
             raise TypeError("Données du formulaire invalides : " + str(e)) from e
 
@@ -91,8 +102,13 @@ class OrderInLineForm(FlaskForm):
         self.order_id.data = str(line.order_in_id)
         self.general_object_id.data = str(line.general_object_id)
         self.quantity.data = str(line.qty_ordered)
-        self.unit_price.data = str(line.unit_price)
-        self.vat_rate.data = str(line.vat_rate)
+        for price in line.prices:
+            self.prices.append_entry(
+                {
+                    "unit_price": float(price.unit_price),
+                    "vat_rate": float(price.vat_rate),
+                }
+            )
 
 
 class BookForm(FlaskForm):

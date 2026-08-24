@@ -125,11 +125,6 @@ def new_reservation_line(order_id: int):
     form = OrderInLineForm()
     form.order_id.data = str(order_id)
 
-    # La TVA n'est pas affichée dans le flux réservation, mais elle est utilisée
-    # en interne pour la logique d'inventaire. On la normalise en 0 si elle est absente.
-    if request.method == "POST" and not form.vat_rate.data:
-        form.vat_rate.data = "0"
-
     if form.validate_on_submit():
         edit_order_in_line_db(form, action="create", order_id=order_id, reservation=True)
         order = get_order_by_id(order_id)

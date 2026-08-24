@@ -199,8 +199,8 @@ def supplier_create_submit():
         try:
             create_supplier(data)
         except ValueError as exc:
-            form.supplier_name.errors = list(form.supplier_name.errors) + [str(exc)]
-            return render_template(SUPPLIER_CREATE_MODAL, form=form), 422
+            form.gln13.errors = list(form.gln13.errors) + [str(exc)]
+            return render_template(SUPPLIER_CREATE_MODAL, form=form), 200
 
         response = make_response("", 200)
         response.headers["HX-Trigger"] = "refreshSupplierTable"

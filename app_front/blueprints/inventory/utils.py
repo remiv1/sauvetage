@@ -255,4 +255,13 @@ def search_object_by_name(
     for item in items:
         item.inventory_price = inventory_repo.get_last_inventory_price(item.id)
         item.available_quantity = inventory_repo.get_available_quantity(item.id)
+        item.selling_prices = [
+            {
+                "unit_price": float(price.price),
+                "vat_rate": float(price.vat_rate.rate) if price.vat_rate else 0.0,
+                "from_date": price.from_date.isoformat(),
+                "to_date": price.to_date.isoformat() if price.to_date else None,
+            }
+            for price in item.get_valid_prices()
+        ]
     return items

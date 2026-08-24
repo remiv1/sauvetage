@@ -91,7 +91,7 @@
                             {% if obj %}
                             <input type="hidden" id="object_id" name="object_id" value="{{ obj.id }}">
                             {% endif %}
-                            <label for="supplier_name" style="display:block;">Fournisseur</label>
+                            <label for="supplier_name" style="display:none;">Fournisseur</label>
                             <input type="text" id="supplier_name"
                                    name="supplier_name"
                                    class="form-control"
@@ -116,7 +116,7 @@
                     {# Type d'objet #}
                     <div class="form-group">
                         {{ form.general_object_type.label(class="form-label") }}
-                        <label for="general_object_type" style="display:block;">Type d'objet</label>
+                        <label for="general_object_type" style="display:none;">Type d'objet</label>
                         <select name="general_object_type" id="general_object_type"
                                 class="form-control"
                                 {% if disabled %}disabled{% endif %}

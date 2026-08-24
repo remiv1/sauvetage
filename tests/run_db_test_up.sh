@@ -131,6 +131,10 @@ FRONT_TEST_RC=$?
 echo "🚀 Lancement des tests (back/) via tests/scripts/run_tests_back.sh"
 bash "$SCRIPT_DIR/scripts/run_tests_back.sh"
 BACK_TEST_RC=$?
+
+echo "🚀 Lancement des tests (e2e/) via tests/scripts/run_tests_e2e.sh"
+bash "$SCRIPT_DIR/scripts/run_tests_e2e.sh" "$SCRIPT_DIR"
+E2E_TEST_RC=$?
 set -e
 
 COVERAGE_DIR="$SCRIPT_DIR/reports/coverage"
@@ -144,6 +148,6 @@ COVERAGE_REPORT="$COVERAGE_DIR/${STAMP}_coverage_report.md"
 python3 "$SCRIPT_DIR/scripts/generate_coverage_report.py" "$COVERAGE_DIR/coverage.json" "$COVERAGE_REPORT"
 echo "✅ Rapports de couverture : $COVERAGE_DIR/coverage.txt, $COVERAGE_DIR/coverage.xml, $COVERAGE_DIR/coverage.json et $COVERAGE_REPORT"
 
-if [ "$DB_TEST_RC" -ne 0 ] || [ "$FRONT_TEST_RC" -ne 0 ] || [ "$BACK_TEST_RC" -ne 0 ]; then
+if [ "$DB_TEST_RC" -ne 0 ] || [ "$FRONT_TEST_RC" -ne 0 ] || [ "$BACK_TEST_RC" -ne 0 ] || [ "$E2E_TEST_RC" -ne 0 ]; then
 	exit 1
 fi

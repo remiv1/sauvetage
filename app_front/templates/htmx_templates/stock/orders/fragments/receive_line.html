@@ -35,7 +35,7 @@
                             </div>
                             <div class="col-md-3">
                                 <p class="mb-1"><small>PU HT :</small></p>
-                                <p class="fw-bold">{{ "%.2f"|format(line.unit_price|float) }} €</p>
+                                <p class="fw-bold">{{ "%.2f"|format(line.get_unit_price_ht()|float) }} €</p>
                             </div>
                         </div>
                     </div>

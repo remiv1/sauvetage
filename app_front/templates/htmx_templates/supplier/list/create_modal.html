@@ -23,7 +23,8 @@
 
                         <div class="form-group">
                             <label class="form-label" for="gln13">Code GLN *</label>
-                            {{ form.gln13(class="form-control", id="gln13") }}
+                            {{ form.gln13(class="form-control", id="gln13", minlength="13", maxlength="13", pattern="[0-9]{13}", inputmode="numeric", **{'hx-get': url_for('supplier_htmx.gln13_availability'), 'hx-trigger': 'input[this.value.length === 13] delay:200ms', 'hx-target': '#create-gln13-availability', 'hx-swap': 'innerHTML'}) }}
+                            <p id="create-gln13-availability" aria-live="polite"></p>
                             {% for error in form.gln13.errors %}
                                 <p class="form-error">{{ error }}</p>
                             {% endfor %}

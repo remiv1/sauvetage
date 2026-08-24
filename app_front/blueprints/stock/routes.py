@@ -85,7 +85,8 @@ def order_download_slip(order_id: int):
     for line in (order.orderin_lines or []):
         if line.line_state == "cancelled":
             continue
-        line_total = float(line.qty_ordered or 0) * float(line.unit_price or 0)
+        unit_price = float(line.get_unit_price_ht())
+        line_total = float(line.qty_ordered or 0) * unit_price
         total_ht += line_total
         lines.append(
             {
@@ -94,7 +95,14 @@ def order_download_slip(order_id: int):
                     else f"Article #{line.general_object_id}",
                 "ean13": getattr(line.general_object, "ean13", None) or "-",
                 "quantity": int(line.qty_ordered or 0),
-                "unit_price": f"{float(line.unit_price or 0):.2f} EUR",
+                "unit_price": f"{unit_price:.2f} EUR",
+                "prices": [
+                    {
+                        "unit_price": f"{float(price.unit_price):.2f} EUR",
+                        "vat_rate": f"{float(price.vat_rate):g} %",
+                    }
+                    for price in line.prices
+                ],
                 "line_total_ht": f"{line_total:.2f} EUR",
             }
         )
@@ -185,7 +193,8 @@ def reservation_download_slip(order_id: int):
     for line in (order.orderin_lines or []):
         if line.line_state == "cancelled":
             continue
-        line_total = float(line.qty_ordered or 0) * float(line.unit_price or 0)
+        unit_price = float(line.get_unit_price_ht())
+        line_total = float(line.qty_ordered or 0) * unit_price
         total_ht += line_total
         lines.append(
             {
@@ -194,7 +203,14 @@ def reservation_download_slip(order_id: int):
                     else f"Article #{line.general_object_id}",
                 "quantity": int(line.qty_ordered or 0),
                 "line_state": line.line_state,
-                "unit_price": f"{float(line.unit_price or 0):.2f} EUR",
+                "unit_price": f"{unit_price:.2f} EUR",
+                "prices": [
+                    {
+                        "unit_price": f"{float(price.unit_price):.2f} EUR",
+                        "vat_rate": f"{float(price.vat_rate):g} %",
+                    }
+                    for price in line.prices
+                ],
                 "line_total_ht": f"{line_total:.2f} EUR",
             }
         )

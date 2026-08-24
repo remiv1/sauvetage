@@ -3,7 +3,11 @@
 import json
 
 from flask import Blueprint, make_response, request, render_template
-from app_front.blueprints.supplier.utils import search_suppliers, create_supplier
+from app_front.blueprints.supplier.utils import (
+    create_supplier,
+    get_supplier_by_gln13,
+    search_suppliers,
+)
 from app_front.blueprints.supplier.forms import SupplierCreateForm
 
 bp_supplier_htmx = Blueprint("supplier_htmx", __name__, url_prefix="/supplier/htmx")
@@ -58,6 +62,17 @@ def add_new_supplier(name: str):
     return render_template(ADD_FORM_TEMPLATE, form=form, name=name)
 
 
+@bp_supplier_htmx.get("/gln13-availability")
+def gln13_availability():
+    """Retourne un message si le code GLN13 est déjà attribué."""
+    gln13 = request.args.get("gln13", "").strip()
+    if len(gln13) != 13:
+        return "", 200
+    if get_supplier_by_gln13(gln13):
+        return '<p class="form-error">Ce code GLN est déjà attribué à un fournisseur.</p>'
+    return "", 200
+
+
 @bp_supplier_htmx.post("/create")
 def create_supplier_htmx():
     """Crée un fournisseur via HTMX (form-encoded + WTForms)."""
@@ -81,9 +96,8 @@ def create_supplier_htmx():
         try:
             result = create_supplier(data)
         except ValueError as exc:
-            print(f"Erreur lors de la création du fournisseur : {exc}")
-            form.supplier_name.errors = list(form.supplier_name.errors) + [str(exc)]
-            return render_template(ADD_FORM_TEMPLATE, form=form), 423
+            form.gln13.errors = list(form.gln13.errors) + [str(exc)]
+            return render_template(ADD_FORM_TEMPLATE, form=form), 200
         # Succès : vider la modale et notifier l'application
         response = make_response("", 200)
         response.headers["HX-Trigger"] = json.dumps({"supplier:created": result})

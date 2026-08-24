@@ -14,7 +14,7 @@ from .customers import (
     CustomerPros,
 )
 from .orders import Order, OrderLine, OrderSyncLog, OrderAlert
-from .stocks import OrderIn, OrderInLine, DilicomReferencial
+from .stocks import OrderIn, OrderInLine, OrderInLinePrice, DilicomReferencial
 from .inventory import InventoryMovements
 from .invoices import Invoice, InvoiceLine, InvoiceSyncLog
 from .shipments import Shipment, ShipmentLine
@@ -50,6 +50,7 @@ __all__ = [
     "OrderAlert",
     "OrderIn",
     "OrderInLine",
+    "OrderInLinePrice",
     "DilicomReferencial",
     "InventoryMovements",
     "Invoice",

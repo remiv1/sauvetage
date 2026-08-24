@@ -167,7 +167,11 @@
                 <td>{{ line.article_name }}</td>
                 <td>{{ line.ean13 }}</td>
                 <td class="right-align">{{ line.quantity }}</td>
-                <td class="right-align">{{ line.unit_price }}</td>
+                <td class="right-align">
+                    {% for price in line.prices %}
+                    <div>{{ price.unit_price }} — TVA {{ price.vat_rate }}</div>
+                    {% endfor %}
+                </td>
                 <td class="right-align">{{ line.line_total_ht }}</td>
             </tr>
             {% endfor %}

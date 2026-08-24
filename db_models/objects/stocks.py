@@ -3,7 +3,7 @@
 from typing import Dict, Any
 from datetime import timezone, datetime
 from decimal import Decimal
-from sqlalchemy import Integer, String, ForeignKey, Numeric, Boolean, JSON
+from sqlalchemy import Integer, String, ForeignKey, Numeric, Boolean, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
@@ -108,14 +108,6 @@ class OrderInLine(WorkingBase, QueryMixin):
     qty_received: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False, comment="Quantité reçue"
     )
-    unit_price: Mapped[float] = mapped_column(
-        Numeric(10, 2, True, True),
-        nullable=False,
-        comment="Prix unitaire en centimes d'euro",
-    )
-    vat_rate: Mapped[Decimal] = mapped_column(
-        Numeric(10, 3, True, True), nullable=False, comment="Taux de TVA en pourcentage"
-    )
     # État de la ligne : 'pending', 'received', 'cancelled'
     line_state: Mapped[str] = mapped_column(
         String,
@@ -130,13 +122,40 @@ class OrderInLine(WorkingBase, QueryMixin):
     inventory_movement = relationship(
         "InventoryMovements", back_populates="orderin_line"
     )
+    prices = relationship(
+        "OrderInLinePrice",
+        back_populates="order_in_line",
+        cascade="all, delete-orphan",
+        order_by="OrderInLinePrice.position",
+    )
 
     def __repr__(self) -> str:
         return (
             f"<OrderInLine(id={self.id}, order_in_id={self.order_in_id}, "
             + f"general_object_id={self.general_object_id}, qty_ordered={self.qty_ordered}, "
-            + f"qty_received={self.qty_received}, unit_price={self.unit_price}, "
-            + f"vat_rate={self.vat_rate}, line_state={self.line_state})>"
+            + f"qty_received={self.qty_received}, prices={len(self.prices)}, "
+            + f"line_state={self.line_state})>"
+        )
+
+    def get_unit_price_ht(self) -> Decimal:
+        """Retourne le prix d'achat unitaire HT total de la ligne."""
+        return sum(
+            (Decimal(str(price.unit_price)) for price in self.prices),
+            start=Decimal("0.00"),
+        )
+
+    def get_unit_price_ttc(self) -> Decimal:
+        """Retourne le prix d'achat unitaire TTC total de la ligne."""
+        return sum(
+            (
+                Decimal(str(price.unit_price))
+                * (
+                    Decimal("1")
+                    + Decimal(str(price.vat_rate)) / Decimal("100")
+                )
+                for price in self.prices
+            ),
+            start=Decimal("0.00"),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -147,16 +166,7 @@ class OrderInLine(WorkingBase, QueryMixin):
             "general_object_id": self.general_object_id,
             "qty_ordered": self.qty_ordered,
             "qty_received": self.qty_received,
-            "unit_price": (
-                float(self.unit_price)
-                if isinstance(self.unit_price, (int, float, Decimal))
-                else None
-            ),
-            "vat_rate": (
-                float(self.vat_rate)
-                if isinstance(self.vat_rate, (int, float, Decimal))
-                else None
-            ),
+            "prices": [price.to_dict() for price in self.prices],
             "line_state": self.line_state,
         }
 
@@ -164,6 +174,55 @@ class OrderInLine(WorkingBase, QueryMixin):
     def from_dict(cls, data: Dict[str, Any]) -> "OrderInLine":
         """Crée un objet OrderInLine à partir d'un dictionnaire."""
         return cls(**data)
+
+
+class OrderInLinePrice(WorkingBase, QueryMixin):
+    """Composante financière d'une ligne de commande fournisseur."""
+
+    __tablename__ = "order_in_line_prices"
+    __table_args__ = (
+        UniqueConstraint(
+            "order_in_line_id",
+            "position",
+            name="uq_order_in_line_prices_line_position",
+        ),
+        {"schema": "app_schema"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    order_in_line_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.order_in_lines.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="ID de la ligne physique de commande fournisseur",
+    )
+    unit_price: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        comment="Composante du prix d'achat unitaire HT en euros",
+    )
+    vat_rate: Mapped[Decimal] = mapped_column(
+        Numeric(10, 3),
+        nullable=False,
+        comment="Taux de TVA historique de la composante",
+    )
+    position: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="Ordre d'affichage de la composante",
+    )
+
+    order_in_line = relationship("OrderInLine", back_populates="prices")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit la composante financière en dictionnaire."""
+        return {
+            "id": self.id,
+            "unit_price": float(self.unit_price),
+            "vat_rate": float(self.vat_rate),
+            "position": self.position,
+        }
 
 
 class DilicomReferencial(WorkingBase, QueryMixin):
