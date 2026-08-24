@@ -268,6 +268,7 @@ class CreateObjectForm(FlaskForm):
     ean_13 = StringField("EAN13", validators=[DataRequired()])
     name = StringField("Nom de l'objet", validators=[DataRequired()])
     description = TextAreaField("Description de l'objet", render_kw={"rows": 4})
+    object_variation_attribut = StringField("Attribut de variation")
     prices = FieldList(FormField(PriceHistoryEntryForm), min_entries=1)  # type: ignore[arg-type]
     purchase_price = StringField("Prix d'achat")
     book = FormField(BookForm)  # type: ignore[arg-type]
@@ -276,6 +277,13 @@ class CreateObjectForm(FlaskForm):
     media_files = FieldList(FormField(MediaFileForm), min_entries=0)  # type: ignore[arg-type]
     variations = FieldList(FormField(VariationForm), min_entries=0)  # type: ignore[arg-type]
     submit = SubmitField("Valider")
+
+    def validate_object_variation_attribut(self, field: StringField) -> None:
+        """Exige le nom de l'attribut lorsqu'au moins une variation est saisie."""
+        if self.variations.entries and not (field.data or "").strip():
+            raise ValidationError(
+                "L'attribut de variation est obligatoire lorsqu'une variation existe."
+            )
 
     def validate_prices(self, field: FieldList):
         """Valide la cohérence des lignes de prix."""
@@ -301,6 +309,7 @@ class CreateObjectForm(FlaskForm):
         self.ean_13.data = obj.ean13
         self.name.data = obj.name
         self.description.data = obj.description
+        self.object_variation_attribut.data = obj.object_variation_attribut or ""
         self.purchase_price.data = str(obj.purchase_price) if obj.purchase_price is not None else ""
 
         self._populate_prices(getattr(obj, "prices", []), getattr(obj, "price", None))

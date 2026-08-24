@@ -18,6 +18,7 @@ from typing import Any, Optional, Sequence, Callable
 from requests.exceptions import RequestException
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import Session
+from db_models.objects import ObjectVariations
 from db_models.objects.vat import VatRate
 from db_models.repositories.objects import ObjectsRepository, GeneralObjects
 from db_models.repositories.tags import TagsRepository, Tags
@@ -176,6 +177,7 @@ class WCProductsService(WCBase):
             merged_attrs = _merge_attribute_lists(current_attrs, meta_attrs) \
                 if isinstance(current_attrs, list) else meta_attrs
             product_dict["attributes"] = merged_attrs
+        self._merge_product_variation_attribute(product, product_dict)
         synced_tags = [
             {"id": obj_tag.tag.wpwc_id}
             for obj_tag in (product.object_tags or [])
@@ -196,6 +198,42 @@ class WCProductsService(WCBase):
                 for media in product.media_files
             ]
         return product_dict
+
+    @staticmethod
+    def _build_variation_attribute(product: GeneralObjects) -> dict[str, Any] | None:
+        """Construit l'attribut WooCommerce porté par les variations actives."""
+        options = [
+            variation.name
+            for variation in product.object_variations
+            if variation.is_active and variation.name
+        ]
+        if not options:
+            return None
+        if not product.object_variation_attribut:
+            raise ValueError(
+                f"Le produit {product.id} possède des variations sans attribut défini."
+            )
+        return {
+            "name": product.object_variation_attribut,
+            "options": list(dict.fromkeys(options)),
+            "visible": True,
+            "variation": True,
+        }
+
+    def _merge_product_variation_attribute(
+        self,
+        product: GeneralObjects,
+        product_dict: dict[str, Any],
+    ) -> None:
+        """Ajoute l'attribut variable aux autres attributs du produit parent."""
+        variation_attribute = self._build_variation_attribute(product)
+        if variation_attribute is None:
+            return
+        current_attrs = product_dict.get("attributes", [])
+        product_dict["attributes"] = _merge_attribute_lists(
+            current_attrs if isinstance(current_attrs, list) else [],
+            [variation_attribute],
+        )
 
     def _build_media_src(self, media: MediaFiles) -> str:
         """Construit l'URL source d'une image pour WooCommerce.
@@ -410,6 +448,118 @@ class WCProductsService(WCBase):
             )
             self.export_tags()
 
+    def _fetch_all_wc_variations(self, product_id: int) -> list[dict[str, Any]]:
+        """Récupère toutes les variations WooCommerce d'un produit."""
+        variations: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            response = self.api_read.get(
+                f"products/{product_id}/variations",
+                params={"page": page, "per_page": 100},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                raise ValueError(
+                    f"Réponse WooCommerce invalide pour les variations du produit {product_id}."
+                )
+            variations.extend(payload)
+            if len(payload) < 100:
+                break
+            page += 1
+        return variations
+
+    def _sync_product_variations(self, product: GeneralObjects) -> None:
+        """Crée, met à jour ou supprime les variations WooCommerce du produit."""
+        if not product.wpwc_id or not product.object_variations:
+            return
+
+        wc_variations = self._fetch_all_wc_variations(product.wpwc_id)
+        by_id = {int(item["id"]): item for item in wc_variations}
+        by_sku = {
+            str(item.get("sku")): item
+            for item in wc_variations
+            if item.get("sku") not in (None, "")
+        }
+        for variation in product.object_variations:
+            variation_sku = f"{product.id}-{variation.id}"
+            matched = by_id.get(int(variation.wpwc_id or 0)) or by_sku.get(variation_sku)
+            if matched:
+                variation.wpwc_id = int(matched["id"])
+            self._sync_product_variation(product.wpwc_id, variation, matched)
+
+    def _sync_product_variation(
+        self,
+        product_id: int,
+        variation: ObjectVariations,
+        matched: dict[str, Any] | None,
+    ) -> None:
+        """Synchronise une variation avec son endpoint WooCommerce individuel."""
+        payload: dict[str, Any] | None = None
+        if variation.is_active:
+            payload = variation.to_dict_for_woo_commerce()
+            if matched:
+                wc_id = int(matched["id"])
+                action = "update"
+                response = self.api_write.put(
+                    f"products/{product_id}/variations/{wc_id}",
+                    data=payload,
+                )
+            else:
+                action = "create"
+                response = self.api_write.post(
+                    f"products/{product_id}/variations",
+                    data=payload,
+                )
+        elif matched:
+            wc_id = int(matched["id"])
+            action = "delete"
+            response = self.api_write.delete(
+                f"products/{product_id}/variations/{wc_id}",
+                params={"force": True},
+            )
+        else:
+            variation.wpwc_id = None
+            return
+
+        try:
+            response.raise_for_status()
+        except RequestException as exc:
+            raw_response = getattr(response, "text", "") or ""
+            logger.error(
+                "Échec WooCommerce variation locale=%d action=%s url=%s payload=%s "
+                "réponse=%s",
+                variation.id,
+                action,
+                getattr(response, "url", ""),
+                payload,
+                raw_response[:1000],
+            )
+            raise exc
+        item = response.json()
+        if not isinstance(item, dict) or not item.get("id"):
+            raise ValueError(
+                f"Réponse WooCommerce invalide pour la variation {variation.id}."
+            )
+        wc_id = int(item["id"])
+        variation.wpwc_id = None if action == "delete" else wc_id
+        self._log_sync(
+            "variation",
+            variation.id,
+            wc_id,
+            action,
+            "success",
+        )
+
+    @staticmethod
+    def _get_product_sync_status(has_batch_effect: bool, has_valid_wc_id: bool) -> str:
+        """Détermine le statut final d'une synchronisation produit."""
+        if has_batch_effect and has_valid_wc_id:
+            return "success"
+        if has_batch_effect:
+            return "error"
+        return "no change"
+
     def update_product(self, product_id: int) -> int | None:
         """
         Met à jour ou crée un produit spécifique dans WooCommerce.
@@ -483,6 +633,7 @@ class WCProductsService(WCBase):
         for r in returns:
             self._apply_product_returns(returns=r, products=[product])
         self.session.flush()
+        self._sync_product_variations(product)
         self.session.commit()
 
         has_valid_wc_id = bool(product.wpwc_id)
@@ -490,11 +641,7 @@ class WCProductsService(WCBase):
             bool(r.get("create") or r.get("update"))
             for r in returns
         )
-        status = "success" \
-            if has_batch_effect and has_valid_wc_id \
-            else "error" \
-                if has_batch_effect \
-                else "no change"
+        status = self._get_product_sync_status(has_batch_effect, has_valid_wc_id)
 
         if status == "error":
             logger.warning(
@@ -559,6 +706,25 @@ class WCProductsService(WCBase):
             return
         for r in returns:
             self._apply_product_returns(r, products)
+        try:
+            for product in products:
+                self._sync_product_variations(product)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception(
+                "Erreur lors de la synchronisation des variations WooCommerce : %s",
+                exc,
+            )
+            for product in products:
+                self._log_sync(
+                    entity_type="object",
+                    entity_id=product.id,
+                    wpwc_id=product.wpwc_id,
+                    operation="batch",
+                    sync_status="error",
+                    error_message=str(exc),
+                )
+            self.session.commit()
+            return
         self.session.commit()
         logger.info(
             "Export produits terminé. Créés: %d, Mis à jour: %d, Supprimés: %d",

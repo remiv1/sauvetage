@@ -11,8 +11,27 @@
         {{ form.id() }}
 
         <div class="form-group">
-            {{ form.name.label(class="form-label") }}
-            {{ form.name(class="form-control", placeholder="Nom de la variation…") }}
+            <label class="form-label" for="object-variation-attribut">Attribut de variation</label>
+            <input class="form-control"
+                   id="object-variation-attribut"
+                   name="object_variation_attribut"
+                   list="variation-attribut-suggestions"
+                   value="{{ variation_attribut }}"
+                   placeholder="Ex. Poids, Couleur, Format"
+                   required>
+            <datalist id="variation-attribut-suggestions">
+                {% for value in variation_attribut_suggestions %}
+                <option value="{{ value }}"></option>
+                {% endfor %}
+            </datalist>
+            {% if variation_attribut_error %}
+            <span class="text-danger small">{{ variation_attribut_error }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.name.id }}">Valeur de l'attribut</label>
+            {{ form.name(class="form-control", placeholder="Ex. 500 g, Rouge, Poche") }}
             {% for err in form.name.errors %}
             <span class="text-danger small">{{ err }}</span>
             {% endfor %}

@@ -37,6 +37,7 @@ from app_front.blueprints.stock.utils import (
     remove_object_from_dilicom,
     get_vat_rates,
     get_variations,
+    get_variation_attribut_suggestions,
     create_variation_for_object,
     update_variation_for_object,
     delete_variation_for_object,
@@ -261,7 +262,8 @@ def object_complement():
         form=form,
         object_type=object_type,
         form_state=form_state,
-        obj=obj
+        obj=obj,
+        variation_attribut_suggestions=get_variation_attribut_suggestions(),
     )
 
 
@@ -435,6 +437,8 @@ def variation_create_form(object_id: int):
         form=form,
         obj=obj,
         variation=None,
+        variation_attribut=obj.object_variation_attribut or "",
+        variation_attribut_suggestions=get_variation_attribut_suggestions(),
         action_url=f"/stock/htmx/search/object/{object_id}/variation/create",
     )
 
@@ -462,6 +466,8 @@ def variation_edit_form(object_id: int, variation_id: int):
         form=form,
         obj=obj,
         variation=variation,
+        variation_attribut=obj.object_variation_attribut or "",
+        variation_attribut_suggestions=get_variation_attribut_suggestions(),
         action_url=f"/stock/htmx/search/object/{object_id}/variation/{variation_id}/edit",
     )
 
@@ -470,17 +476,25 @@ def variation_edit_form(object_id: int, variation_id: int):
 def variation_create(object_id: int):
     """Crée une nouvelle variation et retourne le tableau mis à jour."""
     form = VariationForm()
-    if not form.validate_on_submit():
+    variation_attribut = request.form.get("object_variation_attribut", "").strip()
+    if not form.validate_on_submit() or not variation_attribut:
         logger.warning("Formulaire variation invalide : %s", form.errors)
         return render_template(
             VARIATION_FORM,
             form=form,
             obj=get_object_by_id(object_id),
             variation=None,
+            variation_attribut=variation_attribut,
+            variation_attribut_error=(
+                "L'attribut de variation est obligatoire."
+                if not variation_attribut
+                else None
+            ),
+            variation_attribut_suggestions=get_variation_attribut_suggestions(),
             action_url=f"/stock/htmx/search/object/{object_id}/variation/create",
         ), 422
     try:
-        create_variation_for_object(object_id, form)
+        create_variation_for_object(object_id, form, variation_attribut)
     except ValueError as exc:
         logger.exception("Erreur création variation : %s", exc)
         return f"<p class='text-danger'>{exc}</p>", 422
@@ -498,7 +512,8 @@ def variation_create(object_id: int):
 def variation_edit(object_id: int, variation_id: int):
     """Met à jour une variation et retourne le tableau mis à jour."""
     form = VariationForm()
-    if not form.validate_on_submit():
+    variation_attribut = request.form.get("object_variation_attribut", "").strip()
+    if not form.validate_on_submit() or not variation_attribut:
         logger.warning("Formulaire variation invalide : %s", form.errors)
         obj = get_object_by_id(object_id)
         variations = get_variations(object_id)
@@ -508,10 +523,22 @@ def variation_edit(object_id: int, variation_id: int):
             form=form,
             obj=obj,
             variation=variation,
+            variation_attribut=variation_attribut,
+            variation_attribut_error=(
+                "L'attribut de variation est obligatoire."
+                if not variation_attribut
+                else None
+            ),
+            variation_attribut_suggestions=get_variation_attribut_suggestions(),
             action_url=f"/stock/htmx/search/object/{object_id}/variation/{variation_id}/edit",
         ), 422
     try:
-        update_variation_for_object(variation_id, object_id, form)
+        update_variation_for_object(
+            variation_id,
+            object_id,
+            form,
+            variation_attribut,
+        )
     except ValueError as exc:
         logger.exception("Erreur mise à jour variation : %s", exc)
         return f"<p class='text-danger'>{exc}</p>", 422

@@ -353,6 +353,7 @@
         <div class="tab-panel {{ 'active' if object_type != 'book' else '' }}" id="tab-variations">
             {% if form_state == 'view' %}
                 {% if obj.object_variations %}
+                <p><strong>Attribut :</strong> {{ obj.object_variation_attribut or 'Non défini' }}</p>
                 <table class="stock-table table table-sm table-striped w-100">
                     <thead>
                         <tr><th>Nom</th><th>Prix</th><th>Actif</th></tr>
@@ -371,12 +372,28 @@
                 <p class="text-muted">Aucune variation pour cet objet.</p>
                 {% endif %}
             {% else %}
+            <div class="form-group mb-3">
+                {{ form.object_variation_attribut.label(class="form-label") }}
+                {{ form.object_variation_attribut(
+                    class="form-control",
+                    list="variation-attribut-suggestions-main",
+                    placeholder="Ex. Poids, Couleur, Format"
+                ) }}
+                <datalist id="variation-attribut-suggestions-main">
+                    {% for value in variation_attribut_suggestions %}
+                    <option value="{{ value }}"></option>
+                    {% endfor %}
+                </datalist>
+                {% for error in form.object_variation_attribut.errors %}
+                <span class="text-danger small">{{ error }}</span>
+                {% endfor %}
+            </div>
             <div id="variations-list" class="dynamic-list">
                 {% for variation in form.variations %}
                 <div class="dynamic-list-item variation-item">
                     {{ variation.form.id() }}
                     <input type="text" name="{{ variation.form.name.name }}" class="form-control" id=""
-                           value="{{ variation.form.name.data or '' }}" placeholder="Nom de la variation" required>
+                           value="{{ variation.form.name.data or '' }}" placeholder="Valeur de l'attribut" required>
                     <input type="text" name="{{ variation.form.description.name }}" class="form-control" id=""
                            value="{{ variation.form.description.data or '' }}" placeholder="Description">
                     <input type="number" name="{{ variation.form.price.name }}" class="form-control" id=""
@@ -724,7 +741,7 @@
             var div = document.createElement('div');
             div.className = 'dynamic-list-item variation-item';
             div.innerHTML = '<input type="hidden" name="variations-' + idx + '-id" value="">'
-                          + '<input type="text" name="variations-' + idx + '-name" class="form-control" placeholder="Nom de la variation" required>'
+                          + '<input type="text" name="variations-' + idx + '-name" class="form-control" placeholder="Valeur de l\'attribut" required>'
                           + '<input type="text" name="variations-' + idx + '-description" class="form-control" placeholder="Description">'
                           + '<input type="number" name="variations-' + idx + '-price" class="form-control" placeholder="Prix de vente" step="0.01" required>'
                           + '<input type="number" name="variations-' + idx + '-purchase_price" class="form-control" placeholder="Prix d\'achat" step="0.01">'

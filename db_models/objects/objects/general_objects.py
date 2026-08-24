@@ -83,6 +83,11 @@ class GeneralObjects(WorkingBase, QueryMixin):
     )
     name: Mapped[str] = mapped_column(String, nullable=False, comment="Nom de l'objet")
     description: Mapped[str] = mapped_column(String, comment="Description de l'objet")
+    object_variation_attribut: Mapped[Optional[str]] = mapped_column(
+        String,
+        nullable=True,
+        comment="Nom de l'attribut porté par les variations WooCommerce",
+    )
     purchase_price: Mapped[float] = mapped_column(
         Numeric(10, 2), nullable=True, default=0.0,
         comment="Prix d'achat de l'objet"
@@ -314,6 +319,7 @@ class GeneralObjects(WorkingBase, QueryMixin):
             "ean13": self.ean13,
             "name": self.name,
             "description": self.description,
+            "object_variation_attribut": self.object_variation_attribut,
             "price": self.get_price(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

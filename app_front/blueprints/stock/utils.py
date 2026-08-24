@@ -521,6 +521,23 @@ def search_book_field(field_name: str, query: str) -> List[str]:
     return [row[0] for row in session.execute(stmt).all()]
 
 
+def get_variation_attribut_suggestions() -> List[str]:
+    """Retourne les noms d'attribut de variation existants sans doublon de casse."""
+    session = db_conf.get_main_session()
+    values = session.execute(
+        select(GeneralObjects.object_variation_attribut)
+        .where(GeneralObjects.object_variation_attribut.isnot(None))
+        .where(GeneralObjects.object_variation_attribut != "")
+        .order_by(GeneralObjects.object_variation_attribut)
+    ).scalars()
+    suggestions: dict[str, str] = {}
+    for value in values:
+        if not isinstance(value, str) or not value:
+            continue
+        suggestions.setdefault(value.casefold(), value)
+    return list(suggestions.values())
+
+
 def search_tags(query: str) -> List[Dict[str, Any]]:
     """Recherche des tags (id + name) correspondant à la requête."""
     session = db_conf.get_main_session()
@@ -642,7 +659,9 @@ def get_variations(general_object_id: int) -> List[ObjectVariations]:
 
 
 def create_variation_for_object(
-    general_object_id: int, form: "VariationForm"
+    general_object_id: int,
+    form: "VariationForm",
+    variation_attribut: str,
 ) -> int:
     """Crée une nouvelle variation pour l'objet donné.
 
@@ -650,13 +669,21 @@ def create_variation_for_object(
         L'ID de la variation créée.
     """
     session = db_conf.get_main_session()
+    object_repo = ObjectsRepository(session)
+    general_object = object_repo.get_by_ref(general_object_id, only_actives=False)
+    if general_object is None:
+        raise ValueError(f"Objet {general_object_id} introuvable.")
+    object_repo.set_variation_attribut(general_object, variation_attribut)
     repo = VariationsRepository(session)
     variation = repo.save_from_form(form, general_object_id=general_object_id)
     return variation.id
 
 
 def update_variation_for_object(
-    variation_id: int, general_object_id: int, form: "VariationForm"
+    variation_id: int,
+    general_object_id: int,
+    form: "VariationForm",
+    variation_attribut: str,
 ) -> int:
     """Met à jour une variation existante.
 
@@ -667,6 +694,11 @@ def update_variation_for_object(
         ValueError: Si la variation n'appartient pas à l'objet général donné.
     """
     session = db_conf.get_main_session()
+    object_repo = ObjectsRepository(session)
+    general_object = object_repo.get_by_ref(general_object_id, only_actives=False)
+    if general_object is None:
+        raise ValueError(f"Objet {general_object_id} introuvable.")
+    object_repo.set_variation_attribut(general_object, variation_attribut)
     repo = VariationsRepository(session)
     variation = repo.get_by_id(variation_id)
     if variation is None or variation.general_object_id != general_object_id:

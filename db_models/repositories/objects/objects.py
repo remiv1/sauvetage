@@ -239,6 +239,9 @@ class ObjectsRepository(BaseRepository):
         instance.ean13 = form.ean_13.data
         instance.name = form.name.data
         instance.description = form.description.data
+        instance.object_variation_attribut = self._normalize_variation_attribut(
+            form.object_variation_attribut.data
+        )
         instance.purchase_price = float(form.purchase_price.data) \
                                         if getattr(form, 'purchase_price', None) \
                                               and form.purchase_price.data \
@@ -274,6 +277,30 @@ class ObjectsRepository(BaseRepository):
         self._sync_variations_from_form(instance, form.variations)
         self.commit_object()
         return instance.id
+
+    def _normalize_variation_attribut(self, value: str | None) -> str | None:
+        """Réutilise la casse d'un attribut existant ou nettoie une nouvelle valeur."""
+        normalized = " ".join((value or "").split())
+        if not normalized:
+            return None
+        existing = self.session.execute(
+            select(GeneralObjects.object_variation_attribut)
+            .where(
+                func.lower(GeneralObjects.object_variation_attribut)
+                == normalized.casefold()
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        return existing or normalized
+
+    def set_variation_attribut(
+        self,
+        instance: GeneralObjects,
+        value: str | None,
+    ) -> None:
+        """Met à jour l'attribut porté par les variations d'un produit."""
+        instance.object_variation_attribut = self._normalize_variation_attribut(value)
+        self.session.flush()
 
     def _sync_price_history_from_form(
         self, instance: GeneralObjects, price_entries: Any

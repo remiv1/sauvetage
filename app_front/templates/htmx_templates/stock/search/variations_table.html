@@ -1,6 +1,9 @@
 {# Fragment HTMX — Tableau des variations d'un objet général #}
 
 <div id="variations-panel">
+    {% if variations %}
+    <p class="mb-2"><strong>Attribut :</strong> {{ obj.object_variation_attribut or 'Non défini' }}</p>
+    {% endif %}
     {% if form_state == 'edit' %}
     <button type="button" class="btn btn-sm btn-primary mb-3"
             hx-get="/stock/htmx/search/object/{{ obj.id }}/variation/form"
@@ -14,7 +17,7 @@
     <table class="stock-table table table-sm table-striped w-100">
         <thead>
             <tr>
-                <th>Nom</th>
+                <th>Valeur</th>
                 <th>Actif</th>
                 <th style="width: 80px;">Action</th>
             </tr>
