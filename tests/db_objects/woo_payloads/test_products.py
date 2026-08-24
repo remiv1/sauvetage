@@ -160,20 +160,167 @@ def test_other_object_payload_has_empty_attributes() -> None:
 
 def test_variation_payload_uses_wc_keys() -> None:
     """Les variations doivent envoyer les champs WooCommerce attendus pour un produit variable."""
+    product = GeneralObjects(
+        supplier_id=1,
+        general_object_type="other",
+        ean13="9781111111112",
+        name="Produit variable",
+        description="Description",
+        object_variation_attribut="Couleur",
+    )
     variation = ObjectVariations(
+        id=2,
+        general_object_id=10,
         name="Variation rouge",
         description="Version rouge",
         price=24.90,
         purchase_price=18.00,
+        general_object=product,
     )
 
     payload = variation.to_dict_for_woo_commerce()
 
-    assert payload["name"] == "Variation rouge"
+    assert "name" not in payload
+    assert payload["description"] == "Version rouge"
+    assert payload["sku"] == "10-2"
+    assert payload["attributes"] == [
+        {"name": "Couleur", "option": "Variation rouge"}
+    ]
     assert payload["regular_price"] == "24.90"
-    assert payload["sale_price"] == "24.90"
+    assert "sale_price" not in payload
     assert payload["manage_stock"] == "parent"
     assert payload["backorders"] == "notify"
+
+
+def test_wc_parent_payload_declares_variation_attribute() -> None:
+    """Le produit parent doit déclarer l'attribut et les options de ses variations actives."""
+    service = object.__new__(WCProductsService)
+    service.session = MagicMock()
+    product = GeneralObjects(
+        id=10,
+        supplier_id=1,
+        general_object_type="other",
+        ean13="9781111111113",
+        name="Produit par poids",
+        description="Description",
+        object_variation_attribut="Poids",
+    )
+    product.prices = [
+        ObjectPrices(
+            price=Decimal("10.00"),
+            vat_rate=VatRate(code=1, rate=20.0, label="TVA 20%", wpwc_slug="standard"),
+        ),
+    ]
+    product.object_variations = [
+        ObjectVariations(name="500 g", description="Petit", price=10, is_active=True),
+        ObjectVariations(name="1 kg", description="Grand", price=18, is_active=True),
+        ObjectVariations(name="2 kg", description="Inactif", price=30, is_active=False),
+    ]
+
+    payload = service._build_product_payload(product)  # pylint: disable=W0212
+
+    assert payload["type"] == "variable"
+    assert {
+        "name": "Poids",
+        "options": ["500 g", "1 kg"],
+        "visible": True,
+        "variation": True,
+    } in payload["attributes"]
+
+
+def test_wc_product_variations_are_reconciled() -> None:
+    """Les variations locales doivent être créées, mises à jour ou supprimées dans WooCommerce."""
+    service = object.__new__(WCProductsService)
+    service.api_read = MagicMock()
+    service.api_write = MagicMock()
+    service.sync_log_repo = MagicMock()
+
+    product = GeneralObjects(
+        id=10,
+        supplier_id=1,
+        general_object_type="other",
+        ean13="9784444444444",
+        name="Produit variable",
+        description="Description",
+        wpwc_id=42,
+        object_variation_attribut="Format",
+    )
+    variation_to_create = ObjectVariations(
+        id=101,
+        general_object_id=10,
+        name="Nouvelle variation",
+        description="À créer",
+        price=12.90,
+        is_active=True,
+    )
+    variation_found_by_sku = ObjectVariations(
+        id=102,
+        general_object_id=10,
+        name="Variation existante",
+        description="À mettre à jour",
+        price=14.90,
+        is_active=True,
+    )
+    variation_to_delete = ObjectVariations(
+        id=103,
+        general_object_id=10,
+        name="Variation inactive",
+        description="À supprimer",
+        price=9.90,
+        is_active=False,
+        wpwc_id=503,
+    )
+    product.object_variations = [
+        variation_to_create,
+        variation_found_by_sku,
+        variation_to_delete,
+    ]
+
+    read_response = MagicMock()
+    read_response.raise_for_status.return_value = None
+    read_response.json.return_value = [
+        {"id": 502, "sku": "10-102"},
+        {"id": 503, "sku": "10-103"},
+    ]
+    service.api_read.get.return_value = read_response
+
+    create_response = MagicMock()
+    create_response.raise_for_status.return_value = None
+    create_response.json.return_value = {"id": 501, "sku": "10-101"}
+    service.api_write.post.return_value = create_response
+
+    update_response = MagicMock()
+    update_response.raise_for_status.return_value = None
+    update_response.json.return_value = {"id": 502, "sku": "10-102"}
+    service.api_write.put.return_value = update_response
+
+    delete_response = MagicMock()
+    delete_response.raise_for_status.return_value = None
+    delete_response.json.return_value = {"id": 503, "sku": "10-103"}
+    service.api_write.delete.return_value = delete_response
+
+    service._sync_product_variations(product)  # pylint: disable=W0212
+
+    service.api_read.get.assert_called_once_with(
+        "products/42/variations",
+        params={"page": 1, "per_page": 100},
+    )
+    service.api_write.post.assert_called_once()
+    assert service.api_write.post.call_args.args[0] == "products/42/variations"
+    assert service.api_write.post.call_args.kwargs["data"]["sku"] == "10-101"
+    assert service.api_write.post.call_args.kwargs["data"]["attributes"] == [
+        {"name": "Format", "option": "Nouvelle variation"}
+    ]
+    service.api_write.put.assert_called_once()
+    assert service.api_write.put.call_args.args[0] == "products/42/variations/502"
+    assert service.api_write.put.call_args.kwargs["data"]["sku"] == "10-102"
+    service.api_write.delete.assert_called_once_with(
+        "products/42/variations/503",
+        params={"force": True},
+    )
+    assert variation_to_create.wpwc_id == 501
+    assert variation_found_by_sku.wpwc_id == 502
+    assert variation_to_delete.wpwc_id is None
 
 
 def test_wc_diff_objects_detects_create_update_and_delete_batches() -> None:

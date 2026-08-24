@@ -508,6 +508,7 @@ def test_create_object_with_variations(client_all, supplier, db_session_main):
             "ean_13": ean13,
             "name": "Produit à variations",
             "description": "Produit de test avec deux variations.",
+            "object_variation_attribut": "Format",
             "prices-0-price": "19.99",
             "prices-0-vat_rate_id": str(vat_rate.id),
             "prices-0-from_date": "2026-01-01",
@@ -526,6 +527,7 @@ def test_create_object_with_variations(client_all, supplier, db_session_main):
 
     assert response.status_code == 200
     product = db_session_main.query(GeneralObjects).filter_by(ean13=ean13).one()
+    assert product.object_variation_attribut == "Format"
     variations = (
         db_session_main.query(ObjectVariations)
         .filter_by(general_object_id=product.id)
@@ -602,6 +604,7 @@ def test_edit_object_add_variation(client_all, book_object, supplier, db_session
             "book-publication_year": book_object.book.publication_year,
             "book-pages": book_object.book.pages,
             "variations-0-name": "Édition collector",
+            "object_variation_attribut": "Édition",
             "variations-0-description": "Avec jaquette",
             "variations-0-price": "29.99",
             "variations-0-purchase_price": "15.00",
@@ -615,7 +618,40 @@ def test_edit_object_add_variation(client_all, book_object, supplier, db_session
         .filter_by(general_object_id=book_object.id, name="Édition collector")
         .one()
     )
+    assert book_object.object_variation_attribut == "Édition"
     assert float(variation.price) == 29.99
+
+
+def test_create_variation_htmx_normalizes_parent_attribut(
+    client_all,
+    book_object,
+    db_session_main,
+):
+    """L'ajout HTMX réutilise la casse de l'attribut déjà porté par le parent."""
+    book_object.object_variation_attribut = "Format"
+    db_session_main.flush()
+
+    response = client_all.post(
+        f"/stock/htmx/search/object/{book_object.id}/variation/create",
+        data={
+            "object_variation_attribut": " format ",
+            "name": "Poche",
+            "description": "Petit format",
+            "price": "12.50",
+            "purchase_price": "6.00",
+            "is_active": "y",
+        },
+    )
+
+    assert response.status_code == 200
+    db_session_main.refresh(book_object)
+    variation = (
+        db_session_main.query(ObjectVariations)
+        .filter_by(general_object_id=book_object.id, name="Poche")
+        .one()
+    )
+    assert book_object.object_variation_attribut == "Format"
+    assert variation.description == "Petit format"
 
 
 def test_edit_object(client_all, book_object, supplier):   # pylint: disable=redefined-outer-name, unused-argument

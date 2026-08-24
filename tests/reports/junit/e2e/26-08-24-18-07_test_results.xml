@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="3.593" timestamp="2026-08-24T18:07:04.614924+02:00" hostname="sauvetage">
+    <testcase classname="tests.e2e.stocks.test_stock_movements_e2e" name="test_stock_projection_tracks_orders_and_reservations" time="3.528"/>
+  </testsuite>
+</testsuites>

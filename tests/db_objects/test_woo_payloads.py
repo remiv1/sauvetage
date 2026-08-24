@@ -158,18 +158,35 @@ def test_other_object_payload_has_empty_attributes() -> None:
 
 def test_variation_payload_uses_wc_keys() -> None:
     """Les variations doivent envoyer les champs WooCommerce attendus pour un produit variable."""
+    product = GeneralObjects(
+        id=10,
+        supplier_id=1,
+        general_object_type="other",
+        ean13="9781111111112",
+        name="Produit variable",
+        description="Description",
+        object_variation_attribut="Couleur",
+    )
     variation = ObjectVariations(
+        id=2,
+        general_object_id=10,
         name="Variation rouge",
         description="Version rouge",
         price=24.90,
         purchase_price=18.00,
+        general_object=product,
     )
 
     payload = variation.to_dict_for_woo_commerce()
 
-    assert payload["name"] == "Variation rouge"
+    assert "name" not in payload
+    assert payload["description"] == "Version rouge"
+    assert payload["sku"] == "10-2"
+    assert payload["attributes"] == [
+        {"name": "Couleur", "option": "Variation rouge"}
+    ]
     assert payload["regular_price"] == "24.90"
-    assert payload["sale_price"] == "24.90"
+    assert "sale_price" not in payload
     assert payload["manage_stock"] == "parent"
     assert payload["backorders"] == "notify"
 
