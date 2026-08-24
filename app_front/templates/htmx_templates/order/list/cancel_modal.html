@@ -10,6 +10,7 @@
                pour le client <strong>{{ order.customer_name }}</strong> ?</p>
             <p style="color: #808080; font-size: 0.85rem;">
                 Cette action est irréversible. Les lignes non facturées seront annulées.
+                {% if order.invoices %}Un retour sera créé pour les lignes facturées afin de générer l'avoir.{% endif %}
             </p>
         </div>
         <div class="modal-footer">

@@ -46,6 +46,10 @@ class OrdersRepository(BaseRepository):
 
     def _get_vat_rate_from_wpwc_tax_class(self, tax_class: str) -> float:
         """Résout le taux de TVA local actif correspondant à une classe WooCommerce."""
+        return float(self._get_current_vat_rate_by_wpwc_slug(tax_class).rate)
+
+    def _get_current_vat_rate_by_wpwc_slug(self, tax_class: str) -> VatRate:
+        """Retourne le taux de TVA local actif correspondant à une classe WooCommerce."""
         vat_rate = self.session.execute(
             select(VatRate).where(
                 VatRate.wpwc_slug == tax_class,
@@ -57,7 +61,20 @@ class OrdersRepository(BaseRepository):
             raise ValueError(
                 f"Classe de TVA WooCommerce '{tax_class}' introuvable dans le référentiel local."
             )
-        return float(vat_rate.rate)
+        return vat_rate
+
+    def _get_current_vat_rate_by_value(self, value: float) -> VatRate:
+        """Retourne le taux de TVA local actif correspondant à une valeur de pourcentage."""
+        vat_rate = self.session.execute(
+            select(VatRate).where(
+                VatRate.rate == value,
+                VatRate.date_start <= datetime.now(timezone.utc),
+                (VatRate.date_end.is_(None)) | (VatRate.date_end > datetime.now(timezone.utc)),
+            )
+        ).scalar_one_or_none()
+        if vat_rate is None:
+            raise ValueError(f"Taux de TVA actif {value} % introuvable dans le référentiel local.")
+        return vat_rate
 
     # ── Lecture ──────────────────────────────────────────────
 
@@ -254,6 +271,7 @@ class OrdersRepository(BaseRepository):
                     unit_price=source_line.unit_price,
                     discount=source_line.discount,
                     vat_rate=source_line.vat_rate,
+                    vat_rate_id=source_line.vat_rate_id,
                     status="draft",
                     create_source="wc_cancellation_return",
                 )
@@ -261,14 +279,7 @@ class OrdersRepository(BaseRepository):
         self.session.add(return_order)
         self.session.flush()
         return_order.reference = self.generate_reference(return_order, "RET")
-        try:
-            self.session.commit()
-            return return_order
-        except IntegrityError as exc:
-            self.session.rollback()
-            raise ValueError(
-                f"Erreur lors de la création de la commande de retour : {exc.orig}"
-            ) from exc
+        return return_order
 
     def create_from_woo_commerce(self, wc_order: dict, customer_id: int) -> Order:
         """Crée une commande locale à partir d'un payload WooCommerce.
@@ -329,7 +340,9 @@ class OrdersRepository(BaseRepository):
 
             # Création de la ligne de commande locale en passant par un dictionnaire intermédiaire
             line_dict = wpwc_order_model.to_dict_for_erp_orderline(line)
-            line_dict["vat_rate"] = self._get_vat_rate_from_wpwc_tax_class(line.tax_class)
+            vat_rate = self._get_current_vat_rate_by_wpwc_slug(line.tax_class)
+            line_dict["vat_rate"] = float(vat_rate.rate)
+            line_dict["vat_rate_id"] = vat_rate.id
             line_object = OrderLine().from_dict(line_dict)
             line_object.wpwc_id = line.id
             line_object.create_source = line_dict["create_source"]
@@ -371,7 +384,9 @@ class OrdersRepository(BaseRepository):
         }
         for wc_line in wpwc_order_model.line_items:
             line_dict = wpwc_order_model.to_dict_for_erp_orderline(wc_line)
-            line_dict["vat_rate"] = self._get_vat_rate_from_wpwc_tax_class(wc_line.tax_class)
+            vat_rate = self._get_current_vat_rate_by_wpwc_slug(wc_line.tax_class)
+            line_dict["vat_rate"] = float(vat_rate.rate)
+            line_dict["vat_rate_id"] = vat_rate.id
             local_product = self.object_repo.get_by_wpwc_id(int(wc_line.product_id))
             if not local_product:
                 raise ValueError(
@@ -388,6 +403,7 @@ class OrdersRepository(BaseRepository):
                 local_line.unit_price = line_dict["unit_price"]
                 local_line.discount = line_dict["discount"]
                 local_line.vat_rate = line_dict["vat_rate"]
+                local_line.vat_rate_id = line_dict["vat_rate_id"]
                 local_line.update_source = line_dict["update_source"]
             local_line.general_object = local_product
 
@@ -477,6 +493,11 @@ class OrdersRepository(BaseRepository):
                     unit_price=float(price_row.price),
                     discount=discount,
                     vat_rate=vat_rate_value,
+                    vat_rate_id=(
+                        price_row.vat_rate_id
+                        if price_row.vat_rate_id is not None
+                        else self._get_current_vat_rate_by_value(vat_rate_value).id
+                    ),
                     status="draft",
                     create_source=create_source,
                     object_variation_id=object_variation_id,
@@ -499,6 +520,11 @@ class OrdersRepository(BaseRepository):
                 if valid_prices[0].vat_rate is not None
                 else float(vat_rate or 0)
             )
+        line_vat_rate = (
+            valid_prices[0].vat_rate
+            if valid_prices and valid_prices[0].vat_rate is not None
+            else self._get_current_vat_rate_by_value(float(vat_rate))
+        )
 
         line = OrderLine(
             order_id=order.id,
@@ -507,6 +533,7 @@ class OrdersRepository(BaseRepository):
             unit_price=unit_price,
             discount=discount,
             vat_rate=vat_rate,
+            vat_rate_id=line_vat_rate.id,
             status="draft",
             create_source=create_source,
             object_variation_id=object_variation_id,
@@ -543,6 +570,35 @@ class OrdersRepository(BaseRepository):
                 f"Erreur lors de la mise à jour du statut : {str(e)}"
             ) from e
 
+    def update_line(
+        self,
+        line: OrderLine,
+        *,
+        quantity: int,
+        unit_price: float,
+        discount: float,
+        vat_rate: float,
+        update_source: str = "web",
+    ) -> OrderLine:
+        """Met à jour une ligne de commande encore en brouillon."""
+        if line.status != "draft":
+            raise ValueError("Seules les lignes en brouillon peuvent être modifiées.")
+
+        line.quantity = quantity
+        line.unit_price = unit_price
+        line.discount = discount
+        line.vat_rate = vat_rate
+        line.vat_rate_id = self._get_current_vat_rate_by_value(vat_rate).id
+        line.update_source = update_source
+        try:
+            self.session.commit()
+            return line
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise ValueError(
+                f"Erreur lors de la mise à jour de la ligne de commande : {exc}"
+            ) from exc
+
     def cancel_order(self, order: Order, update_source: str = "web") -> Order:
         """Annule une commande, ses lignes et leurs réservations dans une transaction.
 
@@ -558,7 +614,7 @@ class OrdersRepository(BaseRepository):
         """
         try:
             for line in order.order_lines or []:
-                if line.status == "cancelled":
+                if line.status != "draft":
                     continue
                 self.session.add(
                     InventoryMovements(
@@ -631,6 +687,7 @@ class OrdersRepository(BaseRepository):
             quantity=order_line.quantity - invoiced_quantity,
             unit_price=order_line.unit_price,
             vat_rate=order_line.vat_rate,
+            vat_rate_id=order_line.vat_rate_id,
             status="draft",
             create_source="cut_line_for_invoice",
         )

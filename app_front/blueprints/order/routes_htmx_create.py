@@ -1,11 +1,16 @@
 """Blueprint HTMX pour la création de commandes et gestion des lignes."""
 
 from flask import Blueprint, make_response, render_template, request, url_for
-from app_front.blueprints.order.forms import OrderCreateForm, OrderLineForm, QuickCustomerForm
+from app_front.blueprints.order.forms import (
+    OrderCreateForm,
+    OrderLineForm,
+    QuickCustomerForm,
+)
 from app_front.blueprints.order.utils import (
     create_order,
     add_order_line,
     remove_order_line,
+    update_order_line,
     get_order_by_id,
     get_customer_order_addresses,
     update_order_delivery_address,
@@ -28,6 +33,7 @@ bp_order_htmx_create = Blueprint(
 CUSTOMER_DROPDOWN = "htmx_templates/order/create/customer_dropdown.html"
 QUICK_CUSTOMER_MODAL = "htmx_templates/order/create/quick_customer_modal.html"
 ORDER_LINES_TABLE = "htmx_templates/order/create/lines_table.html"
+ORDER_LINE_EDIT_MODAL = "htmx_templates/order/create/line_edit_modal.html"
 ARTICLE_DROPDOWN = "htmx_templates/order/create/article_dropdown.html"
 ADDRESS_SELECTOR = "htmx_templates/order/create/address_selector.html"
 _EDIT_ORDER_ROUTE = "order_htmx_create.edit_order"
@@ -161,6 +167,45 @@ def delete_line(order_id: int, line_id: int):
     response = make_response("", 200)
     response.headers["HX-Trigger"] = "refreshOrderLines"
     return response
+
+
+@bp_order_htmx_create.route("/line/<int:order_id>/<int:line_id>/edit", methods=["GET", "POST"])
+def edit_line(order_id: int, line_id: int):
+    """Affiche puis enregistre la modification d'une ligne brouillon."""
+    order = get_order_by_id(order_id)
+    if order is None:
+        return "<p>Commande introuvable.</p>", 404
+    line = next((item for item in order["lines"] if item["id"] == line_id), None)
+    if line is None:
+        return "<p>Ligne introuvable.</p>", 404
+
+    if request.method == "POST":
+        form = OrderLineForm()
+        if not form.validate_on_submit():
+            return render_template(ORDER_LINE_EDIT_MODAL, order=order, line=line, form=form), 422
+        try:
+            update_order_line(
+                order_id,
+                line_id,
+                quantity=form.quantity.data or 0,
+                unit_price=float(form.unit_price.data or 0),
+                discount=float(form.discount.data or 0),
+                vat_rate=float(form.vat_rate.data or 0),
+            )
+        except ValueError as exc:
+            return f"<p class='error'>{exc}</p>", 422
+        response = make_response("", 200)
+        response.headers["HX-Trigger"] = "refreshOrderLines"
+        return response
+
+    form = OrderLineForm()
+    form.general_object_id.data = line["general_object_id"]
+    form.variation_id.data = line["object_variation_id"] or ""
+    form.quantity.data = line["quantity"]
+    form.unit_price.data = line["unit_price"]
+    form.discount.data = line["discount"]
+    form.vat_rate.data = line["vat_rate"]
+    return render_template(ORDER_LINE_EDIT_MODAL, order=order, line=line, form=form)
 
 
 @bp_order_htmx_create.post("/invoice/<int:order_id>")

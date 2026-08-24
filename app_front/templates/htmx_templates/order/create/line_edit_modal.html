@@ -1,0 +1,52 @@
+{# Modale de modification d'une ligne de commande brouillon #}
+<dialog class="modal-overlay" aria-label="Modifier une ligne de commande">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Modifier {{ line.article_name }}</h3>
+            <button class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form hx-post="{{ url_for('order_htmx_create.edit_line', order_id=order.id, line_id=line.id) }}"
+                  hx-swap="none"
+                  hx-on::after-request="if(event.detail.successful) this.closest('dialog').close()">
+                {{ form.hidden_tag() }}
+                <div class="modal-form-grid">
+                    <div class="line-form-group">
+                        {{ form.quantity.label }}
+                        {{ form.quantity(class_='form-control') }}
+                    </div>
+                    <div class="line-form-group">
+                        {{ form.unit_price.label }}
+                        {{ form.unit_price(class_='form-control', step='0.01') }}
+                    </div>
+                    <div class="line-form-group">
+                        {{ form.vat_rate.label }}
+                        {{ form.vat_rate(class_='form-control', step='0.1') }}
+                    </div>
+                    <div class="line-form-group">
+                        {{ form.discount.label }}
+                        {{ form.discount(class_='form-control', step='0.01') }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-cancel-close">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</dialog>
+
+<script>
+(function() {
+    var dialog = document.currentScript.previousElementSibling;
+    dialog.showModal();
+    dialog.addEventListener('click', function(event) {
+        if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', function() { dialog.remove(); });
+    dialog.querySelectorAll('.btn-close, .btn-cancel-close').forEach(function(button) {
+        button.addEventListener('click', function() { dialog.close(); });
+    });
+})();
+</script>

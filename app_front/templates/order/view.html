@@ -109,7 +109,7 @@
 
     {# ── Boutons d'action ────────────────────────────────────────────────── #}
     <div class="order-action-buttons">
-        {% if order.status == 'draft' %}
+        {% if order.status == 'draft' and not order.reference.startswith('RET') %}
         <a href="{{ url_for('order_htmx_create.edit_order', order_id=order.id) }}"
            class="btn btn-primary">
             Modifier la commande
@@ -126,10 +126,20 @@
         </button>
         {% endif %}
         <button class="btn btn-site-internet"
+                title="{% if order.wpwc_id %}Resynchroniser sur le Site Internet{% else %}Envoyer sur le Site Internet{% endif %}"
                 hx-post="{{ url_for('order.order_wc_push', order_id=order.id) }}"
                 hx-disabled-elt="this">
-            {% if order.wpwc_id %}Resynchroniser sur le Site Internet{% else %}Envoyer sur le Site Internet{% endif %}
+            {% include "svg/sync_double_arrow.html" %}
         </button>
+        {% if order.status not in ('cancelled', 'returned') and not order.reference.startswith('RET') %}
+        <button class="btn btn-danger"
+                title="Annuler la commande"
+                hx-get="{{ url_for('order_htmx_list.order_cancel_modal', order_id=order.id) }}"
+                hx-target="#order-modal-container"
+                hx-swap="innerHTML">
+            {% include "svg/del.html" %}
+        </button>
+        {% endif %}
     </div>
 
     <div class="order-tabs">
@@ -473,6 +483,8 @@
         </div>
     </dialog>
     {% endif %}
+
+    <div id="order-modal-container"></div>
 
 </div>
 

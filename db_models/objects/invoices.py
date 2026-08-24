@@ -7,6 +7,23 @@ from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, eve
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
+HENRRI_INVOICE_DOCUMENT_TYPE: dict[str, Any] = {
+    "document_kind": "invoice",
+    "id": 1,
+    "is_accounting": True,
+    "is_managed": True,
+    "is_mandatory": True,
+    "is_visible": True,
+}
+HENRRI_CREDIT_NOTE_DOCUMENT_TYPE: dict[str, Any] = {
+    "document_kind": "credit_note",
+    "id": 3,
+    "is_accounting": True,
+    "is_managed": True,
+    "is_mandatory": True,
+    "is_visible": True,
+}
+
 
 class Invoice(WorkingBase, QueryMixin):
     """Modèle de données pour une facture."""
@@ -120,18 +137,15 @@ class Invoice(WorkingBase, QueryMixin):
             )
         customer_payload = self.customer.to_dict_henrri()
         customer_address = customer_payload.get("address") or {}
-        document_type = {
-            "document_kind": "invoice",
-            "id": 1,
-            "is_accounting": True,
-            "is_managed": True,
-            "is_mandatory": True,
-            "is_visible": True,
-        }
+        document_type = (
+            HENRRI_CREDIT_NOTE_DOCUMENT_TYPE
+            if float(self.total_amount) < 0
+            else HENRRI_INVOICE_DOCUMENT_TYPE
+        )
         invoice = {
             "identity": self.reference,
             "finalized": False,
-            "document_type_id": 1,
+            "document_type_id": document_type["id"],
             "document_type": document_type,
             "title": f"Facture de la commande du {order_date}",
             "subtitle": f"Facture Editions Sauvetage du {now_datetime}",

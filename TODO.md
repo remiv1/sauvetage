@@ -59,14 +59,14 @@
 
 ## Validation du staging
 
-- [ ] Voir les erreur lors du push de la commande vers WooCommerce
-- [ ] Problèmes de création de tags depuis la fiche produit
+- [X] Voir les erreur lors du push de la commande vers WooCommerce
+- [X] Problèmes de création de tags depuis la fiche produit
 - [!] Problèmes de synchro diffuseurs sur les réceptions ONIX → Mail envoyé à Dilicom
-- [ ] Problèmes de miniatures images sur les fiches produits
+- [X] Problèmes de miniatures images sur les fiches produits
 - [ ] Décalage des mouvements de stocks sur ISBN 9782740315736 lors d'ajout/suppression de réservations
-- [ ] Sur les commandes clients, il faut ajouter la possibilité de faire :
-  - [ ] une modification de ligne de commande
-  - [ ] la création d'un bon de commande/Devis
+- [X] Sur les commandes clients, il faut ajouter la possibilité de faire :
+  - [X] une modification de ligne de commande
+  - [X] la création d'un bon de commande/Devis
 - [ ] Sur les commandes fournisseurs, lors de la récupération d'un produit, il faut récupérer le prix de vente pour l'affichage ainsi que le taux de TVA.
 - [ ] Voir pourquoi lors de l'inventaire, lors de l'existance de qté négative, le stock est mis à jour à 0.
 - [ ] Bug sur la création d'un fournisseur.

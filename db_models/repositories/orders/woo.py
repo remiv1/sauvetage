@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import logging
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from db_models.objects import Customers, Order, OrderAlert
@@ -281,7 +281,10 @@ class OrdersWooRepository:
             for line in order.order_lines:
                 if line.status == "draft":
                     line.status = "cancelled"
-            return "customer_cancellation", "Annulation cliente appliquée à la commande non facturée."
+            return (
+                "customer_cancellation",
+                "Annulation cliente appliquée à la commande non facturée."
+            )
         self._create_alert_if_absent(
             order,
             code="credit_note_required",
@@ -317,12 +320,23 @@ class OrdersWooRepository:
             self.session.add(OrderAlert(order_id=order.id, code=code, message=message))
 
     def push_recent_local_orders_without_wpwc_id(self) -> list[Order]:
-        """Pousse vers WooCommerce les commandes locales récentes non synchronisées."""
+        """Pousse vers WooCommerce les commandes locales récemment modifiées.
+
+        Les commandes déjà liées à WooCommerce doivent aussi être réémises si leur
+        état local a évolué depuis la dernière synchronisation, sinon on risque de
+        laisser le site WooCommerce dans un état obsolète malgré un push individuel
+        fonctionnel.
+        """
         since = self._one_month_ago()
         orders = self.session.execute(
             select(Order)
-            .where(Order.wpwc_id.is_(None))
-            .where(Order.created_at >= since)
+            .where(Order.updated_at >= since)
+            .where(
+                or_(
+                    Order.last_synced_at.is_(None),
+                    Order.last_synced_at < Order.updated_at,
+                )
+            )
         ).scalars().all()
 
         pushed: list[Order] = []

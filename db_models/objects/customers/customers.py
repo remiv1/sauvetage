@@ -190,7 +190,7 @@ class Customers(WorkingBase, QueryMixin):
                 "type": "professional",
                 "company_identifier_type": "Siret" if siret and len(siret) == 14 else "Unknown",
                 "creation_date": date_now,
-                "siret": siret,
+                "siret": siret.ljust(14, "0"),
                 "trade_name": self.pro.company_name,
                 "company_name": self.pro.company_name,
                 "ict": vat_number,

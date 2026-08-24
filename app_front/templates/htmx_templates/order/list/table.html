@@ -41,22 +41,20 @@
                                     href="{{ url_for('order.order_view', order_id=item.id, modal='view') }}">
                             {% include "svg/eye.html" %}
                         </a>
-                                {% if item.status != 'draft' %}
                                 <a class="action-icon"
                                     title="Télécharger le bon de commande"
                                     href="{{ url_for('order.order_download_slip', order_id=item.id) }}">
                                      {% include "svg/download.html" %}
                                 </a>
-                                {% endif %}
                         {# Bouton Modifier (redirection page édition) #}
-                        {% if item.status == 'draft' %}
+                        {% if item.status == 'draft' and not item.reference.startswith('RET') %}
                         <a href="{{ url_for('order_htmx_create.edit_order', order_id=item.id) }}"
                            class="action-icon action-edit" title="Modifier la commande">
                             {% include "svg/edit.html" %}
                         </a>
                         {% endif %}
                         {# Bouton Annuler #}
-                        {% if item.status not in ('cancelled', 'returned', 'shipped') %}
+                        {% if item.status not in ('cancelled', 'returned') and not item.reference.startswith('RET') %}
                         <button class="action-icon action-cancel"
                                 title="Annuler la commande"
                                 hx-get="{{ url_for('order_htmx_list.order_cancel_modal', order_id=item.id) }}"

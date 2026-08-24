@@ -846,6 +846,23 @@ details[open] > .accordion-toggle {
             flex-shrink: 0;
         }
 
+        .media-thumb-button {
+            display: block;
+            width: 60px;
+            height: 60px;
+            padding: 0;
+            border: 0;
+            border-radius: variables.$radius-xs;
+            background: transparent;
+            cursor: zoom-in;
+            line-height: 0;
+            overflow: hidden;
+        }
+
+        &--view {
+            flex: 0 0 60px;
+        }
+
         .media-replace-input {
             display: none;
 
@@ -861,6 +878,37 @@ details[open] > .accordion-toggle {
         padding: 2px 8px;
         border-radius: variables.$radius-xs;
         background: variables.$gray-300;
+    }
+}
+
+.media-preview-modal {
+    max-width: min(90vw, 1100px);
+    max-height: 90vh;
+    padding: variables.$space-sm;
+    border: 0;
+    background: variables.$gray-900;
+
+    &::backdrop {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .btn-close {
+        position: absolute;
+        top: 0.25rem;
+        right: variables.$space-sm;
+        z-index: 1;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font-size: 2rem;
+        cursor: pointer;
+    }
+
+    &__image {
+        display: block;
+        max-width: calc(90vw - #{variables.$space-sm * 2});
+        max-height: calc(90vh - #{variables.$space-sm * 2});
+        object-fit: contain;
     }
 }
 

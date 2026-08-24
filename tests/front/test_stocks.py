@@ -1,14 +1,20 @@
 """Tests pour les routes de stock."""
 
+import io
 import secrets
 import string
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
+from flask.testing import FlaskClient
+from sqlalchemy.orm import Session
+from PIL import Image
 
 from db_models.objects import (
     VatRate,
     GeneralObjects,
+    MediaFiles,
     ObjectVariations,
     OrderInLine,
     InventoryMovements,
@@ -19,6 +25,136 @@ from db_models.repositories.stocks.orders import OrderRepository
 # +================================================================================================+
 # |                          Gestion des tests de routes_htmx_search                               |
 # +================================================================================================+
+
+
+def test_stock_media_small_returns_webp_thumbnail(
+    client_all: FlaskClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une miniature locale est renvoyée en WebP et ne dépasse pas 160 pixels."""
+    image_path = tmp_path / "cover.png"
+    Image.new("RGB", (640, 320), "red").save(image_path, format="PNG")
+    monkeypatch.setattr(
+        "app_front.blueprints.stock.routes_htmx_search._MEDIA_UPLOAD_DIR",
+        str(tmp_path),
+    )
+
+    response = client_all.get("/stock/htmx/search/media/cover.png?small=true")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/webp"
+    with Image.open(io.BytesIO(response.data)) as thumbnail:
+        assert thumbnail.format == "WEBP"
+        assert thumbnail.size == (160, 80)
+
+
+def test_stock_media_small_false_returns_original_file(
+    client_all: FlaskClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """L'accès avec ``small=false`` retourne le fichier local sans transformation."""
+    image_path = tmp_path / "cover.png"
+    Image.new("RGB", (32, 16), "blue").save(image_path, format="PNG")
+    original_content = image_path.read_bytes()
+    monkeypatch.setattr(
+        "app_front.blueprints.stock.routes_htmx_search._MEDIA_UPLOAD_DIR",
+        str(tmp_path),
+    )
+
+    response = client_all.get("/stock/htmx/search/media/cover.png?small=false")
+
+    assert response.status_code == 200
+    assert response.data == original_content
+    assert response.mimetype == "image/png"
+
+
+def test_stock_media_small_returns_404_for_missing_file(
+    client_all: FlaskClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une demande de miniature pour un fichier absent retourne 404."""
+    monkeypatch.setattr(
+        "app_front.blueprints.stock.routes_htmx_search._MEDIA_UPLOAD_DIR",
+        str(tmp_path),
+    )
+
+    response = client_all.get("/stock/htmx/search/media/absent.png?small=true")
+
+    assert response.status_code == 404
+
+
+def test_stock_media_returns_503_without_upload_directory(
+    client_all: FlaskClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """La route refuse les médias lorsque le répertoire de dépôt est absent."""
+    monkeypatch.setattr(
+        "app_front.blueprints.stock.routes_htmx_search._MEDIA_UPLOAD_DIR",
+        "",
+    )
+
+    response = client_all.get("/stock/htmx/search/media/cover.png?small=true")
+
+    assert response.status_code == 503
+
+
+def test_stock_media_small_falls_back_to_original_non_image(
+    client_all: FlaskClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Un fichier non-image demandé en miniature conserve son contenu original."""
+    file_path = tmp_path / "document.txt"
+    original_content = b"contenu non image"
+    file_path.write_bytes(original_content)
+    monkeypatch.setattr(
+        "app_front.blueprints.stock.routes_htmx_search._MEDIA_UPLOAD_DIR",
+        str(tmp_path),
+    )
+
+    response = client_all.get("/stock/htmx/search/media/document.txt?small=true")
+
+    assert response.status_code == 200
+    assert response.data == original_content
+
+
+@pytest.mark.parametrize("form_state", ["edit", "view"])
+def test_object_complement_routes_legacy_local_media_path(
+    client_all: FlaskClient,
+    book_object: GeneralObjects,
+    db_session_main: Session,
+    form_state: str,
+) -> None:
+    """Un chemin absolu historique utilise les URLs média en édition et en vue."""
+    legacy_path = "/home/root/app/documents/shared/pictures/cover.jpg"
+    db_session_main.add(
+        MediaFiles(
+            general_object_id=book_object.id,
+            file_type="img",
+            file_link=legacy_path,
+            is_local=False,
+        )
+    )
+    db_session_main.commit()
+
+    response = client_all.get(
+        "/stock/htmx/search/object/complement",
+        query_string={
+            "general_object_type": "book",
+            "form_state": form_state,
+            "object_id": book_object.id,
+        },
+    )
+
+    body = response.get_data(as_text=True)
+    media_url = "/stock/htmx/search/media/cover.jpg"
+    assert response.status_code == 200
+    assert f"{media_url}?small=true" in body
+    assert f"{media_url}?small=false" in body
+    assert legacy_path not in body
 
 def test_cleared_authenticated(client_all):
     """Tester que la route /stock/htmx/orders/cleared fonctionne avec une session authentifiée."""

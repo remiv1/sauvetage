@@ -1,8 +1,10 @@
 """Blueprint API HTMX pour le module stock."""
 
+import io
 import logging
 import json
 import os
+
 from flask import (
     Blueprint,
     make_response,
@@ -10,8 +12,12 @@ from flask import (
     request,
     flash,
     send_from_directory,
+    send_file,
     abort,
 )
+from werkzeug.security import safe_join
+from PIL import Image
+
 from app_front.blueprints.stock.forms import (
     CreateObjectForm,
     PriceHistoryEntryForm,
@@ -60,14 +66,33 @@ VARIATIONS_TABLE = "htmx_templates/stock/search/variations_table.html"
 VARIATION_FORM = "htmx_templates/stock/search/variation_form.html"
 
 _MEDIA_UPLOAD_DIR = os.environ.get("MEDIA_UPLOAD_DIR", "")
+_THUMBNAIL_SIZE = (160, 160)
 
 
 @bp_stock_htmx_search.get("/media/<path:filename>")
 def serve_media(filename: str):
-    """Sert un fichier média stocké dans le volume partagé."""
+    """Sert un média local ou sa miniature WebP lorsque ``small=true``."""
     if not _MEDIA_UPLOAD_DIR:
         abort(503)
-    return send_from_directory(_MEDIA_UPLOAD_DIR, filename)
+    if request.args.get("small", "false").lower() != "true":
+        return send_from_directory(_MEDIA_UPLOAD_DIR, filename)
+
+    file_path = safe_join(_MEDIA_UPLOAD_DIR, filename)
+    if file_path is None or not os.path.isfile(file_path):
+        abort(404)
+
+    try:
+        with Image.open(file_path) as image:
+            image.thumbnail(_THUMBNAIL_SIZE, Image.Resampling.LANCZOS)
+            if image.mode not in ("RGB", "L"):
+                image = image.convert("RGB")
+            buffer = io.BytesIO()
+            image.save(buffer, format="WEBP", quality=60, method=6)
+    except OSError:
+        return send_from_directory(_MEDIA_UPLOAD_DIR, filename)
+
+    buffer.seek(0)
+    return send_file(buffer, mimetype="image/webp", max_age=3600)
 
 
 @bp_stock_htmx_search.get("/cleared")

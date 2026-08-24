@@ -239,8 +239,23 @@
                         <input type="text" class="form-control" id=""
                                value="{{ mf.file_link }}" disabled placeholder="URL">
                         {% elif mf.file_type == 'img' %}
+                           {% set is_local_media = mf.is_local or not mf.file_link.startswith(('http://', 'https://')) %}
+                           {% set media_filename = mf.file_link.rsplit('/', 1)[-1] if is_local_media else mf.file_link %}
+                           {% set image_url = url_for('stock_htmx_search.serve_media', filename=media_filename, small='false') if is_local_media else mf.file_link %}
+                           {% set thumbnail_url = url_for('stock_htmx_search.serve_media', filename=media_filename, small='true') if is_local_media else mf.file_link %}
+                           <div class="media-image-preview media-image-preview--view">
+                            <button type="button"
+                                 class="media-thumb-button js-open-media-preview"
+                                 data-image-url="{{ image_url }}"
+                                 data-image-alt="{{ mf.alt_text or ('Image média ' ~ loop.index) }}"
+                                 aria-label="Afficher l'image en taille réelle">
+                                <img src="{{ thumbnail_url }}"
+                                  alt="{{ mf.alt_text or ('Aperçu média ' ~ loop.index) }}"
+                                  class="media-thumb">
+                            </button>
+                           </div>
                         <input type="text" class="form-control" id=""
-                               value="{{ mf.file_link }}" disabled placeholder="Fichier">
+                               value="{{ media_filename }}" disabled placeholder="Fichier">
                         <input type="text" class="form-control" id=""
                                value="{{ mf.alt_text }}" disabled placeholder="Texte alt.">
                         {% else %}
@@ -280,9 +295,19 @@
                             <input type="hidden" value="{{ mf.id }}"
                                    name="media_files-{{ loop.index0 }}-id">
                             <div class="media-image-preview">
-                                <img src="{% if mf.is_local %}{{ url_for('stock_htmx_search.serve_media', filename=mf.file_link) }}{% else %}{{ mf.file_link }}{% endif %}"
-                                      alt="{{ mf.alt_text or ('Aperçu média ' ~ loop.index) }}"
-                                  class="media-thumb">
+                                {% set is_local_media = mf.is_local or not mf.file_link.startswith(('http://', 'https://')) %}
+                                {% set media_filename = mf.file_link.rsplit('/', 1)[-1] if is_local_media else mf.file_link %}
+                                {% set image_url = url_for('stock_htmx_search.serve_media', filename=media_filename, small='false') if is_local_media else mf.file_link %}
+                                {% set thumbnail_url = url_for('stock_htmx_search.serve_media', filename=media_filename, small='true') if is_local_media else mf.file_link %}
+                                <button type="button"
+                                        class="media-thumb-button js-open-media-preview"
+                                        data-image-url="{{ image_url }}"
+                                        data-image-alt="{{ mf.alt_text or ('Image média ' ~ loop.index) }}"
+                                        aria-label="Afficher l'image en taille réelle">
+                                    <img src="{{ thumbnail_url }}"
+                                         alt="{{ mf.alt_text or ('Aperçu média ' ~ loop.index) }}"
+                                         class="media-thumb">
+                                </button>
                                 <button type="button"
                                      class="btn btn-sm btn-secondary js-toggle-media-replace"
                                      data-target="media-replace-input-{{ loop.index0 }}">
@@ -375,11 +400,37 @@
     </div>
 </div>
 
+<dialog class="media-preview-modal" aria-label="Aperçu de l'image">
+    <button type="button" class="btn-close js-close-media-preview" title="Fermer">&times;</button>
+    <img class="media-preview-modal__image" src="" alt="">
+</dialog>
+
 {# ── Script onglets + listes dynamiques + autocomplete ────────────────────── #}
 <script>
 (function() {
     const container = document.querySelector('.complement-tabs');
     if (!container) return;
+
+    var mediaPreviewModal = document.querySelector('.media-preview-modal');
+    var mediaPreviewImage = mediaPreviewModal?.querySelector('.media-preview-modal__image');
+
+    container.addEventListener('click', function(e) {
+        var previewButton = e.target.closest('.js-open-media-preview');
+        if (previewButton && mediaPreviewModal && mediaPreviewImage) {
+            mediaPreviewImage.src = previewButton.dataset.imageUrl;
+            mediaPreviewImage.alt = previewButton.dataset.imageAlt;
+            mediaPreviewModal.showModal();
+            return;
+        }
+
+        if (e.target.classList.contains('js-close-media-preview')) {
+            mediaPreviewModal?.close();
+        }
+    });
+
+    mediaPreviewModal?.addEventListener('click', function(e) {
+        if (e.target === mediaPreviewModal) mediaPreviewModal.close();
+    });
 
     // ── Fonction globale de sélection autocomplete ──────────────────────
     window.selectAutocomplete = function(el, value) {
@@ -438,7 +489,15 @@
         // Appel HTMX via fetch pour créer le tag
         var url = "{{ url_for('stock_htmx_search.create_tag_htmx') }}";
         var body = new URLSearchParams({name: name, description: desc});
-        fetch(url, {method: 'POST', body: body, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        fetch(url, {
+            method: 'POST',
+            body: body,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
             .then(function(resp) { return resp.text(); })
             .then(function(html) {
                 // Parser la réponse pour extraire l'id et le nom du nouveau tag

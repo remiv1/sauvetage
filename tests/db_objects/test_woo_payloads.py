@@ -1,4 +1,4 @@
-"""Tests des payloads WooCommerce générés par les modèles métier."""
+"""Tests des payloads WooCommerce générés par les modèles métier."""    # pylint: disable=C0302
 
 import struct
 import zlib
@@ -297,16 +297,22 @@ def test_order_line_payload_uses_wc_tax_class_and_variation_id(
         status="draft",
         unit_price=15.0,
         discount=0,
-        vat_rate=20.0,
+        vat_rate=5.5,
         create_source="test",
         general_object=product,
         object_variation=variation,
+        vat_rate_ref=VatRate(
+            code=10,
+            rate=5.5,
+            label="Taux réduit",
+            wpwc_slug="taux-reduit",
+        ),
     )
 
     payload = line.to_dict_for_woo_commerce()
 
     assert payload["product_id"] == 150
-    assert payload["tax_class"] == "standard"
+    assert payload["tax_class"] == "taux-reduit"
     assert payload["variation_id"] == 21
     assert payload["subtotal"] == "30.0"
     assert payload["total"] == "30.0"

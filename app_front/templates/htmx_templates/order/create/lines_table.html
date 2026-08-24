@@ -32,6 +32,13 @@
             {% if order.status == 'draft' %}
             <td class="text-center">
                 {% if line.status == 'draft' %}
+                <button class="action-icon action-edit"
+                        title="Modifier la ligne"
+                        hx-get="{{ url_for('order_htmx_create.edit_line', order_id=order.id, line_id=line.id) }}"
+                        hx-target="#order-modal-container"
+                        hx-swap="innerHTML">
+                    {% include "svg/edit.html" %}
+                </button>
                 <button class="action-icon action-cancel"
                         title="Annuler la ligne"
                         hx-delete="{{ url_for('order_htmx_create.delete_line', order_id=order.id, line_id=line.id) }}"

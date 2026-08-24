@@ -1,12 +1,14 @@
 """Module des modèles de données pour les commandes."""
 
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Boolean, String, Integer, ForeignKey, DateTime, Numeric, Text, event
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
+if TYPE_CHECKING:
+    from db_models.objects.vat import VatRate
 
 _ALL_DELETE_ORPHAN = "all, delete-orphan"
 
@@ -342,6 +344,12 @@ class OrderLine(WorkingBase, QueryMixin):
     vat_rate: Mapped[float] = mapped_column(
         Numeric(10, 3), nullable=False, comment="Taux de TVA en pourcentage"
     )
+    vat_rate_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.vat_rates.id"),
+        nullable=False,
+        comment="Taux de TVA appliqué à la ligne",
+    )
 
     # Metadonnées audit
     create_source: Mapped[str] = mapped_column(
@@ -375,6 +383,7 @@ class OrderLine(WorkingBase, QueryMixin):
     order = relationship("Order", back_populates="order_lines")
     general_object = relationship("GeneralObjects", back_populates="order_lines")
     object_variation = relationship("ObjectVariations")
+    vat_rate_ref: Mapped["VatRate"] = relationship("VatRate")
     invoice_lines = relationship("InvoiceLine", back_populates="order_line")
     shipment_lines = relationship("ShipmentLine", back_populates="order_line")
 
@@ -398,6 +407,7 @@ class OrderLine(WorkingBase, QueryMixin):
             "unit_price": self.unit_price,
             "discount": self.discount,
             "vat_rate": self.vat_rate,
+            "vat_rate_id": self.vat_rate_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -412,7 +422,6 @@ class OrderLine(WorkingBase, QueryMixin):
                 "n'est pas synchronisé sur WooCommerce (wpwc_id manquant)."
             )
 
-        vat_rate_obj = self.general_object.vat_rate if self.general_object else None
         subtotal_ht = round(float(self.unit_price) * self.quantity, 4)
         discount_ratio = 1 - float(self.discount) / 100
         total_ht = round(subtotal_ht * discount_ratio, 4)
@@ -425,9 +434,16 @@ class OrderLine(WorkingBase, QueryMixin):
             "total": str(total_ht),
         }
 
-        # Classe de taxe WooCommerce : WC recalcule les montants de taxe automatiquement
-        if vat_rate_obj and vat_rate_obj.wpwc_slug:
-            value_dict["tax_class"] = vat_rate_obj.wpwc_slug
+        if self.vat_rate_ref is None:
+            raise ValueError(
+                f"La ligne de commande {self.id} n'est rattachée à aucun taux de TVA."
+            )
+        if not self.vat_rate_ref.wpwc_slug:
+            raise ValueError(
+                f"Le taux de TVA {self.vat_rate_ref.label!r} de la ligne {self.id} "
+                "n'est pas synchronisé sur WooCommerce (wpwc_slug manquant)."
+            )
+        value_dict["tax_class"] = self.vat_rate_ref.wpwc_slug
 
         # Inclure l'ID WooCommerce de la ligne pour que le PUT mette à jour au lieu de dupliquer
         if self.wpwc_id:
@@ -447,6 +463,7 @@ class OrderLine(WorkingBase, QueryMixin):
             unit_price=data.get("unit_price", 0.0),
             discount=data.get("discount", 0.0),
             vat_rate=data.get("vat_rate", 0.0),
+            vat_rate_id=data.get("vat_rate_id"),
         )
 
 

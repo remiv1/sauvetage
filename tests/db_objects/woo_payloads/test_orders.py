@@ -14,6 +14,7 @@ from db_models.objects import (
     OrderLine,
     VatRate,
 )
+from db_models.repositories.orders.woo import OrdersWooRepository
 from db_models.services.woo_commerce.orders import WCOrdersService
 
 
@@ -457,3 +458,35 @@ def test_wc_orders_service_push_order_updates_remote_order_and_logs_success() ->
         operation="update",
         sync_status="success",
     )
+
+
+def test_push_recent_local_orders_includes_commands_already_linked_to_woo() -> None:
+    """La synchronisation globale doit repasser les commandes localement modifiées."""
+    repo = object.__new__(OrdersWooRepository)
+    repo.session = MagicMock()
+    repo.service = MagicMock()
+    repo.order_repo = MagicMock()
+    repo.sync_log_repo = MagicMock()
+
+    customer = Customers(id=12, wpwc_id="42", customer_type="part")
+    local_order = Order(
+        id=1,
+        reference="CMD-2501-00001",
+        customer_id=12,
+        status="draft",
+        create_source="test",
+        customer=customer,
+        order_lines=[],
+        wpwc_id=221,
+    )
+    repo.session.execute.return_value.scalars.return_value.all.return_value = [local_order]
+    repo.service.push_order.return_value = (True, None)
+
+    pushed = repo.push_recent_local_orders_without_wpwc_id()
+
+    query = repo.session.execute.call_args[0][0]
+    compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+    assert "updated_at" in compiled.lower()
+    assert "last_synced_at" in compiled.lower()
+    assert pushed == [local_order]
+    assert repo.service.push_order.call_count == 1

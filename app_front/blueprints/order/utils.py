@@ -21,7 +21,7 @@ from db_models.repositories.objects.objects import ObjectsRepository, GeneralObj
 from db_models.services.woo_commerce.orders import WCOrdersService
 
 logger = logging.getLogger(__name__)
-
+DATETIME_FORMAT = "%d/%m/%Y %H:%M"
 
 # ── Libellés statuts ──────────────────────────────────────────────────────
 
@@ -111,7 +111,7 @@ def _order_to_list_dict(order: Order) -> Dict[str, Any]:
         "status_badge": STATUS_BADGE_CLASS.get(order.status, ""),
         "nb_lines": len(order.order_lines) if order.order_lines else 0,
         "total_ht": round(total_ht, 2),
-        "created_at": order.created_at.strftime("%d/%m/%Y %H:%M") if order.created_at else "—",
+        "created_at": order.created_at.strftime(DATETIME_FORMAT) if order.created_at else "—",
     }
 
 
@@ -268,7 +268,7 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
         {
             "code": alert.code,
             "message": alert.message,
-            "created_at": alert.created_at.strftime("%d/%m/%Y %H:%M"),
+            "created_at": alert.created_at.strftime(DATETIME_FORMAT),
         }
         for alert in (order.alerts or [])
         if not alert.is_resolved
@@ -297,7 +297,7 @@ def _get_sync_data_for_order(order: Order) -> Dict[str, Any]:
     if last_sync:
         data["wpwc_sync_status"] = last_sync.sync_status       # success / failed / pending
         data["wpwc_sync_operation"] = last_sync.operation      # create / update / delete
-        data["wpwc_sync_at"] = last_sync.synced_at.strftime("%d/%m/%Y %H:%M")
+        data["wpwc_sync_at"] = last_sync.synced_at.strftime(DATETIME_FORMAT)
         data["wpwc_sync_error"] = last_sync.error_message
     else:
         data["wpwc_sync_status"] = None
@@ -314,7 +314,7 @@ def _get_sync_data_for_invoice(invoice: Invoice) -> Dict[str, Any]:
     if last_sync:
         data["henrri_sync_status"] = last_sync.sync_status
         data["henrri_sync_operation"] = last_sync.operation
-        data["henrri_sync_at"] = last_sync.synced_at.strftime("%d/%m/%Y %H:%M")
+        data["henrri_sync_at"] = last_sync.synced_at.strftime(DATETIME_FORMAT)
         data["henrri_sync_error"] = last_sync.error_message
     else:
         data["henrri_sync_status"] = None
@@ -547,11 +547,61 @@ def remove_order_line(order_id: int, line_id: int) -> bool:
     return result
 
 
+def update_order_line(
+    order_id: int,
+    line_id: int,
+    *,
+    quantity: int,
+    unit_price: float,
+    discount: float,
+    vat_rate: float,
+) -> dict[str, Any]:
+    """Met à jour une ligne brouillon et ajuste sa réservation de stock."""
+    session = db_conf.get_main_session()
+    repo = OrdersRepository(session)
+    order = repo.get_by_id(order_id)
+    if order is None:
+        raise ValueError(_ORDER_NOT_FOUND)
+    if order.status != "draft":
+        raise ValueError("Seules les lignes d'une commande en brouillon sont modifiables.")
+    line = next((item for item in order.order_lines if item.id == line_id), None)
+    if line is None:
+        raise ValueError("Ligne introuvable")
+    if line.status != "draft":
+        raise ValueError("Seules les lignes en brouillon peuvent être modifiées.")
+    if quantity == 0 or quantity * line.quantity < 0:
+        raise ValueError("La quantité doit conserver le signe de la ligne existante.")
+
+    quantity_delta = quantity - line.quantity
+    if quantity_delta:
+        session.add(
+            InventoryMovements(
+                general_object_id=line.general_object_id,
+                movement_type="reserved",
+                quantity=quantity_delta,
+                price_at_movement=unit_price,
+                source="order",
+                destination=f"CMD-{order_id}",
+                notes=f"Mise à jour réservation commande {order.reference}",
+            )
+        )
+
+    updated_line = repo.update_line(
+        line,
+        quantity=quantity,
+        unit_price=unit_price,
+        discount=discount,
+        vat_rate=vat_rate,
+        update_source="backoffice",
+    )
+    return _build_order_line_dto(updated_line)
+
+
 def cancel_order(order_id: int) -> Dict[str, Any]:
-    """Annule une commande (passe en statut 'cancelled').
+    """Annule une commande et crée un retour pour ses lignes facturées.
 
     Returns:
-        Dict de la commande mise à jour.
+        Dict de la commande mise à jour et de son éventuel retour.
     """
     session = db_conf.get_main_session()
     repo = OrdersRepository(session)
@@ -560,8 +610,14 @@ def cancel_order(order_id: int) -> Dict[str, Any]:
         raise ValueError(_ORDER_NOT_FOUND)
     if order.status in ("cancelled", "returned"):
         raise ValueError("Commande déjà annulée ou retournée")
+    return_order = None
+    if any(line.status in {"invoiced", "shipped"} for line in order.order_lines):
+        return_order = repo.create_return_order(order)
     order = repo.cancel_order(order, update_source="backoffice")
-    return _order_to_list_dict(order)
+    return {
+        "order": _order_to_list_dict(order),
+        "return_order_id": return_order.id if return_order else None,
+    }
 
 
 def create_return_order(order_id: int) -> Order:

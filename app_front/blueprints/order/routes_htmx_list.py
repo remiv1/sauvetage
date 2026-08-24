@@ -52,11 +52,14 @@ def order_cancel_modal(order_id: int):
     """Retourne la modale de confirmation d'annulation (HTMX)."""
     if request.method == "POST":
         try:
-            cancel_order(order_id)
-        except ValueError:
-            return "<p>Erreur lors de l'annulation de la commande.</p>", 422
+            result = cancel_order(order_id)
+        except ValueError as exc:
+            return f"<p>Erreur lors de l'annulation de la commande : {exc}</p>", 422
 
         response = make_response("", 200)
+        if result["return_order_id"]:
+            response.headers["HX-Redirect"] = f"/order/view/{result['return_order_id']}"
+            return response
         response.headers["HX-Trigger"] = "refreshOrderTable"
         return response
     order = get_order_by_id(order_id)
