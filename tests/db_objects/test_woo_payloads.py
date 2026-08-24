@@ -32,6 +32,11 @@ from db_models.services.woo_commerce.orders import WCOrdersService, _match_line_
 from db_models.services.woo_commerce.products import WCProductsService
 
 
+def _woo_vat_rate() -> VatRate:
+    """Construit le taux de TVA WooCommerce utilisé par les lignes de test."""
+    return VatRate(code=1, rate=20.0, label="TVA 20%", wpwc_slug="standard")
+
+
 def test_wc_customer_sync_links_existing_customer_by_email() -> None:
     """Un client WooCommerce existant doit être rattaché à son identifiant distant."""
     service = object.__new__(WCCustomersService)
@@ -300,13 +305,13 @@ def test_order_line_payload_uses_wc_tax_class_and_variation_id(
         vat_rate=5.5,
         create_source="test",
         general_object=product,
-        object_variation=variation,
         vat_rate_ref=VatRate(
             code=10,
             rate=5.5,
             label="Taux réduit",
             wpwc_slug="taux-reduit",
         ),
+        object_variation=variation,
     )
 
     payload = line.to_dict_for_woo_commerce()
@@ -488,6 +493,7 @@ def test_order_payload_uses_wc_customer_and_line_contract(
         vat_rate=20.0,
         create_source="test",
         general_object=product,
+        vat_rate_ref=_woo_vat_rate(),
     )
     order = Order(
         id=1,
@@ -537,6 +543,7 @@ def test_cancelled_order_payload_updates_status_without_zeroing_lines(
         create_source="test",
         general_object=product,
         wpwc_id=70,
+        vat_rate_ref=_woo_vat_rate(),
     )
     order = Order(
         id=1,
@@ -551,9 +558,17 @@ def test_cancelled_order_payload_updates_status_without_zeroing_lines(
     payload = order.to_dict_for_woo_commerce()
 
     assert payload["status"] == "cancelled"
-    assert payload["line_items"] == [{"name": "Produit annulé", "product_id": 120,
-                                       "quantity": 2, "subtotal": "32.0", "total": "32.0",
-                                       "id": 70}]
+    assert payload["line_items"] == [
+        {
+            "name": "Produit annulé",
+            "product_id": 120,
+            "quantity": 2,
+            "subtotal": "32.0",
+            "total": "32.0",
+            "tax_class": "standard",
+            "id": 70
+        }
+    ]
 
 
 def test_returned_order_payload_uses_refunded_status(wc_customer_pro: Customers) -> None:
@@ -1099,6 +1114,7 @@ def test_wc_orders_service_creates_missing_products_before_push() -> None:
         create_source="test",
         general_object=product,
         wpwc_id=50,
+        vat_rate_ref=_woo_vat_rate(),
     )
     customer = Customers(
         id=12,
@@ -1172,6 +1188,7 @@ def test_wc_orders_service_push_order_updates_remote_order_and_logs_success() ->
         create_source="test",
         general_object=product,
         wpwc_id=50,
+        vat_rate_ref=_woo_vat_rate(),
     )
     customer = Customers(
         id=12,

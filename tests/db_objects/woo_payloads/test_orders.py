@@ -18,6 +18,11 @@ from db_models.repositories.orders.woo import OrdersWooRepository
 from db_models.services.woo_commerce.orders import WCOrdersService
 
 
+def _woo_vat_rate() -> VatRate:
+    """Construit le taux de TVA WooCommerce utilisé par les lignes de test."""
+    return VatRate(code=1, rate=20.0, label="TVA 20%", wpwc_slug="standard")
+
+
 def test_order_line_payload_uses_wc_tax_class_and_variation_id(woo_book_product) -> None:
     """La ligne de commande doit conserver la tax_class et l'ID de variation WooCommerce."""
     product = woo_book_product
@@ -40,6 +45,7 @@ def test_order_line_payload_uses_wc_tax_class_and_variation_id(woo_book_product)
         create_source="test",
         general_object=product,
         object_variation=variation,
+        vat_rate_ref=_woo_vat_rate(),
     )
 
     payload = line.to_dict_for_woo_commerce()
@@ -68,6 +74,7 @@ def test_order_line_payload_raises_clear_error_when_product_not_synced_to_woo(
         vat_rate=20.0,
         create_source="test",
         general_object=product,
+        vat_rate_ref=_woo_vat_rate(),
     )
 
     try:
@@ -112,6 +119,7 @@ def test_order_payload_uses_wc_customer_and_line_contract(wc_customer_pro) -> No
         vat_rate=20.0,
         create_source="test",
         general_object=product,
+        vat_rate_ref=_woo_vat_rate(),
     )
     order = Order(
         id=1,
@@ -331,6 +339,7 @@ def test_wc_orders_service_creates_missing_products_before_push() -> None:
         create_source="test",
         general_object=product,
         wpwc_id=50,
+        vat_rate_ref=_woo_vat_rate(),
     )
     customer = Customers(id=12, wpwc_id="42", customer_type="part")
     customer.emails = [
@@ -404,6 +413,7 @@ def test_wc_orders_service_push_order_updates_remote_order_and_logs_success() ->
         create_source="test",
         general_object=product,
         wpwc_id=50,
+        vat_rate_ref=_woo_vat_rate(),
     )
     customer = Customers(id=12, wpwc_id="42", customer_type="part")
     customer.emails = [

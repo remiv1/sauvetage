@@ -46,9 +46,10 @@ def test_cancel_order_cancels_lines_and_releases_reservations() -> None:
     repository.cancel_order(order, update_source="backoffice")
 
     assert order.status == "cancelled"
-    assert all(line.status == "cancelled" for line in order.order_lines)
+    assert order.order_lines[0].status == "cancelled"
+    assert order.order_lines[1].status == "invoiced"
     movements = [call.args[0] for call in session.add.call_args_list]
-    assert [movement.quantity for movement in movements] == [-2, -3]
+    assert [movement.quantity for movement in movements] == [-2]
     session.commit.assert_called_once()
 
 

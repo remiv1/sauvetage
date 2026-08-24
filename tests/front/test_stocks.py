@@ -1,8 +1,9 @@
-"""Tests pour les routes de stock."""
+"""Tests pour les routes de stock."""   # pylint: disable=C0302
 
 import io
 import secrets
 import string
+from decimal import Decimal
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from db_models.objects import (
     MediaFiles,
     ObjectVariations,
     OrderInLine,
+    OrderInLinePrice,
     InventoryMovements,
     OrderIn,
 )
@@ -931,7 +933,6 @@ def test_create_reservation_line(client_all, order_in, book_object, db_session_m
             "order_id": order_id,
             "general_object_id": book_object.id,
             "quantity": "3",
-            "unit_price": "12.50",
         },
     )
 
@@ -945,7 +946,7 @@ def test_create_reservation_line(client_all, order_in, book_object, db_session_m
     ).first()
     assert saved_line is not None
     assert saved_line.qty_ordered == 3
-    assert saved_line.unit_price == 12.5
+    assert saved_line.get_unit_price_ht() == Decimal(str(book_object.purchase_price))
     assert len(order_in.orderin_lines) == initial_line_count + 1
 
 
@@ -978,8 +979,7 @@ def test_delete_reservation_line_reintegrates_stock(db_session_main, supplier, g
         inventory_movement_id=movement.id,
         qty_ordered=3,
         qty_received=0,
-        unit_price=12.5,
-        vat_rate=0,
+        prices=[OrderInLinePrice(unit_price=12.5, vat_rate=0, position=0)],
         line_state="pending",
     )
     db_session_main.add(line)
@@ -1027,15 +1027,15 @@ def test_edit_order_line(client_all, order_in):   # pylint: disable=redefined-ou
     assert response.status_code == 200
     assert response.text.startswith("<!-- template new_line.html -->")
 
-    response = client_all.post(f"/stock/htmx/orders/{order_id}/line/{line_id}/edit",
-                                         data={
-                                             "order_id": order_id,
-                                             "general_object_id":
-                                                order_in.orderin_lines[0].general_object_id,
-                                             "quantity": 5,
-                                             "unit_price": "9.99",
-                                             "vat_rate": "5.50",
-                                         })
+    response = client_all.post(
+        f"/stock/htmx/orders/{order_id}/line/{line_id}/edit",
+        data={
+            "order_id": order_id,
+            "general_object_id": order_in.orderin_lines[0].general_object_id,
+            "quantity": 5,
+            "prices-0-unit_price": "9.99",
+            "prices-0-vat_rate": "5.50",
+        })
 
     assert response.status_code == 200
     assert response.text.startswith("<!-- template view.html -->")

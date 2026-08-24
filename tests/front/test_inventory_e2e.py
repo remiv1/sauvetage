@@ -243,3 +243,47 @@ class TestInventoryE2E:
         assert mvt_types[(ean1, "inventory")] == 3
         assert mvt_types[(ean2, "in")] == 1
         assert mvt_types[(ean2, "inventory")] == 4
+
+    def test_complete_inventory_preserves_negative_stock(
+        self, client_direction, supplier, fastapi_test_client,  # pylint: disable=unused-argument
+        db_session_main,
+    ):
+        """Un inventaire complet conserve le stock négatif d'un produit non scanné."""
+        product = GeneralObjects(
+            supplier_id=supplier.id,
+            general_object_type="generic",
+            ean13="9780000000035",
+            name="Objet en stock négatif",
+            description="Objet de test avec un stock théorique négatif.",
+            price=Decimal("12.00"),
+        )
+        db_session_main.add(product)
+        db_session_main.flush()
+        db_session_main.add(
+            InventoryMovements(
+                general_object_id=product.id,
+                movement_type="out",
+                quantity=3,
+                price_at_movement=Decimal("12.00"),
+                source="stock",
+                destination="customer",
+                notes="sortie sans stock initial",
+            )
+        )
+        db_session_main.flush()
+
+        resp = _prepare(client_direction, [], inventory_type="complete")
+        assert resp.status_code == 200
+        line = next(
+            item for item in resp.get_json() if item["ean13"] == product.ean13
+        )
+        assert line["stock_theorique"] == -3
+        assert line["stock_reel"] == -3
+        assert line["difference"] == 0
+
+        resp = _validate(client_direction, [line], inventory_type="complete")
+        assert resp.status_code == 200
+        planned = resp.get_json()["planned"]
+        assert len(planned) == 1
+        assert planned[0]["movement_type"] == "inventory"
+        assert planned[0]["quantity"] == -3

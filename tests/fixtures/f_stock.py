@@ -6,7 +6,12 @@ import pytest
 from sqlalchemy.orm import Session
 
 from db_models.objects.inventory import InventoryMovements
-from db_models.objects.stocks import DilicomReferencial, OrderIn, OrderInLine
+from db_models.objects.stocks import (
+    DilicomReferencial,
+    OrderIn,
+    OrderInLine,
+    OrderInLinePrice,
+)
 from tests.fixtures.db_fixture import (  # pylint: disable=unused-import # type: ignore
     db_session_main,  # pylint: disable=unused-import # type: ignore
     engine,  # pylint: disable=unused-import # type: ignore
@@ -58,16 +63,26 @@ def order_in(
         general_object_id=general_object.id,
         inventory_movement_id=inventory_movements[0].id,
         qty_ordered=10,
-        unit_price=Decimal("19.99"),
-        vat_rate=Decimal("5.50"),
+        prices=[
+            OrderInLinePrice(
+                unit_price=Decimal("19.99"),
+                vat_rate=Decimal("5.50"),
+                position=0,
+            )
+        ],
     ))
     line.append(OrderInLine(
         order_in_id=order.id,
         general_object_id=general_object.id,
         inventory_movement_id=inventory_movements[1].id,
         qty_ordered=10,
-        unit_price=Decimal("15.99"),
-        vat_rate=Decimal("5.50"),
+        prices=[
+            OrderInLinePrice(
+                unit_price=Decimal("15.99"),
+                vat_rate=Decimal("5.50"),
+                position=0,
+            )
+        ],
     ))
     db_session_main.add_all(line)
     db_session_main.flush()
@@ -108,8 +123,13 @@ def order_in_return(
         general_object_id=general_object.id,
         inventory_movement_id=inventory_movement.id,
         qty_ordered=5,
-        unit_price=Decimal("19.99"),
-        vat_rate=Decimal("5.50"),
+        prices=[
+            OrderInLinePrice(
+                unit_price=Decimal("19.99"),
+                vat_rate=Decimal("5.50"),
+                position=0,
+            )
+        ],
     )
     db_session_main.add(line)
     db_session_main.flush()

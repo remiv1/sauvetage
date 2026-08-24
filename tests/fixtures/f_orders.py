@@ -1,5 +1,6 @@
 """Module de fixtures pour les tests liés aux objets liées aux commandes"""
 
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -193,6 +194,21 @@ def order(
     book_object: GeneralObjects,  # pylint: disable=redefined-outer-name # type: ignore
 ) -> Order:  # pylint: disable=redefined-outer-name # type: ignore
     """Fixture pour créer une commande de test."""
+    vat_rate = (
+        db_session_main.query(VatRate)
+        .filter(VatRate.rate == Decimal("5.50"))
+        .first()
+    )
+    if vat_rate is None:
+        vat_rate = VatRate(
+            code=1,
+            rate=Decimal("5.50"),
+            label="Taux réduit",
+            date_start=datetime.now(timezone.utc),
+        )
+        db_session_main.add(vat_rate)
+        db_session_main.flush()
+
     # Récupérer l'adresse de facturation
     invoice_address = (
         db_session_main.query(CustomerAddresses)
@@ -232,6 +248,7 @@ def order(
             quantity=2,
             unit_price=19.99,
             vat_rate=5.5,
+            vat_rate_id=vat_rate.id,
             create_source="e-commerce",
         ),
         OrderLine(
@@ -240,6 +257,7 @@ def order(
             quantity=1,
             unit_price=19.99,
             vat_rate=5.5,
+            vat_rate_id=vat_rate.id,
             create_source="e-commerce",
         ),
     ]
