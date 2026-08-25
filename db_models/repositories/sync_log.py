@@ -26,7 +26,7 @@ class SyncLogRepository(BaseRepository):
 
     # ------------------------------------------------------------------ objects
 
-    def log_object(
+    def log_object( # pylint: disable=R0913
         self,
         *,
         entity_type: str,
@@ -82,7 +82,7 @@ class SyncLogRepository(BaseRepository):
 
     # ---------------------------------------------------------------- customers
 
-    def log_customer(
+    def log_customer(   # pylint: disable=R0913
         self,
         *,
         customer_id: int,
@@ -132,7 +132,7 @@ class SyncLogRepository(BaseRepository):
 
     # ------------------------------------------------------------------ orders
 
-    def log_order(
+    def log_order(  # pylint: disable=R0913
         self,
         *,
         order_id: int,
@@ -180,7 +180,7 @@ class SyncLogRepository(BaseRepository):
 
     # ---------------------------------------------------------------- invoices
 
-    def log_invoice(
+    def log_invoice(    # pylint: disable=R0913
         self,
         *,
         invoice_id: int,

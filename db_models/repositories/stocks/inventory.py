@@ -105,8 +105,9 @@ class InventoryRepository(BaseRepository):
 
         return new_movement.id
 
-    def search_stock_global(
+    def search_stock_global(    # pylint: disable=R0913, R0914
         self,
+        *,
         name: Optional[str] = None,
         ean13: Optional[str] = None,
         supplier_id: Optional[int] = None,

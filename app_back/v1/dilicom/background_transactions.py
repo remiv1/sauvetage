@@ -10,10 +10,9 @@ Ce module contient toute la logique métier :
 """
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 from pathlib import Path
 from os import getenv
-from typing import Any
 from fastapi import APIRouter, Depends, Form, Body
 from sqlalchemy.orm import Session
 from app_back.db_connection import config
@@ -22,6 +21,62 @@ from db_models.services.dilicom import DilicomService
 
 router = APIRouter(prefix="/background", tags=["dilicom", "background"])
 logger = logging.getLogger(__name__)
+SERVICES_NOT_IMPLEMENTED_MESSAGE = "_update_services non implémenté."
+FILE_REMOVAL_ERROR_MESSAGE = "Impossible de supprimer %s: %s"
+
+
+def _resolve_file_parameters(
+    filename: str | None,
+    remove_after: bool,
+    payload: dict | None,
+) -> tuple[str | None, bool]:
+    if payload and isinstance(payload, dict):
+        filename = filename or payload.get("filename")
+        if payload.get("remove_after") is not None:
+            remove_after = bool(payload["remove_after"])
+    return filename, remove_after
+
+
+def _classify_dilicom_file(
+    ds: DilicomService,
+    file_path: Path,
+) -> tuple[dict[str, Any], list[Path]]:
+    from dilicom_parser.classifier import FilesClassifier  # pylint: disable=C0415
+
+    ds.classifier = FilesClassifier([file_path], streaming_option=True)
+    classified = ds.classifier.classify().parse()
+    books = ds._books_target_path(ds.classifier.heavy_files)  # pylint: disable=protected-access
+    return classified, books
+
+
+def _update_classified_objects(
+    ds: DilicomService,
+    objects_to_merge: dict[str, Any],
+) -> dict[str, int]:
+    processed = {"distributor": 0, "services": 0}
+    distributors = objects_to_merge.get("distributor", [])
+    if distributors:
+        ds._update_distributors(distributors)  # pylint: disable=protected-access
+        processed["distributor"] = len(distributors)
+
+    for service_type in ("eancom", "gencod"):
+        services = objects_to_merge.get(service_type, [])
+        if not services:
+            continue
+        try:
+            ds._update_services(services)  # pylint: disable=protected-access
+            processed["services"] += len(services)
+        except NotImplementedError:
+            logger.warning(SERVICES_NOT_IMPLEMENTED_MESSAGE)
+    return processed
+
+
+def _remove_processed_file(file_path: Path) -> None:
+    try:
+        file_path.unlink()
+        logger.info("Fichier %s supprimé après traitement.", file_path)
+    except OSError as exc:
+        logger.exception(FILE_REMOVAL_ERROR_MESSAGE, file_path, exc)
 
 
 @router.post("/post-referencial")
@@ -80,14 +135,17 @@ def test_book_processing(
 @router.post("/process-single-xml")
 def process_single_xml_dilicom(
     session: Annotated[Session, Depends(config.get_main_session)],
-    file_path: str | None = Form(None),
-    remove_after: bool = Form(False),
-    payload: dict | None = Body(None),
+    file_path: Annotated[str | None, Form()] = None,
+    remove_after: Annotated[bool, Form()] = False,
+    payload: Annotated[dict | None, Body()] = None,
 ):
     """
     Route provisoire pour tester un fichier XML unique sans relancer les archives complètes.
     Utile pour reproduire un cas précis de fusion livre / EAN / métadonnées.
-    curl -X POST "http://127.0.0.1:8000/api/v1/dilicom/background/process-single-xml" -F "file_path=/home/root/app/dilicom_in/DIF492327800/492327800.xml"
+    
+    eg:
+    - curl -X POST "http://127.0.0.1:8000/api/v1/dilicom/background/process-single-xml"
+        -F "file_path=/home/root/app/dilicom_in/DIF492327800/492327800.xml"
     """
     try:
         if not file_path and payload and isinstance(payload, dict):
@@ -117,13 +175,13 @@ def process_single_xml_dilicom(
                 xml_path.unlink()
                 logger.info("Fichier %s supprimé après traitement unique.", xml_path)
             except Exception as exc:  # pylint: disable=broad-except
-                logger.exception("Impossible de supprimer %s: %s", xml_path, exc)
+                logger.exception(FILE_REMOVAL_ERROR_MESSAGE, xml_path, exc)
 
         return {
             "status": "success",
             "processed": {"books": 1, "file": str(xml_path)},
         }
-    except Exception as exc:  # pylint: disable=broad-except
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
         logger.exception("Erreur lors du traitement du fichier XML Dilicom %s: %s", file_path, exc)
         return {"status": "error", "message": str(exc)}
 
@@ -131,9 +189,9 @@ def process_single_xml_dilicom(
 @router.post("/process-file")
 def process_dilicom_file(
     session: Annotated[Session, Depends(config.get_main_session)],
-    filename: str | None = Form(None),
-    remove_after: bool = Form(False),
-    payload: dict | None = Body(None),
+    filename: Annotated[str | None, Form()] = None,
+    remove_after: Annotated[bool, Form()] = False,
+    payload: Annotated[dict | None, Body()] = None,
 ):
     """
     Route pour traiter un fichier déposé localement dans le répertoire d'entrée Dilicom.
@@ -144,72 +202,28 @@ def process_dilicom_file(
         `curl -X POST http://localhost:8000/api/v1/background/process-file -d 'filename=...'
     et de faire parser le fichier comme s'il venait du serveur Dilicom.
     """
+    filename, remove_after = _resolve_file_parameters(filename, remove_after, payload)
+    if not filename:
+        message = "Paramètre 'filename' manquant dans la requête (formulaire ou JSON)."
+        logger.warning(message)
+        return {"status": "error", "message": message}
+
+    file_path = Path(getenv("DILICOM_IN_DIR", "dilicom_in")) / filename
+    if not file_path.exists() or not file_path.is_file():
+        message = f"Fichier introuvable: {file_path}"
+        logger.warning(message)
+        return {"status": "error", "message": message}
+
     try:
-        # support form-data (`-d`) or JSON body {"filename":..., "remove_after":...}
-        if not filename and payload and isinstance(payload, dict):
-            filename = payload.get("filename")
-            if filename is None:
-                # allow boolean string values in JSON
-                remove_after = bool(payload.get("remove_after", remove_after))
-
-        if not filename:
-            message = "Paramètre 'filename' manquant dans la requête (formulaire ou JSON)."
-            logger.warning(message)
-            return {"status": "error", "message": message}
-
-        in_dir = Path(getenv("DILICOM_IN_DIR", "dilicom_in"))
-        file_path = in_dir / filename
-        if not file_path.exists() or not file_path.is_file():
-            message = f"Fichier introuvable: {file_path}"
-            logger.warning(message)
-            return {"status": "error", "message": message}
-
-        # Import localement le classifier pour éviter dépendance inutile au module si non utilisé
-        from dilicom_parser.classifier import FilesClassifier  # type: ignore
-
         ds = DilicomService(session=session)
-        # Construire le classifier à partir du fichier local
-        ds.classifier = FilesClassifier([file_path], streaming_option=True)
-        objects_to_merge = ds.classifier.classify().parse()
-        books_to_merge = ds.classifier.heavy_files
-        # Transformer les chemins lourds en chemins cibles attendus par la logique
-        try:
-            books_to_merge = ds._books_target_path(books_to_merge)
-        except ValueError as e:
-            logger.exception("Erreur lors du calcul des chemins de books: %s", e)
-            return {"status": "error", "message": str(e)}
-
-        processed: dict[str, Any] = {"distributor": 0, "services": 0, "books": 0}
-
-        if objects_to_merge:
-            if "distributor" in objects_to_merge and objects_to_merge["distributor"]:
-                ds._update_distributors(objects_to_merge["distributor"])  # pylint: disable=protected-access
-                processed["distributor"] = len(objects_to_merge["distributor"])
-            if "eancom" in objects_to_merge and objects_to_merge["eancom"]:
-                try:
-                    ds._update_services(objects_to_merge["eancom"])  # pylint: disable=protected-access
-                    processed["services"] += len(objects_to_merge["eancom"])
-                except NotImplementedError:
-                    logger.warning("_update_services non implémenté.")
-            if "gencod" in objects_to_merge and objects_to_merge["gencod"]:
-                try:
-                    ds._update_services(objects_to_merge["gencod"])  # pylint: disable=protected-access
-                    processed["services"] += len(objects_to_merge["gencod"])
-                except NotImplementedError:
-                    logger.warning("_update_services non implémenté.")
-
+        objects_to_merge, books_to_merge = _classify_dilicom_file(ds, file_path)
+        processed = _update_classified_objects(ds, objects_to_merge)
+        processed["books"] = len(books_to_merge)
         if books_to_merge:
             ds._update_books(books_to_merge)  # pylint: disable=protected-access
-            processed["books"] = len(books_to_merge)
-
         if remove_after:
-            try:
-                file_path.unlink()
-                logger.info("Fichier %s supprimé après traitement.", file_path)
-            except Exception as e:
-                logger.exception("Impossible de supprimer %s: %s", file_path, e)
-
+            _remove_processed_file(file_path)
         return {"status": "success", "processed": processed}
-    except Exception as e:  # pylint: disable=broad-except
-        logger.exception("Erreur lors du traitement du fichier Dilicom %s: %s", filename, e)
-        return {"status": "error", "message": str(e)}
+    except (ImportError, KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        logger.exception("Erreur lors du traitement du fichier Dilicom %s: %s", filename, exc)
+        return {"status": "error", "message": str(exc)}

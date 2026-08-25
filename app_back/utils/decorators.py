@@ -8,7 +8,8 @@ from fastapi import Request, HTTPException
 from app_back.config.security import get_security_token
 
 INTERNAL_TOKEN = get_security_token()  # Récupère le token de sécurité depuis la configuration
-ALLOWED_IPS = {"127.0.0.1", "10.0.0.5"}  # exemple
+INTERNAL = "10.0.0"
+ALLOWED_IPS = {"127.0.0.1", f"{INTERNAL}.5"}
 
 def access_control(restrict_ip: bool = False):
     """

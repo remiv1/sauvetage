@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 from email.utils import formataddr, parseaddr
 from typing import Any, Dict, List, Optional
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app_back.config.mails import MailConfig
 from .documents import TEMPLATES_DIR
@@ -18,7 +18,8 @@ from .documents import TEMPLATES_DIR
 logger = logging.getLogger(__name__)
 
 
-def send_mail(
+def send_mail(  # pylint: disable=R0913
+    *,
     to: List[str],
     subject: str,
     template_name: str,
@@ -40,7 +41,13 @@ def send_mail(
                         avec les clés 'filename' et 'content' (bytes) et 'content_type' (str).
     """
     # 1. Générer le contenu HTML
-    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATES_DIR),
+        autoescape=select_autoescape(
+            enabled_extensions=("html", "htm", "xml"),
+            default_for_string=True,
+        ),
+    )
     template = env.get_template(template_name)
     html_body = template.render(**data)
 
@@ -76,7 +83,8 @@ def strip_html(html: str) -> str:
     text = re.sub(r'<[^>]+>', '', html)
     return text.strip()
 
-def build_mime_message(
+def build_mime_message( #pylint: disable=R0913, R0914
+    *,
     to: List[str],
     cc: Optional[List[str]],
     subject: str,
@@ -199,8 +207,8 @@ def smtp_send(
                 "recipients": recipients,
                 "result": smtp_result,
                 "message": "Le message a été accepté par le serveur SMTP ; " + \
-                    "la livraison finale dans la messagerie du destinataire n'est pas confirmée " + \
-                    "par ce retour.",
+                    "la livraison finale dans la messagerie du destinataire n'est pas " + \
+                    "confirmée par ce retour.",
             }
     except Exception:
         logger.exception(

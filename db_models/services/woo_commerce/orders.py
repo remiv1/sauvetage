@@ -264,6 +264,64 @@ class WCOrdersService(WCBase):
             f"WooCommerce a refusé la création de la commande (HTTP {response.status_code})"
         )
 
+    def _ensure_order_products_synced(
+        self,
+        order: Order,
+        product_service: WCProductsService | None,
+    ) -> None:
+        """Synchronise les produits manquants avant un push commande."""
+        for line in order.order_lines:
+            if not line or not line.general_object:
+                continue
+            product = line.general_object
+            if product.wpwc_id is not None:
+                continue
+            logger.info(
+                "Commande %d : produit WooCommerce manquant pour la ligne %d (%s). "
+                "Tentative de synchronisation du produit avant push commande.",
+                order.id,
+                line.id,
+                product.name,
+            )
+            if product_service is None:
+                raise ValueError(
+                    f"Le produit '{product.name}' de la ligne {line.id} "
+                    "n'est pas synchronisé sur WooCommerce et aucun service de création"
+                    " n'est disponible."
+                )
+            created_wc_id = product_service.update_product(product.id)
+            if created_wc_id is not None:
+                product.wpwc_id = created_wc_id
+                logger.info(
+                    "Commande %d : produit '%s' synchronisé sur WooCommerce avec "
+                    "id=%s avant push commande.",
+                    order.id,
+                    product.name,
+                    created_wc_id,
+                )
+            if hasattr(self, "session"):
+                self.session.flush()
+
+    def _submit_order_to_wc(
+        self,
+        order: Order,
+        data: dict[str, Any],
+        operation: str,
+    ) -> tuple[Response, bool]:
+        """Envoie la commande vers WooCommerce selon l'opération demandée."""
+        if operation == "create":
+            logger.info("Commande %d : création de la commande WooCommerce.", order.id)
+            response = _call_api(self.api_write.post, "orders", data=data)
+            return response, response.status_code == 201
+
+        logger.info(
+            "Commande %d : mise à jour de la commande WooCommerce (wc_id=%s).",
+            order.id,
+            order.wpwc_id,
+        )
+        response = _call_api(self.api_write.put, f"orders/{order.wpwc_id}", data=data)
+        return response, response.status_code == 200
+
     def push_order(self, order: Order) -> tuple[bool, str | None]:
         """Pousse la commande vers WooCommerce (création ou mise à jour).
 
@@ -283,64 +341,23 @@ class WCOrdersService(WCBase):
             tuple[bool, str | None]: (succès, message_erreur_ou_None)
         """
         operation = "update" if order.wpwc_id else "create"
-
-        # Snapshot des wpwc_id avant toute modification (restaurés en cas d'échec)
         wpwc_snapshot = {line.id: line.wpwc_id for line in order.order_lines}
 
         try:
             product_service = getattr(self, "product_service", None)
             if product_service is None and hasattr(self, "session"):
                 product_service = WCProductsService(self.session)
-            for line in order.order_lines:
-                if not line or not line.general_object:
-                    continue
-                product = line.general_object
-                if product.wpwc_id is None:
-                    logger.info(
-                        "Commande %d : produit WooCommerce manquant pour la ligne %d (%s). "
-                        "Tentative de synchronisation du produit avant push commande.",
-                        order.id,
-                        line.id,
-                        product.name,
-                    )
-                    if product_service is None:
-                        raise ValueError(
-                            f"Le produit '{product.name}' de la ligne {line.id} "
-                            "n'est pas synchronisé sur WooCommerce et aucun service de création" +
-                            " n'est disponible."
-                        )
-                    created_wc_id = product_service.update_product(product.id)
-                    if created_wc_id is not None:
-                        product.wpwc_id = created_wc_id
-                        logger.info(
-                            "Commande %d : produit '%s' synchronisé sur WooCommerce avec " +
-                            "id=%s avant push commande.",
-                            order.id,
-                            product.name,
-                            created_wc_id,
-                        )
-                    if hasattr(self, "session"):
-                        self.session.flush()
+            self._ensure_order_products_synced(order, product_service)
             logger.info(
                 "Commande %d : préparation du payload WooCommerce pour %d ligne(s).",
                 order.id,
                 len(order.order_lines),
             )
-            data = _serialize_decimals(order.to_dict_for_woo_commerce())
-            if operation == "create":
-                logger.info("Commande %d : création de la commande WooCommerce.", order.id)
-                response = _call_api(self.api_write.post, "orders", data=data)
-                ok = response.status_code == 201
-            else:
-                logger.info(
-                    "Commande %d : mise à jour de la commande WooCommerce (wc_id=%s).",
-                    order.id,
-                    order.wpwc_id,
-                )
-                response = _call_api(
-                    self.api_write.put, f"orders/{order.wpwc_id}", data=data
-                )
-                ok = response.status_code == 200
+            response, ok = self._submit_order_to_wc(
+                order,
+                _serialize_decimals(order.to_dict_for_woo_commerce()),
+                operation,
+            )
             logger.info(
                 "Commande %d : réponse WooCommerce HTTP %s — %s",
                 order.id,
@@ -394,7 +411,7 @@ class WCOrdersService(WCBase):
         logger.warning("Erreur WooCommerce (commande %d) : %s", order.id, error_msg)
         return False, error_msg
 
-    def _fetch_wc_orders(
+    def _fetch_wc_orders(   # pylint: disable=R0913
         self,
         status: list[str] | None = None,
         *,
@@ -570,6 +587,36 @@ class WCOrdersService(WCBase):
             if line.id in snapshot:
                 line.wpwc_id = snapshot[line.id]
 
+    @staticmethod
+    def _build_wc_line_index(
+        wc_lines: list[WCData],
+        linked_wc_ids: set[int],
+    ) -> dict[tuple[int, int], deque[int]]:
+        """Indexe les IDs WooCommerce par couple (product_id, variation_id)."""
+        wc_by_product: dict[tuple[int, int], deque[int]] = defaultdict(deque)
+        for wc_line in wc_lines:
+            if not wc_line.get("id"):
+                continue
+            wc_id = int(wc_line["id"])
+            if wc_id in linked_wc_ids:
+                continue
+            product_key = (
+                int(wc_line.get("product_id") or 0),
+                int(wc_line.get("variation_id") or 0),
+            )
+            wc_by_product[product_key].append(wc_id)
+        return wc_by_product
+
+    @staticmethod
+    def _get_order_line_product_key(line: OrderLine) -> tuple[int, int] | None:
+        """Calcule la clé produit/variation d'une ligne locale."""
+        if not line.general_object or line.general_object.wpwc_id is None:
+            return None
+        variation_id = 0
+        if line.object_variation and line.object_variation.wpwc_id is not None:
+            variation_id = int(line.object_variation.wpwc_id)
+        return int(line.general_object.wpwc_id), variation_id
+
     def _sync_line_ids(
         self,
         order: Order,
@@ -585,23 +632,12 @@ class WCOrdersService(WCBase):
             clear_all_cancelled (bool): Vide le wpwc_id des lignes annulées lorsque
                 WooCommerce a confirmé leur suppression.
         """
-        wc_by_product: dict[tuple[int, int], deque[int]] = defaultdict(deque)
         linked_wc_ids = {
             line.wpwc_id
             for line in order.order_lines
             if line.status != OrderStatus.CANCELLED and line.wpwc_id is not None
         }
-        for wc_line in wc_lines:
-            if not wc_line.get("id"):
-                continue
-            wc_id = int(wc_line["id"])
-            if wc_id in linked_wc_ids:
-                continue
-            product_key = (
-                int(wc_line.get("product_id") or 0),
-                int(wc_line.get("variation_id") or 0),
-            )
-            wc_by_product[product_key].append(wc_id)
+        wc_by_product = self._build_wc_line_index(wc_lines, linked_wc_ids)
 
         for line in order.order_lines:
             if line.status == OrderStatus.CANCELLED:
@@ -610,14 +646,9 @@ class WCOrdersService(WCBase):
                 continue
             if line.wpwc_id is not None:
                 continue
-            if not line.general_object or line.general_object.wpwc_id is None:
+            product_key = self._get_order_line_product_key(line)
+            if product_key is None:
                 continue
-            product_key = (
-                int(line.general_object.wpwc_id),
-                int(line.object_variation.wpwc_id)
-                if line.object_variation and line.object_variation.wpwc_id is not None
-                else 0,
-            )
             available_wc_ids = wc_by_product.get(product_key)
             if available_wc_ids:
                 line.wpwc_id = available_wc_ids.popleft()

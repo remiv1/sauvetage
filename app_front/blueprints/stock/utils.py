@@ -84,7 +84,7 @@ def send_order_by_edi(order: Any) -> bool:
     La valeur de retour est volontairement False tant qu'aucune intégration
     n'est branchée, ce qui garde le comportement explicite et sûr.
     """
-    # TODO: Implémenter l'intégration EDI réelle ici.
+    # Intégration EDI non disponible actuellement : garder un comportement explicite.
     logger.warning(
         "Placeholder EDI appelé pour la commande %s : intégration non implémentée.",
         getattr(order, "id", None),
@@ -120,7 +120,7 @@ def send_order_by_mail(order: Any) -> str | bool:
         if status in {"success", "accepted_by_smtp"}:
             return status
         return False
-    except Exception as exc:
+    except RuntimeError as exc:
         logger.exception(
             "Échec de la demande d'envoi du bon de commande %s par email au fournisseur %s : %s",
             getattr(order, "id", None),
@@ -284,6 +284,67 @@ def get_order_by_id(order_id: int) -> OrderIn:
     return order
 
 
+def _validate_reservation_quantity(
+    order: Any, inventory_repo: InventoryRepository
+) -> float:
+    """Vérifie la disponibilité du stock pour une réservation."""
+    if not inventory_repo.has_inventory_history(order.general_object_id):
+        return inventory_repo.get_last_inventory_price(order.general_object_id)
+
+    available_qty = inventory_repo.get_available_quantity(order.general_object_id)
+    if order.qty > available_qty:
+        raise ValueError(
+            f"Quantité indisponible : {order.qty} > stock disponible ({available_qty})."
+        )
+    return inventory_repo.get_last_inventory_price(order.general_object_id)
+
+
+def _resolve_order_line_unit_price(
+    order: Any, reservation: bool, inventory_repo: InventoryRepository
+) -> float:
+    """Calcule le prix unitaire de la ligne selon le type de commande."""
+    if reservation:
+        return _validate_reservation_quantity(order, inventory_repo)
+    return sum(price.unit_price for price in order.prices)
+
+
+def _build_order_line(
+    order: Any,
+    reservation: bool,
+    unit_price: float,
+    line_id: int = 0,
+    action: str = "create",
+) -> OrderInLine:
+    """Construit la ligne de commande avec la structure de prix associée."""
+    if reservation:
+        prices = [
+            OrderInLinePrice(
+                unit_price=unit_price,
+                vat_rate=0,
+                position=0,
+            )
+        ]
+    else:
+        prices = [
+            OrderInLinePrice(
+                unit_price=price.unit_price,
+                vat_rate=price.vat_rate,
+                position=position,
+            )
+            for position, price in enumerate(order.prices)
+        ]
+
+    line = OrderInLine(
+        order_in_id=order.id,
+        general_object_id=order.general_object_id,
+        qty_ordered=order.qty,
+        prices=prices,
+    )
+    if action == "edit":
+        line.id = line_id
+    return line
+
+
 def edit_order_in_line_db(
     form: OrderInLineForm, order_id: int, action: str = "create",
     line_id: int = 0, reservation: bool = False
@@ -297,62 +358,60 @@ def edit_order_in_line_db(
         line_id: L'identifiant de la ligne (pour edit/delete).
         reservation: True pour une ligne de réservation (prix auto depuis purchase_price).
     """
-    try:
-        line_id = int(line_id)
-    except ValueError as e:
-        msg = f"ID de ligne invalide : {line_id}"
-        logger.error(msg)
-        raise ValueError(msg) from e
     stock_repo = StockRepository(db_conf.get_main_session())
     inventory_repo = InventoryRepository(db_conf.get_main_session())
+    normalized_line_id = _coerce_order_line_id(line_id)
 
-    # Gestion de la suppression d'une ligne de commande
     if action == "delete":
-        line_id = stock_repo.delete_order_in_line_db(line_id)
+        line_id = stock_repo.delete_order_in_line_db(normalized_line_id)
+        stock_repo.update_order_in_price(order_id)
+        return line_id
 
-    # Gestion de la création d'une ligne de commande
-    elif action in ["create", "edit"]:
-        order = form.validate_form_data(reservation=reservation)
-        if reservation:
-            if inventory_repo.has_inventory_history(order.general_object_id):
-                available_qty = inventory_repo.get_available_quantity(order.general_object_id)
-                if order.qty > available_qty:
-                    raise ValueError(
-                        f"Quantité indisponible : {order.qty} > stock disponible ({available_qty})."
-                    )
-            unit_price = inventory_repo.get_last_inventory_price(order.general_object_id)
-        else:
-            unit_price = sum(price.unit_price for price in order.prices)
-        line = OrderInLine(
-            order_in_id=order.id,
-            general_object_id=order.general_object_id,
-            qty_ordered=order.qty,
-            prices=[
-                OrderInLinePrice(
-                    unit_price=unit_price,
-                    vat_rate=0,
-                    position=0,
-                )
-            ] if reservation else [
-                OrderInLinePrice(
-                    unit_price=price.unit_price,
-                    vat_rate=price.vat_rate,
-                    position=position,
-                )
-                for position, price in enumerate(order.prices)
-            ],
-        )
-        # Si on est en édition, s'assurer que l'ID de la ligne est renseigné
-        if action == "edit":
-            line.id = line_id
-        line_id = stock_repo.edit_order_in_line_db(
-            new_line=line, action=action, reservation=reservation
-        )
-
-    else:
+    if action not in {"create", "edit"}:
         raise ValueError("Action inconnue : " + action)
+
+    order = form.validate_form_data(reservation=reservation)
+    unit_price = _resolve_order_line_unit_price(order, reservation, inventory_repo)
+    line = _build_order_line(
+        order,
+        reservation=reservation,
+        unit_price=unit_price,
+        line_id=normalized_line_id,
+        action=action,
+    )
+    line_id = stock_repo.edit_order_in_line_db(
+        new_line=line, action=action, reservation=reservation
+    )
     stock_repo.update_order_in_price(order_id)
     return line_id
+
+
+def _coerce_order_line_id(value: Any) -> int:
+    """Convertit un identifiant de ligne en entier avec un message explicite."""
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        msg = f"ID de ligne invalide : {value}"
+        logger.error(msg)
+        raise ValueError(msg) from exc
+
+
+def _build_return_order_line(order: Any, line_id: int = 0) -> OrderInLine:
+    """Construit une ligne de retour fournisseur à partir d'un formulaire validé."""
+    return OrderInLine(
+        order_in_id=order.id,
+        general_object_id=order.general_object_id,
+        qty_ordered=order.qty,
+        prices=[
+            OrderInLinePrice(
+                unit_price=price.unit_price,
+                vat_rate=price.vat_rate,
+                position=position,
+            )
+            for position, price in enumerate(order.prices)
+        ],
+        id=line_id if line_id else None,
+    )
 
 
 def edit_return_order_in_line_db(
@@ -367,40 +426,22 @@ def edit_return_order_in_line_db(
         action: "create", "edit" ou "delete".
         line_id: L'identifiant de la ligne (pour edit/delete).
     """
-    try:
-        line_id = int(line_id)
-    except ValueError as e:
-        msg = f"ID de ligne invalide : {line_id}"
-        logger.error(msg)
-        raise ValueError(msg) from e
     stock_repo = StockRepository(db_conf.get_main_session())
+    normalized_line_id = _coerce_order_line_id(line_id)
 
     if action == "delete":
-        line_id = stock_repo.delete_order_in_line_db(line_id)
-    elif action in ["create", "edit"]:
-        order = form.validate_form_data(reservation=False)
-        line = OrderInLine(
-            order_in_id=order.id,
-            general_object_id=order.general_object_id,
-            qty_ordered=order.qty,
-            prices=[
-                OrderInLinePrice(
-                    unit_price=price.unit_price,
-                    vat_rate=price.vat_rate,
-                    position=position,
-                )
-                for position, price in enumerate(order.prices)
-            ],
-        )
-        if action == "edit":
-            line.id = line_id
-        line_id = stock_repo.edit_order_in_line_db(
-            new_line=line, action=action, out=True
-        )
-    else:
+        updated_line_id = stock_repo.delete_order_in_line_db(normalized_line_id)
+        stock_repo.update_order_in_price(order_id)
+        return updated_line_id
+
+    if action not in {"create", "edit"}:
         raise ValueError("Action inconnue : " + action)
+
+    order = form.validate_form_data(reservation=False)
+    line = _build_return_order_line(order, normalized_line_id if action == "edit" else 0)
+    saved_line_id = stock_repo.edit_order_in_line_db(new_line=line, action=action, out=True)
     stock_repo.update_order_in_price(order_id)
-    return line_id
+    return saved_line_id
 
 
 def receive_return_order_line(

@@ -7,7 +7,7 @@ from sqlalchemy.sql import Select
 T = TypeVar("T", bound="QueryMixin")
 
 
-class QueryMixin:
+class QueryMixin:   # pylint: disable=R0903
     """Mixin pour ajouter une méthode de requête générique à un modèle SQLAlchemy."""
 
     @classmethod

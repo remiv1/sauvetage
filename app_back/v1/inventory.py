@@ -14,12 +14,11 @@ import os
 import re
 import threading
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from typing import Annotated
 from app_back.v1.schems.inventory import (
     ParseRequest,
     ParseResponse,
@@ -368,48 +367,48 @@ def _run_commit(planned: List[Dict], price_by_object_id: Dict[int, float]) -> No
         )
         total = len(planned)
         with config.main_session_ctx() as session:
-         try:
-            for idx, mvt in enumerate(planned, start=1):
-                movement = InventoryMovements(
-                    general_object_id=mvt["general_object_id"],
-                    movement_type=mvt["movement_type"],
-                    quantity=mvt["quantity"],
-                    price_at_movement=price_by_object_id.get(
-                        mvt["general_object_id"], 0.0
-                    ),
-                    source="inventory_workflow",
-                    destination="stock",
-                    notes=json.dumps(
+            try:
+                for idx, mvt in enumerate(planned, start=1):
+                    movement = InventoryMovements(
+                        general_object_id=mvt["general_object_id"],
+                        movement_type=mvt["movement_type"],
+                        quantity=mvt["quantity"],
+                        price_at_movement=price_by_object_id.get(
+                            mvt["general_object_id"], 0.0
+                        ),
+                        source="inventory_workflow",
+                        destination="stock",
+                        notes=json.dumps(
+                            {
+                                "motifs": mvt.get("motifs", []),
+                                "commentaire": mvt.get("commentaire"),
+                            },
+                            ensure_ascii=False,
+                        ),
+                    )
+                    session.add(movement)
+                    progress = int((idx / total) * 100)
+                    _write_status(
                         {
-                            "motifs": mvt.get("motifs", []),
-                            "commentaire": mvt.get("commentaire"),
-                        },
-                        ensure_ascii=False,
-                    ),
-                )
-                session.add(movement)
-                progress = int((idx / total) * 100)
-                _write_status(
-                    {
-                        "status": "running",
-                        "progress": progress,
-                        "started_at": started,
-                        "message": f"Mouvement {idx}/{total} appliqué",
-                    }
-                )
-            session.commit()
-         except SQLAlchemyError as exc:
-             session.rollback()
-             raise RuntimeError(f"Erreur lors de l'application des mouvements : {exc}") from exc
-         except Exception as exc:
-             session.rollback()
-             raise RuntimeError(f"Erreur lors du commit : {exc}") from exc
-         finally:
-             # Succès → supprimer le fichier d'état
-             try:
-                 os.remove(STATUS_FILE)
-             except FileNotFoundError:
-                 pass
+                            "status": "running",
+                            "progress": progress,
+                            "started_at": started,
+                            "message": f"Mouvement {idx}/{total} appliqué",
+                        }
+                    )
+                session.commit()
+            except SQLAlchemyError as exc:
+                session.rollback()
+                raise RuntimeError(f"Erreur lors de l'application des mouvements : {exc}") from exc
+            except Exception as exc:
+                session.rollback()
+                raise RuntimeError(f"Erreur lors du commit : {exc}") from exc
+            finally:
+                # Succès → supprimer le fichier d'état
+                try:
+                    os.remove(STATUS_FILE)
+                except FileNotFoundError:
+                    pass
     except (ValueError, TypeError, OSError, RuntimeError) as exc:
         _write_status(
             {

@@ -11,7 +11,8 @@ from typing import Any, Iterable, Type
 from db_models.objects import GeneralObjects
 
 
-def sync_collection(
+def sync_collection(    # pylint: disable=R0913, R0914
+    *,
     parent: GeneralObjects,
     general_object_id: int,
     attr_name: str,

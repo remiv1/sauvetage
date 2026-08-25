@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from db_models.config.woocommerce import WooCommerceConfig, load_woocommerce_config
 from db_models.repositories.sync_log import SyncLogRepository
 
-class WCBase:
+class WCBase:   # pylint: disable=R0903
     """
     Service pour interagir avec l'API de WooCommerce.
     Ce service gère la connexion à l'API, l'export des produits, la récupération des commandes,
@@ -89,8 +89,9 @@ class WCBase:
         self.sync_log_repo = SyncLogRepository(self.session)
 
 
-    def _log_sync(
+    def _log_sync(  # pylint: disable=R0913
         self,
+        *,
         entity_type: str,
         entity_id: Optional[int],
         wpwc_id: Optional[int],

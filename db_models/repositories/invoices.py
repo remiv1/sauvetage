@@ -129,7 +129,7 @@ class InvoiceRepository(BaseRepository):
             "Prévu pour après le 15 avril."
         )
 
-    def add_sync_log(
+    def add_sync_log(   # pylint: disable=R0913
         self,
         invoice: Invoice,
         *,

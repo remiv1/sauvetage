@@ -142,27 +142,24 @@ class DilicomServiceBase:
         Génère le chemin de destination pour les fichiers de livres à partir du chemin local.
         Cette méthode prend un chemin local, et génère le chemin de destination correspondant
         pour les fichiers de livres à envoyer au serveur de Dilicom.
-        
+
         param :
         path: Le chemin local du fichier de livres.
         """
         target_files: list[Path] = []
-        # 1. Nom de base sans axtensions multiples
-        for f in list_path:
-            base = f.name.split(".")[0]
+        for file_path in list_path:
+            base = file_path.name.split(".", 1)[0]
+            code_start = len(base)
+            while code_start > 0 and base[code_start - 1].isdigit():
+                code_start -= 1
+            code = base[code_start:]
+            if not code:
+                raise ValueError(
+                    f"Aucun code numérique trouvé dans le nom du fichier: {file_path.name}"
+                )
 
-            # 2. Extraction du code numérique
-            m = re.search(r'(\d+)$', base)
-            if not m:
-                raise ValueError(f"Aucun code numérique trouvé dans le nom du fichier: {f.name}")
-            code = m.group(1)
-
-            # 3. Répertoire cible
-            target_dir = f.parent / base
-
-            # 4. Fichier xml final
-            target_file = target_dir / f"{code}.xml"
-            target_files.append(target_file)
+            target_dir = file_path.parent / base
+            target_files.append(target_dir / f"{code}.xml")
 
         return target_files
 
@@ -291,70 +288,106 @@ class DilicomServiceBase:
         ``TaxableAmount`` et le TTC dans ``PriceAmount`` pour un prix de type 04.
         Dans ce cas, la base taxable est le montant réellement utilisé pour la TVA.
         """
-        aggregated = getattr(onix_product, "price", None)
-        if aggregated is not None:
-            if aggregated.ht is not None:
-                price_ht = float(aggregated.ht)
-            else:
-                price_ht = None
-            if aggregated.vat_rate is not None:
-                vat_rate = float(aggregated.vat_rate)
-            else:
-                vat_rate = None
-        else:
-            price_ht = None
-            vat_rate = None
+        entries = self._extract_prices_and_vats_from_onix(onix_product)
+        if entries:
+            first = entries[0]
+            return {"price_ht": float(first["price_ht"]), "vat_rate": float(first["vat_rate"])}
+        return {"price_ht": 0.0, "vat_rate": 0.0}
 
-        raw_product = getattr(onix_product, "raw", None)
+    @staticmethod
+    def _add_unique_price_entry(
+        entries: list[dict[str, float]],
+        seen: set[tuple[float, float]],
+        price_ht: float,
+        vat_rate: float,
+    ) -> None:
+        """Ajoute une entrée de prix s'il n'existe pas déjà avec la même paire HT/TVA."""
+        key = (round(price_ht, 3), round(vat_rate, 3))
+        if key not in seen:
+            seen.add(key)
+            entries.append({"price_ht": price_ht, "vat_rate": vat_rate})
+
+    def _iter_raw_prices(self, raw_product: Any) -> list[Any]:
+        """Itère sur les blocs de prix ONIX brut sans aplatir toute la logique métier."""
         prices: list[Any] = []
         for supply in getattr(raw_product, "product_supply", []) or []:
             for supply_detail in getattr(supply, "supply_detail", []) or []:
                 prices.extend(getattr(supply_detail, "price", []) or [])
+        return prices
 
-        for raw_price in prices:
-            price_type = _read_value(getattr(raw_price, "price_type", None))
-            price_type_code = _read_value(getattr(price_type, "value", None))
-            price_amount = _read_value(getattr(raw_price, "price_amount", None))
-            price_amount_value = _read_value(getattr(price_amount, "value", None))
+    @staticmethod
+    def _tax_entries(raw_price: Any) -> list[dict[str, float]]:
+        """Extrait les variations de prix liées aux taxes d'un bloc ONIX."""
+        entries: list[dict[str, float]] = []
+        for tax in getattr(raw_price, "tax", []) or []:
+            rate_value = _read_value(getattr(getattr(tax, "tax_rate_percent", None), "value", None))
+            taxable_value = _read_value(
+                getattr(getattr(tax, "taxable_amount", None),"value", None)
+            )
+            if rate_value is not None and taxable_value is not None:
+                entries.append({"price_ht": float(taxable_value), "vat_rate": float(rate_value)})
+        return entries
 
-            for tax in getattr(raw_price, "tax", []) or []:
-                rate_value = _read_value(
-                    getattr(getattr(tax, "tax_rate_percent", None), "value", None)
+    @staticmethod
+    def _price_type_amount(raw_price: Any) -> tuple[str | None, float | None]:
+        """Retourne le type de prix et le montant brut associated au bloc ONIX."""
+        price_type = _read_value(getattr(raw_price, "price_type", None))
+        price_type_code = _read_value(getattr(price_type, "value", None))
+        price_amount = _read_value(getattr(raw_price, "price_amount", None))
+        price_amount_value = _read_value(getattr(price_amount, "value", None))
+        return price_type_code, None if price_amount_value is None else float(price_amount_value)
+
+    def _extract_raw_price_entries(self, raw_product: Any) -> list[dict[str, float]]:
+        """Extrait les entrées de prix issue des blocs de prix brute ONIX."""
+        seen: set[tuple[float, float]] = set()
+        entries: list[dict[str, float]] = []
+        for raw_price in self._iter_raw_prices(raw_product):
+            taxes = getattr(raw_price, "tax", []) or []
+            for tax_entry in self._tax_entries(raw_price):
+                self._add_unique_price_entry(
+                    entries,
+                    seen,
+                    tax_entry["price_ht"],
+                    tax_entry["vat_rate"],
                 )
-                taxable_value = _read_value(
-                    getattr(getattr(tax, "taxable_amount", None), "value", None)
-                )
+            if taxes:
+                continue
+            price_type_code, price_amount_value = self._price_type_amount(raw_price)
+            if price_type_code in {"01", "04"} and price_amount_value is not None:
+                self._add_unique_price_entry(entries, seen, price_amount_value, 0.0)
+        return entries
 
-                if vat_rate is None and rate_value is not None:
-                    vat_rate = float(rate_value)
-                if price_ht is None and taxable_value is not None:
-                    price_ht = float(taxable_value)
+    def _extract_prices_and_vats_from_onix(self, onix_product: Product) -> list[dict[str, float]]:
+        """Extrait toutes les combinaisons prix HT / taux TVA présentes dans le produit."""
+        aggregated = getattr(onix_product, "price", None)
+        default_entries: list[dict[str, float]] = []
+        if aggregated is not None and aggregated.ht is not None and aggregated.vat_rate is not None:
+            default_entries.append(
+                {"price_ht": float(aggregated.ht), "vat_rate": float(aggregated.vat_rate)}
+            )
 
-            if (
-                price_ht is None
-                and price_type_code == "01"
-                and price_amount_value is not None
-            ):
-                price_ht = float(price_amount_value)
+        raw_product = getattr(onix_product, "raw", None)
+        entries = self._extract_raw_price_entries(raw_product)
+        return entries or default_entries
 
-            if (
-                price_ht is None
-                and price_type_code == "04"
-                and price_amount_value is not None
-                and vat_rate is not None
-            ):
-                price_ht = float(price_amount_value) / (1 + float(vat_rate) / 100)
+    @staticmethod
+    def _coerce_year_candidate(value: Any) -> Optional[int]:
+        """Convertit une valeur ONIX en année si elle est exploitable."""
+        extracted = _read_value(value)
+        if extracted is None:
+            return None
+        if isinstance(extracted, (int, float)):
+            year = int(extracted)
+            return year if 1900 <= year <= 2100 else None
+        digits = re.sub(r"\D", "", str(extracted))
+        if len(digits) < 4:
+            return None
+        year = int(digits[:4])
+        return year if 1900 <= year <= 2100 else None
 
-        if price_ht is None:
-            price_ht = 0.0
-        if vat_rate is None:
-            vat_rate = 0.0
-        return {"price_ht": price_ht, "vat_rate": vat_rate}
-
-    def _extract_publication_year_from_onix(self, onix_product: Product) -> Optional[int]:
-        """Extrait l’année de publication ONIX en supportant plusieurs variantes de structure."""
+    def _iter_publication_candidates(self, onix_product: Product) -> list[Any]:
+        """Regroupe les valeurs de dates de publication ONIX dans un seul flux itérable."""
         candidates: list[Any] = []
-
         for source in (
             getattr(onix_product, "publishing", None),
             getattr(onix_product, "_raw", None)
@@ -371,268 +404,217 @@ class DilicomServiceBase:
         if publishing_detail is not None:
             for publication_date in getattr(publishing_detail, "publishing_date", []) or []:
                 if publication_date is not None:
-                    candidates.append(getattr(publication_date, "date", None))
-                    candidates.append(publication_date)
+                    candidates.extend((getattr(publication_date, "date", None), publication_date))
+        return candidates
 
-        for candidate in candidates:
-            extracted = _read_value(candidate)
-            if extracted is None:
-                continue
-            if isinstance(extracted, (int, float)):
-                if 1900 <= int(extracted) <= 2100:
-                    return int(extracted)
-                continue
-            digits = re.sub(r"\D", "", str(extracted))
-            if len(digits) >= 4:
-                year = int(digits[:4])
-                if 1900 <= year <= 2100:
-                    return year
+    def _extract_publication_year_from_onix(self, onix_product: Product) -> Optional[int]:
+        """Extrait l’année de publication ONIX en supportant plusieurs variantes de structure."""
+        for candidate in self._iter_publication_candidates(onix_product):
+            year = self._coerce_year_candidate(candidate)
+            if year is not None:
+                return year
         return None
+
+    @staticmethod
+    def _normalise_list(value: Any) -> list[Any]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        return [value]
+
+    @staticmethod
+    def _format_measurement(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return None
+        if numeric_value.is_integer():
+            return str(int(numeric_value))
+        return str(numeric_value).rstrip("0").rstrip(".")
+
+    @staticmethod
+    def _convert_to_mm(value: Any, unit: Any) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return None
+        unit_key = str(unit or "").strip().lower()
+        conversion_factors = {
+            "mm": 1,
+            "cm": 10,
+            "m": 1000,
+            "in": 25.4,
+            "inch": 25.4,
+            "inches": 25.4,
+        }
+        factor = conversion_factors.get(unit_key)
+        if factor is None:
+            return numeric_value
+        return numeric_value * factor
+
+    @staticmethod
+    def _convert_to_grams(value: Any, unit: Any) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return None
+        unit_key = str(unit or "").strip().lower()
+        conversion_factors = {
+            "mg": 0.001,
+            "g": 1,
+            "gr": 1,
+            "kg": 1000,
+            "lb": 453.59237,
+            "oz": 28.349523125,
+        }
+        factor = conversion_factors.get(unit_key)
+        if factor is None:
+            return numeric_value
+        return numeric_value * factor
+
+    def _extract_language_metadata(self, raw_product: Any, onix_product: Product) -> dict[str, Any]:
+        metadatas: dict[str, Any] = {}
+        descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+        language_values: list[str] = []
+        raw_languages = getattr(descriptive_detail, "language", []) or []
+        if not raw_languages and hasattr(onix_product, "descriptive"):
+            raw_languages = cast(
+                list[Language],
+                _deep_getattr(onix_product, "descriptive.languages"),
+            ) or []
+        for language in self._normalise_list(raw_languages):
+            if not language:
+                continue
+            code = _read_value(getattr(language, "language_code", None))
+            if code is not None:
+                language_values.append(str(code))
+        language_code = next(
+            (
+                code for candidate in ["01", "02", "fr", "fre", "FRE"]
+                for code in language_values
+                if str(code).upper() == str(candidate).upper()),
+            None,
+        )
+        if language_code is None and language_values:
+            language_code = language_values[0]
+        if not language_code:
+            return metadatas
+
+        normalized_code = str(language_code).upper()
+        if normalized_code.startswith("VALUE_"):
+            normalized_code = normalized_code.split("VALUE_", 1)[1]
+        metadatas["code_langue"] = normalized_code
+        metadatas["langue"] = LANGUAGE_FRIENDLY_LABEL_MAP.get(
+            normalized_code,
+            LANGUAGE_LABEL_MAP.get(normalized_code, normalized_code),
+        )
+        return metadatas
+
+    @staticmethod
+    def _iter_collection_titles(collection: Any) -> list[str]:
+        """Extrait les titres d'une collection ONIX sans imbriquer les boucles métier."""
+        title_texts: list[str] = []
+        for title_detail in DilicomServiceBase._normalise_list(
+            getattr(collection, "title_detail", []) or []
+        ):
+            for title_element in DilicomServiceBase._normalise_list(
+                getattr(title_detail, "title_element", []) or []
+            ):
+                title_text = _read_value(getattr(title_element, "title_text", None))
+                if title_text is not None:
+                    title_texts.append(str(title_text))
+        return title_texts
+
+    def _extract_collection_metadata(self, raw_product: Any) -> dict[str, Any]:
+        metadatas: dict[str, Any] = {}
+        descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+        collection_names: list[str] = []
+        for collection in self._normalise_list(getattr(descriptive_detail, "collection", []) or []):
+            if not collection:
+                continue
+            for title_text in self._iter_collection_titles(collection):
+                if title_text not in collection_names:
+                    collection_names.append(title_text)
+        if collection_names:
+            metadatas["collection"] = collection_names[0]
+            metadatas["collections"] = collection_names
+        return metadatas
+
+    def _extract_dimensions_metadata(self, raw_product: Any) -> dict[str, Any]:
+        metadatas: dict[str, Any] = {}
+        descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+        measures = getattr(descriptive_detail, "measure", []) or []
+        width_value: Optional[float] = None
+        height_value: Optional[float] = None
+        thickness_value: Optional[float] = None
+        for measure in measures:
+            measure_type = _read_value(getattr(measure, "measure_type", None))
+            measure_value = _read_value(getattr(measure, "measurement", None))
+            measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
+            if measure_type == "01":
+                width_value = self._convert_to_mm(measure_value, measure_unit)
+            elif measure_type == "02":
+                height_value = self._convert_to_mm(measure_value, measure_unit)
+            elif measure_type == "03":
+                thickness_value = self._convert_to_mm(measure_value, measure_unit)
+        dimensions = [
+            self._format_measurement(width_value),
+            self._format_measurement(height_value),
+            self._format_measurement(thickness_value),
+        ]
+        dimensions_values = [dimension for dimension in dimensions if dimension is not None]
+        if dimensions_values:
+            metadatas["dimensions_mm"] = "*".join(dimensions_values)
+        return metadatas
+
+    def _extract_weight_metadata(self, raw_product: Any) -> dict[str, Any]:
+        metadatas: dict[str, Any] = {}
+        descriptive_detail = getattr(raw_product, "descriptive_detail", None)
+        for measure in getattr(descriptive_detail, "measure", []) or []:
+            measure_type = _read_value(getattr(measure, "measure_type", None))
+            measure_value = _read_value(getattr(measure, "measurement", None))
+            measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
+            if measure_type == "08":
+                grams = self._convert_to_grams(measure_value, measure_unit)
+                if grams is not None:
+                    metadatas["poids_grammes"] = self._format_measurement(grams) or str(grams)
+                    break
+        return metadatas
+
+    def _extract_bnf_metadata(self, raw_product: Any) -> dict[str, Any]:
+        metadatas: dict[str, Any] = {}
+        for identifier in getattr(raw_product, "product_identifier", []) or []:
+            product_id_type = _read_value(getattr(identifier, "product_idtype", None))
+            id_value = _read_value(getattr(getattr(identifier, "idvalue", None), "value", None))
+            if product_id_type == "31" and id_value is not None:
+                metadatas["ref_bnf"] = str(id_value)
+            elif product_id_type == "35" and id_value is not None:
+                metadatas["notice_bnf"] = str(id_value)
+        return metadatas
 
     def _get_metadatas_from_onix(self, onix_product: Product) -> dict[str, Optional[str]]:
         """Extrait les métadonnées utiles, y compris les variantes d’images ONIX."""
-
-        def _normalise_list(value: Any) -> list[Any]:
-            if value is None:
-                return []
-            if isinstance(value, list):
-                return value
-            return [value]
-
-        def _format_measurement(value: Any) -> Optional[str]:
-            if value is None:
-                return None
-            try:
-                numeric_value = float(value)
-            except (TypeError, ValueError):
-                return None
-            if numeric_value.is_integer():
-                return str(int(numeric_value))
-            return str(numeric_value).rstrip("0").rstrip(".")
-
-        def _convert_to_mm(value: Any, unit: Any) -> Optional[float]:
-            if value is None:
-                return None
-            try:
-                numeric_value = float(value)
-            except (TypeError, ValueError):
-                return None
-            unit_key = str(unit or "").strip().lower()
-            conversion_factors = {
-                "mm": 1,
-                "cm": 10,
-                "m": 1000,
-                "in": 25.4,
-                "inch": 25.4,
-                "inches": 25.4,
-            }
-            factor = conversion_factors.get(unit_key)
-            if factor is None:
-                return numeric_value
-            return numeric_value * factor
-
-        def _convert_to_grams(value: Any, unit: Any) -> Optional[float]:
-            if value is None:
-                return None
-            try:
-                numeric_value = float(value)
-            except (TypeError, ValueError):
-                return None
-            unit_key = str(unit or "").strip().lower()
-            conversion_factors = {
-                "mg": 0.001,
-                "g": 1,
-                "gr": 1,
-                "kg": 1000,
-                "lb": 453.59237,
-                "oz": 28.349523125,
-            }
-            factor = conversion_factors.get(unit_key)
-            if factor is None:
-                return numeric_value
-            return numeric_value * factor
-
-        def _extract_language_metadata(raw_product: Any) -> dict[str, Any]:
-            metadatas: dict[str, Any] = {}
-            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
-            language_values: list[str] = []
-            raw_languages = getattr(descriptive_detail, "language", []) or []
-            if not raw_languages and hasattr(onix_product, "descriptive"):
-                raw_languages = cast(
-                    list[Language],
-                    _deep_getattr(onix_product, "descriptive.languages"),
-                ) or []
-            for language in _normalise_list(raw_languages):
-                if not language:
-                    continue
-                code = _read_value(getattr(language, "language_code", None))
-                if code is not None:
-                    language_values.append(str(code))
-            language_code = None
-            for candidate in ["01", "02", "fr", "fre", "FRE"]:
-                for code in language_values:
-                    if str(code).upper() == str(candidate).upper():
-                        language_code = code
-                        break
-                if language_code is not None:
-                    break
-            if language_code is None and language_values:
-                language_code = language_values[0]
-            if language_code:
-                normalized_code = str(language_code).upper()
-                if normalized_code.startswith("VALUE_"):
-                    normalized_code = normalized_code.split("VALUE_", 1)[1]
-                metadatas["code_langue"] = normalized_code
-                metadatas["langue"] = LANGUAGE_FRIENDLY_LABEL_MAP.get(
-                    normalized_code,
-                    LANGUAGE_LABEL_MAP.get(normalized_code, normalized_code),
-                )
-            return metadatas
-
-        def _extract_collection_metadata(raw_product: Any) -> dict[str, Any]:
-            metadatas: dict[str, Any] = {}
-            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
-            collection_names: list[str] = []
-            raw_collections = getattr(descriptive_detail, "collection", []) or []
-            for collection in _normalise_list(raw_collections):
-                if not collection:
-                    continue
-                title_details = getattr(collection, "title_detail", []) or []
-                if not isinstance(title_details, list):
-                    title_details = [title_details]
-                for title_detail in title_details:
-                    title_elements = getattr(title_detail, "title_element", []) or []
-                    if not isinstance(title_elements, list):
-                        title_elements = [title_elements]
-                    for title_element in title_elements:
-                        title_text = _read_value(getattr(title_element, "title_text", None))
-                        if title_text and str(title_text) not in collection_names:
-                            collection_names.append(str(title_text))
-            if collection_names:
-                metadatas["collection"] = collection_names[0]
-                metadatas["collections"] = collection_names
-            return metadatas
-
-        def _extract_dimensions_metadata(raw_product: Any) -> dict[str, Any]:
-            metadatas: dict[str, Any] = {}
-            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
-            measures = getattr(descriptive_detail, "measure", []) or []
-            width_value: Optional[float] = None
-            height_value: Optional[float] = None
-            thickness_value: Optional[float] = None
-            for measure in measures:
-                measure_type = _read_value(getattr(measure, "measure_type", None))
-                measure_value = _read_value(getattr(measure, "measurement", None))
-                measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
-                if measure_type == "01":
-                    width_value = _convert_to_mm(measure_value, measure_unit)
-                elif measure_type == "02":
-                    height_value = _convert_to_mm(measure_value, measure_unit)
-                elif measure_type == "03":
-                    thickness_value = _convert_to_mm(measure_value, measure_unit)
-            dimensions = [
-                _format_measurement(width_value),
-                _format_measurement(height_value),
-                _format_measurement(thickness_value),
-            ]
-            dimensions_values = [dimension for dimension in dimensions if dimension is not None]
-            if dimensions_values:
-                metadatas["dimensions_mm"] = "*".join(dimensions_values)
-            return metadatas
-
-        def _extract_weight_metadata(raw_product: Any) -> dict[str, Any]:
-            metadatas: dict[str, Any] = {}
-            descriptive_detail = getattr(raw_product, "descriptive_detail", None)
-            measures = getattr(descriptive_detail, "measure", []) or []
-            for measure in measures:
-                measure_type = _read_value(getattr(measure, "measure_type", None))
-                measure_value = _read_value(getattr(measure, "measurement", None))
-                measure_unit = _read_value(getattr(measure, "measure_unit_code", None))
-                if measure_type == "08":
-                    grams = _convert_to_grams(measure_value, measure_unit)
-                    if grams is not None:
-                        metadatas["poids_grammes"] = _format_measurement(grams) or str(grams)
-                        break
-            return metadatas
-
-        def _extract_bnf_metadata(raw_product: Any) -> dict[str, Any]:
-            metadatas: dict[str, Any] = {}
-            product_identifiers = getattr(raw_product, "product_identifier", []) or []
-            for identifier in product_identifiers:
-                product_id_type = _read_value(getattr(identifier, "product_idtype", None))
-                id_value = _read_value(getattr(getattr(identifier, "idvalue", None), "value", None))
-                if product_id_type == "31" and id_value is not None:
-                    metadatas["ref_bnf"] = str(id_value)
-                elif product_id_type == "35" and id_value is not None:
-                    metadatas["notice_bnf"] = str(id_value)
-            return metadatas
-
-        metadatas: dict[str, Any] = {}
         raw_product = getattr(onix_product, "_raw", None)
         if raw_product is None:
-            return metadatas
+            return {}
 
-        metadatas.update(_extract_bnf_metadata(raw_product))
-        metadatas.update(_extract_language_metadata(raw_product))
-        metadatas.update(_extract_collection_metadata(raw_product))
-        metadatas.update(_extract_dimensions_metadata(raw_product))
-        metadatas.update(_extract_weight_metadata(raw_product))
-
-        collateral_detail = getattr(raw_product, "collateral_detail", None)
-        supporting_resources = getattr(collateral_detail, "supporting_resource", []) or []
-        for resource in supporting_resources:
-            resource_versions = getattr(resource, "resource_version", []) or []
-            for version in resource_versions:
-                feature_map: dict[str, str] = {}
-                for feature in getattr(version, "resource_version_feature", []) or []:
-                    feature_type = _read_value(
-                        getattr(
-                            getattr(
-                                feature,
-                                "resource_version_feature_type",
-                                None,
-                            ),
-                            "value",
-                            None,
-                        )
-                    )
-                    feature_value = _read_value(
-                        getattr(getattr(feature, "feature_value", None), "value", None)
-                    )
-                    if feature_type is not None and feature_value is not None:
-                        feature_map[str(feature_type)] = str(feature_value)
-
-                base_name = feature_map.get("04")
-                if base_name:
-                    label = re.sub(r"[^a-z0-9]+", "_", base_name.lower()).strip("_")
-                    metadatas[label] = base_name
-                    for suffix, feature_code in (
-                        ("width", "02"),
-                        ("height", "03"),
-                        ("size", "07"),
-                    ):
-                        if feature_map.get(feature_code):
-                            metadatas[f"{label}_{suffix}"] = feature_map[feature_code]
-                    resource_link = getattr(version, "resource_link", None)
-                    if resource_link:
-                        link = _read_value(getattr(resource_link[0], "value", None)) \
-                            if isinstance(resource_link, list) \
-                            else _read_value(resource_link)
-                        if link:
-                            metadatas[f"{label}_url"] = str(link)
-
+        metadatas: dict[str, Any] = {}
+        metadatas.update(self._extract_bnf_metadata(raw_product))
+        metadatas.update(self._extract_language_metadata(raw_product, onix_product))
+        metadatas.update(self._extract_collection_metadata(raw_product))
+        metadatas.update(self._extract_dimensions_metadata(raw_product))
+        metadatas.update(self._extract_weight_metadata(raw_product))
         return metadatas
 
 
-    def _get_values_from_onix(self, onix_product: Product) -> Optional[dict[str, Any]]:
-        """
-        Extrait les valeurs pertinentes d'un objet `Notice` ONIX pour un produit.
-        Cette méthode prend un objet `Notice` représentant un produit ONIX, et extrait les
-        informations nécessaires pour la mise à jour des livres dans la base de données.
-        
-        param :
-            - onix_product: L'objet `Notice` ONIX à partir duquel extraire les valeurs.
-        """
+    def _build_book_from_onix(self, onix_product: Product) -> Book:
         book = Book(title=cast(str, _deep_getattr(onix_product, "title")))
         book.isbn = cast(str, _deep_getattr(onix_product, "isbn"))
         book.title = cast(str, _deep_getattr(onix_product, "title"))
@@ -645,23 +627,19 @@ class DilicomServiceBase:
         book.vat_rate = float(price_data["vat_rate"])
 
         authors = _deep_getattr(onix_product, "authors")
-        authors = [a.full_name for a in authors if hasattr(a, "full_name")] \
-                        if isinstance(authors, list) \
-                        else []
-        book.authors = ", ".join(authors) if authors else ""
-        logger.debug("Mise à jour du livre avec ISBN %s et titre %s", book.isbn, book.title)
-        book.supplier = self.supplier_repo.get_by_gln13(book.supplier_gln)
-        book.editor = self.supplier_repo.get_by_gln13(book.editor_gln)
-        vat_rate_id = self._get_vat_rate_id(book.vat_rate)
-        if book.vat_rate is not None and vat_rate_id is None:
-            logger.warning(
-                "Aucun taux de TVA actif trouvé pour la valeur %.2f lors de l'import ONIX %s.",
-                float(book.vat_rate),
-                book.isbn,
+        if isinstance(authors, list):
+            book.authors = ", ".join(
+                author.full_name for author in authors if hasattr(author, "full_name")
             )
+        else:
+            book.authors = ""
+        return book
+
+    def _hydrate_book_year_and_pages(self, onix_product: Product, book: Book) -> None:
         publication_year = self._extract_publication_year_from_onix(onix_product)
         if publication_year is not None:
             book.year = str(publication_year)
+
         extents = cast(list[Extent], _deep_getattr(onix_product, "_raw.descriptive_detail.extent"))
         for extent in extents:
             extent_type = _read_value(getattr(extent, "extent_type", None))
@@ -670,11 +648,60 @@ class DilicomServiceBase:
             if extent_type == "00" and extent_unit == "03" and extent_value is not None:
                 book.pages = int(extent_value)
                 break
+
+    def _build_object_prices(self, onix_product: Product, book: Book) -> list[ObjectPrices]:
+        price_rows = self._extract_prices_and_vats_from_onix(onix_product)
+        object_prices = [
+            ObjectPrices(
+                price=float(price_row["price_ht"]),
+                vat_rate_id=self._get_vat_rate_id(price_row["vat_rate"]),
+                from_date=date.today(),
+                to_date=None,
+            )
+            for price_row in price_rows
+            if price_row["price_ht"] is not None and price_row["vat_rate"] is not None
+        ]
+        if object_prices:
+            return object_prices
+        return [
+            ObjectPrices(
+                price=float(book.price_ht or 0.0),
+                vat_rate_id=self._get_vat_rate_id(book.vat_rate),
+                from_date=date.today(),
+                to_date=None,
+            )
+        ]
+
+    def _get_values_from_onix(self, onix_product: Product) -> Optional[dict[str, Any]]:
+        """
+        Extrait les valeurs pertinentes d'un objet `Notice` ONIX pour un produit.
+        Cette méthode prend un objet `Notice` représentant un produit ONIX, et extrait les
+        informations nécessaires pour la mise à jour des livres dans la base de données.
+
+        param :
+            - onix_product: L'objet `Notice` ONIX à partir duquel extraire les valeurs.
+        """
+        book = self._build_book_from_onix(onix_product)
+        logger.debug("Mise à jour du livre avec ISBN %s et titre %s", book.isbn, book.title)
+        book.supplier = self.supplier_repo.get_by_gln13(book.supplier_gln or "")
+        book.editor = self.supplier_repo.get_by_gln13(book.editor_gln or "")
+        self._hydrate_book_year_and_pages(onix_product, book)
+
+        vat_rate_id = self._get_vat_rate_id(book.vat_rate)
+        if book.vat_rate is not None and vat_rate_id is None:
+            logger.warning(
+                "Aucun taux de TVA actif trouvé pour la valeur %.2f lors de l'import ONIX %s.",
+                float(book.vat_rate),
+                book.isbn,
+            )
+
         if not book.supplier:
             logger.info("Création d'un nouveau fournisseur %s nécessaire.", book.supplier_gln)
             return None
+
         if not book.editor:
             book.editor_name = cast(str, _deep_getattr(onix_product, "editor.name"))
+
         supplier_id = book.supplier.id
         book.supplier_name = book.supplier.name
         g_o = GeneralObjects(
@@ -683,7 +710,7 @@ class DilicomServiceBase:
             ean13=book.isbn,
             name=book.title,
             description=book.description,
-            )
+        )
         b = Books(
             author=book.authors,
             diffuser=book.supplier_name,
@@ -693,27 +720,22 @@ class DilicomServiceBase:
             b.pages = cast(int, book.pages)
         if book.editor:
             b.editor = book.editor.name
-        metadatas = ObjMetadatas(
-            semistructured_data=self._get_metadatas_from_onix(onix_product)
-        )
+
+        metadatas = ObjMetadatas(semistructured_data=self._get_metadatas_from_onix(onix_product))
         logger.debug(
             "Génération d'un objet avec EAN13 %s: GeneralObjects: %s, Book: %s, metadatas: %s",
             book.isbn,
             g_o,
             b,
-            metadatas
+            metadatas,
         )
-        object_price = ObjectPrices(
-            price=float(book.price_ht),
-            vat_rate_id=vat_rate_id,
-            from_date=date.today(),
-            to_date=None,
-        )
+        object_prices = self._build_object_prices(onix_product, book)
         return {
             "general_object": g_o,
             "book": b,
             "obj_metadatas": metadatas,
-            "object_price": object_price,
+            "object_price": object_prices[0] if object_prices else None,
+            "object_prices": object_prices,
         }
 
 
@@ -739,7 +761,6 @@ class DilicomServiceBase:
                     g_o = values["general_object"]
                     b = values["book"]
                     m = values["obj_metadatas"]
-                    object_price = values.get("object_price")
                 else:
                     logger.warning(
                         "Eléments manquants pour le livre %s avec les données ONIX du fichier %s,",
@@ -749,7 +770,7 @@ class DilicomServiceBase:
                     general_object=g_o,
                     book=b,
                     obj_metadatas=m,
-                    object_price=object_price,
+                    object_price=values.get("object_prices", values.get("object_price")),
                 )
                 list_ean13.append(g_o.ean13)
             self.objects_repo.commit_object()

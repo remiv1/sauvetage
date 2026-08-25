@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from db_models.objects.suppliers import Suppliers
 
 @dataclass
-class Book:
+class Book: # pylint: disable=R0902
     """Représente un livre."""
     title: str
     isbn: Optional[str] = None

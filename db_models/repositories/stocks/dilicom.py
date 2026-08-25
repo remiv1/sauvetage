@@ -78,14 +78,13 @@ class DilicomReferencialRepository(BaseRepository):
         """
         if row.create_ref and not row.dilicom_synced:
             return "to_create"
-        elif row.create_ref and row.dilicom_synced:
+        if row.create_ref and row.dilicom_synced:
             return "created"
-        elif row.delete_ref and not row.dilicom_synced:
+        if row.delete_ref and not row.dilicom_synced:
             return "to_delete"
-        elif row.delete_ref and row.dilicom_synced:
+        if row.delete_ref and row.dilicom_synced:
             return "deleted"
-        else:
-            raise ValueError("Statut inconnu pour la référence Dilicom.")
+        raise ValueError("Statut inconnu pour la référence Dilicom.")
 
     def _update_status(self, status: str) -> Dict[str, bool]:
         """Met à jour les champs de statut d'une référence Dilicom en fonction du statut
@@ -100,14 +99,13 @@ class DilicomReferencialRepository(BaseRepository):
         """
         if status == "to_create":
             return {"create_ref": True, "delete_ref": False, "dilicom_synced": False}
-        elif status == "created":
+        if status == "created":
             return {"create_ref": True, "delete_ref": False, "dilicom_synced": True}
-        elif status == "to_delete":
+        if status == "to_delete":
             return {"create_ref": False, "delete_ref": True, "dilicom_synced": False}
-        elif status == "deleted":
+        if status == "deleted":
             return {"create_ref": False, "delete_ref": True, "dilicom_synced": True}
-        else:
-            raise ValueError(f"Statut inconnu : {status}")
+        raise ValueError(f"Statut inconnu : {status}")
 
     def get_last_by_ean13(self, ean13: str) -> Optional[DilicomReferencial]:
         """Récupère une référence Dilicom à partir de son EAN13.

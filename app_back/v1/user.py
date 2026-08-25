@@ -255,7 +255,7 @@ async def modify_user(
 
 
 @router.get("/list")
-def list_users(
+def list_users( # pylint: disable=R0913, R0917
     _admin: Annotated[bool, Depends(verify_admin_access)],
     session: Annotated[Session, Depends(config.get_secure_session)],
     username: Annotated[Optional[str], Query()] = None,

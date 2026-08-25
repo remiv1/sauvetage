@@ -555,7 +555,7 @@ class OrderSyncLog(WorkingBase):
         }
 
 
-class OrderAlert(WorkingBase):
+class OrderAlert(WorkingBase):  # pylint: disable=R0903
     """Alerte métier persistante associée à une commande."""
 
     __tablename__ = "order_alerts"
@@ -591,3 +591,15 @@ class OrderAlert(WorkingBase):
     )
 
     order = relationship("Order", back_populates="alerts")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet OrderAlert en dictionnaire."""
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "code": self.code,
+            "message": self.message,
+            "is_resolved": self.is_resolved,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+        }

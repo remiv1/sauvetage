@@ -119,7 +119,7 @@ class Users(SecureBase, QueryMixin):
         return cls(**data)
 
 
-class UserSession(SecureBase):
+class UserSession(SecureBase):  # pylint: disable=R0903
     """Session authentifiée associée à un utilisateur."""
 
     __tablename__ = "user_sessions"
@@ -168,6 +168,20 @@ class UserSession(SecureBase):
     )
 
     user = relationship("Users", back_populates="sessions")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'objet UserSession en dictionnaire."""
+        return {
+            "id": self.id,
+            "token_hash": self.token_hash,
+            "user_id": self.user_id,
+            "expires_at": self.expires_at.isoformat(),
+            "last_seen_at": self.last_seen_at.isoformat(),
+            "revoked_at": self.revoked_at.isoformat()
+            if self.revoked_at
+            else None,
+            "created_at": self.created_at.isoformat(),
+        }
 
 
 class UsersPasswords(SecureBase):

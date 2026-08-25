@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -19,7 +19,13 @@ def create_document_buffer(
         data: Un dictionnaire de données à passer au template pour le rendu.
     """
     # 1. Charger le template (HTML, Jinja2, etc.)
-    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATES_DIR),
+        autoescape=select_autoescape(
+            enabled_extensions=("html", "htm", "xml"),
+            default_for_string=True,
+        ),
+    )
     template = env.get_template(template_name)
     html = template.render(**data)
 

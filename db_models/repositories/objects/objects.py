@@ -27,7 +27,7 @@ from db_models.services.objects import sync_collection
 logger = getLogger(__name__)
 
 
-class ObjectsRepository(BaseRepository):
+class ObjectsRepository(BaseRepository):    # pylint: disable=R0902
     """
     Dépôt de données pour les objets vendus par la librairie.
     Contient les méthodes :
@@ -308,7 +308,7 @@ class ObjectsRepository(BaseRepository):
         """Synchronise l'historique des prix à partir du tableau du formulaire."""
         price_model = instance.__mapper__.relationships["prices"].mapper.class_
         sorted_entries = sorted(
-            list(price_entries or []),
+            price_entries or [],
             key=lambda entry: (
                 entry.form.from_date.data or date.min,
                 entry.form.to_date.data or date.max,
@@ -369,7 +369,128 @@ class ObjectsRepository(BaseRepository):
             )
         )
 
-    def save_or_update_from_object(
+    def _coerce_price_rows(
+        self,
+        object_price: ObjectPrices | list[ObjectPrices] | None,
+    ) -> list[ObjectPrices]:
+        """Normalise un prix unique ou une liste de prix dans un même format."""
+        if object_price is None:
+            return []
+        if isinstance(object_price, list):
+            return object_price
+        return [object_price]
+
+    def _normalize_ean(self, general_object: GeneralObjects) -> str | None:
+        """Nettoie et normalise le code EAN13 de l'objet."""
+        if general_object.ean13 is None:
+            return None
+        normalized = str(general_object.ean13).strip()
+        general_object.ean13 = normalized
+        return normalized
+
+    def _copy_object_fields(self, target: GeneralObjects, source: GeneralObjects) -> None:
+        """Copie les champs utiles d'un objet source vers la cible."""
+        for attr, value in vars(source).items():
+            if attr not in ("id", "_sa_instance_state") and value is not None:
+                setattr(target, attr, value)
+
+    def _find_existing_instance(
+        self,
+        general_object_id: int | None,
+        normalized_ean: str | None,
+    ) -> GeneralObjects | None:
+        """Cherche une instance existante par id ou par EAN13."""
+        if general_object_id is not None:
+            instance = self.session.get(self.model, general_object_id)
+            if instance is not None:
+                return instance
+        if normalized_ean is None:
+            return None
+        instance = self.get_by_ref(normalized_ean, only_actives=False)
+        if instance is not None:
+            return instance
+        return self.session.execute(
+            select(self.model).where(self.model.ean13 == normalized_ean)
+        ).scalar_one_or_none()
+
+    def _resolve_instance(self, general_object: GeneralObjects) -> GeneralObjects:
+        """Récupère ou crée l'instance GeneralObjects correspondante."""
+        normalized_ean = self._normalize_ean(general_object)
+        instance = self._find_existing_instance(general_object.id, normalized_ean)
+        if instance is None:
+            instance = GeneralObjects()
+            self.session.add(instance)
+        self._copy_object_fields(instance, general_object)
+        return instance
+
+    def _flush_instance(
+        self,
+        instance: GeneralObjects,
+        normalized_ean: str | None,
+    ) -> GeneralObjects:
+        """Flush l'instance et récupère l'enregistrement existant en cas de conflit."""
+        try:
+            self.session.flush()
+            return instance
+        except IntegrityError:
+            self.session.rollback()
+            if normalized_ean is None:
+                raise
+            existing_instance = self.session.execute(
+                select(self.model).where(self.model.ean13 == normalized_ean)
+            ).scalar_one_or_none()
+            if existing_instance is None:
+                raise
+            self._copy_object_fields(existing_instance, instance)
+            self.session.flush()
+            return existing_instance
+
+    def _apply_relationships(   # pylint: disable=R0913
+        self,
+        instance: GeneralObjects,
+        *,
+        book: Books | None,
+        other_object: OtherObjects | None,
+        obj_metadatas: ObjMetadatas | None,
+        object_tags: ObjectTags | None,
+        media_files: MediaFiles | None,
+    ) -> None:
+        """Attache les relations de l'objet sans logique métier de prix."""
+        if book:
+            instance.book = book
+        if other_object:
+            instance.other_object = other_object
+        if obj_metadatas:
+            instance.obj_metadatas = obj_metadatas
+        if object_tags:
+            instance.object_tags = object_tags
+        if media_files:
+            instance.media_files = media_files
+
+    def _apply_price_rows(self, instance: GeneralObjects, price_rows: list[ObjectPrices]) -> None:
+        """Ajoute les lignes de prix sans créer de doublons exacts."""
+        for price_row in price_rows:
+            existing = next(
+                (
+                    price for price in instance.prices
+                    if price.price == price_row.price
+                    and price.vat_rate_id == price_row.vat_rate_id
+                    and price.from_date == (price_row.from_date or date.today())
+                    and price.to_date == price_row.to_date
+                ),
+                None,
+            )
+            if existing is None:
+                instance.prices.append(
+                    ObjectPrices(
+                        price=price_row.price,
+                        vat_rate_id=price_row.vat_rate_id,
+                        from_date=price_row.from_date or date.today(),
+                        to_date=price_row.to_date,
+                    )
+                )
+
+    def save_or_update_from_object( # pylint: disable=R0913, R0917
             self,
             general_object: GeneralObjects,
             other_object: Optional[OtherObjects] = None,
@@ -377,77 +498,27 @@ class ObjectsRepository(BaseRepository):
             obj_metadatas: Optional[ObjMetadatas] = None,
             object_tags: Optional[ObjectTags] = None,
             media_files: Optional[MediaFiles] = None,
-            object_price: Optional[ObjectPrices] = None,
+            object_price: ObjectPrices | list[ObjectPrices] | None = None,
             ) -> int:
-        """
-        Sauvegarde un objet à partir d'une instance de GeneralObjects complète.
-        Si l'objet a un id, met à jour l'objet existant, sinon en crée un nouveau.
-        """
-        normalized_ean = (
-            str(general_object.ean13).strip() if general_object.ean13 is not None else None
+        """Sauvegarde un objet à partir d'une instance GeneralObjects complète."""
+        normalized_ean = self._normalize_ean(general_object)
+        instance = self._resolve_instance(general_object)
+        instance = self._flush_instance(instance, normalized_ean)
+
+        self._apply_relationships(
+            instance,
+            book=book,
+            other_object=other_object,
+            obj_metadatas=obj_metadatas,
+            object_tags=object_tags,
+            media_files=media_files,
         )
-        if normalized_ean is not None:
-            general_object.ean13 = normalized_ean
 
-        # 1. Récupération éventuelle de l'objet existant
-        instance = None
-        if general_object.id is not None:
-            instance = self.session.get(self.model, general_object.id)
-        if instance is None and normalized_ean:
-            instance = self.get_by_ref(normalized_ean, only_actives=False)
-        if instance is None and normalized_ean:
-            instance = self.session.execute(
-                select(self.model).where(self.model.ean13 == normalized_ean)
-            ).scalar_one_or_none()
+        price_rows = self._coerce_price_rows(object_price)
+        if price_rows:
+            self._apply_price_rows(instance, price_rows)
 
-        if instance is None:
-            # 2. Création
-            instance = GeneralObjects()
-            for attr, value in vars(general_object).items():
-                if attr not in ("id", "_sa_instance_state") and value is not None:
-                    setattr(instance, attr, value)
-            self.session.add(instance)
-        else:
-            # 3. Mise à jour : on copie les champs utiles
-            for attr, value in vars(general_object).items():
-                if attr not in ("id", "_sa_instance_state") and value is not None:
-                    setattr(instance, attr, value)
-
-        try:
-            # 4. Flush pour obtenir instance.id si nouvel objet
-            self.session.flush()
-        except IntegrityError:
-            self.session.rollback()
-            if normalized_ean:
-                instance = self.session.execute(
-                    select(self.model).where(self.model.ean13 == normalized_ean)
-                ).scalar_one_or_none()
-                if instance is None:
-                    raise
-                for attr, value in vars(general_object).items():
-                    if attr not in ("id", "_sa_instance_state") and value is not None:
-                        setattr(instance, attr, value)
-                self.session.flush()
-
-        # 5. Assignation des relations (SQLAlchemy gère les FK)
-        if book:
-            instance.book = book
-
-        if other_object:
-            instance.other_object = other_object
-
-        if obj_metadatas:
-            instance.obj_metadatas = obj_metadatas
-
-        if object_tags:
-            instance.object_tags = object_tags
-
-        if media_files:
-            instance.media_files = media_files
-
-        if object_price is not None:
-            self._set_current_price(instance, object_price)
-
+        first_price = price_rows[0] if price_rows else None
         logger.debug(
             "[ObjectsRepository] objet avant commit: ean13=%s, name=%s, description=%s, book=%s, " +
             "obj_metadatas=%s, prices=%s, object_price=%s, vat_rate_id=%s",
@@ -457,9 +528,8 @@ class ObjectsRepository(BaseRepository):
             getattr(instance, "book", None),
             getattr(instance, "obj_metadatas", None),
             getattr(instance, "prices", None),
-            object_price,
-            getattr(object_price, "vat_rate_id", None),
+            first_price,
+            getattr(first_price, "vat_rate_id", None),
         )
 
-        # 6. Retour verse l'appelant (id de l'objet créé ou mis à jour)
         return instance.id

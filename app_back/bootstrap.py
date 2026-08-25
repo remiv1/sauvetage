@@ -192,7 +192,7 @@ if __name__ == "__main__":
     configure_dilicom_cron()
     print("[BOOTSTRAP] Configuration du cron WooCommerce orders")
     configure_woocommerce_orders_cron()
-    subprocess.Popen(["cron", "-f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.Popen(["cron", "-f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # pylint: disable=R1732
 
     # Lancer Gunicorn dans le process principal
     start_gunicorn()

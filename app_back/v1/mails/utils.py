@@ -63,7 +63,7 @@ def _build_order_lines(order: OrderIn) -> tuple[list[dict[str, Any]], float]:
     return lines, total_ht
 
 
-def build_supplier_order_mail(
+def build_supplier_order_mail(  # pylint: disable=R0914
     order: OrderIn,
     payload: SupplierOrderMailSchema,
 ) -> tuple[MailSchema, str]:

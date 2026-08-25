@@ -281,7 +281,7 @@ class OrdersRepository(BaseRepository):
         return_order.reference = self.generate_reference(return_order, "RET")
         return return_order
 
-    def create_from_woo_commerce(self, wc_order: dict, customer_id: int) -> Order:
+    def create_from_woo_commerce(self, wc_order: dict, customer_id: int) -> Order:  # pylint: disable=R0914
         """Crée une commande locale à partir d'un payload WooCommerce.
 
         Cette méthode est un transformateur de données local : elle ne récupère pas
@@ -446,7 +446,68 @@ class OrdersRepository(BaseRepository):
                 f"Erreur lors de la mise à jour de l'adresse de livraison : {str(e)}"
             ) from e
 
-    def add_line(   # pylint: disable=too-many-arguments
+    def _build_order_line(
+        self,
+        *,
+        order: Order,
+        general_object_id: int,
+        quantity: int,
+        unit_price: float | Any,
+        discount: float,
+        vat_rate: float,
+        vat_rate_id: int,
+        create_source: str,
+        object_variation_id: int | None,
+    ) -> OrderLine:
+        """Construit une ligne de commande à partir des paramètres métier."""
+        return OrderLine(
+            order_id=order.id,
+            general_object_id=general_object_id,
+            quantity=quantity,
+            unit_price=float(unit_price),
+            discount=discount,
+            vat_rate=float(vat_rate),
+            vat_rate_id=vat_rate_id,
+            status="draft",
+            create_source=create_source,
+            object_variation_id=object_variation_id,
+        )
+
+    def _save_order_lines(
+        self,
+        lines: list[OrderLine],
+        *,
+        is_multi: bool,
+    ) -> OrderLine | list[OrderLine]:
+        """Persiste une ou plusieurs lignes et renvoie le bon type de résultat."""
+        try:
+            if is_multi:
+                self.session.add_all(lines)
+            else:
+                self.session.add(lines[0])
+            self.session.commit()
+            return lines if is_multi else lines[0]
+        except IntegrityError as exc:
+            self.session.rollback()
+            message = "lignes" if is_multi else "ligne"
+            raise ValueError(f"Erreur lors de l'ajout des {message} : {exc.orig}") from exc
+
+    def _build_vat_rate_id_for_price_row(
+        self,
+        price_row: ObjectPrices,
+        fallback_vat_rate: float,
+    ) -> int:
+        """Retourne l'identifiant TVA à associer à un prix métier."""
+        vat_rate_value = (
+            float(price_row.vat_rate.rate)
+            if price_row.vat_rate is not None
+            else float(fallback_vat_rate or 0)
+        )
+        if price_row.vat_rate_id is not None:
+            return price_row.vat_rate_id
+        return self._get_current_vat_rate_by_value(vat_rate_value).id
+
+    def add_line(   # pylint: disable=R0914, R0913
         self,
         order: Order,
         *,
@@ -479,39 +540,25 @@ class OrdersRepository(BaseRepository):
             key=lambda row: (row.from_date, row.id or 0),
         )
         if len(valid_prices) > 1:
-            lines = []
-            for price_row in valid_prices:
-                vat_rate_value = (
-                    float(price_row.vat_rate.rate)
-                    if price_row.vat_rate is not None
-                    else float(vat_rate or 0)
-                )
-                line = OrderLine(
-                    order_id=order.id,
+            lines = [
+                self._build_order_line(
+                    order=order,
                     general_object_id=general_object_id,
                     quantity=quantity,
-                    unit_price=float(price_row.price),
+                    unit_price=price_row.price,
                     discount=discount,
-                    vat_rate=vat_rate_value,
-                    vat_rate_id=(
-                        price_row.vat_rate_id
-                        if price_row.vat_rate_id is not None
-                        else self._get_current_vat_rate_by_value(vat_rate_value).id
+                    vat_rate=(
+                        float(price_row.vat_rate.rate)
+                        if price_row.vat_rate is not None
+                        else float(vat_rate or 0)
                     ),
-                    status="draft",
+                    vat_rate_id=self._build_vat_rate_id_for_price_row(price_row, vat_rate),
                     create_source=create_source,
                     object_variation_id=object_variation_id,
                 )
-                lines.append(line)
-            try:
-                self.session.add_all(lines)
-                self.session.commit()
-                return lines
-            except IntegrityError as e:
-                self.session.rollback()
-                raise ValueError(
-                    f"Erreur lors de l'ajout des lignes : {e.orig}"
-                ) from e
+                for price_row in valid_prices
+            ]
+            return self._save_order_lines(lines, is_multi=True)
 
         if valid_prices:
             unit_price = float(valid_prices[0].price)
@@ -520,33 +567,24 @@ class OrdersRepository(BaseRepository):
                 if valid_prices[0].vat_rate is not None
                 else float(vat_rate or 0)
             )
-        line_vat_rate = (
+
+        resolved_vat_rate = (
             valid_prices[0].vat_rate
             if valid_prices and valid_prices[0].vat_rate is not None
             else self._get_current_vat_rate_by_value(float(vat_rate))
         )
-
-        line = OrderLine(
-            order_id=order.id,
+        line = self._build_order_line(
+            order=order,
             general_object_id=general_object_id,
             quantity=quantity,
             unit_price=unit_price,
             discount=discount,
             vat_rate=vat_rate,
-            vat_rate_id=line_vat_rate.id,
-            status="draft",
+            vat_rate_id=resolved_vat_rate.id,
             create_source=create_source,
             object_variation_id=object_variation_id,
         )
-        try:
-            self.session.add(line)
-            self.session.commit()
-            return line
-        except IntegrityError as e:
-            self.session.rollback()
-            raise ValueError(
-                f"Erreur lors de l'ajout de la ligne : {e.orig}"
-            ) from e
+        return self._save_order_lines([line], is_multi=False)
 
     def update_order_status(
         self, order: Order, new_status: str, update_source: str = "web"
@@ -570,7 +608,7 @@ class OrdersRepository(BaseRepository):
                 f"Erreur lors de la mise à jour du statut : {str(e)}"
             ) from e
 
-    def update_line(
+    def update_line(    # pylint: disable=R0913
         self,
         line: OrderLine,
         *,

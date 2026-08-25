@@ -549,8 +549,9 @@ class OrderRepository(BaseRepository):
             ) from exc
         return order
 
-    def _build_receive_movements(
+    def _build_receive_movements(   # pylint: disable=R0913
         self,
+        *,
         line: OrderInLine,
         order_id: int,
         is_return: bool,
@@ -678,7 +679,7 @@ class OrderRepository(BaseRepository):
         )
         self.session.add(pending_line)
 
-    def receive_order_line(
+    def receive_order_line( # pylint: disable=R0914
         self,
         line_id: int,
         qty_received: int,
@@ -749,8 +750,13 @@ class OrderRepository(BaseRepository):
 
         movement_received, movement_cancelled, movement_remaining = \
             self._build_receive_movements(
-                line, order_id, is_return, qty_received, qty_cancelled,
-                qty_remaining, unit_price_ht,
+                line=line,
+                order_id=order_id,
+                is_return=is_return,
+                qty_received=qty_received,
+                qty_cancelled=qty_cancelled,
+                qty_remaining=qty_remaining,
+                unit_price_ht=unit_price_ht,
             )
 
         if qty_received > 0:

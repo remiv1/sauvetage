@@ -16,6 +16,8 @@ import os
 import uuid
 from typing import Any, Optional
 
+from PIL import Image
+
 # ---------------------------------------------------------------------------
 # Constantes de compression
 # ---------------------------------------------------------------------------
@@ -54,11 +56,6 @@ def compress_to_webp(content: bytes, original_filename: str) -> tuple[bytes, str
     Si le fichier n'est pas une image ou si Pillow est absent, retourne le
     contenu original avec son extension d'origine.
     """
-    try:
-        from PIL import Image  # type: ignore
-    except ImportError:
-        return content, _ext(original_filename)
-
     try:
         img = Image.open(io.BytesIO(content))
     except OSError:

@@ -43,7 +43,7 @@ _engine_main = create_engine(
     pool_pre_ping=True,
     pool_recycle=1800,
 )
-_SessionMain = sessionmaker(autocommit=False, autoflush=False, bind=_engine_main)
+_SessionMain = sessionmaker(autocommit=False, autoflush=False, bind=_engine_main)   # pylint: disable=C0103
 
 _engine_secure = create_engine(
     SECURE_DATABASE_URL,
@@ -53,7 +53,7 @@ _engine_secure = create_engine(
     pool_pre_ping=True,
     pool_recycle=1800,
 )
-_SessionSecure = sessionmaker(autocommit=False, autoflush=False, bind=_engine_secure)
+_SessionSecure = sessionmaker(autocommit=False, autoflush=False, bind=_engine_secure)   # pylint: disable=C0103
 
 
 def get_secure_session() -> Generator[Session, None, None]:

@@ -196,8 +196,11 @@ def _run_object_target(
     try:
         remote = sync_product_to_henrri(product)
     except Exception as exc:  # pylint: disable=broad-except
+        error_message = _format_target_error(HENRRI, exc)
         logger.exception(
-            "Échec de synchronisation du produit %s vers Henrri : %s", product.id, exc
+            "Échec de synchronisation du produit %s vers Henrri : %s",
+            product.id,
+            error_message,
         )
         sync_repo.log_object(
             entity_type="object",
@@ -207,9 +210,9 @@ def _run_object_target(
             sync_direction="outbound",
             operation=operation,
             sync_status="failed",
-            error_message=str(exc),
+            error_message=error_message,
         )
-        return TargetResult(target=HENRRI, status="error", error=str(exc))
+        return TargetResult(target=HENRRI, status="error", error=error_message)
 
     sync_repo.log_object(
         entity_type="object",
