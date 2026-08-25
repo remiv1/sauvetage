@@ -28,7 +28,10 @@ def test_price_ht_uses_taxable_amount_when_present() -> None:
 
 
 def test_reproduces_dif499492052_price_year_and_metadata() -> None:
-    """Le fichier réel de régression doit garder le prix HT, l’année et les ressources d’image."""
+    """
+    Le fichier réel de régression doit garder le prix HT, l’année et les métadonnées
+    ONIX sans images.
+    """
     product = Notice.parse_full(
         Path("tests/back/fixtures/dilicom/in/DIF499492052/499492052.xml"),
         version="3.0",
@@ -73,7 +76,7 @@ def test_reproduces_dif499492052_price_year_and_metadata() -> None:
 
     metadata = service._get_metadatas_from_onix(product)  # pylint: disable=W0212
     assert metadata["langue"] in {"français", "fre", "fr"}
-    assert any("cover" in key.lower() for key in metadata)
+    assert not any("cover" in key.lower() or "image" in key.lower() for key in metadata)
 
 
 def test_dilicom_real_file_extracts_language_collection_dimensions_and_weight_metadata() -> None:
@@ -157,6 +160,80 @@ def test_get_values_from_onix_returns_sqlalchemy_object_price() -> None:
     assert isinstance(values["object_price"], ObjectPrices)
     assert float(values["object_price"].price) == 7.58
     assert values["object_price"].vat_rate_id == 2
+
+
+def test_dilicom_imports_two_vat_prices_for_single_product(
+        db_session_main: Session,
+        supplier,
+    ) -> None:
+    """Un produit ONIX avec deux taxes doit créer deux lignes de prix distinctes."""
+    vat_5 = VatRate(
+        code=1,
+        rate=5.5,
+        label="Taux réduit",
+        date_start=datetime.now(timezone.utc),
+    )
+    vat_20 = VatRate(
+        code=3,
+        rate=20.0,
+        label="Taux normal",
+        date_start=datetime.now(timezone.utc),
+    )
+    db_session_main.add_all([vat_5, vat_20])
+    db_session_main.flush()
+
+    product = Notice.parse_full(Path("tests/fixtures/9782362563560.xml"), version="3.0").products[0]
+
+    service = object.__new__(DilicomService)
+    service.supplier_repo = type(   # type: ignore
+        "S",
+        (),
+        {"get_by_gln13": lambda self, gln: supplier}
+    )()
+    service.objects_repo = ObjectsRepository(db_session_main)
+    service.refresh_vat_rate_cache = lambda: None
+    service.vat_rates_by_value = {5.5: vat_5.id, 20.0: vat_20.id}
+
+    values = service._get_values_from_onix(product)  # pylint: disable=W0212
+    assert values is not None
+    assert len(values["object_prices"]) == 2
+    assert {
+        float(price.price) for price in values["object_prices"]
+    } == {7.58, 7.42}
+    assert {
+        float(price.vat_rate_id or 0) for price in values["object_prices"]
+    } == {vat_5.id, vat_20.id}
+
+    repo = ObjectsRepository(db_session_main)
+    repo.save_or_update_from_object(
+        general_object=values["general_object"],
+        book=values["book"],
+        obj_metadatas=values["obj_metadatas"],
+        object_price=values["object_prices"],
+    )
+
+    stored = repo.get_by_ref(values["general_object"].ean13)
+    assert stored is not None
+    assert len(stored.prices) == 2
+    assert all(price.to_date is None for price in stored.prices)
+    assert {float(price.price) for price in stored.prices} == {7.58, 7.42}
+    assert {float(price.vat_rate.rate) for price in stored.prices} == {5.5, 20.0}
+
+
+def test_dilicom_metadata_ignores_supporting_resources_but_keeps_bnf_and_language() -> None:
+    """Les ressources d’image ONIX ne doivent pas produire des métadonnées d’objet."""
+    product = Notice.parse_full(Path("tests/fixtures/499492052.xml"), version="3.0").products[0]
+
+    service = object.__new__(DilicomService)
+    metadata = service._get_metadatas_from_onix(product)  # pylint: disable=W0212
+
+    assert metadata["code_langue"] in {"FRE", "FR", "fre", "fr"}
+    assert metadata["langue"] in {"français", "fre", "fr"}
+    assert metadata["dimensions_mm"] == "210*140*5"
+    assert metadata["poids_grammes"] == "110"
+    assert metadata["ref_bnf"] == "FRBNF468557930000005"
+    assert metadata["notice_bnf"] == "http://catalogue.bnf.fr/ark:/12148/cb46855793p"
+    assert not any("cover" in key.lower() or "image" in key.lower() for key in metadata)
 
 
 def test_save_or_update_from_object_keeps_taxable_amount_and_vat_rate_id(

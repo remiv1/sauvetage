@@ -358,7 +358,7 @@ def test_wc_diff_objects_detects_create_update_and_delete_batches() -> None:
         ),
     ]
 
-    diff = service._WCProductsService__diff_objects(  # type: ignore # pylint: disable=W0212
+    diff = service._diff_objects(  # pylint: disable=W0212
         [existing, new_product],
         [{"id": 42, "name": "Produit existant"}, {"id": 99, "name": "Produit distant"}],
     )
@@ -441,7 +441,7 @@ def test_wc_product_update_fails_when_woo_returns_no_wc_id(caplog) -> None:
     ]
     service.object_repo.get_by_ref.return_value = product
     service.api_read.get.return_value = MagicMock(json=MagicMock(return_value=None))
-    service._WCProductsService__diff_objects = MagicMock(  # type: ignore[attr-defined] # pylint: disable=W0212
+    service._diff_objects = MagicMock(  # pylint: disable=W0212
         return_value=[{"create": [{"sku": "9999999999999"}]}]
     )
     response = MagicMock(status_code=200)

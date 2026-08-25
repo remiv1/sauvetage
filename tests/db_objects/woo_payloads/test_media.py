@@ -30,8 +30,11 @@ def _make_png_bytes() -> bytes:
 
 
 def test_wc_product_build_media_src_uses_internal_public_host_when_env_missing(monkeypatch) -> None:
-    """Sans FRONT_BASE_URL explicit, le service doit utiliser le host interne public attendu par WooCommerce."""
-    monkeypatch.setattr("db_models.services.woo_commerce.products._FRONT_BASE_URL", "")
+    """
+    Sans FRONT_BASE_URL explicit, le service doit utiliser le host interne public attendu
+    par WooCommerce.
+    """
+    monkeypatch.setattr("db_models.services.woo_commerce.products.payloads.FRONT_BASE_URL", "")
 
     service = object.__new__(WCProductsService)
     service.session = MagicMock()
@@ -48,7 +51,7 @@ def test_wc_product_build_media_src_uses_internal_public_host_when_env_missing(m
 
 def test_wc_product_build_media_src_uses_token_for_absolute_local_paths(monkeypatch) -> None:
     """Un chemin de fichier local absolu doit quand même être servi via le jeton publique."""
-    monkeypatch.setattr("db_models.services.woo_commerce.products._FRONT_BASE_URL", "")
+    monkeypatch.setattr("db_models.services.woo_commerce.products.payloads.FRONT_BASE_URL", "")
 
     service = object.__new__(WCProductsService)
     service.session = MagicMock()
@@ -57,7 +60,9 @@ def test_wc_product_build_media_src_uses_token_for_absolute_local_paths(monkeypa
     media.is_local = False
     media.file_link = "/app/data-seed/images/29334045_main.jpg"
 
-    with patch("db_models.services.woo_commerce.products.MediaAccessTokenRepository") as repo_cls:
+    with patch(
+        "db_models.services.woo_commerce.products.payloads.MediaAccessTokenRepository"
+    ) as repo_cls:
         repo = repo_cls.return_value
         repo.get_last_by_media_id.return_value = None
         repo.create.return_value = MagicMock(token="token-abc123")

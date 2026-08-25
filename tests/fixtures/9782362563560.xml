@@ -1,4 +1,28 @@
-<?xml version="1.0" encoding="UTF-8" ?><Product>
+<?xml version="1.0" encoding="UTF-8"?>
+<ONIXMessage release="3.0" xmlns="http://www.editeur.org/onix/3.0/reference"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.editeur.org/onix/3.0/reference 
+https://hub-dilicom.centprod.com/notices_onix/schema_onix/ONIX_BookProduct_3.0_reference.xsd">
+<Header>
+  <Sender>
+    <SenderIdentifier>
+      <SenderIDType>06</SenderIDType>
+      <IDValue>3025590000008</IDValue>
+    </SenderIdentifier>
+    <SenderName>DILICOM</SenderName>
+    <EmailAddress>bdd@dilicom.fr</EmailAddress>
+  </Sender>
+  <Addressee>
+    <AddresseeIdentifier>
+      <AddresseeIDType>06</AddresseeIDType>
+      <IDValue>3025599265804</IDValue>
+    </AddresseeIdentifier>
+    <AddresseeName>EDITIONS SAUVETAGE - TEST BDD</AddresseeName>
+  </Addressee>
+  <MessageNumber>499492052</MessageNumber>
+  <SentDateTime>20260813T032833Z</SentDateTime>
+</Header>
+<Product>
   <RecordReference>9782362563560</RecordReference>
   <NotificationType>03</NotificationType>
   <ProductIdentifier>
@@ -113,3 +137,5 @@
     </SupplyDetail>
   </ProductSupply>
 </Product>
+
+</ONIXMessage>

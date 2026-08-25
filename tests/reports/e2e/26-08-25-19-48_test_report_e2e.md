@@ -1,6 +1,6 @@
 # Rapport des Tests - pytest tests
 
-**Date:** 2026-08-25T09:48:34.972720+02:00
+**Date:** 2026-08-25T19:48:32.066742+02:00
 **Suite:** pytest tests
 
 ---
@@ -22,8 +22,8 @@
 
 | Test Class | Test Name | Status | Time (s) |
 | ---------- | --------- | ------ | -------- |
-| tests.e2e.stocks.stock_movements_e2e | stock_projection_tracks_orders_and_reservations | ✅ PASSED | 3.559 |
+| tests.e2e.stocks.stock_movements_e2e | stock_projection_tracks_orders_and_reservations | ✅ PASSED | 3.571 |
 
 ---
 
-*Generated on 2026-08-25 09:48:39*
+*Generated on 2026-08-25 19:48:36*

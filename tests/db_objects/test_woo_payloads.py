@@ -461,7 +461,7 @@ def test_wc_diff_objects_detects_create_update_and_delete_batches() -> None:
         ),
     ]
 
-    diff = service._WCProductsService__diff_objects(    # type: ignore  # pylint: disable=W0212
+    diff = service._diff_objects(  # pylint: disable=W0212
         [existing, new_product],
         [{"id": 42, "name": "Produit existant"}, {"id": 99, "name": "Produit distant"}],
     )
@@ -848,7 +848,7 @@ def test_wc_product_update_fails_when_woo_returns_no_wc_id(caplog) -> None:
     ]
     service.object_repo.get_by_ref.return_value = product
     service.api_read.get.return_value = MagicMock(json=MagicMock(return_value=None))
-    service._WCProductsService__diff_objects = MagicMock(  # type: ignore[attr-defined] # pylint: disable=W0212
+    service._diff_objects = MagicMock(  # pylint: disable=W0212
         return_value=[
             {"create": [
                     {
@@ -877,7 +877,7 @@ def test_wc_product_build_media_src_uses_internal_public_host_when_env_missing(m
     Sans FRONT_BASE_URL explicit, le service doit utiliser le host interne public attendu par
     WooCommerce.
     """
-    monkeypatch.setattr("db_models.services.woo_commerce.products._FRONT_BASE_URL", "")
+    monkeypatch.setattr("db_models.services.woo_commerce.products.payloads.FRONT_BASE_URL", "")
     service = object.__new__(WCProductsService)
     service.session = MagicMock()
     media = MagicMock(spec=MediaFiles)
@@ -933,7 +933,7 @@ def test_wc_product_build_media_src_uses_token_for_absolute_local_paths(monkeypa
     Un chemin de fichier local absolu doit quand même être servi via le jeton publique
     afin d'éviter d'envoyer une URL invalide à WooCommerce.
     """
-    monkeypatch.setattr("db_models.services.woo_commerce.products._FRONT_BASE_URL", "")
+    monkeypatch.setattr("db_models.services.woo_commerce.products.payloads.FRONT_BASE_URL", "")
     service = object.__new__(WCProductsService)
     service.session = MagicMock()
     media = MagicMock(spec=MediaFiles)
@@ -941,7 +941,9 @@ def test_wc_product_build_media_src_uses_token_for_absolute_local_paths(monkeypa
     media.is_local = False
     media.file_link = "/app/data-seed/images/29334045_main.jpg"
 
-    with patch("db_models.services.woo_commerce.products.MediaAccessTokenRepository") as repo_cls:
+    with patch(
+        "db_models.services.woo_commerce.products.payloads.MediaAccessTokenRepository"
+    ) as repo_cls:
         repo = repo_cls.return_value
         repo.get_last_by_media_id.return_value = None
         repo.create.return_value = MagicMock(token="token-abc123")
