@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?><Product>
+  <RecordReference>9782362563560</RecordReference>
+  <NotificationType>03</NotificationType>
+  <ProductIdentifier>
+    <ProductIDType>15</ProductIDType>
+    <IDValue>9782362563560</IDValue>
+  </ProductIdentifier>
+  <ProductIdentifier>
+    <ProductIDType>01</ProductIDType>
+    <IDValue>45479</IDValue>
+  </ProductIdentifier>
+  <Barcode>
+    <BarcodeType>02</BarcodeType>
+    <PositionOnProduct>00</PositionOnProduct>
+  </Barcode>
+  <DescriptiveDetail>
+    <ProductComposition>00</ProductComposition>
+    <ProductForm>BC</ProductForm>
+    <Measure>
+      <MeasureType>08</MeasureType>
+      <Measurement>385</Measurement>
+      <MeasureUnitCode>gr</MeasureUnitCode>
+    </Measure>
+    <NoCollection/>
+    <TitleDetail>
+      <TitleType>01</TitleType>
+      <TitleElement>
+        <TitleElementLevel>01</TitleElementLevel>
+        <TitleText>COMPTINES EN VOYAGE AVEC REMI</TitleText>
+      </TitleElement>
+    </TitleDetail>
+    <TitleDetail>
+      <TitleType>10</TitleType>
+      <TitleElement>
+        <TitleElementLevel>01</TitleElementLevel>
+        <TitleText>COMPTINES EN VOYAGE AVEC REMI</TitleText>
+      </TitleElement>
+    </TitleDetail>
+    <TitleDetail>
+      <TitleType>05</TitleType>
+      <TitleElement>
+        <TitleElementLevel>01</TitleElementLevel>
+        <TitleText>COMPTINES EN VOYAGE</TitleText>
+      </TitleElement>
+    </TitleDetail>
+    <Contributor>
+      <SequenceNumber>1</SequenceNumber>
+      <ContributorRole>A01</ContributorRole>
+      <KeyNames>GUICHARD REMI</KeyNames>
+    </Contributor>
+    <NoEdition/>
+    <Subject>
+      <SubjectSchemeIdentifier>29</SubjectSchemeIdentifier>
+      <SubjectCode>3728</SubjectCode>
+      <SubjectHeadingText>Livres illustr&#233;s (+ de 3 ans)</SubjectHeadingText>
+    </Subject>
+    <Subject sourcename="DILICOM" sourcetype="04">
+      <SubjectSchemeIdentifier>93</SubjectSchemeIdentifier>
+      <SubjectCode>YBCS</SubjectCode>
+    </Subject>
+    <Subject sourcename="DILICOM" sourcetype="04">
+      <SubjectSchemeIdentifier>98</SubjectSchemeIdentifier>
+      <SubjectCode>5AC</SubjectCode>
+    </Subject>
+    <Audience>
+      <AudienceCodeType>01</AudienceCodeType>
+      <AudienceCodeValue>01</AudienceCodeValue>
+    </Audience>
+  </DescriptiveDetail>
+  <PublishingDetail>
+    <Imprint>
+      <ImprintIdentifier>
+        <ImprintIDType>06</ImprintIDType>
+        <IDValue>3052362710018</IDValue>
+      </ImprintIdentifier>
+      <ImprintName sourcename="DILICOM" sourcetype="04">FORMULETTE</ImprintName>
+    </Imprint>
+    <PublishingDate sourcename="DILICOM" sourcetype="04">
+      <PublishingDateRole>01</PublishingDateRole>
+      <DateFormat>00</DateFormat>
+      <Date>20201002</Date>
+    </PublishingDate>
+  </PublishingDetail>
+  <ProductSupply>
+    <SupplyDetail>
+      <Supplier>
+        <SupplierRole sourcename="DILICOM" sourcetype="04">03</SupplierRole>
+        <SupplierIdentifier>
+          <SupplierIDType>06</SupplierIDType>
+          <IDValue>3012480230010</IDValue>
+        </SupplierIdentifier>
+        <SupplierName sourcename="DILICOM" sourcetype="04">DOD &amp; CIE</SupplierName>
+      </Supplier>
+      <ProductAvailability>20</ProductAvailability>
+      <Price>
+        <PriceType>04</PriceType>
+        <PriceAmount>16.90</PriceAmount>
+        <Tax>
+          <TaxType>01</TaxType>
+          <TaxRatePercent>5.50</TaxRatePercent>
+          <TaxableAmount>7.58</TaxableAmount>
+        </Tax>
+        <Tax>
+          <TaxType>01</TaxType>
+          <TaxRatePercent>20.00</TaxRatePercent>
+          <TaxableAmount>7.42</TaxableAmount>
+        </Tax>
+        <CurrencyCode>EUR</CurrencyCode>
+        <Territory>
+          <CountriesIncluded>FR</CountriesIncluded>
+        </Territory>
+      </Price>
+    </SupplyDetail>
+  </ProductSupply>
+</Product>
