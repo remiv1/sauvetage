@@ -70,15 +70,15 @@ app_front/blueprints/order/routes_htmx_list.py              40     29     10    
 app_front/blueprints/order/utils.py                        455    301    162     25    31%
 app_front/blueprints/order/utils_henrri.py                 167     65     42      9    58%
 app_front/blueprints/stock/__init__.py                       0      0      0      0   100%
-app_front/blueprints/stock/forms.py                        240     32     54     16    83%
-app_front/blueprints/stock/routes.py                       101     55     12      2    42%
+app_front/blueprints/stock/forms.py                        263     44     60     16    79%
+app_front/blueprints/stock/routes.py                       139     83     20      3    37%
 app_front/blueprints/stock/routes_data.py                   32      2      2      0    94%
 app_front/blueprints/stock/routes_htmx_council.py           27     16      4      0    35%
 app_front/blueprints/stock/routes_htmx_orders.py           124      8     30      8    90%
 app_front/blueprints/stock/routes_htmx_reservations.py      85     27     12      4    64%
-app_front/blueprints/stock/routes_htmx_return.py            28      7      0      0    75%
+app_front/blueprints/stock/routes_htmx_return.py           109     59     28      3    39%
 app_front/blueprints/stock/routes_htmx_search.py           299    111     62     18    60%
-app_front/blueprints/stock/utils.py                        264     79     60     14    67%
+app_front/blueprints/stock/utils.py                        288    101     66     14    62%
 app_front/blueprints/supplier/__init__.py                    0      0      0      0   100%
 app_front/blueprints/supplier/forms.py                      36      0      0      0   100%
 app_front/blueprints/supplier/routes.py                      6      0      0      0   100%
@@ -167,7 +167,7 @@ db_models/repositories/shipments.py                         37      9      4    
 db_models/repositories/stocks/__init__.py                    7      0      0      0   100%
 db_models/repositories/stocks/dilicom.py                    89     46     38      8    45%
 db_models/repositories/stocks/inventory.py                 123     36     44     10    65%
-db_models/repositories/stocks/orders.py                    280    100     96     33    60%
+db_models/repositories/stocks/orders.py                    320    115    104     38    61%
 db_models/repositories/stocks/stock.py                      42     17      6      1    58%
 db_models/repositories/suppliers.py                         69     49     18      0    23%
 db_models/repositories/sync_log.py                          34     20      0      0    41%
@@ -203,4 +203,4 @@ db_models/services/woo_commerce/orders.py                  253    136     90    
 db_models/services/woo_commerce/products.py                522    237    170     18    52%
 db_models/services/woo_commerce/utils.py                    48     20     30      5    53%
 ------------------------------------------------------------------------------------------
-TOTAL                                                    12070   4690   2766    512    57%
+TOTAL                                                    12276   4819   2822    521    57%

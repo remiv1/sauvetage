@@ -825,8 +825,9 @@ def test_new_return_section(client_all):   # pylint: disable=redefined-outer-nam
     """
     response = client_all.get("/stock/htmx/returns/section/create")
 
-    # Devrait retourner 200 (succès) au lieu de 302 (redirect)
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert response.text.startswith("<!-- template new.html -->")
+    assert 'value="Créer le retour"' in response.text
 
 
 def test_view_return(client_all, order_in_return):   # pylint: disable=redefined-outer-name, unused-argument
@@ -838,8 +839,21 @@ def test_view_return(client_all, order_in_return):   # pylint: disable=redefined
     return_id = order_in_return.id
     response = client_all.get(f"/stock/htmx/returns/view/{return_id}")
 
-    # Devrait retourner 200 (succès) au lieu de 302 (redirect)
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert response.text.startswith("<!-- template view.html -->")
+    assert "Retour fournisseur" in response.text
+
+
+def test_new_return_line_modal(client_all, order_in_return):
+    """Le formulaire d'une ligne de retour expose une modale et son libellé métier."""
+    response = client_all.get(
+        f"/stock/htmx/returns/{order_in_return.id}/line/create"
+    )
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'id="return-line-modal"' in body
+    assert 'value="Ajouter au retour"' in body
 
 
 def test_new_return_table(client_all):   # pylint: disable=redefined-outer-name, unused-argument
