@@ -1,2 +1,217 @@
 <!-- template new_line.html -->
-<!-- Fragments des commandes utilisées -->
+<!-- template new_line.html -->
+{% set reference_prices = line.general_object.get_valid_prices() if line and line.general_object else [] %}
+{# ── Modale de création/édition d'une ligne de retour fournisseur ───────── #}
+<div class="modal show" id="return-line-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    {{ 'Modifier la ligne de retour' if view_state == 'edit' else 'Nouvelle ligne de retour' }}
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+
+            <form id="return-line-form"
+                    method="post"
+                    hx-post="{{
+                    url_for('stock_htmx_return.new_return_line', order_id=form.order_id.data)
+                    if view_state == 'create' else
+                    url_for('stock_htmx_return.edit_return_line',
+                        order_id=form.order_id.data,
+                        line_id=line.id,
+                        action='edit'
+                    )
+                    }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML">
+                <div class="modal-body">
+                    {{ form.hidden_tag() }}
+
+                    {# ── Champ Article ──────────────────────────────────────── #}
+                    <div class="form-group mb-3" id="article-wrapper">
+                        {{ form.order_id() }}
+                        {{ form.general_object_id(class="form-control", id="general_object_id") }}
+                        <label for="object-wrapper">Article</label>
+                        <input type="text"
+                               class="form-control"
+                               name="object-wrapper"
+                               id="object-wrapper"
+                               {% if line and line.general_object.name %}
+                               value="{{ line.general_object.name }}"
+                               {% endif %}
+                               placeholder="Saisissez l'ID ou le nom de l'article"
+                               required
+                               hx-get="{{ url_for('inventory_htmx.get_items_search', supplier_id=order.supplier_id) if order else url_for('inventory_htmx.get_items_search') }}"
+                               hx-trigger="input changed delay:500ms"
+                               hx-target="#article-search-results"
+                               hx-swap="innerHTML"
+                               autocomplete="off"
+                        >
+
+                        <div id="article-search-results" class="dropdown-menu position-static mt-1">
+                            {# Les résultats de la recherche seront injectés ici #}
+                        </div>
+
+                        {% if form.general_object_id.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.general_object_id.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# ── Quantité ─────────────────────────────────────────── #}
+                    <div class="form-group mb-3">
+                        {{ form.quantity.label(class="form-label") }}
+                        {{ form.quantity(
+                            class="form-control",
+                            id="quantity",
+                            placeholder="0",
+                            required=True,
+                            type="number",
+                            step="1",
+                            min="0"
+                        ) }}
+                        {% if form.quantity.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.quantity.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# ── Composantes financières ────────────────────────────────── #}
+                    <div class="form-group mb-3">
+                        <label class="form-label">Prix et TVA de l'article</label>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-1">
+                                <thead>
+                                    <tr>
+                                        <th>Prix de vente HT</th>
+                                        <th>Prix d'achat HT</th>
+                                        <th>TVA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="price-components">
+                                    {% for entry in form.prices %}
+                                    {% set reference_price = reference_prices[loop.index0].price if loop.index0 < reference_prices|length else entry.form.unit_price.data %}
+                                    <tr class="price-component" data-selling-price="{{ reference_price or 0 }}">
+                                        <td class="selling-price">{{ "%.2f"|format(reference_price|float) }} €</td>
+                                        <td>{{ entry.form.unit_price(class="form-control form-control-sm purchase-price", type="number", min="0", step="0.01", required=True) }}</td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                {{ entry.form.vat_rate(class="form-control vat-rate", type="number", min="0", step="0.001", required=True) }}
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="price-components-help" class="text-muted small">Sélectionnez un article pour charger ses tarifs actifs.</div>
+                    </div>
+
+                    {# ── Résumé du calcul HT ─────────────────────────────────────── #}
+                    <div class="alert alert-info mt-4" id="line-summary">
+                        <p class="mb-1"><small>Montant HT :</small></p>
+                        <p class="fs-5 fw-bold mb-1" id="line-ht">0,00 €</p>
+                        <p class="mb-1"><small>Montant TTC :</small></p>
+                        <p class="fs-5 fw-bold" id="line-ttc">0,00 €</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                            title="Annuler la création de la ligne de retour"
+                            hx-get="{{ url_for('stock_htmx_return.cleared') }}"
+                            hx-target="#new-line-modal"
+                            hx-swap="innerHTML"
+                    >
+                        Annuler
+                    </button>
+                    {{ form.submit(class="btn btn-primary", id="submit-line", value="Ajouter au retour") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Script de calcul du montant ─────────────────────────────────── #}
+<script>
+function formatPrice(value) {
+    return value.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }) + ' €';
+}
+
+(function() {
+    function initReturnLineModal() {
+        const quantityInput = document.getElementById('quantity');
+        const componentsBody = document.getElementById('price-components');
+        const lineHT = document.getElementById('line-ht');
+        const lineTTC = document.getElementById('line-ttc');
+
+        if (!quantityInput || !lineHT) return;
+
+        function calculateTotal() {
+            const quantity = Number.parseFloat(quantityInput.value || 0);
+            let unitHT = 0;
+            let unitTTC = 0;
+            document.querySelectorAll('#price-components .price-component').forEach(function(row) {
+                const price = Number.parseFloat(row.querySelector('.purchase-price').value || 0);
+                const vat = Number.parseFloat(row.querySelector('.vat-rate').value || 0);
+                unitHT += price;
+                unitTTC += price * (1 + vat / 100);
+            });
+            lineHT.textContent = formatPrice(quantity * unitHT);
+            if (lineTTC) lineTTC.textContent = formatPrice(quantity * unitTTC);
+        }
+
+        function setPrices(prices, fallbackPrice) {
+            if (!componentsBody) return;
+            const sourcePrices = prices.length ? prices : [{unit_price: Number(fallbackPrice || 0), vat_rate: 0}];
+            componentsBody.innerHTML = sourcePrices.map(function(price, index) {
+                const sellingPrice = Number(price.unit_price || 0);
+                const vatRate = Number(price.vat_rate || 0);
+                return '<tr class="price-component" data-selling-price="' + sellingPrice + '">' +
+                    '<td class="selling-price">' + formatPrice(sellingPrice) + '</td>' +
+                    '<td><input class="form-control form-control-sm purchase-price" type="number" min="0" step="0.01" required name="prices-' + index + '-unit_price" value="' + sellingPrice.toFixed(2) + '"></td>' +
+                    '<td><div class="input-group input-group-sm"><input class="form-control vat-rate" type="number" min="0" step="0.001" required name="prices-' + index + '-vat_rate" value="' + vatRate + '"><span class="input-group-text">%</span></div></td>' +
+                    '</tr>';
+            }).join('');
+            const help = document.getElementById('price-components-help');
+            if (help) help.textContent = sourcePrices.length > 1 ? sourcePrices.length + ' composantes financières seront enregistrées.' : 'Une composante financière sera enregistrée.';
+            calculateTotal();
+        }
+
+        if (componentsBody) {
+            componentsBody.addEventListener('input', calculateTotal);
+        }
+        if (quantityInput) {
+            quantityInput.addEventListener('input', calculateTotal);
+        }
+
+        window.setOrderLinePrices = setPrices;
+
+        calculateTotal();
+    }
+
+    initReturnLineModal();
+    document.addEventListener('htmx:afterSettle', initReturnLineModal);
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        try {
+            var target = evt.detail && evt.detail.target;
+            if (target && typeof target.querySelector === 'function') {
+                if (target.id === 'new-line-modal' || target.querySelector('#return-line-modal')) {
+                    initReturnLineModal();
+                }
+            }
+        } catch (e) {
+            console.warn('Error initializing return line modal (if any)', e);
+        }
+    });
+})();
+</script>

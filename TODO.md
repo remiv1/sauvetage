@@ -25,8 +25,8 @@
 - [ ] Création d'une commande fournisseur
   - [X] Ajout de lignes de commandes
   - [X] Validation de la commande
-    - [ ] Réception DILICOM
-    - [ ] Réception message DILICOM
+    - [X] Réception DILICOM
+    - [X] Réception message DILICOM
   - [X] Création d'une réservation de stock
   - [X] Retour de la réservation de stock
 - [X] Gestion d'un inventaire
@@ -47,5 +47,5 @@
 - [X] Le formulaire de création d'objet est différent de celui de modification d'objet, il faut unifier les deux.
 - [X] Revoir la gestion des variations produits lors des synchronisations WooCommerce, il faut que les variations soient créées sur WooCommerce si elles n'existent pas.
 - [X] Mettre en place tous les tests sur les stocks : commandes, suppression d'une ligne, réservations, annulations, etc.
-- [ ] Gérer les imports et commandes de produits composés avec plusieurs prix/tva.
-- [ ] Traiter les retours de commandes fournisseurs.
+- [!] Gérer les imports et commandes de produits composés avec plusieurs prix/tva. → Mail Dilicom
+- [X] Traiter les retours de commandes fournisseurs.

@@ -36,6 +36,20 @@ class OrderRepository(BaseRepository):
             for price in line.prices
         ]
 
+    @staticmethod
+    def _copy_line_prices_from_list(
+        prices: list[OrderInLinePrice],
+    ) -> list[OrderInLinePrice]:
+        """Copie une liste de composantes financières fournisseur."""
+        return [
+            OrderInLinePrice(
+                unit_price=price.unit_price,
+                vat_rate=price.vat_rate,
+                position=price.position,
+            )
+            for price in prices
+        ]
+
     def _compensate_inventory_movements(self, movement_ids: set, order_id: int) -> None:
         """Crée des mouvements de compensation inverse pour annuler les mouvements d'inventaire
         liés à une commande annulée.
@@ -214,33 +228,44 @@ class OrderRepository(BaseRepository):
         return order_in.id
 
     def cancel_supplier_order(
-        self, order_id: int, reservation: bool = False
+        self, order_id: int, out: bool = False, reservation: bool = False
     ) -> None:
         """
-        Supprime une commande fournisseur (ou réservation) et ses lignes associées
-        et compense les mouvements d'inventaire liés.
+        Supprime une commande fournisseur, un retour fournisseur ou une réservation
+        et ses lignes associées, puis compense les mouvements d'inventaire liés.
 
         Args:
             order_id: L'identifiant de la commande à annuler.
-            reservation: True pour supprimer une réservation (vérifie l'état brouillon).
+            out: True pour supprimer un retour fournisseur.
+            reservation: True pour supprimer une réservation.
 
         Raises:
-            ValueError: Si la commande n'existe pas.
+            ValueError: Si la commande n'existe pas ou si les contraintes de type/état
+                        ne sont pas respectées.
             RuntimeError: En cas d'erreur lors du commit.
         """
-        label = "Réservation" if reservation else "Commande"
+        if reservation:
+            label = "Réservation"
+            expected_prefix = "RES-"
+        elif out:
+            label = "Retour fournisseur"
+            expected_prefix = "RET-"
+        else:
+            label = "Commande"
+            expected_prefix = "CMD-"
+
         order = self.session.get(OrderIn, order_id)
         if order is None:
             raise ValueError(f"{label} {order_id} introuvable")
 
-        if reservation:
-            if not order.order_ref.startswith("RES-"):
-                raise ValueError(f"La commande {order_id} n'est pas une réservation")
-            if order.order_state != "draft":
-                raise ValueError(
-                    f"Seules les réservations à l'état brouillon peuvent être supprimées "
-                    f"(état actuel : {order.order_state})"
-                )
+        if not order.order_ref.startswith(expected_prefix):
+            raise ValueError(f"La commande {order_id} n'est pas un(e) {label.lower()}")
+
+        if reservation and order.order_state != "draft":
+            raise ValueError(
+                f"Seules les réservations à l'état brouillon peuvent être supprimées "
+                f"(état actuel : {order.order_state})"
+            )
 
         # Chargement ORM des lignes pour passer par les relations SQLAlchemy
         lines = (
@@ -524,8 +549,141 @@ class OrderRepository(BaseRepository):
             ) from exc
         return order
 
+    def _build_receive_movements(
+        self,
+        line: OrderInLine,
+        order_id: int,
+        is_return: bool,
+        qty_received: int,
+        qty_cancelled: int,
+        qty_remaining: int,
+        unit_price_ht: float,
+    ) -> tuple[InventoryMovements | None, InventoryMovements | None, InventoryMovements | None]:
+        """Construit les mouvements d'inventaire pour une réception de ligne."""
+        if is_return:
+            movement_received = InventoryMovements(
+                general_object_id=line.general_object_id,
+                movement_type="out",
+                quantity=qty_received,
+                price_at_movement=unit_price_ht,
+                source="Stock",
+                destination=f"Retour fournisseur #{order_id}",
+                notes=f"Retour confirmé de {qty_received} unité(s) "
+                      f"pour la ligne #{line.id} du retour #{order_id}",
+            )
+            movement_cancelled = InventoryMovements(
+                general_object_id=line.general_object_id,
+                movement_type="in",
+                quantity=qty_cancelled,
+                price_at_movement=unit_price_ht,
+                source=f"Annulation retour fournisseur #{order_id}",
+                destination="Stock",
+                notes=f"Annulation de {qty_cancelled} unité(s) "
+                      f"pour la ligne #{line.id} du retour #{order_id}",
+            )
+            movement_remaining = InventoryMovements(
+                general_object_id=line.general_object_id,
+                movement_type="out",
+                quantity=qty_remaining,
+                price_at_movement=unit_price_ht,
+                source="Stock",
+                destination=f"Retour fournisseur #{order_id}",
+                notes=f"Reste en attente de retour ({qty_remaining} unité(s)) "
+                      f"pour la ligne #{line.id} du retour #{order_id}",
+            )
+        else:
+            movement_received = InventoryMovements(
+                general_object_id=line.general_object_id,
+                movement_type="in",
+                quantity=qty_received,
+                price_at_movement=unit_price_ht,
+                source=f"Réception commande #{order_id}",
+                destination="Stock",
+                notes=f"Réception de {qty_received} unité(s) "
+                      f"pour la ligne #{line.id} de la commande #{order_id}",
+            )
+            movement_cancelled = None
+            movement_remaining = InventoryMovements(
+                general_object_id=line.general_object_id,
+                movement_type="pending",
+                quantity=qty_remaining,
+                price_at_movement=unit_price_ht,
+                source=f"Commande fournisseur #{order_id}",
+                destination="Stock",
+                notes=f"Reste en attente ({qty_remaining} unité(s)) "
+                      f"pour la ligne #{line.id} de la commande #{order_id}",
+            )
+        return movement_received, movement_cancelled, movement_remaining
+
+    def _persist_received_line(
+        self,
+        line: OrderInLine,
+        movement: InventoryMovements,
+        prices: list[OrderInLinePrice],
+        qty_received: int,
+    ) -> None:
+        """Met à jour la ligne originale après réception et applique les prix."""
+        line.qty_received = qty_received
+        line.line_state = "received"
+        line.inventory_movement_id = movement.id
+        line.prices.clear()
+        self.session.flush()
+        line.prices = self._copy_line_prices_from_list(prices)
+
+    def _persist_cancelled_line(
+        self,
+        line: OrderInLine,
+        order_id: int,
+        movement: InventoryMovements | None,
+        prices: list[OrderInLinePrice],
+        qty_cancelled: int,
+    ) -> None:
+        """Crée la ligne annulée et son mouvement associé si présent."""
+        if movement is not None:
+            self.session.add(movement)
+            self.session.flush()
+            cancelled_movement_id = movement.id
+        else:
+            cancelled_movement_id = None
+        cancelled_line = OrderInLine(
+            order_in_id=order_id,
+            general_object_id=line.general_object_id,
+            inventory_movement_id=cancelled_movement_id,
+            qty_ordered=qty_cancelled,
+            qty_received=0,
+            line_state="cancelled",
+            prices=self._copy_line_prices_from_list(prices),
+        )
+        self.session.add(cancelled_line)
+
+    def _persist_pending_line(
+        self,
+        line: OrderInLine,
+        order_id: int,
+        movement: InventoryMovements,
+        prices: list[OrderInLinePrice],
+        qty_remaining: int,
+    ) -> None:
+        """Crée la ligne en attente et son mouvement associé."""
+        self.session.add(movement)
+        self.session.flush()
+        pending_line = OrderInLine(
+            order_in_id=order_id,
+            general_object_id=line.general_object_id,
+            inventory_movement_id=movement.id,
+            qty_ordered=qty_remaining,
+            qty_received=0,
+            line_state="pending",
+            prices=self._copy_line_prices_from_list(prices),
+        )
+        self.session.add(pending_line)
+
     def receive_order_line(
-        self, line_id: int, qty_received: int, qty_cancelled: int
+        self,
+        line_id: int,
+        qty_received: int,
+        qty_cancelled: int,
+        prices: list[OrderInLinePrice] | None = None,
     ) -> int:
         """Traite la réception d'une ligne de commande avec split possible.
 
@@ -543,6 +701,9 @@ class OrderRepository(BaseRepository):
             line_id: L'identifiant de la ligne de commande.
             qty_received: La quantité reçue.
             qty_cancelled: La quantité annulée.
+            prices: Composantes financières à appliquer sur les lignes générées
+                    (utile pour les retours fournisseurs où le prix est validé
+                    à la réception). Si None, les prix de la ligne source sont conservés.
 
         Returns:
             L'ID de la commande parente.
@@ -568,82 +729,51 @@ class OrderRepository(BaseRepository):
                 f"dépasse la quantité commandée ({line.qty_ordered})."
             )
 
-        order_id = line.order_in_id
+        order = self.session.get(OrderIn, line.order_in_id)
+        if order is None:
+            raise ValueError(f"Commande {line.order_in_id} introuvable")
+        order_id = order.id
+        is_return = order.order_ref.startswith("RET-")
 
-        # ── Compensation du mouvement original via la méthode existante ──
+        effective_prices = prices if prices else self._copy_line_prices(line)
+
         if line.inventory_movement_id is not None:
             self._compensate_inventory_movements(
                 {line.inventory_movement_id}, order_id
             )
             self.session.flush()
 
-        # ── Mouvement 'in' pour la quantité reçue ──
+        unit_price_ht = float(
+            sum(Decimal(str(price.unit_price)) for price in effective_prices)
+        )
+
+        movement_received, movement_cancelled, movement_remaining = \
+            self._build_receive_movements(
+                line, order_id, is_return, qty_received, qty_cancelled,
+                qty_remaining, unit_price_ht,
+            )
+
         if qty_received > 0:
-            movement_in = InventoryMovements(
-                general_object_id=line.general_object_id,
-                movement_type="in",
-                quantity=qty_received,
-                price_at_movement=float(line.get_unit_price_ht()),
-                source=f"Réception commande #{order_id}",
-                destination="Stock",
-                notes=f"Réception de {qty_received} unité(s) "
-                      f"pour la ligne #{line_id} de la commande #{order_id}",
-            )
-            self.session.add(movement_in)
+            self.session.add(movement_received)
             self.session.flush()
+            self._persist_received_line(line, movement_received, effective_prices, qty_received)
 
-            # Mise à jour de la ligne originale → received
-            line.qty_received = qty_received
-            line.line_state = "received"
-            line.inventory_movement_id = movement_in.id
-
-        # ── Mouvement 'pending' de compensation pour annulation ──
-        # (le mouvement pending original a déjà été compensé en totalité,
-        #  pas besoin de mouvement supplémentaire pour la partie annulée)
-
-        # ── Ligne 'cancelled' pour la quantité annulée ──
         if qty_cancelled > 0:
-            cancelled_line = OrderInLine(
-                order_in_id=order_id,
-                general_object_id=line.general_object_id,
-                inventory_movement_id=None,
-                qty_ordered=qty_cancelled,
-                qty_received=0,
-                line_state="cancelled",
-                prices=self._copy_line_prices(line),
+            self._persist_cancelled_line(
+                line, order_id, movement_cancelled, effective_prices, qty_cancelled
             )
-            self.session.add(cancelled_line)
 
-        # ── Nouveau mouvement 'pending' + ligne pour le reste en attente ──
         if qty_remaining > 0:
-            movement_pending = InventoryMovements(
-                general_object_id=line.general_object_id,
-                movement_type="pending",
-                quantity=qty_remaining,
-                price_at_movement=float(line.get_unit_price_ht()),
-                source=f"Commande fournisseur #{order_id}",
-                destination="Stock",
-                notes=f"Reste en attente ({qty_remaining} unité(s)) "
-                      f"pour la ligne #{line_id} de la commande #{order_id}",
+            self._persist_pending_line(
+                line, order_id, movement_remaining, effective_prices, qty_remaining
             )
-            self.session.add(movement_pending)
-            self.session.flush()
 
-            pending_line = OrderInLine(
-                order_in_id=order_id,
-                general_object_id=line.general_object_id,
-                inventory_movement_id=movement_pending.id,
-                qty_ordered=qty_remaining,
-                qty_received=0,
-                line_state="pending",
-                prices=self._copy_line_prices(line),
-            )
-            self.session.add(pending_line)
-
-        # Si rien n'a été reçu (tout annulé ou reste en attente), marquer la ligne en conséquence
         if qty_received == 0 and qty_cancelled > 0 and qty_remaining == 0:
             line.line_state = "cancelled"
             line.inventory_movement_id = None  # type: ignore
+            line.prices.clear()
+            self.session.flush()
+            line.prices = self._copy_line_prices_from_list(effective_prices)
 
         try:
             self.session.commit()
@@ -653,9 +783,7 @@ class OrderRepository(BaseRepository):
                 f"Erreur lors de la réception de la ligne : {exc}"
             ) from exc
 
-        # Vérifier si toutes les lignes sont finalisées pour mettre à jour l'état de la commande
         self._check_order_completion(order_id)
-
         return order_id
 
     # ── Réservations ───────────────────────────────────────────────────────

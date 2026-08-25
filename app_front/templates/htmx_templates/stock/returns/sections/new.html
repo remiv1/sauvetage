@@ -1,18 +1,69 @@
 <!-- template new.html -->
-{# ── Section de création de retour ─────────────────────────────────── #}
-
+{% from 'common/macros.html' import render_field_errors %}
 <div class="orders-header">
-    <h2 id="create-return-title">Nouveau retour</h2>
+    <h2 id="create-return-title">Nouveau retour fournisseur</h2>
 </div>
-<div class="orders-form">
+<div id="new-return-form">
+    <form
+        method="post"
+        hx-post="{{ url_for('stock_htmx_return.new_return_section') }}"
+        hx-target="#orders-management"
+        hx-swap="innerHTML"
+    >
+        {{ form.hidden_tag() }}
+
+        <div class="form-group" id="supplier-wrapper">
+            {{ form.supplier_id(id="supplier_id", type="hidden") }}
+            {{ form.supplier_name.label(class="form-label") }}
+            {{ form.supplier_name(class="form-control", id="supplier_name",
+                placeholder="ID ou nom du fournisseur", required=True,
+                **{
+                    "hx-get": url_for("supplier_htmx.get_suppliers", type_of_data="id_name_gln", allow_create="true"),
+                    "hx-trigger": "input changed delay:500ms",
+                    "hx-target": "#search-results",
+                    "hx-swap": "innerHTML"
+                }
+                )
+            }}
+
+            <div id="search-results"
+                 class="dropdown-menu show">
+                 <!-- Les résultats de recherche seront injectés ici -->
+            </div>
+            {{ render_field_errors(form.supplier_name) }}
+            {{ render_field_errors(form.supplier_id) }}
+        </div>
+
+        <div class="mt-2">
+            {{ form.submit(class="btn btn-primary", disabled=True, value="Créer le retour") }}
+        </div>
+    </form>
 </div>
-<div class="orders-actions">
-    <div class="btn btn-secondary" id="back-from-create-return">
-        {% include "svg/close.html" %}
-        Retour
-    </div>
-    <div class="btn btn-primary" id="create-return-validation">
-        {% include "svg/checkmark.html" %}
-        Valider le retour
-    </div>
-</div>
+<script>
+(() => {
+    const toggle = () => {
+        const formElement = document.getElementById('new-return-form');
+        if (!formElement) return;
+
+        const supplier = formElement.querySelector('#supplier_id');
+        const submit = formElement.querySelector('[type="submit"]');
+
+        if (submit && supplier) {
+            const hasSupplier = supplier.value && supplier.value.trim();
+            submit.disabled = !hasSupplier;
+        }
+    };
+
+    const formElement = document.getElementById('new-return-form');
+    if (formElement) {
+        toggle();
+        formElement.addEventListener('input', toggle, true);
+        formElement.addEventListener('change', toggle, true);
+        formElement.addEventListener('htmx:afterSettle', toggle);
+        formElement.addEventListener('htmx:afterSwap', toggle);
+    }
+
+    document.addEventListener('htmx:afterSettle', toggle);
+    document.addEventListener('htmx:afterSwap', toggle);
+})();
+</script>

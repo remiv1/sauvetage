@@ -200,18 +200,19 @@ def get_supplier_orders(
 
 
 def cancel_supplier_order(
-    order_id: int, reservation: bool = False
+    order_id: int, out: bool = False, reservation: bool = False
 ) -> bool:
-    """Supprime une commande fournisseur (ou réservation) et ses lignes associées.
+    """Supprime une commande fournisseur, un retour ou une réservation et ses lignes.
 
     Les mouvements d'inventaire liés sont désassociés et un mouvement inverse est créé.
 
     Args:
         order_id: L'identifiant de la commande à annuler.
-        reservation: True pour supprimer une réservation (vérifie l'état brouillon).
+        out: True pour supprimer un retour fournisseur.
+        reservation: True pour supprimer une réservation.
     """
     stock_repo = StockRepository(db_conf.get_main_session())
-    stock_repo.cancel_supplier_order(order_id, reservation=reservation)
+    stock_repo.cancel_supplier_order(order_id, out=out, reservation=reservation)
     return True
 
 
@@ -234,12 +235,13 @@ def build_reservation_context(form: Any) -> Dict[str, str]:
 
 
 def create_order_in_db(
-    form: OrderInCreateForm, reservation: bool = False
+    form: OrderInCreateForm, out: bool = False, reservation: bool = False
 ) -> int:
-    """Crée une nouvelle commande fournisseur (ou réservation) en base.
+    """Crée une nouvelle commande fournisseur, un retour ou une réservation en base.
 
     Args:
         form: Le formulaire contenant les données de la commande.
+        out: True pour créer un retour fournisseur (RET-).
         reservation: True pour créer une réservation (RES-).
     """
     supplier_id = form.supplier_id.data
@@ -258,7 +260,9 @@ def create_order_in_db(
         supplier_id=supplier_id,
         reservation_context=reservation_context,
     )
-    return stock_repo.edit_order_in_db(order, action="create", reservation=reservation)
+    return stock_repo.edit_order_in_db(
+        order, action="create", out=out, reservation=reservation
+    )
 
 
 def get_order_by_id(order_id: int) -> OrderIn:
@@ -349,6 +353,79 @@ def edit_order_in_line_db(
         raise ValueError("Action inconnue : " + action)
     stock_repo.update_order_in_price(order_id)
     return line_id
+
+
+def edit_return_order_in_line_db(
+    form: OrderInLineForm, order_id: int, action: str = "create",
+    line_id: int = 0
+) -> int:
+    """Crée/édite/supprime une ligne de retour fournisseur en base.
+
+    Args:
+        form: Le formulaire contenant les données de la ligne.
+        order_id: L'identifiant du retour.
+        action: "create", "edit" ou "delete".
+        line_id: L'identifiant de la ligne (pour edit/delete).
+    """
+    try:
+        line_id = int(line_id)
+    except ValueError as e:
+        msg = f"ID de ligne invalide : {line_id}"
+        logger.error(msg)
+        raise ValueError(msg) from e
+    stock_repo = StockRepository(db_conf.get_main_session())
+
+    if action == "delete":
+        line_id = stock_repo.delete_order_in_line_db(line_id)
+    elif action in ["create", "edit"]:
+        order = form.validate_form_data(reservation=False)
+        line = OrderInLine(
+            order_in_id=order.id,
+            general_object_id=order.general_object_id,
+            qty_ordered=order.qty,
+            prices=[
+                OrderInLinePrice(
+                    unit_price=price.unit_price,
+                    vat_rate=price.vat_rate,
+                    position=position,
+                )
+                for position, price in enumerate(order.prices)
+            ],
+        )
+        if action == "edit":
+            line.id = line_id
+        line_id = stock_repo.edit_order_in_line_db(
+            new_line=line, action=action, out=True
+        )
+    else:
+        raise ValueError("Action inconnue : " + action)
+    stock_repo.update_order_in_price(order_id)
+    return line_id
+
+
+def receive_return_order_line(
+    line_id: int,
+    qty_received: int,
+    qty_cancelled: int,
+    prices: list[OrderInLinePrice],
+) -> int:
+    """Traite la réception d'une ligne de retour fournisseur avec prix validés.
+
+    Args:
+        line_id: L'identifiant de la ligne.
+        qty_received: Quantité confirmée comme retournée au fournisseur.
+        qty_cancelled: Quantité annulée/réintégrée en stock.
+        prices: Composantes financières validées à la réception.
+
+    Returns:
+        L'ID du retour parent.
+    """
+    stock_repo = StockRepository(db_conf.get_main_session())
+    order_id = stock_repo.receive_order_line(
+        line_id, qty_received, qty_cancelled, prices=prices
+    )
+    stock_repo.update_order_in_price(order_id)
+    return order_id
 
 
 def search_stock_global(

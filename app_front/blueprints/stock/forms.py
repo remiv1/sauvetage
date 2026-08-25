@@ -460,3 +460,52 @@ class ExternalRefForm(FlaskForm):
 
     external_ref = StringField("Référence fournisseur")
     submit = SubmitField("Mettre à jour")
+
+
+class ReceiveReturnLinePriceForm(Form):
+    """Composante financière validée lors de la réception d'un retour fournisseur."""
+
+    unit_price = FloatField("Prix d'achat HT", validators=[InputRequired(), NumberRange(min=0)])
+    vat_rate = FloatField(VAT_RATE, validators=[InputRequired(), NumberRange(min=0)])
+
+
+class ReceiveReturnLineForm(FlaskForm):
+    """Formulaire de réception d'une ligne de retour fournisseur avec prix/TVA."""
+
+    line_id = HiddenField("ID de la ligne", validators=[DataRequired()])
+    order_id = HiddenField("ID du retour", validators=[DataRequired()])
+    qty_received = StringField("Quantité retournée", validators=[DataRequired()])
+    qty_cancelled = StringField("Quantité annulée", validators=[DataRequired()])
+    prices = FieldList(FormField(ReceiveReturnLinePriceForm), min_entries=1)
+    submit = SubmitField("Valider la réception")
+
+    def validate_receive_data(self, qty_ordered: int) -> tuple[int, int]:
+        """Valide les quantités de réception.
+
+        Args:
+            qty_ordered: La quantité initiale de la ligne.
+
+        Returns:
+            tuple[int, int]: (qty_received, qty_cancelled).
+
+        Raises:
+            ValueError: Si les données sont invalides.
+        """
+        try:
+            qty_r = int(self.qty_received.data or 0)
+            qty_c = int(self.qty_cancelled.data or 0)
+        except (ValueError, TypeError) as e:
+            raise ValueError("Les quantités doivent être des nombres entiers.") from e
+
+        if qty_r < 0 or qty_c < 0:
+            raise ValueError("Les quantités ne peuvent pas être négatives.")
+        if qty_r + qty_c > qty_ordered:
+            raise ValueError(
+                f"La somme retournés ({qty_r}) + annulés ({qty_c}) "
+                f"dépasse la quantité initiale ({qty_ordered})."
+            )
+        if qty_r == 0 and qty_c == 0:
+            raise ValueError(
+                "Veuillez saisir au moins une quantité retournée ou annulée."
+            )
+        return qty_r, qty_c

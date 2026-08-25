@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 import toml
 
 from flask import Blueprint, flash, make_response, redirect, request, send_file, url_for
@@ -16,6 +17,8 @@ from app_front.blueprints.stock.utils import (
 )
 from app_front.blueprints.stock.forms import OrderInCreateForm
 from app_front.utils.documents import build_qrcode_data_uri, create_pdf_from_template
+
+PDF_MIMETYPE = "application/pdf"
 
 bp_stock = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -137,7 +140,7 @@ def order_download_slip(order_id: int):
     )
     return send_file(
         pdf_stream,
-        mimetype="application/pdf",
+        mimetype=PDF_MIMETYPE,
         as_attachment=True,
         download_name=filename,
     )
@@ -151,8 +154,112 @@ def create_order():
 
 @bp_stock.route("/returns/new", methods=["GET", "POST"])
 def create_return():
-    """Création d'un retour fournisseur"""
-    return render_page("stock_order")
+    """Création d'un retour fournisseur."""
+    form = OrderInCreateForm()
+    returns_list = get_supplier_orders(out=True)
+    if form.validate_on_submit():
+        try:
+            create_order_in_db(form, out=True)
+            flash("Retour fournisseur créé avec succès.", "success")
+            return redirect(url_for("stock_htmx_return.returns"))
+        except (ValueError, RuntimeError) as exc:
+            flash(str(exc), "error")
+    return render_page("stock_returns", returns=returns_list)
+
+
+@bp_stock.route("/returns/<int:order_id>", methods=["GET"])
+def return_view(order_id: int):
+    """Route d'accès direct à un retour fournisseur (QR / URL partageable)."""
+    modal = request.args.get("modal", "view")
+    return render_page("stock_returns", open_order_id=order_id, modal=modal)
+
+
+def _build_return_slip_line(line: Any) -> dict[str, Any] | None:
+    """Construit le dictionnaire représentant une ligne du bon de retour."""
+    if line.line_state == "cancelled":
+        return None
+    unit_price = float(line.get_unit_price_ht())
+    line_total = float(line.qty_ordered or 0) * unit_price
+    return {
+        "article_name": line.general_object.name
+            if line.general_object
+            else f"Article #{line.general_object_id}",
+        "ean13": getattr(line.general_object, "ean13", None) or "-",
+        "quantity": int(line.qty_ordered or 0),
+        "unit_price": f"{unit_price:.2f} EUR",
+        "prices": [
+            {
+                "unit_price": f"{float(price.unit_price):.2f} EUR",
+                "vat_rate": f"{float(price.vat_rate):g} %",
+            }
+            for price in line.prices
+        ],
+        "line_total_ht": f"{line_total:.2f} EUR",
+        "line_total_value": line_total,
+    }
+
+
+@bp_stock.route("/returns/<int:order_id>/slip.pdf", methods=["GET"])
+def return_download_slip(order_id: int):
+    """Télécharge le bon de retour fournisseur (A4 paysage N&B)."""
+    order = get_order_by_id(order_id)
+
+    open_url = url_for("stock.order_view", order_id=order_id, modal="view", _external=True)
+    qr_code_data_uri = build_qrcode_data_uri(open_url)
+
+    lines: list[dict[str, Any]] = []
+    total_ht = 0.0
+    for line in (order.orderin_lines or []):
+        slip_line = _build_return_slip_line(line)
+        if slip_line is None:
+            continue
+        lines.append(slip_line)
+        total_ht += slip_line["line_total_value"]
+
+    company = get_company_config()
+    supplier = order.supplier
+    pdf_stream, filename = create_pdf_from_template(
+        "pdf/supplier_return_slip.html",
+        {
+            "order": {
+                "reference": order.order_ref,
+                "external_ref": order.external_ref or "-",
+                "supplier_name": supplier.name if supplier else "-",
+                "state": order.order_state,
+                "date": datetime.now().strftime("%d/%m/%Y"),
+            },
+            "supplier": {
+                "name": supplier.name if supplier else "-",
+                "address": supplier.address or "-",
+                "siren_siret": supplier.siren_siret or "-",
+                "vat_number": supplier.vat_number or "-",
+                "contact_phone": supplier.contact_phone or "-",
+                "contact_email": supplier.contact_email or "-",
+            },
+            "company": {
+                "name": company.get("name", "-"),
+                "address": company.get("address", "-"),
+                "siret": company.get("siret", "-"),
+                "greffe": company.get("greffe", "-"),
+                "naf": company.get("naf", "-"),
+                "tva": company.get("tva", "-"),
+                "tel": company.get("tel", "-"),
+                "email": company.get("mail", "-"),
+            },
+            "lines": lines,
+            "total_ht": f"{total_ht:.2f} EUR",
+            "internal": True,
+            "qr_code_data_uri": qr_code_data_uri,
+        },
+        fallback_filename=f"{order.order_ref}.pdf",
+    )
+    return send_file(
+        pdf_stream,
+        mimetype=PDF_MIMETYPE,
+        as_attachment=True,
+        download_name=filename,
+    )
+
 
 # ——————————————————————— Réservations de stocks ———————————————————————
 
@@ -233,7 +340,7 @@ def reservation_download_slip(order_id: int):
     )
     return send_file(
         pdf_stream,
-        mimetype="application/pdf",
+        mimetype=PDF_MIMETYPE,
         as_attachment=True,
         download_name=filename,
     )

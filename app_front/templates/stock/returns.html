@@ -1,0 +1,25 @@
+{% extends layout.extend_layout %}
+
+{% block content %}
+
+<section class="orders-container" id="orders-management">
+    {% include "htmx_templates/stock/returns/sections/home.html" %}
+</section>
+<div id="supplier-create-modal">
+    <!-- Le formulaire d'ajout rapide de fournisseur sera injecté ici -->
+</div>
+
+{% if open_order_id %}
+<script>
+(() => {
+    const url = new URL(`/stock/htmx/returns/view/{{ open_order_id }}`, globalThis.location.origin);
+    const modal = new URLSearchParams(globalThis.location.search).get('modal') || '{{ modal or "" }}';
+    if (modal) {
+        url.searchParams.set('modal', modal);
+    }
+    htmx.ajax('GET', url.toString(), { target: '#orders-management', swap: 'innerHTML' });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

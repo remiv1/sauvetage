@@ -1,14 +1,15 @@
 <!-- template view.html -->
 {% set reservation = reservation|default(false) %}
+{% set is_return = is_return|default(false) %}
 <div class="new-order-wrapper">
     {# ── En-tête avec bouton de retour ──────────────────────────────────────── #}
     <div class="orders-header">
         <div class="header-top">
             <button class="btn btn-back"
-                    hx-get="{{ url_for('stock_htmx_reservations.reservations_list') if reservation else url_for('stock_htmx_orders.orders') }}"
+                    hx-get="{% if reservation %}{{ url_for('stock_htmx_reservations.reservations_list') }}{% elif is_return %}{{ url_for('stock_htmx_return.returns') }}{% else %}{{ url_for('stock_htmx_orders.orders') }}{% endif %}"
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
-                    title="{{ 'Revenir aux réservations' if reservation else 'Revenir aux commandes fournisseurs' }}">
+                    title="{{ 'Revenir aux réservations' if reservation else 'Revenir aux retours fournisseurs' if is_return else 'Revenir aux commandes fournisseurs' }}">
                 {% include "svg/back.html" %}
             </button>
             <h2>
@@ -19,6 +20,16 @@
                         Édition de la réservation
                     {% else %}
                         Réservation
+                    {% endif %}
+                {% elif is_return %}
+                    {% if view_state == 'new' %}
+                        Nouveau retour fournisseur
+                    {% elif view_state == 'edit' %}
+                        Édition du retour fournisseur
+                    {% elif view_state == 'receipt' %}
+                        Réception du retour fournisseur
+                    {% else %}
+                        Retour fournisseur
                     {% endif %}
                 {% else %}
                     {% if view_state == 'new' %}
@@ -35,10 +46,12 @@
         </div>
     </div>
 
-    {# ── Informations de la commande / réservation ───────────────────────── #}
+    {# ── Informations de la commande / réservation / retour ───────────────── #}
     <div class="order-info-section">
         <div class="info-group">
-            <span class="info-label">{{ '#Réservation' if reservation else '#Commande' }}&nbsp:</span>
+            <span class="info-label">
+                {{ '#Réservation' if reservation else '#Retour' if is_return else '#Commande' }}&nbsp:
+            </span>
             <span class="info-value" id="order-id">
                 {% if order.id %}
                     {{ order.id }}
@@ -56,7 +69,7 @@
         {% if not reservation %}
         <div class="info-group">
             <span class="info-label">Réf. externe&nbsp:</span>
-            {% if view_state == 'receipt' and not order.external_ref %}
+            {% if view_state == 'receipt' and not order.external_ref and not is_return %}
             <span class="info-value" id="external-ref">
                 <form class="d-inline"
                       hx-post="{{ url_for('stock_htmx_orders.update_external_ref', order_id=order.id) }}"
@@ -105,11 +118,15 @@
                 {% if order.order_state == 'draft' %}
                 <span class="badge badge-warning">Brouillon</span>
                 {% elif order.order_state == 'sended' %}
-                <span class="badge badge-info">{{ 'Confirmée' if reservation else 'Envoyée' }}</span>
+                <span class="badge badge-info">
+                    {{ 'Confirmée' if reservation else 'Envoyé' if is_return else 'Envoyée' }}
+                </span>
                 {% elif order.order_state == 'received' %}
-                <span class="badge badge-success">{{ 'Retournée' if reservation else 'Reçue' }}</span>
+                <span class="badge badge-success">
+                    {{ 'Retournée' if reservation else 'Reçu' if is_return else 'Reçue' }}
+                </span>
                 {% elif order.order_state == 'cancelled' %}
-                <span class="badge badge-danger">Annulée</span>
+                <span class="badge badge-danger">Annulé{{ 'e' if not is_return }}</span>
                 {% else %}
                 <span class="badge">{{ order.order_state | capitalize }}</span>
                 {% endif %}
@@ -124,7 +141,7 @@
             </button>
         </div>
         {% endif %}
-        {% if not reservation %}
+        {% if not reservation and not is_return %}
         <div class="info-group">
             <span class="info-label">Envoi :</span>
             <span class="info-value" id="order-dispatch">
@@ -218,10 +235,18 @@
     {# ── Tableau des lignes ──────────────────────────────────────────────── #}
     <div class="order-lines-section">
         <div class="lines-header">
-            <h3>{{ 'Lignes de réservation' if reservation else 'Lignes de commande' }}</h3>
+            <h3>
+                {% if reservation %}
+                    Lignes de réservation
+                {% elif is_return %}
+                    Lignes de retour
+                {% else %}
+                    Lignes de commande
+                {% endif %}
+            </h3>
             {% if view_state == 'edit' or view_state == 'new' %}
             <button class="btn btn-primary btn-sm"
-                    hx-get="{{ url_for('stock_htmx_reservations.new_reservation_line', order_id=order.id) if reservation else url_for('stock_htmx_orders.new_order_line', order_id=order.id) }}"
+                    hx-get="{% if reservation %}{{ url_for('stock_htmx_reservations.new_reservation_line', order_id=order.id) }}{% elif is_return %}{{ url_for('stock_htmx_return.new_return_line', order_id=order.id) }}{% else %}{{ url_for('stock_htmx_orders.new_order_line', order_id=order.id) }}{% endif %}"
                     hx-target="#new-line-modal"
                     hx-swap="innerHTML"
                     title="Ajouter une ligne">
@@ -240,8 +265,8 @@
                         <th>Qté réservée</th>
                         <th>État</th>
                         {% else %}
-                        <th>Nb commandé</th>
-                        <th>Nb reçu</th>
+                        <th>Nb {{ 'retourné' if is_return else 'commandé' }}</th>
+                        <th>Nb reçue</th>
                         <th>État</th>
                         {% endif %}
                     {% else %}
@@ -338,34 +363,34 @@
                         {% else %}
                         <button class="action-icon action-edit"
                                 title="Modifier la ligne"
-                                hx-get="{{ url_for('stock_htmx_orders.edit_order_line', line_id=line.id, order_id=order.id, action='edit') }}"
+                                hx-get="{% if is_return %}{{ url_for('stock_htmx_return.edit_return_line', line_id=line.id, order_id=order.id, action='edit') }}{% else %}{{ url_for('stock_htmx_orders.edit_order_line', line_id=line.id, order_id=order.id, action='edit') }}{% endif %}"
                                 hx-target="#new-line-modal"
                                 hx-swap="innerHTML">
                             {% include "svg/edit.html" %}
                         </button>
                         <button class="action-icon action-cancel"
                                 title="Supprimer la ligne"
-                                hx-get="{{ url_for('stock_htmx_orders.edit_order_line', line_id=line.id, order_id=order.id, action='delete') }}"
+                                hx-get="{% if is_return %}{{ url_for('stock_htmx_return.edit_return_line', line_id=line.id, order_id=order.id, action='delete') }}{% else %}{{ url_for('stock_htmx_orders.edit_order_line', line_id=line.id, order_id=order.id, action='delete') }}{% endif %}"
                                 hx-target="#delete-line-modal"
                                 hx-swap="innerHTML">
                             {% include "svg/del.html" %}
                         </button>
                         {% endif %}
                     </td>
-                    
+
                     {% elif view_state == 'receipt' %}
                     <td class="text-center actions-cell">
                         {% if line.line_state == 'pending' %}
                         <button class="action-icon action-receipt"
-                                title="Recevoir la ligne"
-                                hx-get="{{ url_for('stock_htmx_orders.receive_order_line_route', order_id=order.id, line_id=line.id) }}"
+                                title="Réceptionner la ligne"
+                                hx-get="{% if is_return %}{{ url_for('stock_htmx_return.receive_return_line_route', order_id=order.id, line_id=line.id) }}{% else %}{{ url_for('stock_htmx_orders.receive_order_line_route', order_id=order.id, line_id=line.id) }}{% endif %}"
                                 hx-target="#receive-line-modal"
                                 hx-swap="innerHTML">
                             {% include "svg/box.html" %}
                         </button>
                         {% else %}
                         <span class="badge badge-{{ 'success' if line.line_state == 'received' else 'danger' }}">
-                            {{ line.line_state | capitalize }}
+                            {% if line.line_state == 'received' %}Reçue{% elif line.line_state == 'cancelled' %}Annulée{% else %}{{ line.line_state | capitalize }}{% endif %}
                         </span>
                         {% endif %}
                     </td>
@@ -376,7 +401,16 @@
                 <tr class="empty-row">
                     <td colspan="6">
                         <div class="no-lines-message">
-                            <p>{{ 'Aucune ligne de réservation.' if reservation else 'Aucune ligne de commande.' }} Passez en édition pour ajouter des lignes.</p>
+                            <p>
+                                {% if reservation %}
+                                    Aucune ligne de réservation.
+                                {% elif is_return %}
+                                    Aucune ligne de retour.
+                                {% else %}
+                                    Aucune ligne de commande.
+                                {% endif %}
+                                Passez en édition pour ajouter des lignes.
+                            </p>
                         </div>
                     </td>
                 </tr>
@@ -384,7 +418,7 @@
             </tbody>
         </table>
     </div>
-    
+
     {# ── Modale pour ajouter une ligne ──────────────────────────────────────── #}
     {% if view_state == 'edit' or view_state == 'new' %}
     <div id="new-line-modal">
@@ -409,13 +443,19 @@
     <div class="order-actions-section">
         <button class="btn {{ 'btn-success' if order.orderin_lines | length > 0 else 'btn-secondary' }}" id="confirm-order"
                 {% if order.orderin_lines | length == 0 %}disabled{% endif %}
-                hx-post="{{ url_for('stock_htmx_reservations.confirm_reservation', order_id=order.id) if reservation else url_for('stock_htmx_orders.confirm_order', order_id=order.id) }}"
+                hx-post="{% if reservation %}{{ url_for('stock_htmx_reservations.confirm_reservation', order_id=order.id) }}{% elif is_return %}{{ url_for('stock_htmx_return.confirm_return', order_id=order.id) }}{% else %}{{ url_for('stock_htmx_orders.confirm_order', order_id=order.id) }}{% endif %}"
                 hx-target="#confirm-order-modal"
                 hx-swap="innerHTML">
-            {{ 'Valider la réservation' if reservation else 'Valider la commande' }}
+            {% if reservation %}
+                Valider la réservation
+            {% elif is_return %}
+                Valider le retour
+            {% else %}
+                Valider la commande
+            {% endif %}
         </button>
         <button class="btn btn-secondary"
-                hx-get="{{ url_for('stock_htmx_reservations.reservations_list') if reservation else url_for('stock_htmx_orders.orders') }}"
+                hx-get="{% if reservation %}{{ url_for('stock_htmx_reservations.reservations_list') }}{% elif is_return %}{{ url_for('stock_htmx_return.returns') }}{% else %}{{ url_for('stock_htmx_orders.orders') }}{% endif %}"
                 hx-target="#orders-management"
                 hx-swap="innerHTML">
             Annuler

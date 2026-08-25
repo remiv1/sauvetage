@@ -1,0 +1,179 @@
+<!-- template receive_line.html -->
+{# ── Modale de réception d'une ligne de retour fournisseur ─────────────── #}
+<div class="modal show" id="receive-return-line-modal-dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Réception de ligne de retour</h2>
+                <button type="button" class="btn-close"
+                        hx-get="{{ url_for('stock_htmx_return.cleared') }}"
+                        hx-target="#receive-line-modal"
+                        hx-swap="innerHTML"
+                        aria-label="Fermer"></button>
+            </div>
+
+            <form id="receive-return-line-form"
+                  method="post"
+                  hx-post="{{ url_for('stock_htmx_return.receive_return_line_route', order_id=order.id, line_id=line.id) }}"
+                  hx-target="#orders-management"
+                  hx-swap="innerHTML">
+                <div class="modal-body">
+                    {{ form.hidden_tag() }}
+                    {{ form.line_id() }}
+                    {{ form.order_id() }}
+
+                    {# ── Informations sur la ligne ───────────────────────────── #}
+                    <div class="alert alert-info mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><small>Article :</small></p>
+                                <p class="fw-bold">{{ line.general_object.name }}</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="mb-1"><small>Qté retournée :</small></p>
+                                <p class="fw-bold">{{ line.qty_ordered }}</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="mb-1"><small>PU HT initial :</small></p>
+                                <p class="fw-bold">{{ "%.2f"|format(line.get_unit_price_ht()|float) }} €</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Champs de saisie des quantités ──────────────────────── #}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                {{ form.qty_received.label(class="form-label") }}
+                                {{ form.qty_received(
+                                    class="form-control",
+                                    id="qty_received",
+                                    type="number",
+                                    min="0",
+                                    max=line.qty_ordered,
+                                    step="1",
+                                    required=True,
+                                    readonly=True
+                                ) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                {{ form.qty_cancelled.label(class="form-label") }}
+                                {{ form.qty_cancelled(
+                                    class="form-control",
+                                    id="qty_cancelled",
+                                    type="number",
+                                    min="0",
+                                    max=line.qty_ordered,
+                                    step="1",
+                                    required=True
+                                ) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="qty_pending">En attente</label>
+                                <input type="number"
+                                       class="form-control"
+                                       id="qty_pending"
+                                       value="{{ line.qty_ordered }}"
+                                       min="0"
+                                       max="{{ line.qty_ordered }}"
+                                       step="1"
+                                       required>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Composantes financières validées à la réception ─────── #}
+                    <div class="form-group mb-3">
+                        <label class="form-label">Prix validés à la réception</label>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-1">
+                                <thead>
+                                    <tr>
+                                        <th>Prix d'achat HT</th>
+                                        <th>TVA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="receive-price-components">
+                                    {% for entry in form.prices %}
+                                    <tr class="price-component">
+                                        <td>
+                                            {{ entry.form.unit_price(class="form-control form-control-sm purchase-price", type="number", min="0", step="0.01", required=True) }}
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm flex-nowrap">
+                                                {{ entry.form.vat_rate(class="form-control vat-rate", type="number", min="0", step="0.001", required=True) }}
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {# ── Message d'erreur de validation ──────────────────────── #}
+                    <div id="receive-validation-error" class="text-danger small mt-1" style="display: none;"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            hx-get="{{ url_for('stock_htmx_return.cleared') }}"
+                            hx-target="#receive-line-modal"
+                            hx-swap="innerHTML">
+                        Annuler
+                    </button>
+                    {{ form.submit(class="btn btn-primary", id="submit-receive") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Script de calcul dynamique des quantités ─────────────────────── #}
+<script>
+(function() {
+    const qtyOrdered = {{ line.qty_ordered }};
+    const qtyReceived = document.getElementById('qty_received');
+    const qtyCancelled = document.getElementById('qty_cancelled');
+    const qtyPending = document.getElementById('qty_pending');
+    const errorDiv = document.getElementById('receive-validation-error');
+    const submitBtn = document.getElementById('submit-receive');
+
+    function updateQuantities() {
+        const cancelled = Number.parseInt(qtyCancelled.value || 0, 10);
+        const pending = Number.parseInt(qtyPending.value || 0, 10);
+        const returned = qtyOrdered - cancelled - pending;
+
+        qtyReceived.value = returned >= 0 ? returned : 0;
+
+        if (cancelled + pending > qtyOrdered) {
+            errorDiv.textContent = 'La somme annulés + en attente dépasse la quantité retournée (' + qtyOrdered + ').';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = true;
+        } else if (cancelled < 0 || pending < 0) {
+            errorDiv.textContent = 'Les quantités ne peuvent pas être négatives.';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = true;
+        } else if (returned === 0 && cancelled === 0 && pending === 0) {
+            errorDiv.textContent = 'Veuillez saisir au moins une quantité retournée, annulée ou en attente.';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = true;
+        } else {
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    }
+
+    if (qtyReceived && qtyCancelled && qtyPending) {
+        qtyCancelled.addEventListener('input', updateQuantities);
+        qtyPending.addEventListener('input', updateQuantities);
+        updateQuantities();
+    }
+})();
+</script>

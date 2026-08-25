@@ -492,7 +492,8 @@
 /* new_line.html — Modale de création de ligne de commande                    */
 /* ============================================================================ */
 
-#order-line-modal {
+#order-line-modal,
+#return-line-modal {
     position: fixed;
     inset: 0;
     z-index: 1050;

@@ -1,4 +1,5 @@
 <!-- template home.html -->
+{% set is_return = true %}
 {# ── En-tête + boutons d'action ──────────────────────────────────────── #}
 <div class="orders-header">
     <div class="search-header">
@@ -11,14 +12,14 @@
         </div>
     </div>
     <div class="orders-actions">
-        <div class="btn btn-primary" id="new-order"
+        <div class="btn btn-primary" id="new-return"
              hx-get="{{ url_for('stock_htmx_return.new_return_section') }}"
              hx-target="#orders-management"
              hx-swap="innerHTML">
             {% include "svg/plus.html" %}
             Nouveau retour
         </div>
-        <div class="btn btn-secondary" id="new-return"
+        <div class="btn btn-secondary" id="back-orders"
              hx-get="{{ url_for('stock_htmx_orders.orders') }}"
              hx-target="#orders-management"
              hx-swap="innerHTML">
@@ -36,6 +37,7 @@
             <th>Référence</th>
             <th>Réf. externe</th>
             <th>Fournisseur</th>
+            <th>État</th>
             <th>Montant</th>
             <th>Nb articles</th>
             <th class="text-center">Actions</th>
@@ -44,32 +46,73 @@
     <tbody>
         {% for r in returns %}
         <tr>
-            <td class="identifiant">{{ r.return_ref }}</td>
-            <td>{{ r.external_ref }}</td>
-            <td>{{ r.supplier_name }}</td>
+            <td class="identifiant">{{ r.order_ref }}</td>
+            <td>{{ r.external_ref or '—' }}</td>
+            <td>{{ r.supplier.name if r.supplier else '—' }}</td>
+            <td>
+                {% if r.order_state == 'draft' %}
+                <span class="badge badge-warning">Brouillon</span>
+                {% elif r.order_state == 'sended' %}
+                <span class="badge badge-info">Envoyé</span>
+                {% elif r.order_state == 'received' %}
+                <span class="badge badge-success">Reçu</span>
+                {% elif r.order_state == 'cancelled' %}
+                <span class="badge badge-danger">Annulé</span>
+                {% else %}
+                <span class="badge">{{ r.order_state | capitalize }}</span>
+                {% endif %}
+            </td>
             <td class="text-right">{{ "%.2f"|format(r.value|float) }} €</td>
-            <td class="text-center">{{ r.line_count }}</td>
+            <td class="text-center">{{ r.orderin_lines | length }}</td>
             <td class="text-center actions-cell">
-                <a hx-get="{{ url_for('stock.view_return', order_id=r.id) }}"
+                <a hx-get="{{ url_for('stock_htmx_return.view_return', order_id=r.id) }}"
                     hx-target="#orders-management"
                     hx-swap="innerHTML"
                     class="action-icon" title="Voir le retour">
                     {% include "svg/eye.html" %}
                 </a>
+                {% if r.order_state != 'draft' %}
+                <a class="action-icon"
+                   title="Télécharger le bon de retour"
+                   href="{{ url_for('stock.return_download_slip', order_id=r.id) }}">
+                    {% include "svg/download.html" %}
+                </a>
+                {% endif %}
+                {% if r.order_state == 'draft' %}
+                <a hx-get="{{ url_for('stock_htmx_return.edit_return', order_id=r.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Modifier le retour">
+                    {% include "svg/edit.html" %}
+                </a>
+                {% endif %}
+                {% if r.order_state == 'sended' %}
+                <a hx-get="{{ url_for('stock_htmx_return.receipt_return', order_id=r.id) }}"
+                    hx-target="#orders-management"
+                    hx-swap="innerHTML"
+                    class="action-icon"
+                    title="Réceptionner le retour">
+                    {% include "svg/box.html" %}
+                </a>
+                {% endif %}
+                {% if r.order_state in ('draft', 'sended') %}
                 <button class="action-icon action-cancel"
-                        hx-post="{{ url_for('stock_htmx_return.cancel_order', order_id=r.id) }}"
-                        hx-target="#orders-management"
+                        hx-get="{{ url_for('stock_htmx_return.cancel_return', order_id=r.id) }}"
+                        hx-target="#order-modale"
                         hx-swap="innerHTML"
-                        title="Annuler la commande"
+                        title="Annuler le retour"
                         data-order-id="{{ r.id }}"
-                        data-order-ref="{{ r.return_ref }}">
+                        data-order-ref="{{ r.order_ref }}">
                     {% include "svg/del.html" %}
                 </button>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+<div id="order-modale"></div>
 {% else %}
 <div class="no-order">
     {% include "svg/truck.html" %}
