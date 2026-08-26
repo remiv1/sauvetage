@@ -22,7 +22,7 @@
   - [X] Expédition de la commande
   - [X] Annulation de la commande
   - [X] Retour de la commande
-- [ ] Création d'une commande fournisseur
+- [X] Création d'une commande fournisseur
   - [X] Ajout de lignes de commandes
   - [X] Validation de la commande
     - [X] Réception DILICOM
@@ -35,7 +35,7 @@
 
 - [X] Voir les erreur lors du push de la commande vers WooCommerce
 - [X] Problèmes de création de tags depuis la fiche produit
-- [!] Problèmes de synchro diffuseurs sur les réceptions ONIX → Mail envoyé à Dilicom
+- [X] Problèmes de synchro diffuseurs sur les réceptions ONIX → Mail envoyé à Dilicom
 - [X] Problèmes de miniatures images sur les fiches produits
 - [X] Décalage des mouvements de stocks sur ISBN 9782740315736 lors d'ajout/suppression de réservations
 - [X] Sur les commandes clients, il faut ajouter la possibilité de faire :
@@ -47,5 +47,5 @@
 - [X] Le formulaire de création d'objet est différent de celui de modification d'objet, il faut unifier les deux.
 - [X] Revoir la gestion des variations produits lors des synchronisations WooCommerce, il faut que les variations soient créées sur WooCommerce si elles n'existent pas.
 - [X] Mettre en place tous les tests sur les stocks : commandes, suppression d'une ligne, réservations, annulations, etc.
-- [!] Gérer les imports et commandes de produits composés avec plusieurs prix/tva. → Mail Dilicom
+- [X] Gérer les imports et commandes de produits composés avec plusieurs prix/tva. → Mail Dilicom
 - [X] Traiter les retours de commandes fournisseurs.

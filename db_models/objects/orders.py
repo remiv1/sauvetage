@@ -3,7 +3,17 @@
 from typing import Any, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import Boolean, String, Integer, ForeignKey, DateTime, Numeric, Text, event
+from sqlalchemy import (
+    Boolean,
+    String,
+    Integer,
+    ForeignKey,
+    DateTime,
+    Numeric,
+    Text,
+    event,
+    CheckConstraint,
+)
 from db_models import WorkingBase
 from db_models.objects import QueryMixin, Customers  # pylint: disable=unused-import
 
@@ -11,6 +21,7 @@ if TYPE_CHECKING:
     from db_models.objects.vat import VatRate
 
 _ALL_DELETE_ORPHAN = "all, delete-orphan"
+ORDERS_KEY = "app_schema.orders.id"
 
 
 class Order(WorkingBase, QueryMixin):
@@ -72,7 +83,7 @@ class Order(WorkingBase, QueryMixin):
     )
     return_of_order_id: Mapped[int | None] = mapped_column(
         Integer,
-        ForeignKey("app_schema.orders.id"),
+        ForeignKey(ORDERS_KEY),
         nullable=True,
         unique=True,
         comment="Commande d'origine pour une commande de retour",
@@ -307,7 +318,13 @@ class OrderLine(WorkingBase, QueryMixin):
     """
 
     __tablename__ = "order_lines"
-    __table_args__ = {"schema": "app_schema"}
+    __table_args__ = (
+        CheckConstraint(
+            "is_shipping_fee OR general_object_id IS NOT NULL",
+            name="check_shipping_fee_or_general_object_id_not_null",
+        ),
+        {"schema": "app_schema"},
+    )
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -322,10 +339,22 @@ class OrderLine(WorkingBase, QueryMixin):
         comment="ID de la ligne de commande dans WooCommerce",
     )
     order_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("app_schema.orders.id"), nullable=False
+        Integer,
+        ForeignKey(ORDERS_KEY),
+        nullable=False,
+        comment="Commande associée",
     )
     general_object_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("app_schema.general_objects.id"), nullable=False
+        Integer,
+        ForeignKey("app_schema.general_objects.id"),
+        nullable=True,
+        comment="Objet général associé à la ligne de commande",
+    )
+    is_shipping_fee: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Indique si la ligne correspond à des frais de port",
     )
     quantity: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="Quantité commandée"
@@ -484,7 +513,7 @@ class OrderSyncLog(WorkingBase):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("app_schema.orders.id"),
+        ForeignKey(ORDERS_KEY),
         nullable=False,
         comment="Commande associée",
     )
@@ -564,7 +593,7 @@ class OrderAlert(WorkingBase):  # pylint: disable=R0903
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("app_schema.orders.id"),
+        ForeignKey(ORDERS_KEY),
         nullable=False,
         comment="Commande concernée",
     )
