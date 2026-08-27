@@ -139,7 +139,7 @@ db_models/objects/objects/other_objects.py                  26      5      2    
 db_models/objects/objects/sync_logs.py                      22      2      0      0    91%
 db_models/objects/objects/tags.py                           46      8      2      0    79%
 db_models/objects/objects/variations.py                     40      3      4      2    89%
-db_models/objects/orders.py                                167     19     32      8    85%
+db_models/objects/orders.py                                169     19     32      8    86%
 db_models/objects/shipments.py                              41      3      0      0    93%
 db_models/objects/stocks.py                                 92     18      4      0    77%
 db_models/objects/suppliers.py                              34      3      0      0    91%
@@ -155,7 +155,7 @@ db_models/repositories/objects/media.py                    135     72     44    
 db_models/repositories/objects/media_access_token.py        42     26      0      0    38%
 db_models/repositories/objects/obj_metadatas.py             78     47     30      2    34%
 db_models/repositories/objects/object_tags.py               60     42     18      0    23%
-db_models/repositories/objects/objects.py                  240     71     78     12    66%
+db_models/repositories/objects/objects.py                  251     71     82     11    68%
 db_models/repositories/objects/other_objects.py             47     29     14      1    31%
 db_models/repositories/objects/prices.py                    32     17      2      0    44%
 db_models/repositories/objects/variations.py                72     41     16      1    36%
@@ -179,7 +179,7 @@ db_models/services/__init__.py                               0      0      0    
 db_models/services/auth.py                                  58     58     10      0     0%
 db_models/services/decorators.py                             9      9      0      0     0%
 db_models/services/dilicom/__init__.py                      18      0      0      0   100%
-db_models/services/dilicom/base.py                         539    203    212     38    59%
+db_models/services/dilicom/base.py                         550    219    216     39    56%
 db_models/services/henrri/__init__.py                        5      0      0      0   100%
 db_models/services/henrri/base.py                           13      1      2      1    87%
 db_models/services/henrri/customers.py                      50     30     16      2    36%
@@ -210,4 +210,4 @@ db_models/services/woo_commerce/products/variations.py      55      8     18    
 db_models/services/woo_commerce/products/vat.py            102     52     34      3    46%
 db_models/services/woo_commerce/utils.py                    48     20     30      5    53%
 ------------------------------------------------------------------------------------------
-TOTAL                                                    12285   4746   2766    504    57%
+TOTAL                                                    12309   4762   2774    504    57%
