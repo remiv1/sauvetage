@@ -468,27 +468,46 @@ class ObjectsRepository(BaseRepository):    # pylint: disable=R0902
             instance.media_files = media_files
 
     def _apply_price_rows(self, instance: GeneralObjects, price_rows: list[ObjectPrices]) -> None:
-        """Ajoute les lignes de prix sans créer de doublons exacts."""
-        for price_row in price_rows:
+        """Synchronise les périodes de prix sans modifier les tarifs futurs connus."""
+        for price_row in sorted(price_rows, key=lambda row: row.from_date or date.today()):
+            from_date = price_row.from_date or date.today()
             existing = next(
                 (
                     price for price in instance.prices
-                    if price.price == price_row.price
-                    and price.vat_rate_id == price_row.vat_rate_id
-                    and price.from_date == (price_row.from_date or date.today())
-                    and price.to_date == price_row.to_date
+                    if price.vat_rate_id == price_row.vat_rate_id
+                    and price.from_date == from_date
                 ),
                 None,
             )
             if existing is None:
-                instance.prices.append(
-                    ObjectPrices(
-                        price=price_row.price,
-                        vat_rate_id=price_row.vat_rate_id,
-                        from_date=price_row.from_date or date.today(),
-                        to_date=price_row.to_date,
-                    )
+                existing = ObjectPrices(
+                    price=price_row.price,
+                    vat_rate_id=price_row.vat_rate_id,
+                    from_date=from_date,
+                    to_date=price_row.to_date,
                 )
+                instance.prices.append(existing)
+            else:
+                existing.price = price_row.price
+
+            previous_prices = [
+                price for price in instance.prices
+                if price.vat_rate_id == existing.vat_rate_id
+                and price.from_date < from_date
+                and (price.to_date is None or price.to_date >= from_date)
+            ]
+            if previous_prices:
+                latest_price = max(previous_prices, key=lambda price: price.from_date)
+                latest_price.to_date = from_date - timedelta(days=1)
+
+            future_prices = [
+                price for price in instance.prices
+                if price.vat_rate_id == existing.vat_rate_id
+                and price.from_date > from_date
+            ]
+            if future_prices:
+                next_price = min(future_prices, key=lambda price: price.from_date)
+                existing.to_date = next_price.from_date - timedelta(days=1)
 
     def save_or_update_from_object( # pylint: disable=R0913, R0917
             self,

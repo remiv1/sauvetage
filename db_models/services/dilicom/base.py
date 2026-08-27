@@ -296,16 +296,19 @@ class DilicomServiceBase:
 
     @staticmethod
     def _add_unique_price_entry(
-        entries: list[dict[str, float]],
-        seen: set[tuple[float, float]],
+        entries: list[dict[str, Any]],
+        seen: set[tuple[float, float, date]],
         price_ht: float,
         vat_rate: float,
+        from_date: date,
     ) -> None:
-        """Ajoute une entrée de prix s'il n'existe pas déjà avec la même paire HT/TVA."""
-        key = (round(price_ht, 3), round(vat_rate, 3))
+        """Ajoute une entrée de prix unique pour une date d'effet donnée."""
+        key = (round(price_ht, 3), round(vat_rate, 3), from_date)
         if key not in seen:
             seen.add(key)
-            entries.append({"price_ht": price_ht, "vat_rate": vat_rate})
+            entries.append(
+                {"price_ht": price_ht, "vat_rate": vat_rate, "from_date": from_date}
+            )
 
     def _iter_raw_prices(self, raw_product: Any) -> list[Any]:
         """Itère sur les blocs de prix ONIX brut sans aplatir toute la logique métier."""
@@ -331,39 +334,63 @@ class DilicomServiceBase:
     @staticmethod
     def _price_type_amount(raw_price: Any) -> tuple[str | None, float | None]:
         """Retourne le type de prix et le montant brut associated au bloc ONIX."""
-        price_type = _read_value(getattr(raw_price, "price_type", None))
-        price_type_code = _read_value(getattr(price_type, "value", None))
-        price_amount = _read_value(getattr(raw_price, "price_amount", None))
-        price_amount_value = _read_value(getattr(price_amount, "value", None))
+        price_type_code = _read_value(getattr(raw_price, "price_type", None))
+        price_amount_value = _read_value(getattr(raw_price, "price_amount", None))
         return price_type_code, None if price_amount_value is None else float(price_amount_value)
 
-    def _extract_raw_price_entries(self, raw_product: Any) -> list[dict[str, float]]:
+    @staticmethod
+    def _price_effective_date(raw_price: Any) -> date:
+        """Retourne la date d'effet ONIX du prix ou la date du jour par défaut."""
+        for price_date in getattr(raw_price, "price_date", []) or []:
+            role = _read_value(getattr(price_date, "price_date_role", None))
+            value = _read_value(getattr(price_date, "date", None))
+            if str(role) != "14" or value is None:
+                continue
+            try:
+                return datetime.strptime(str(value), "%Y%m%d").date()
+            except ValueError:
+                logger.warning("Date d'effet ONIX invalide pour un prix: %s", value)
+        return date.today()
+
+    def _extract_raw_price_entries(self, raw_product: Any) -> list[dict[str, Any]]:
         """Extrait les entrées de prix issue des blocs de prix brute ONIX."""
-        seen: set[tuple[float, float]] = set()
-        entries: list[dict[str, float]] = []
+        seen: set[tuple[float, float, date]] = set()
+        entries: list[dict[str, Any]] = []
         for raw_price in self._iter_raw_prices(raw_product):
             taxes = getattr(raw_price, "tax", []) or []
+            effective_date = self._price_effective_date(raw_price)
             for tax_entry in self._tax_entries(raw_price):
                 self._add_unique_price_entry(
                     entries,
                     seen,
                     tax_entry["price_ht"],
                     tax_entry["vat_rate"],
+                    effective_date,
                 )
             if taxes:
                 continue
             price_type_code, price_amount_value = self._price_type_amount(raw_price)
             if price_type_code in {"01", "04"} and price_amount_value is not None:
-                self._add_unique_price_entry(entries, seen, price_amount_value, 0.0)
+                self._add_unique_price_entry(
+                    entries,
+                    seen,
+                    price_amount_value,
+                    0.0,
+                    effective_date,
+                )
         return entries
 
-    def _extract_prices_and_vats_from_onix(self, onix_product: Product) -> list[dict[str, float]]:
+    def _extract_prices_and_vats_from_onix(self, onix_product: Product) -> list[dict[str, Any]]:
         """Extrait toutes les combinaisons prix HT / taux TVA présentes dans le produit."""
         aggregated = getattr(onix_product, "price", None)
-        default_entries: list[dict[str, float]] = []
+        default_entries: list[dict[str, Any]] = []
         if aggregated is not None and aggregated.ht is not None and aggregated.vat_rate is not None:
             default_entries.append(
-                {"price_ht": float(aggregated.ht), "vat_rate": float(aggregated.vat_rate)}
+                {
+                    "price_ht": float(aggregated.ht),
+                    "vat_rate": float(aggregated.vat_rate),
+                    "from_date": date.today(),
+                }
             )
 
         raw_product = getattr(onix_product, "raw", None)
@@ -655,7 +682,7 @@ class DilicomServiceBase:
             ObjectPrices(
                 price=float(price_row["price_ht"]),
                 vat_rate_id=self._get_vat_rate_id(price_row["vat_rate"]),
-                from_date=date.today(),
+                from_date=cast(date, price_row["from_date"]),
                 to_date=None,
             )
             for price_row in price_rows

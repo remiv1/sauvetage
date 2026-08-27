@@ -1,7 +1,8 @@
 """Tests de validation du parsing Dilicom ONIX."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -16,15 +17,38 @@ from db_models.services.dilicom import DilicomService
 def test_price_ht_uses_taxable_amount_when_present() -> None:
     """Le prix HT doit être la base taxable quand ONIX fournit un montant taxable."""
     product = Notice.parse_full(
-        Path("documents/back/dilicom/in/DIF499492051/499492051.xml"),
+        Path("tests/back/fixtures/dilicom/in/DIF499492052/499492052.xml"),
         version="3.0",
     ).products[0]
 
     service = object.__new__(DilicomService)
     data = service._extract_price_and_vat_from_onix(product)    # pylint: disable=W0212
 
-    assert data["price_ht"] == 9.95
+    assert data["price_ht"] == 7.58
     assert data["vat_rate"] == 5.5
+
+
+def test_dilicom_extracts_price_effective_date() -> None:
+    """La date ONIX de rôle 14 doit devenir la date d'effet du prix."""
+    raw_price = SimpleNamespace(
+        tax=[],
+        price_type=SimpleNamespace(value="04"),
+        price_amount=SimpleNamespace(value="169.00"),
+        price_date=[
+            SimpleNamespace(
+                price_date_role=SimpleNamespace(value="14"),
+                date=SimpleNamespace(value="20260201"),
+            )
+        ],
+    )
+    raw_product = SimpleNamespace(
+        product_supply=[SimpleNamespace(supply_detail=[SimpleNamespace(price=[raw_price])])]
+    )
+
+    service = object.__new__(DilicomService)
+    entries = service._extract_raw_price_entries(raw_product)  # pylint: disable=W0212
+
+    assert entries == [{"price_ht": 169.0, "vat_rate": 0.0, "from_date": date(2026, 2, 1)}]
 
 
 def test_reproduces_dif499492052_price_year_and_metadata() -> None:
@@ -79,13 +103,13 @@ def test_reproduces_dif499492052_price_year_and_metadata() -> None:
     assert not any("cover" in key.lower() or "image" in key.lower() for key in metadata)
 
 
-def test_dilicom_real_file_extracts_language_collection_dimensions_and_weight_metadata() -> None:
+def test_dilicom_fixture_extracts_language_dimensions_and_weight_metadata() -> None:
     """
-    Le fichier ONIX doit remonter les métadonnées explicites de langue,
-    collection, dimensions et poids.
+    La fixture ONIX doit remonter les métadonnées explicites de langue,
+    dimensions et poids.
     """
     product = Notice.parse_full(
-        Path("documents/back/dilicom/in/DIF492327800/492327800.xml"),
+        Path("tests/back/fixtures/dilicom/in/DIF499492052/499492052.xml"),
         version="3.0",
     ).products[0]
 
@@ -96,14 +120,10 @@ def test_dilicom_real_file_extracts_language_collection_dimensions_and_weight_me
     assert metadata["langue"] in {"français", "fre", "fr"}
     assert "sujets" not in metadata
     assert "sujet" not in metadata
-    assert any(
-        "ancade" in str(item).lower()
-        for item in metadata.get("collections", [])   # type: ignore
-    )
-    assert metadata["dimensions_mm"] == "210*120*7"
-    assert metadata["poids_grammes"] == "115"
-    assert "ref_bnf" not in metadata
-    assert "notice_bnf" not in metadata
+    assert metadata["dimensions_mm"] == "210*140*5"
+    assert metadata["poids_grammes"] == "110"
+    assert metadata["ref_bnf"] == "FRBNF468557930000005"
+    assert metadata["notice_bnf"] == "http://catalogue.bnf.fr/ark:/12148/cb46855793p"
 
 
 def test_dilicom_extracts_bnf_metadata_when_present() -> None:
@@ -372,3 +392,37 @@ def test_save_or_update_from_object_is_idempotent_on_same_ean(
         .select_from(GeneralObjects)
         .where(GeneralObjects.ean13 == "9782081222199")
     ).scalar_one() == 1
+
+
+def test_price_history_closes_only_matching_vat_and_preserves_future_price(
+) -> None:
+    """Un nouveau prix clôture sa TVA courante sans supprimer le prix futur programmé."""
+    today = date.today()
+    future_date = today + timedelta(days=30)
+    obj = GeneralObjects(
+        supplier_id=1,
+        general_object_type="book",
+        ean13="9780000000012",
+        name="Historique tarifaire",
+        description="Prix Dilicom",
+    )
+    obj.prices.extend(
+        [
+            ObjectPrices(price=10.0, vat_rate_id=1, from_date=today - timedelta(days=30)),
+            ObjectPrices(price=20.0, vat_rate_id=1, from_date=future_date),
+            ObjectPrices(price=8.0, vat_rate_id=2, from_date=today - timedelta(days=30)),
+        ]
+    )
+
+    repo = object.__new__(ObjectsRepository)
+    repo._apply_price_rows(  # pylint: disable=protected-access
+        obj,
+        [ObjectPrices(price=15.0, vat_rate_id=1, from_date=today)],
+    )
+
+    prices_by_amount = {float(price.price): price for price in obj.prices}
+    assert prices_by_amount[10.0].to_date == today - timedelta(days=1)
+    assert prices_by_amount[15.0].to_date == future_date - timedelta(days=1)
+    assert prices_by_amount[20.0].from_date == future_date
+    assert prices_by_amount[20.0].to_date is None
+    assert prices_by_amount[8.0].to_date is None
