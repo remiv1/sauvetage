@@ -195,6 +195,8 @@ def _sync_products_step(invoice: Invoice, hps: HenrriProductsService) -> None:
     """Synchronise les produits facturés chez Henrri (POST ou PUT)."""
     seen = set()
     for line in invoice.lines:
+        if line.order_line.is_shipping_fee:
+            continue
         product = line.order_line.general_object
         if product in seen:
             continue

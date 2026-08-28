@@ -250,8 +250,25 @@ class InvoiceLine(WorkingBase, QueryMixin):
             "is_tax_included": False,
             "are_elements_of_group_shown": False,
             "type_id": 3,
-            "item_id": item_id,
         }
+        if self.order_line and self.order_line.is_shipping_fee:
+            price_without_tax = float(self.unit_price)
+            vat_percent = float(self.vat_rate)
+            payload["item"] = {
+                "reference": self.reference,
+                "description": self.description,
+                "is_tax_included": False,
+                "selling_price_without_tax": price_without_tax,
+                "selling_price_with_tax": price_without_tax * (1 + vat_percent / 100),
+                "purchase_price": 0.0,
+                "vat_percent": vat_percent,
+                "is_a_group": False,
+                "item_category_id": 17,
+                "unit_id": 16,
+                "creation_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            }
+        else:
+            payload["item_id"] = item_id
         return payload
 
 

@@ -68,7 +68,9 @@
                       hx-swap="none"
                       hx-on::after-request="if(event.detail.successful && event.detail.requestConfig.verb === 'post') { this.reset(); document.getElementById('add-line-dialog').close(); }">
 
-                    {{ line_form.hidden_tag() }}
+                    {{ line_form.csrf_token }}
+                    {{ line_form.general_object_id }}
+                    {{ line_form.variation_id }}
 
                     <div class="modal-form-grid">
                         {# Article (recherche) #}
@@ -83,7 +85,6 @@
                                    hx-target="#article-dropdown"
                                    hx-swap="innerHTML"
                                    name="q">
-                            <input type="hidden" id="general_object_id" name="general_object_id" value="">
                             <div id="article-dropdown" class="article-dropdown"></div>
                         </div>
 
@@ -93,7 +94,6 @@
                             <select id="variation-select" class="form-control">
                                 <option value="">— Aucune variation —</option>
                             </select>
-                            <input type="hidden" id="variation_id" name="variation_id" value="">
                         </div>
 
                         {# Quantité #}

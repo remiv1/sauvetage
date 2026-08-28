@@ -816,6 +816,52 @@ dialog.modal-overlay::backdrop {
   box-shadow: 0 0 0 3px rgba(0, 8, 111, 0.2);
 }
 
+.shipping-fee-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.shipping-fee-choice legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.shipping-fee-options {
+  display: flex;
+  width: -moz-fit-content;
+  width: fit-content;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.shipping-fee-option {
+  position: relative;
+  display: grid;
+  min-width: 5rem;
+  cursor: pointer;
+}
+.shipping-fee-option input {
+  position: absolute;
+  opacity: 0;
+}
+.shipping-fee-option span {
+  padding: 0.5rem 1rem;
+  color: #404040;
+  text-align: center;
+}
+.shipping-fee-option input:checked + span {
+  background: #00086f;
+  color: #fff;
+}
+.shipping-fee-option input:focus-visible + span {
+  outline: 3px solid rgba(0, 8, 111, 0.2);
+  outline-offset: -3px;
+}
+.shipping-fee-option + .shipping-fee-option {
+  border-left: 1px solid #ccc;
+}
+
 /* ── Article search (dropdown) ───────────────────────────────────────────── */
 .article-search-wrapper {
   position: relative;

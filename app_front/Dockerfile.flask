@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     libmagic1 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --upgrade pip
 
 WORKDIR /app
 ENV PYTHONPATH=/app
@@ -17,7 +18,8 @@ COPY config/__init__.py config/__init__.py
 COPY config/logs/ config/logs/
 
 # Rendre le script entrypoint exécutable
-RUN pip install -r app_front/requirements.txt \
-    && chmod +x app_front/entrypoint.sh
+RUN pip install --upgrade pip && \
+    pip install -r app_front/requirements.txt && \
+    chmod +x app_front/entrypoint.sh
 
-ENTRYPOINT [ "app_front/entrypoint.sh" ]
+ENTRYPOINT ["sh", "app_front/entrypoint.sh"]

@@ -818,6 +818,57 @@ dialog.modal-overlay {
   }
 }
 
+.shipping-fee-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: v.$space-sm;
+    font-weight: 600;
+  }
+}
+
+.shipping-fee-options {
+  display: flex;
+  width: fit-content;
+  overflow: hidden;
+  border: 1px solid v.$gray-300;
+  border-radius: v.$radius-xs;
+}
+
+.shipping-fee-option {
+  position: relative;
+  display: grid;
+  min-width: 5rem;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    opacity: 0;
+  }
+
+  span {
+    padding: v.$space-sm v.$space-md;
+    color: v.$gray-700;
+    text-align: center;
+  }
+
+  input:checked + span {
+    background: #00086f;
+    color: #fff;
+  }
+
+  input:focus-visible + span {
+    outline: 3px solid rgba(0, 8, 111, 0.2);
+    outline-offset: -3px;
+  }
+}
+
+.shipping-fee-option + .shipping-fee-option {
+  border-left: 1px solid v.$gray-300;
+}
+
 /* ── Article search (dropdown) ───────────────────────────────────────────── */
 .article-search-wrapper {
   position: relative;

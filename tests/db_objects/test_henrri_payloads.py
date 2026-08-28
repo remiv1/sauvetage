@@ -17,6 +17,7 @@ from app_front.blueprints.order import utils as order_utils
 from app_front.blueprints.order.routes import order_wc_push
 from app_front.blueprints.order.utils_henrri import (
     HenrriSyncError,
+    _sync_products_step,
     check_customer,
     check_product,
     create_invoice,
@@ -151,6 +152,55 @@ def test_henri_invoice_line_contract_omits_totals_when_tax_is_excluded(
     assert payload["is_tax_included"] is False
     assert "total_without_tax" not in payload
     assert "total_with_tax" not in payload
+
+
+def test_henri_shipping_fee_line_is_sent_with_inline_item() -> None:
+    """Une ligne de port doit fournir un article inline sans identifiant Henrri."""
+    order_line = OrderLine(is_shipping_fee=True)
+    invoice = Invoice(henrri_id="42")
+    line = InvoiceLine(
+        invoice=invoice,
+        order_line=order_line,
+        reference="PORT",
+        description="Frais de port (TVA 20 %)",
+        quantity=1,
+        unit_price=10,
+        discount=0,
+        vat_rate=20,
+    )
+
+    payload = line.to_dict_henrri()
+
+    assert "item_id" not in payload
+    assert "id" not in payload["item"]
+    assert payload["item"]["reference"] == "PORT"
+    assert payload["item"]["vat_percent"] == 20.0
+    assert payload["selling_price_without_tax"] == 10.0
+    assert payload["vat_percent"] == 20.0
+    HenriItem(**payload["item"])
+    DocumentLine(**payload)
+
+
+def test_henri_shipping_fee_does_not_synchronize_a_product() -> None:
+    """Une ligne de port ne doit déclencher aucune création de produit Henrri."""
+    invoice = Invoice(
+        lines=[
+            InvoiceLine(
+                order_line=OrderLine(is_shipping_fee=True),
+                reference="PORT",
+                description="Frais de port",
+                quantity=1,
+                unit_price=10,
+                discount=0,
+                vat_rate=20,
+            )
+        ]
+    )
+    service = MagicMock()
+
+    _sync_products_step(invoice, service)
+
+    service.assert_not_called()
 
 
 def test_henri_service_configures_http_timeout(monkeypatch: pytest.MonkeyPatch) -> None:

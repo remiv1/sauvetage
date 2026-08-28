@@ -1,0 +1,52 @@
+<form id="invoice-form"
+      hx-post="{{ url_for('order_htmx_create.confirm_invoice_order_route', order_id=order_id) }}"
+      hx-swap="none">
+    {% for line_item in line_items %}
+    <input type="hidden" name="line_ids" value="{{ line_item.order_line_id }}">
+    <input type="hidden" name="quantities" value="{{ line_item.quantity }}">
+    {% endfor %}
+
+    <fieldset class="shipping-fee-choice">
+        <legend>Voulez-vous ajouter des frais de port ?</legend>
+        <div class="shipping-fee-options" role="radiogroup">
+            <label class="shipping-fee-option">
+                <input type="radio" name="add_shipping_fee" value="no" required checked>
+                <span>Non</span>
+            </label>
+            <label class="shipping-fee-option">
+                <input type="radio" name="add_shipping_fee" value="yes" required>
+                <span>Oui</span>
+            </label>
+        </div>
+    </fieldset>
+
+    <div id="shipping-fee-field" class="line-form-group mt-2" hidden>
+        <label for="shipping_fee">Montant HT des frais de port</label>
+        <input type="number" id="shipping_fee" name="shipping_fee"
+               min="0.01" step="0.01" inputmode="decimal">
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary"
+            onclick="document.getElementById('invoice-dialog').close()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Confirmer la facturation</button>
+    </div>
+</form>
+
+<script>
+(() => {
+    const form = document.getElementById('invoice-form');
+    const field = document.getElementById('shipping-fee-field');
+    const input = document.getElementById('shipping_fee');
+    const updateShippingFeeField = () => {
+        const isSelected = form.querySelector('[name="add_shipping_fee"]:checked').value === 'yes';
+        field.hidden = !isSelected;
+        input.required = isSelected;
+        if (!isSelected) input.value = '';
+    };
+    form.querySelectorAll('[name="add_shipping_fee"]').forEach((radio) => {
+        radio.addEventListener('change', updateShippingFeeField);
+    });
+    updateShippingFeeField();
+})();
+</script>

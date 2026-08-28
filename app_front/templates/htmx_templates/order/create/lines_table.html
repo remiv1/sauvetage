@@ -1,6 +1,8 @@
 {# Fragment HTMX — Tableau des lignes de commande #}
 
 {% if order.lines %}
+{% set article_lines = order.lines | rejectattr('is_shipping_fee') | list %}
+{% set shipping_fee_lines = order.lines | selectattr('is_shipping_fee') | list %}
 <table class="order-lines-table">
     <thead>
         <tr>
@@ -19,7 +21,7 @@
     </thead>
     <tbody>
         {% set ns = namespace(total_ht=0) %}
-        {% for line in order.lines %}
+        {% for line in article_lines %}
         <tr>
             <td>{{ line.article_name }}</td>
             <td>{{ line.variation_name if line.variation_name else '—' }}</td>
@@ -53,6 +55,22 @@
         </tr>
         {% endfor %}
     </tbody>
+    {% if shipping_fee_lines %}
+    <tbody>
+        <tr>
+            <th colspan="{% if order.status == 'draft' %}9{% else %}8{% endif %}">Frais de port</th>
+        </tr>
+        {% for line in shipping_fee_lines %}
+        <tr>
+            <td colspan="5"></td>
+            <td>TVA {{ "%.1f"|format(line.vat_rate) }} %</td>
+            <td>{{ "%.2f"|format(line.line_total_ht) }} €</td>
+            <td colspan="{% if order.status == 'draft' %}2{% else %}1{% endif %}"></td>
+        </tr>
+        {% set ns.total_ht = ns.total_ht + line.line_total_ht %}
+        {% endfor %}
+    </tbody>
+    {% endif %}
     <tfoot>
         <tr>
             <td colspan="6" class="weight-600 text-right">Total HT</td>

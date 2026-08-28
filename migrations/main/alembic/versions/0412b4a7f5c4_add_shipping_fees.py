@@ -82,7 +82,25 @@ def upgrade() -> None:
     op.create_foreign_key(None, 'order_in_lines', 'inventory_movements', ['inventory_movement_id'], ['id'], source_schema='app_schema', referent_schema='app_schema')
     op.create_foreign_key(None, 'order_in_lines', 'order_in', ['order_in_id'], ['id'], source_schema='app_schema', referent_schema='app_schema')
     op.create_foreign_key(None, 'order_in_lines', 'general_objects', ['general_object_id'], ['id'], source_schema='app_schema', referent_schema='app_schema')
-    op.add_column('order_lines', sa.Column('is_shipping_fee', sa.Boolean(), nullable=False, comment='Indique si la ligne correspond à des frais de port'))
+    op.add_column(
+        'order_lines',
+        sa.Column(
+            'is_shipping_fee',
+            sa.Boolean(),
+            nullable=True,
+            default=False,
+            comment='Indique si la ligne correspond à des frais de port'
+        ),
+    )
+    op.execute("UPDATE app_schema.order_lines SET is_shipping_fee = false")
+    op.alter_column(
+        'order_lines',
+        'is_shipping_fee',
+        existing_type=sa.BOOLEAN(),
+        nullable=False,
+        default=False,
+        comment='Indique si la ligne correspond à des frais de port',
+    )
     op.alter_column('order_lines', 'order_id',
                existing_type=sa.INTEGER(),
                comment='Commande associée',

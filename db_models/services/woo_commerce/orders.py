@@ -271,7 +271,12 @@ class WCOrdersService(WCBase):
     ) -> None:
         """Synchronise les produits manquants avant un push commande."""
         for line in order.order_lines:
-            if not line or not line.general_object:
+            if (
+                not line
+                or line.is_shipping_fee
+                or line.status == OrderStatus.CANCELLED
+                or not line.general_object
+            ):
                 continue
             product = line.general_object
             if product.wpwc_id is not None:
@@ -326,8 +331,7 @@ class WCOrdersService(WCBase):
         """Pousse la commande vers WooCommerce (création ou mise à jour).
 
         Comportement des lignes :
-                - Annulées : conservées avec leur quantité et leur wpwc_id ; l'annulation est
-                    portée par le statut global de la commande.
+        - Annulées avec un wpwc_id : supprimées de WooCommerce avec une quantité nulle.
         - Actives sans wpwc_id : créées dans WC, wpwc_id assigné depuis la réponse.
         - Actives avec wpwc_id : mises à jour dans WC.
 
@@ -344,6 +348,11 @@ class WCOrdersService(WCBase):
         wpwc_snapshot = {line.id: line.wpwc_id for line in order.order_lines}
 
         try:
+            remote_shipping_line_ids = set()
+            if operation == "update" and any(
+                line.is_shipping_fee for line in order.order_lines if line
+            ):
+                remote_shipping_line_ids = self._pre_sync_line_ids(order)
             product_service = getattr(self, "product_service", None)
             if product_service is None and hasattr(self, "session"):
                 product_service = WCProductsService(self.session)
@@ -355,7 +364,9 @@ class WCOrdersService(WCBase):
             )
             response, ok = self._submit_order_to_wc(
                 order,
-                _serialize_decimals(order.to_dict_for_woo_commerce()),
+                _serialize_decimals(
+                    order.to_dict_for_woo_commerce(remote_shipping_line_ids)
+                ),
                 operation,
             )
             logger.info(
@@ -386,7 +397,7 @@ class WCOrdersService(WCBase):
             wc_data: WCData = response.json()
             if operation == "create":
                 order.wpwc_id = wc_data.get("id")
-            self._post_push_sync(order, wc_data.get("line_items", []))
+            self._post_push_sync(order, wc_data, remote_shipping_line_ids)
             order.last_synced_at = datetime.now(timezone.utc)
             self.sync_log_repo.log_order(
                 order_id=order.id,
@@ -653,10 +664,11 @@ class WCOrdersService(WCBase):
             if available_wc_ids:
                 line.wpwc_id = available_wc_ids.popleft()
 
-    def _pre_sync_line_ids(self, order: Order) -> None:
+    def _pre_sync_line_ids(self, order: Order) -> set[int]:
         """Resynchronise les wpwc_id locaux depuis l'état actuel de WC avant un push.
 
-        Effectue un GET sur la commande WC pour récupérer les lignes en cours.
+        Effectue un GET sur la commande WC pour récupérer les lignes en cours
+        et identifier les livraisons à convertir en frais.
         - Lignes annulées avec wpwc_id absent de WC : wpwc_id vidé (stale).
         - Lignes actives : wpwc_id mis à jour par appariement product_id + variation_id.
 
@@ -666,21 +678,81 @@ class WCOrdersService(WCBase):
         try:
             response = _call_api(self.api_read.get, f"orders/{order.wpwc_id}")
             if response.status_code != 200:
-                return
-            wc_lines: list[WCData] = response.json().get("line_items", [])
-        except Exception:  # pylint: disable=broad-except
-            return
+                raise RuntimeError(
+                    f"Impossible de relire la commande WooCommerce {order.wpwc_id} "
+                    f"(HTTP {response.status_code})."
+                )
+            wc_data: WCData = response.json()
+        except Exception as exc:  # pylint: disable=broad-except
+            raise RuntimeError(
+                f"Impossible de relire la commande WooCommerce {order.wpwc_id}."
+            ) from exc
 
-        self._sync_line_ids(order, wc_lines, clear_all_cancelled=False)
+        self._sync_line_ids(
+            order,
+            wc_data.get("line_items", []),
+            clear_all_cancelled=False,
+        )
+        return {
+            int(line["id"])
+            for line in wc_data.get("shipping_lines", [])
+            if line.get("id")
+        }
 
-    def _post_push_sync(self, order: Order, wc_lines: list[WCData]) -> None:
+    def _post_push_sync(
+        self,
+        order: Order,
+        wc_data: WCData,
+        replaced_shipping_line_ids: set[int],
+    ) -> None:
         """Met à jour les wpwc_id locaux après un push réussi.
 
-        Les lignes annulées conservent leur wpwc_id, car elles restent présentes dans
-        WooCommerce. Les lignes actives reçoivent leur wpwc_id depuis la réponse.
+        Les lignes annulées voient leur wpwc_id vidé après suppression confirmée.
+        Les lignes actives et les frais de port reçoivent leur wpwc_id depuis la réponse.
 
         Args:
             order (Order): Commande dont les lignes doivent être synchronisées.
-            wc_lines (list[WCData]): Lignes renvoyées par WooCommerce dans la réponse du push.
+            wc_data (WCData): Commande renvoyée par WooCommerce dans la réponse du push.
         """
-        self._sync_line_ids(order, wc_lines, clear_all_cancelled=False)
+        self._sync_line_ids(
+            order,
+            wc_data.get("line_items", []),
+            clear_all_cancelled=True,
+        )
+        self._sync_fee_line_ids(
+            order,
+            wc_data.get("fee_lines", []),
+            replaced_shipping_line_ids,
+        )
+
+    @staticmethod
+    def _sync_fee_line_ids(
+        order: Order,
+        wc_lines: list[WCData],
+        replaced_shipping_line_ids: set[int],
+    ) -> None:
+        """Associe les identifiants de frais WooCommerce aux frais de port locaux."""
+        linked_ids = {
+            line.wpwc_id
+            for line in order.order_lines
+            if line.is_shipping_fee
+            and line.wpwc_id is not None
+            and line.wpwc_id not in replaced_shipping_line_ids
+        }
+        unlinked_remote_ids = [
+            int(wc_line["id"])
+            for wc_line in wc_lines
+            if wc_line.get("id") and int(wc_line["id"]) not in linked_ids
+        ]
+        unlinked_local_lines = [
+            line
+            for line in order.order_lines
+            if line.is_shipping_fee
+            and line.status != OrderStatus.CANCELLED
+            and (
+                line.wpwc_id is None
+                or line.wpwc_id in replaced_shipping_line_ids
+            )
+        ]
+        for line, wpwc_id in zip(unlinked_local_lines, unlinked_remote_ids):
+            line.wpwc_id = wpwc_id

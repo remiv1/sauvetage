@@ -84,6 +84,15 @@ class ShippingLine(BaseModel):
     total: str | None = None
 
 
+class FeeLine(BaseModel):
+    """Données d'une ligne de frais de commande WooCommerce."""
+
+    name: str | None = None
+    tax_class: str | None = None
+    tax_status: str | None = None
+    total: str | None = None
+
+
 class WCOrderPut(BaseModel):
     """
     Modèle de données pour la mise à jour d'une commande WooCommerce.
@@ -95,6 +104,7 @@ class WCOrderPut(BaseModel):
     - shipping (Shipping | None): Données de livraison du client.
     - line_items (list[LineItem] | None): Liste des lignes de commande.
     - shipping_lines (list[ShippingLine] | None): Liste des lignes de livraison.
+    - fee_lines (list[FeeLine] | None): Liste des lignes de frais.
     """
     payment_method: str | None = None
     payment_method_title: str | None = None
@@ -103,3 +113,4 @@ class WCOrderPut(BaseModel):
     shipping: Shipping | None = None
     line_items: list[LineItem] | None = None
     shipping_lines: list[ShippingLine] | None = None
+    fee_lines: list[FeeLine] | None = None

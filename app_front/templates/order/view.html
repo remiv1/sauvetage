@@ -159,6 +159,8 @@
     <div id="tab-lines" class="order-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-lines" aria-hidden="false">
         <h3>Lignes de commande</h3>
         {% if order.lines %}
+        {% set article_lines = order.lines | rejectattr('is_shipping_fee') | list %}
+        {% set shipping_fee_lines = order.lines | selectattr('is_shipping_fee') | list %}
         <table class="order-lines-table">
             <thead>
                 <tr>
@@ -172,7 +174,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for line in order.lines %}
+                {% for line in article_lines %}
                 <tr>
                     <td>{{ line.article_name }}</td>
                     <td>{{ line.quantity }}</td>
@@ -184,6 +186,20 @@
                 </tr>
                 {% endfor %}
             </tbody>
+            {% if shipping_fee_lines %}
+            <tbody>
+                <tr>
+                    <th colspan="7">Frais de port</th>
+                </tr>
+                {% for shipping_fee_group in shipping_fee_lines | groupby('vat_rate') %}
+                <tr>
+                    <td colspan="5"></td>
+                    <td>TVA {{ "%.1f"|format(shipping_fee_group.grouper) }} %</td>
+                    <td>{{ "%.2f"|format(shipping_fee_group.list | map(attribute='line_total_ht') | sum) }} €</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% endif %}
             <tfoot>
                 <tr>
                     <td colspan="5" class="text-right weight-600">Total HT</td>
@@ -209,6 +225,8 @@
         {% endif %}
 
         {% if order.cancelled_lines %}
+        {% set cancelled_article_lines = order.cancelled_lines | rejectattr('is_shipping_fee') | list %}
+        {% set cancelled_shipping_fee_lines = order.cancelled_lines | selectattr('is_shipping_fee') | list %}
         <details class="cancelled-lines-section">
             <summary>
                 Lignes annulées
@@ -228,7 +246,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for line in order.cancelled_lines %}
+                        {% for line in cancelled_article_lines %}
                         <tr>
                             <td>{{ line.article_name }}</td>
                             <td>{{ line.quantity }}</td>
@@ -240,6 +258,20 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+                    {% if cancelled_shipping_fee_lines %}
+                    <tbody>
+                        <tr>
+                            <th colspan="7">Frais de port</th>
+                        </tr>
+                        {% for shipping_fee_group in cancelled_shipping_fee_lines | groupby('vat_rate') %}
+                        <tr>
+                            <td colspan="5"></td>
+                            <td>TVA {{ "%.1f"|format(shipping_fee_group.grouper) }} %</td>
+                            <td>{{ "%.2f"|format(shipping_fee_group.list | map(attribute='line_total_ht') | sum) }} €</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% endif %}
                 </table>
             </div>
         </details>
@@ -355,7 +387,8 @@
             <div class="modal-body">
                 <form id="invoice-form"
                       hx-post="{{ url_for('order_htmx_create.invoice_order_route', order_id=order.id) }}"
-                      hx-swap="none">
+                      hx-target="#invoice-form"
+                      hx-swap="outerHTML">
                     <p class="mb-2 subtile-text-600">Sélectionnez les lignes à {% if order.is_return %}avoirer{% else %}facturer{% endif %} et indiquez les quantités.</p>
                     <table class="order-lines-table">
                         <thead>
@@ -449,7 +482,7 @@
                         </thead>
                         <tbody>
                             {% for line in order.lines %}
-                            {% if line.status == 'invoiced' %}
+                            {% if line.status == 'invoiced' and not line.is_shipping_fee %}
                             <tr>
                                 <td class="text-center">
                                     <input type="checkbox" name="line_ids" value="{{ line.id }}"

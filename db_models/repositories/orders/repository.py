@@ -63,6 +63,56 @@ class OrdersRepository(BaseRepository):
             )
         return vat_rate
 
+    def _get_current_vat_rate_by_wpwc_id(self, wpwc_id: int) -> VatRate:
+        """Retourne le taux de TVA local actif correspondant à un identifiant WooCommerce."""
+        vat_rate = self.session.execute(
+            select(VatRate).where(
+                VatRate.wpwc_id == wpwc_id,
+                VatRate.date_start <= datetime.now(timezone.utc),
+                (VatRate.date_end.is_(None)) | (VatRate.date_end > datetime.now(timezone.utc)),
+            )
+        ).scalar_one_or_none()
+        if vat_rate is None:
+            raise ValueError(
+                f"Taux de TVA WooCommerce {wpwc_id} introuvable dans le référentiel local."
+            )
+        return vat_rate
+
+    def _add_shipping_fee_lines_from_woo(
+        self,
+        order: Order,
+        shipping_lines: Sequence[Any],
+        source: str,
+    ) -> None:
+        """Ajoute les frais de livraison WooCommerce aux lignes locales de commande."""
+        for shipping_line in shipping_lines:
+            tax_ids = [
+                int(tax["id"])
+                for tax in shipping_line.taxes
+                if isinstance(tax, dict) and tax.get("id")
+            ]
+            if len(tax_ids) != 1:
+                raise ValueError(
+                    f"La livraison WooCommerce {shipping_line.id} doit avoir un unique taux de TVA."
+                )
+            vat_rate = self._get_current_vat_rate_by_wpwc_id(tax_ids[0])
+            order.order_lines.append(
+                OrderLine(
+                    wpwc_id=shipping_line.id,
+                    general_object_id=None,
+                    is_shipping_fee=True,
+                    quantity=1,
+                    unit_price=float(shipping_line.total),
+                    discount=0,
+                    vat_rate=float(vat_rate.rate),
+                    vat_rate_id=vat_rate.id,
+                    vat_rate_ref=vat_rate,
+                    status="draft",
+                    create_source=source,
+                    update_source=source,
+                )
+            )
+
     def _get_current_vat_rate_by_value(self, value: float) -> VatRate:
         """Retourne le taux de TVA local actif correspondant à une valeur de pourcentage."""
         vat_rate = self.session.execute(
@@ -349,6 +399,11 @@ class OrdersRepository(BaseRepository):
             line_object.update_source = line_dict["update_source"]
             line_object.general_object = local_product
             order.order_lines.append(line_object)
+        self._add_shipping_fee_lines_from_woo(
+            order,
+            wpwc_order_model.shipping_lines,
+            wpwc_order_dict["create_source"],
+        )
         self.session.add(order)
         self.session.flush()
         order.reference = self.generate_reference(order, "CMD")

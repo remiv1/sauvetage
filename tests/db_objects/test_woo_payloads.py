@@ -27,6 +27,7 @@ from db_models.objects import (
     VatRate,
 )
 from db_models.repositories.customers import CustomersRepository
+from db_models.repositories.orders.repository import OrdersRepository
 from db_models.services.woo_commerce.customers import WCCustomersService
 from db_models.services.woo_commerce.orders import WCOrdersService, _match_line_to_wc
 from db_models.services.woo_commerce.products import WCProductsService
@@ -535,10 +536,10 @@ def test_order_payload_uses_wc_customer_and_line_contract(
     assert payload["metadata"]["_billing_wooccm10"] == "Professionnel"
 
 
-def test_cancelled_order_payload_updates_status_without_zeroing_lines(
+def test_cancelled_order_payload_removes_known_lines(
         wc_customer_pro: Customers,
     ) -> None:
-    """Une annulation doit changer le statut WC sans altérer la quantité des lignes."""
+    """Une ligne annulée déjà connue doit être supprimée de WooCommerce."""
     product = GeneralObjects(
         id=12,
         supplier_id=1,
@@ -575,17 +576,161 @@ def test_cancelled_order_payload_updates_status_without_zeroing_lines(
     payload = order.to_dict_for_woo_commerce()
 
     assert payload["status"] == "cancelled"
-    assert payload["line_items"] == [
+    assert payload["line_items"] == [{"id": 70, "quantity": 0}]
+
+
+def test_order_payload_exports_shipping_fee_in_fee_lines(
+    wc_customer_pro: Customers,
+) -> None:
+    """Les frais de port doivent être envoyés comme lignes de frais WooCommerce."""
+    vat_rate = VatRate(
+        code=1,
+        rate=5.5,
+        label="TVA 5,5%",
+        wpwc_id=2,
+        wpwc_slug="taux-reduit",
+    )
+    shipping_fee = OrderLine(
+        id=8,
+        order_id=1,
+        general_object_id=None,
+        is_shipping_fee=True,
+        quantity=1,
+        status="invoiced",
+        unit_price=25.0,
+        discount=0,
+        vat_rate=5.5,
+        create_source="test",
+        vat_rate_ref=vat_rate,
+    )
+    order = Order(
+        id=1,
+        reference="CMD-2401-00003",
+        customer_id=999,
+        status="invoiced",
+        create_source="test",
+        customer=wc_customer_pro,
+        order_lines=[shipping_fee],
+    )
+
+    payload = order.to_dict_for_woo_commerce()
+
+    assert payload["line_items"] == []
+    assert payload["shipping_lines"] == []
+    assert payload["fee_lines"] == [
         {
-            "name": "Produit annulé",
-            "product_id": 120,
-            "quantity": 2,
-            "subtotal": "32.0",
-            "total": "32.0",
-            "tax_class": "standard",
-            "id": 70
+            "name": "Frais de port",
+            "tax_class": "taux-reduit",
+            "tax_status": "taxable",
+            "total": "25.0",
         }
     ]
+
+
+def test_wc_orders_service_stores_fee_line_identifier() -> None:
+    """Un frais de port créé doit conserver son identifiant de frais WooCommerce."""
+    service = object.__new__(WCOrdersService)
+    shipping_fee = OrderLine(
+        id=8,
+        order_id=1,
+        general_object_id=None,
+        is_shipping_fee=True,
+        quantity=1,
+        status="invoiced",
+        unit_price=25.0,
+        discount=0,
+        vat_rate=5.5,
+        create_source="test",
+    )
+    order = Order(
+        id=1,
+        reference="CMD-2401-00003",
+        customer_id=999,
+        status="invoiced",
+        create_source="test",
+        order_lines=[shipping_fee],
+    )
+
+    service._sync_fee_line_ids(order, [{"id": 278}], set())  # pylint: disable=W0212
+
+    assert shipping_fee.wpwc_id == 278
+
+
+def test_imported_shipping_fee_is_converted_to_fee_line(
+    wc_customer_pro: Customers,
+) -> None:
+    """Une livraison importée doit être remise à zéro puis créée comme frais WooCommerce."""
+    repository = object.__new__(OrdersRepository)
+    vat_rate = VatRate(
+        id=5,
+        code=1,
+        rate=5.5,
+        label="TVA 5,5%",
+        wpwc_id=2,
+        wpwc_slug="taux-reduit",
+    )
+    setattr(
+        repository,
+        "_get_current_vat_rate_by_wpwc_id",
+        MagicMock(return_value=vat_rate),
+    )
+    order = Order(
+        id=1,
+        reference="CMD-2401-00004",
+        customer_id=999,
+        status="draft",
+        create_source="Site Web",
+        customer=wc_customer_pro,
+    )
+    remote_shipping_line = MagicMock(
+        id=294,
+        total="25.00",
+        taxes=[{"id": 2, "total": "1.38"}],
+    )
+
+    repository._add_shipping_fee_lines_from_woo(  # pylint: disable=W0212
+        order,
+        [remote_shipping_line],
+        "Site Web",
+    )
+
+    shipping_fee = order.order_lines[0]
+    payload = order.to_dict_for_woo_commerce({294})
+    assert shipping_fee.is_shipping_fee is True
+    assert shipping_fee.wpwc_id == 294
+    assert shipping_fee.vat_rate_id == 5
+    assert payload["shipping_lines"] == [{"id": 294, "meta_data": [], "total": "0"}]
+    assert "id" not in payload["fee_lines"][0]
+
+
+def test_wc_orders_service_replaces_shipping_identifier_with_fee_identifier() -> None:
+    """La conversion doit remplacer l'identifiant de livraison par celui du frais."""
+    service = object.__new__(WCOrdersService)
+    shipping_fee = OrderLine(
+        id=8,
+        order_id=1,
+        general_object_id=None,
+        is_shipping_fee=True,
+        quantity=1,
+        status="invoiced",
+        unit_price=25.0,
+        discount=0,
+        vat_rate=5.5,
+        create_source="Site Web",
+        wpwc_id=294,
+    )
+    order = Order(
+        id=1,
+        reference="CMD-2401-00005",
+        customer_id=999,
+        status="invoiced",
+        create_source="Site Web",
+        order_lines=[shipping_fee],
+    )
+
+    service._sync_fee_line_ids(order, [{"id": 310}], {294})  # pylint: disable=W0212
+
+    assert shipping_fee.wpwc_id == 310
 
 
 def test_returned_order_payload_uses_refunded_status(wc_customer_pro: Customers) -> None:

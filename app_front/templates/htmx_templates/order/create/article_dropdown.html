@@ -5,7 +5,7 @@
          data-article-id="{{ a.id }}"
          data-article-name="{{ a.name }}"
          data-article-price="{{ a.price }}"
-         data-article-vat=""
+         data-article-vat="{{ a.vat_rate }}"
          data-variations='{{ a.variations | tojson }}'>
         {{ a.name }}
         {% if a.ean13 %}<small class="text-muted"> &mdash; EAN : {{ a.ean13 }}</small>{% endif %}

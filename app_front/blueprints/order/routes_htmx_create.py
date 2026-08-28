@@ -1,5 +1,7 @@
 """Blueprint HTMX pour la création de commandes et gestion des lignes."""
 
+from decimal import Decimal, InvalidOperation
+
 from flask import Blueprint, make_response, render_template, request, url_for
 from app_front.blueprints.order.forms import (
     OrderCreateForm,
@@ -36,8 +38,11 @@ ORDER_LINES_TABLE = "htmx_templates/order/create/lines_table.html"
 ORDER_LINE_EDIT_MODAL = "htmx_templates/order/create/line_edit_modal.html"
 ARTICLE_DROPDOWN = "htmx_templates/order/create/article_dropdown.html"
 ADDRESS_SELECTOR = "htmx_templates/order/create/address_selector.html"
+INVOICE_SHIPPING_FEE_FORM = "htmx_templates/order/create/invoice_shipping_fee_form.html"
 _EDIT_ORDER_ROUTE = "order_htmx_create.edit_order"
 _VIEW_ORDER_ROUTE = "order.order_view"
+_ORDER_NOT_FOUND_HTML = "<p>Commande introuvable.</p>"
+_NO_VALID_QUANTITY_HTML = "<p class='error'>Aucune quantité valide.</p>"
 
 
 @bp_order_htmx_create.post("/return/<int:order_id>")
@@ -101,7 +106,7 @@ def edit_order(order_id: int):
     """Page d'édition d'une commande (ajout de lignes, récapitulatif)."""
     order = get_order_by_id(order_id)
     if order is None:
-        return "<p>Commande introuvable.</p>", 404
+        return _ORDER_NOT_FOUND_HTML, 404
     line_form = OrderLineForm()
     return render_page("order_edit", order=order, line_form=line_form)
 
@@ -153,7 +158,11 @@ def add_line(order_id: int):
         response = make_response("", 200)
         response.headers["HX-Trigger"] = "refreshOrderLines"
         return response
-    return "<p>Formulaire invalide.</p>", 422
+    errors = " ".join(
+        f"{field}: {', '.join(messages)}"
+        for field, messages in form.errors.items()
+    )
+    return f"<p class='error'>Formulaire invalide. {errors}</p>", 422
 
 
 @bp_order_htmx_create.delete("/line/<int:order_id>/<int:line_id>")
@@ -174,7 +183,7 @@ def edit_line(order_id: int, line_id: int):
     """Affiche puis enregistre la modification d'une ligne brouillon."""
     order = get_order_by_id(order_id)
     if order is None:
-        return "<p>Commande introuvable.</p>", 404
+        return _ORDER_NOT_FOUND_HTML, 404
     line = next((item for item in order["lines"] if item["id"] == line_id), None)
     if line is None:
         return "<p>Ligne introuvable.</p>", 404
@@ -210,7 +219,7 @@ def edit_line(order_id: int, line_id: int):
 
 @bp_order_htmx_create.post("/invoice/<int:order_id>")
 def invoice_order_route(order_id: int):
-    """Crée une facture pour les lignes sélectionnées avec quantités (HTMX)."""
+    """Affiche l'étape de saisie des frais de port avant facturation."""
     line_ids = request.form.getlist("line_ids", type=int)
     quantities = request.form.getlist("quantities", type=int)
 
@@ -224,10 +233,41 @@ def invoice_order_route(order_id: int):
             line_items.append({"order_line_id": lid, "quantity": qty})
 
     if not line_items:
-        return "<p class='error'>Aucune quantité valide.</p>", 422
+        return _NO_VALID_QUANTITY_HTML, 422
+
+    return render_template(
+        INVOICE_SHIPPING_FEE_FORM,
+        order_id=order_id,
+        line_items=line_items,
+    )
+
+
+@bp_order_htmx_create.post("/invoice/<int:order_id>/confirm")
+def confirm_invoice_order_route(order_id: int):
+    """Crée les frais de port éventuels puis facture les lignes sélectionnées."""
+    line_ids = request.form.getlist("line_ids", type=int)
+    quantities = request.form.getlist("quantities", type=int)
+    line_items = [
+        {"order_line_id": line_id, "quantity": quantities[index]}
+        for index, line_id in enumerate(line_ids)
+        if index < len(quantities) and quantities[index] != 0
+    ]
+    if not line_items:
+        return _NO_VALID_QUANTITY_HTML, 422
+
+    add_shipping_fee = request.form.get("add_shipping_fee")
+    if add_shipping_fee not in {"yes", "no"}:
+        return "<p class='error'>Veuillez indiquer si des frais de port sont à ajouter.</p>", 422
+
+    shipping_fee = None
+    if add_shipping_fee == "yes":
+        try:
+            shipping_fee = Decimal(request.form.get("shipping_fee", ""))
+        except InvalidOperation:
+            return "<p class='error'>Le montant des frais de port est invalide.</p>", 422
 
     try:
-        invoice_order(order_id, line_items=line_items)
+        invoice_order(order_id, line_items=line_items, shipping_fee=shipping_fee)
     except ValueError as exc:
         return f"<p class='error'>{exc}</p>", 422
     response = make_response("", 200)
@@ -272,7 +312,7 @@ def ship_order_route(order_id: int):
             line_items.append({"order_line_id": lid, "quantity": qty})
 
     if not line_items:
-        return "<p class='error'>Aucune quantité valide.</p>", 422
+        return _NO_VALID_QUANTITY_HTML, 422
 
     try:
         ship_order(
@@ -295,7 +335,7 @@ def order_lines(order_id: int):
     """Retourne le fragment des lignes de commande (HTMX)."""
     order = get_order_by_id(order_id)
     if order is None:
-        return "<p>Commande introuvable.</p>", 404
+        return _ORDER_NOT_FOUND_HTML, 404
     return render_template(ORDER_LINES_TABLE, order=order)
 
 
@@ -366,6 +406,7 @@ def search_articles():
             results = []
         articles = []
         for a in results:
+            vat_rate = float(a.get_current_vat_rate() or 0)
             variations = [
                 {"id": v.id, "name": v.name, "price": float(v.price) if v.price else 0}
                 for v in a.object_variations
@@ -377,6 +418,7 @@ def search_articles():
                 "ean13": a.ean13 or "",
                 "price": float(a.price) if a.price else 0,
                 "variations": variations,
+                "vat_rate": vat_rate,
             })
         return render_template(ARTICLE_DROPDOWN, articles=articles, query=query)
     except ValueError as exc:

@@ -226,8 +226,12 @@ class Order(WorkingBase, QueryMixin):
         """Retourne l'objet enfant si le parent existe, sinon ""."""
         return getattr(obj, attribute, default) if obj else default
 
-    def to_dict_for_woo_commerce(self) -> dict[str, Any]:
+    def to_dict_for_woo_commerce(
+        self,
+        shipping_line_ids: set[int] | None = None,
+    ) -> dict[str, Any]:
         """Convertit l'objet Order en dictionnaire au format attendu par WooCommerce."""
+        shipping_line_ids = shipping_line_ids or set()
         wc_statuses = {
             "draft": "pending",
             "partial_invoiced": "completed",
@@ -263,11 +267,33 @@ class Order(WorkingBase, QueryMixin):
             "country": self._get_if_parent_exists(self.delivery_address, "country"),
         }
         metadata = self._get_wc_metadata()
-        line_items = []
-        for line in self.order_lines:
-            if not line:
-                continue
-            line_items.append(line.to_dict_for_woo_commerce())
+        line_items = [
+            line.to_dict_for_woo_commerce()
+            for line in self.order_lines
+            if line and not line.is_shipping_fee and line.status != "cancelled"
+        ]
+        line_items.extend(
+            {"id": line.wpwc_id, "quantity": 0}
+            for line in self.order_lines
+            if line
+            and not line.is_shipping_fee
+            and line.status == "cancelled"
+            and line.wpwc_id is not None
+        )
+        shipping_lines = [
+            line.to_dict_for_woo_commerce_shipping_removal()
+            for line in self.order_lines
+            if line
+            and line.is_shipping_fee
+            and line.wpwc_id in shipping_line_ids
+        ]
+        fee_lines = [
+            line.to_dict_for_woo_commerce_fee(
+                include_id=line.wpwc_id not in shipping_line_ids
+            )
+            for line in self.order_lines
+            if line and line.is_shipping_fee and line.status != "cancelled"
+        ]
         return {
             "customer_id": self.customer.wpwc_id,
             "status": wc_statuses.get(self.status, "pending"),
@@ -277,6 +303,8 @@ class Order(WorkingBase, QueryMixin):
             "billing": billing,
             "shipping": shipping,
             "line_items": line_items,
+            "shipping_lines": shipping_lines,
+            "fee_lines": fee_lines,
             "metadata": metadata,
         }
 
@@ -344,7 +372,7 @@ class OrderLine(WorkingBase, QueryMixin):
         nullable=False,
         comment="Commande associée",
     )
-    general_object_id: Mapped[int] = mapped_column(
+    general_object_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         ForeignKey("app_schema.general_objects.id"),
         nullable=True,
@@ -431,6 +459,7 @@ class OrderLine(WorkingBase, QueryMixin):
             "order_id": self.order_id,
             "general_object_id": self.general_object_id,
             "object_variation_id": self.object_variation_id,
+            "is_shipping_fee": self.is_shipping_fee,
             "quantity": self.quantity,
             "status": self.status,
             "unit_price": self.unit_price,
@@ -480,6 +509,36 @@ class OrderLine(WorkingBase, QueryMixin):
         if self.object_variation and self.object_variation.wpwc_id:
             value_dict["variation_id"] = int(self.object_variation.wpwc_id)
         return value_dict
+
+    def to_dict_for_woo_commerce_fee(self, *, include_id: bool = True) -> dict[str, Any]:
+        """Convertit une ligne de frais de port au format de frais WooCommerce."""
+        if not self.is_shipping_fee:
+            raise ValueError("Seules les lignes de frais de port sont acceptées ici.")
+        if self.vat_rate_ref is None or not self.vat_rate_ref.wpwc_slug:
+            raise ValueError(
+                f"Le taux de TVA de la ligne de port {self.id} n'est pas synchronisé "
+                "sur WooCommerce (wpwc_slug manquant)."
+            )
+
+        total_without_tax = round(
+            float(self.unit_price) * self.quantity * (1 - float(self.discount) / 100),
+            2,
+        )
+        value_dict: dict[str, Any] = {
+            "name": "Frais de port",
+            "tax_class": self.vat_rate_ref.wpwc_slug,
+            "tax_status": "taxable",
+            "total": str(total_without_tax),
+        }
+        if include_id and self.wpwc_id:
+            value_dict["id"] = self.wpwc_id
+        return value_dict
+
+    def to_dict_for_woo_commerce_shipping_removal(self) -> dict[str, Any]:
+        """Construit la remise à zéro d'une ligne de livraison WooCommerce importée."""
+        if not self.is_shipping_fee or self.wpwc_id is None:
+            raise ValueError("Une ligne de port WooCommerce identifiée est requise.")
+        return {"id": self.wpwc_id, "meta_data": [], "total": "0"}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "OrderLine":

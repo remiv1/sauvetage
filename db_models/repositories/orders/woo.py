@@ -220,6 +220,13 @@ class OrdersWooRepository:
         try:
             if existing is None:
                 order = self.order_repo.create_from_woo_commerce(wc_order, customer.id)
+                synced, error_message = self.service.push_order(order)
+                if not synced:
+                    order.last_synced_at = None
+                    raise ValueError(
+                        "Conversion des frais de livraison WooCommerce en frais "
+                        f"de port échouée : {error_message}"
+                    )
                 logger.info(
                     "Synchronisation site WooCommerce : commande %s créée localement "
                     "sous l'identifiant %d.",

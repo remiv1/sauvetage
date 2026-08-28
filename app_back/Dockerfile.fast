@@ -4,14 +4,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-openbsd libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
     libgdk-pixbuf2.0-0 libglib2.0-0 libfontconfig1 libjpeg62-turbo \
     libffi-dev shared-mime-info fonts-dejavu-core curl cron \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --upgrade pip
 
 WORKDIR /app
 ENV PYTHONPATH=/app
 
 COPY app_back/requirements.txt .
 
-RUN pip install -r requirements.txt && \
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
     pip install uvicorn[standard]
 
 COPY app_back/ app_back/

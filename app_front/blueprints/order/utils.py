@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Sequence
 from app_front.config import db_conf
 from app_front.blueprints.order.utils_henrri import (
@@ -183,7 +184,9 @@ def search_orders_paginated(    # pylint: disable=too-many-arguments
 
 def _build_order_line_dto(line: OrderLine) -> dict[str, Any]:
     """Convertit une ligne ORM en dict de présentation."""
-    if line.general_object:
+    if line.is_shipping_fee:
+        article_name = "Frais de port"
+    elif line.general_object:
         article_name = (
             getattr(line.general_object, "name", None)
             or f"Article #{line.general_object_id}"
@@ -278,7 +281,10 @@ def get_order_by_id(order_id: int) -> Optional[Dict[str, Any]]:
     # Flags pour boutons facturer / expédier
     order_lines = order.order_lines or []
     data["has_uninvoiced_lines"] = any(l.status == "draft" for l in order_lines)
-    data["has_unshipped_invoiced_lines"] = any(l.status == "invoiced" for l in order_lines)
+    data["has_unshipped_invoiced_lines"] = any(
+        l.status == "invoiced" and l.general_object_id is not None
+        for l in order_lines
+    )
 
     # Synchronisation WooCommerce
     data |= _get_sync_data_for_order(order)
@@ -645,12 +651,94 @@ def create_return_order(order_id: int) -> Order:
     return return_order
 
 
-def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
+def _create_shipping_fee_lines(
+    order: Order,
+    selected_lines: list[tuple[OrderLine, int]],
+    shipping_fee: Decimal | None,
+) -> list[OrderLine]:
+    """Ventile et construit les frais de port selon les montants HT facturés."""
+    if shipping_fee is None:
+        return []
+    if not shipping_fee.is_finite() or shipping_fee <= 0:
+        raise ValueError("Le montant des frais de port doit être supérieur à zéro.")
+
+    amounts_by_vat: dict[tuple[int, Decimal], Decimal] = {}
+    for line, quantity in selected_lines:
+        gross_amount = Decimal(str(line.unit_price)) * abs(quantity)
+        discount_ratio = Decimal("1") - Decimal(str(line.discount)) / Decimal("100")
+        amount = gross_amount * discount_ratio
+        vat_key = (line.vat_rate_id, Decimal(str(line.vat_rate)))
+        amounts_by_vat[vat_key] = amounts_by_vat.get(vat_key, Decimal("0")) + amount
+
+    total_amount = sum(amounts_by_vat.values(), Decimal("0"))
+    if total_amount <= 0:
+        raise ValueError(
+            "Les montants HT sélectionnés ne permettent pas de répartir les frais de port."
+        )
+
+    shipping_fee = shipping_fee.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    remaining_fee = shipping_fee
+    vat_groups = sorted(amounts_by_vat.items(), key=lambda item: item[0])
+    quantity = -1 if all(item_quantity < 0 for _, item_quantity in selected_lines) else 1
+    shipping_lines: list[OrderLine] = []
+
+    for index, ((vat_rate_id, vat_rate), vat_amount) in enumerate(vat_groups):
+        if index == len(vat_groups) - 1:
+            allocated_fee = remaining_fee
+        else:
+            allocated_fee = (shipping_fee * vat_amount / total_amount).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            remaining_fee -= allocated_fee
+
+        order_line = OrderLine(
+            order_id=order.id,
+            general_object_id=None,
+            is_shipping_fee=True,
+            quantity=quantity,
+            unit_price=allocated_fee,
+            discount=0,
+            vat_rate=vat_rate,
+            vat_rate_id=vat_rate_id,
+            status="draft",
+            create_source="backoffice_shipping_fee",
+        )
+        shipping_lines.append(order_line)
+
+    return shipping_lines
+
+
+def _mark_invoice_lines(
+    order_repository: OrdersRepository,
+    order_lines: list[OrderLine],
+    line_items: list[Dict[str, Any]],
+) -> None:
+    """Met à jour le statut des lignes après leur ajout à une facture."""
+    quantities_by_line_id = {
+        item["order_line_id"]: item["quantity"] for item in line_items
+    }
+    for line in order_lines:
+        if line.is_shipping_fee:
+            line.status = "invoiced"
+            continue
+
+        invoiced_quantity = quantities_by_line_id[line.id]
+        if line.quantity != invoiced_quantity:
+            order_repository.cut_line_for_invoice(line, invoiced_quantity)
+        line.status = "invoiced"
+
+
+def invoice_order(
+    order_id: int,
+    line_items: list[Dict[str, Any]],
+    shipping_fee: Decimal | None = None,
+) -> Invoice:
     """Crée une facture pour les lignes sélectionnées avec les quantités spécifiées.
 
     Args:
         order_id: ID de la commande.
         line_items: Liste de dicts {order_line_id: int, quantity: int}.
+        shipping_fee: Montant HT positif des frais de port à répartir.
     Returns:
         Invoice créée (objet SQLAlchemy).
     """
@@ -674,12 +762,14 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
     line_objects = [l for l in order.order_lines if l.id in requested_ids]
 
     invoice_lines = []
+    selected_lines: list[tuple[OrderLine, int]] = []
     for line in line_objects:
         if line.status != "draft":
             raise ValueError(f"La ligne {line.id} n'est pas en brouillon.")
         qty = next(item["quantity"] for item in line_items if item["order_line_id"] == line.id)
         if not _has_valid_quantity_sign(line.quantity, qty):
             raise ValueError(f"Quantité invalide pour la ligne {line.id}.")
+        selected_lines.append((line, qty))
         invoice_lines.append(
             InvoiceLine(
                 order_line_id=line.id,
@@ -691,6 +781,23 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
                 vat_rate=float(line.vat_rate),
             )
         )
+
+    shipping_lines = _create_shipping_fee_lines(order, selected_lines, shipping_fee)
+    session.add_all(shipping_lines)
+    session.flush()
+    invoice_lines.extend(
+        InvoiceLine(
+            order_line_id=order_line.id,
+            reference="PORT",
+            description=f"Frais de port (TVA {order_line.vat_rate:g} %)",
+            quantity=order_line.quantity,
+            unit_price=order_line.unit_price,
+            discount=0,
+            vat_rate=order_line.vat_rate,
+        )
+        for order_line in shipping_lines
+    )
+    line_objects.extend(shipping_lines)
 
     # Créer la facture en local
     inv_repo = InvoiceRepository(session)
@@ -706,16 +813,7 @@ def invoice_order(order_id: int, line_items: list[Dict[str, Any]]) -> Invoice:
     except HenrriSyncError:
         pass
 
-    # Mettre à jour le statut des lignes de commande
-    for line in line_objects:
-        qty_invoiced = next(
-            item["quantity"] for item in line_items if item["order_line_id"] == line.id
-            )
-
-        if line.quantity != qty_invoiced:
-            order_repo.cut_line_for_invoice(line, qty_invoiced)
-
-        line.status = "invoiced"
+    _mark_invoice_lines(order_repo, line_objects, line_items)
     session.commit()
 
     # Recalculer le statut de la commande
@@ -859,6 +957,14 @@ def ship_order(
     line_objects: List[OrderLine] = [
         l for l in (order.order_lines or []) \
             if l.id in {item["order_line_id"] for item in line_items}]
+    shipping_fee_line = next(
+        (line for line in line_objects if line.is_shipping_fee),
+        None,
+    )
+    if shipping_fee_line is not None:
+        raise ValueError(
+            f"La ligne {shipping_fee_line.id} est un frais de port et ne peut pas être expédiée."
+        )
 
     shipment_lines: List[ShipmentLine] = []
     for line in line_objects:
@@ -902,7 +1008,9 @@ def ship_order(
 def _recalculate_order_status(order: Order, repo: OrdersRepository) -> None:
     """Recalcule le statut de la commande en fonction des statuts de ses lignes."""
     statuses = {
-        l.status for l in (order.order_lines or []) if l.status != "cancelled"
+        l.status
+        for l in (order.order_lines or [])
+        if l.status != "cancelled" and l.general_object_id is not None
     }
     if not statuses:
         return
