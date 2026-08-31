@@ -16,8 +16,8 @@ HENRRI_INVOICE_DOCUMENT_TYPE: dict[str, Any] = {
     "is_visible": True,
 }
 HENRRI_CREDIT_NOTE_DOCUMENT_TYPE: dict[str, Any] = {
-    "document_kind": "credit_note",
-    "id": 3,
+    "document_kind": "creditNote",
+    "id": 2,
     "is_accounting": True,
     "is_managed": True,
     "is_mandatory": True,

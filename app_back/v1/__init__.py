@@ -6,6 +6,7 @@ from .dilicom import dilicom_router
 from .documents import router as documents_router
 from .mails import router as mails_router
 from .woocommerce import router as woo_commerce_router
+from .henrri import henrri_router
 
 __all__ = [
     "user_router",
@@ -14,4 +15,5 @@ __all__ = [
     "documents_router",
     "mails_router",
     "woo_commerce_router",
+    "henrri_router",
 ]
