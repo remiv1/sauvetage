@@ -99,8 +99,11 @@ class InvoiceRepository(BaseRepository):
                 selectinload(Invoice.order),
                 selectinload(Invoice.sync_logs),
                 selectinload(Invoice.lines)
-                .selectinload(InvoiceLine.order_line)
-                .selectinload(OrderLine.general_object),
+                    .selectinload(InvoiceLine.order_line)
+                    .selectinload(OrderLine.general_object),
+                selectinload(Invoice.lines)
+                    .selectinload(InvoiceLine.order_line)
+                    .selectinload(OrderLine.invoice_fee_product),
             )
         )
         return self.session.execute(stmt).scalar_one_or_none()

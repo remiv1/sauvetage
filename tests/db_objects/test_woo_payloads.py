@@ -15,6 +15,7 @@ from db_models.objects import (
     CustomerParts,
     Customers,
     GeneralObjects,
+    InvoiceFeeProduct,
     MediaFiles,
     ObjMetadatas,
     ObjectPrices,
@@ -658,9 +659,11 @@ def test_wc_orders_service_stores_fee_line_identifier() -> None:
 
 def test_imported_shipping_fee_is_converted_to_fee_line(
     wc_customer_pro: Customers,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Une livraison importée doit être remise à zéro puis créée comme frais WooCommerce."""
     repository = object.__new__(OrdersRepository)
+    repository.session = MagicMock()
     vat_rate = VatRate(
         id=5,
         code=1,
@@ -668,6 +671,17 @@ def test_imported_shipping_fee_is_converted_to_fee_line(
         label="TVA 5,5%",
         wpwc_id=2,
         wpwc_slug="taux-reduit",
+    )
+    fee_product = InvoiceFeeProduct(
+        id=10,
+        fee_type="shipping",
+        vat_rate=vat_rate,
+        reference="PORT-5",
+        description="Frais de port (TVA 5,5 %)",
+    )
+    monkeypatch.setattr(
+        "db_models.repositories.orders.repository.get_or_create_invoice_fee_product",
+        lambda *_args, **_kwargs: fee_product,
     )
     setattr(
         repository,
@@ -699,6 +713,7 @@ def test_imported_shipping_fee_is_converted_to_fee_line(
     assert shipping_fee.is_shipping_fee is True
     assert shipping_fee.wpwc_id == 294
     assert shipping_fee.vat_rate_id == 5
+    assert shipping_fee.invoice_fee_product is fee_product
     assert payload["shipping_lines"] == [{"id": 294, "meta_data": [], "total": "0"}]
     assert "id" not in payload["fee_lines"][0]
 

@@ -16,7 +16,7 @@ from .customers import (
 from .orders import Order, OrderLine, OrderSyncLog, OrderAlert
 from .stocks import OrderIn, OrderInLine, OrderInLinePrice, DilicomReferencial
 from .inventory import InventoryMovements
-from .invoices import Invoice, InvoiceLine, InvoiceSyncLog
+from .invoices import Invoice, InvoiceFeeProduct, InvoiceLine, InvoiceSyncLog
 from .shipments import Shipment, ShipmentLine
 from .users import Users, UsersPasswords, UserSession
 from .objects import (
@@ -54,6 +54,7 @@ __all__ = [
     "DilicomReferencial",
     "InventoryMovements",
     "Invoice",
+    "InvoiceFeeProduct",
     "InvoiceLine",
     "InvoiceSyncLog",
     "Shipment",

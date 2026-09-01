@@ -28,6 +28,7 @@ from db_models.objects import (
 )
 from db_models.objects.vat import VatRate
 from db_models.models.woo.order import WCOrderGet
+from db_models.services.invoice_fees import get_or_create_invoice_fee_product
 
 
 class OrdersRepository(BaseRepository):
@@ -96,10 +97,16 @@ class OrdersRepository(BaseRepository):
                     f"La livraison WooCommerce {shipping_line.id} doit avoir un unique taux de TVA."
                 )
             vat_rate = self._get_current_vat_rate_by_wpwc_id(tax_ids[0])
+            fee_product = get_or_create_invoice_fee_product(
+                self.session,
+                fee_type="shipping",
+                vat_rate=vat_rate,
+            )
             order.order_lines.append(
                 OrderLine(
                     wpwc_id=shipping_line.id,
                     general_object_id=None,
+                    invoice_fee_product=fee_product,
                     is_shipping_fee=True,
                     quantity=1,
                     unit_price=float(shipping_line.total),
@@ -140,6 +147,9 @@ class OrdersRepository(BaseRepository):
             .where(Order.id == order_id)
             .options(
                 selectinload(Order.order_lines).joinedload(OrderLine.general_object),
+                selectinload(Order.order_lines).joinedload(
+                    OrderLine.invoice_fee_product
+                ),
                 selectinload(Order.invoices),
                 selectinload(Order.shipments),
                 selectinload(Order.alerts),

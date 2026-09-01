@@ -3,7 +3,16 @@
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Numeric, Text, event
+from sqlalchemy import (
+    String,
+    Integer,
+    ForeignKey,
+    DateTime,
+    Numeric,
+    Text,
+    UniqueConstraint,
+    event,
+)
 from db_models import WorkingBase
 from db_models.objects import QueryMixin
 
@@ -23,6 +32,90 @@ HENRRI_CREDIT_NOTE_DOCUMENT_TYPE: dict[str, Any] = {
     "is_mandatory": True,
     "is_visible": True,
 }
+
+
+class InvoiceFeeProduct(WorkingBase, QueryMixin):
+    """Produit de facturation associé à un type de frais et un taux de TVA."""
+
+    __tablename__ = "invoice_fee_products"
+    __table_args__ = (
+        UniqueConstraint(
+            "fee_type",
+            "vat_rate_id",
+            name="uq_invoice_fee_products_type_vat_rate",
+        ),
+        {"schema": "app_schema"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    fee_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, comment="Type de frais facturé"
+    )
+    vat_rate_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.vat_rates.id"),
+        nullable=False,
+        comment="Taux de TVA du produit de frais",
+    )
+    henrri_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        unique=True,
+        comment="Identifiant du produit de frais chez Henrri",
+    )
+    reference: Mapped[str] = mapped_column(
+        String(14), nullable=False, unique=True, comment="Référence du produit de frais"
+    )
+    description: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Description du produit de frais"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        comment="Date de création du produit de frais",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        comment="Date de dernière mise à jour du produit de frais",
+    )
+
+    vat_rate = relationship("VatRate", back_populates="invoice_fee_products")
+    order_lines = relationship("OrderLine", back_populates="invoice_fee_product")
+
+    def to_dict_henrri(self) -> Dict[str, Any]:
+        """Convertit le produit de frais au format attendu par Henrri."""
+        vat_percent = float(self.vat_rate.rate)
+        shipping_amount = 0.0
+        shipping_lines = [
+            line for line in self.order_lines if getattr(line, "is_shipping_fee", False)
+        ]
+        if shipping_lines:
+            shipping_values = [
+                abs(float(line.unit_price))
+                for line in shipping_lines
+                if line.unit_price is not None
+            ]
+            if shipping_values:
+                shipping_amount = max(shipping_values)
+        selling_price_with_tax = shipping_amount * (1 + vat_percent / 100)
+        return {
+            "id": self.henrri_id,
+            "reference": self.reference,
+            "description": self.description,
+            "is_tax_included": False,
+            "selling_price_without_tax": shipping_amount,
+            "selling_price_with_tax": selling_price_with_tax,
+            "purchase_price": 0.0,
+            "vat_percent": vat_percent,
+            "is_a_group": False,
+            "item_category_id": 17,
+            "unit_id": 16,
+            "creation_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        }
 
 
 class Invoice(WorkingBase, QueryMixin):
@@ -229,11 +322,12 @@ class InvoiceLine(WorkingBase, QueryMixin):
 
     def to_dict_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet InvoiceLine en dictionnaire pour Henrri."""
-        item_id = (
-            self.order_line.general_object.henrri_id
-            if self.order_line and self.order_line.general_object
-            else None
-        )
+        item_id = None
+        if self.order_line and self.order_line.is_shipping_fee:
+            if self.order_line.invoice_fee_product:
+                item_id = self.order_line.invoice_fee_product.henrri_id
+        elif self.order_line and self.order_line.general_object:
+            item_id = self.order_line.general_object.henrri_id
         document_id = (
             int(self.invoice.henrri_id)
             if self.invoice and self.invoice.henrri_id
@@ -251,24 +345,7 @@ class InvoiceLine(WorkingBase, QueryMixin):
             "are_elements_of_group_shown": False,
             "type_id": 3,
         }
-        if self.order_line and self.order_line.is_shipping_fee:
-            price_without_tax = float(self.unit_price)
-            vat_percent = float(self.vat_rate)
-            payload["item"] = {
-                "reference": self.reference,
-                "description": self.description,
-                "is_tax_included": False,
-                "selling_price_without_tax": price_without_tax,
-                "selling_price_with_tax": price_without_tax * (1 + vat_percent / 100),
-                "purchase_price": 0.0,
-                "vat_percent": vat_percent,
-                "is_a_group": False,
-                "item_category_id": 17,
-                "unit_id": 16,
-                "creation_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            }
-        else:
-            payload["item_id"] = item_id
+        payload["item_id"] = item_id
         return payload
 
 

@@ -8,9 +8,15 @@ Classes:
 - ``HenrriProductsService``: Service de gestion des produits pour Henrri.
 """
 
+import json
+import logging
 from typing import Any, Sequence
+
 from henrri_connect.models import Item, ItemsQuery
+
 from .base import HenrriService
+
+logger = logging.getLogger(__name__)
 
 class HenrriProductsService(HenrriService):
     """
@@ -55,6 +61,15 @@ class HenrriProductsService(HenrriService):
         response = self.client.items.list_items(request=request)
         return response.elements or []
 
+    @staticmethod
+    def _serialize_payload(item: Item) -> str:
+        """Convertit le payload produit en JSON lisible pour le log de debug."""
+        try:
+            payload = item.model_dump(exclude_none=True, by_alias=True)
+        except AttributeError:
+            payload = item.dict(exclude_none=True, by_alias=True)
+        return json.dumps(payload, default=str, ensure_ascii=False)
+
     def create_product(self, product: Item | Any) -> int:
         """
         Crée un nouveau produit sur Henrri.
@@ -66,6 +81,7 @@ class HenrriProductsService(HenrriService):
         - int: L'identifiant du produit créé au format de la bibliothèque henrri-connect.
         """
         item = self._as_item(product)
+        logger.warning("Henri product payload create: %s", self._serialize_payload(item))
         response = self.client.items.add(item)
         if response.id is None:
             raise ValueError("Le produit n'a pas pu étre créé.")
@@ -89,6 +105,12 @@ class HenrriProductsService(HenrriService):
             ValueError: Si Henrri ne retourne pas d'identifiant.
         """
         remote_product = self._as_item(product)
+        action = "create" if henrri_id is None else "update"
+        logger.warning(
+            "Henri product payload %s: %s",
+            action,
+            self._serialize_payload(remote_product),
+        )
         if henrri_id is None:
             response = self.client.items.add(remote_product)
         else:
@@ -110,7 +132,9 @@ class HenrriProductsService(HenrriService):
 
         responses = []
         for product in products:
-            response = self.client.items.add(self._as_item(product))
+            item = self._as_item(product)
+            logger.warning("Henri product payload batch create: %s", self._serialize_payload(item))
+            response = self.client.items.add(item)
             responses.append(response)
         return responses
 
@@ -132,5 +156,6 @@ class HenrriProductsService(HenrriService):
                 f"Identifiant produit invalide: {product_id}. Il doit être une chaîne d'entier."
             ) from e
         remote_product = self._as_item(updated_product)
+        logger.warning("Henri product payload update: %s", self._serialize_payload(remote_product))
         response = self.client.items.modify(p_id, remote_product)
         return response

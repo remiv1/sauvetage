@@ -348,8 +348,11 @@ class OrderLine(WorkingBase, QueryMixin):
     __tablename__ = "order_lines"
     __table_args__ = (
         CheckConstraint(
-            "is_shipping_fee OR general_object_id IS NOT NULL",
-            name="check_shipping_fee_or_general_object_id_not_null",
+            "(NOT is_shipping_fee AND general_object_id IS NOT NULL "
+            "AND invoice_fee_product_id IS NULL) OR "
+            "(is_shipping_fee AND general_object_id IS NULL "
+            "AND invoice_fee_product_id IS NOT NULL)",
+            name="check_order_line_product_source",
         ),
         {"schema": "app_schema"},
     )
@@ -377,6 +380,12 @@ class OrderLine(WorkingBase, QueryMixin):
         ForeignKey("app_schema.general_objects.id"),
         nullable=True,
         comment="Objet général associé à la ligne de commande",
+    )
+    invoice_fee_product_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("app_schema.invoice_fee_products.id"),
+        nullable=True,
+        comment="Produit de frais associé à la ligne de commande",
     )
     is_shipping_fee: Mapped[bool] = mapped_column(
         Boolean,
@@ -439,6 +448,9 @@ class OrderLine(WorkingBase, QueryMixin):
     # Relations
     order = relationship("Order", back_populates="order_lines")
     general_object = relationship("GeneralObjects", back_populates="order_lines")
+    invoice_fee_product = relationship(
+        "InvoiceFeeProduct", back_populates="order_lines"
+    )
     object_variation = relationship("ObjectVariations")
     vat_rate_ref: Mapped["VatRate"] = relationship("VatRate")
     invoice_lines = relationship("InvoiceLine", back_populates="order_line")
@@ -458,6 +470,7 @@ class OrderLine(WorkingBase, QueryMixin):
             "wpwc_id": self.wpwc_id,
             "order_id": self.order_id,
             "general_object_id": self.general_object_id,
+            "invoice_fee_product_id": self.invoice_fee_product_id,
             "object_variation_id": self.object_variation_id,
             "is_shipping_fee": self.is_shipping_fee,
             "quantity": self.quantity,

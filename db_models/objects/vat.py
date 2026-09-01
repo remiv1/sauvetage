@@ -69,6 +69,9 @@ class VatRate(WorkingBase, QueryMixin):
 
     # Relations
     object_prices = relationship("ObjectPrices", back_populates="vat_rate")
+    invoice_fee_products = relationship(
+        "InvoiceFeeProduct", back_populates="vat_rate"
+    )
 
     def __repr__(self) -> str:
         return (

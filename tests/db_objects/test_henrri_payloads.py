@@ -27,9 +27,11 @@ from db_models.objects import (
     Customers,
     GeneralObjects,
     Invoice,
+    InvoiceFeeProduct,
     InvoiceLine,
     Order,
     OrderLine,
+    VatRate,
 )
 
 def test_customer_to_dict_henrri_contract_for_professional(
@@ -141,6 +143,22 @@ def test_henri_product_contract(henri_book_product: GeneralObjects) -> None:    
     HenriItem(**payload)
 
 
+def test_henri_product_contract_uses_zero_when_price_is_missing(
+    henri_book_product: GeneralObjects,
+) -> None:
+    """Si le prix courant n'est pas disponible, le payload Henrri doit rester valide."""
+    obj = henri_book_product
+    obj.get_price = lambda: None  # type: ignore[assignment]
+
+    payload = obj.to_dict_henrri()
+
+    assert payload["is_tax_included"] is False
+    assert payload["selling_price_without_tax"] == 0.0
+    assert payload["selling_price_with_tax"] == 0.0
+    assert payload["vat_percent"] == 20.0
+    HenriItem(**payload)
+
+
 def test_henri_invoice_line_contract_omits_totals_when_tax_is_excluded(
     henri_sync_context: dict[str, object],
 ) -> None:
@@ -154,9 +172,13 @@ def test_henri_invoice_line_contract_omits_totals_when_tax_is_excluded(
     assert "total_with_tax" not in payload
 
 
-def test_henri_shipping_fee_line_is_sent_with_inline_item() -> None:
-    """Une ligne de port doit fournir un article inline sans identifiant Henrri."""
-    order_line = OrderLine(is_shipping_fee=True)
+def test_henri_shipping_fee_line_uses_synchronized_product_id() -> None:
+    """Une ligne de port doit référencer son produit de frais Henrri."""
+    fee_product = InvoiceFeeProduct(henrri_id=701)
+    order_line = OrderLine(
+        is_shipping_fee=True,
+        invoice_fee_product=fee_product,
+    )
     invoice = Invoice(henrri_id="42")
     line = InvoiceLine(
         invoice=invoice,
@@ -171,22 +193,35 @@ def test_henri_shipping_fee_line_is_sent_with_inline_item() -> None:
 
     payload = line.to_dict_henrri()
 
-    assert "item_id" not in payload
-    assert "id" not in payload["item"]
-    assert payload["item"]["reference"] == "PORT"
-    assert payload["item"]["vat_percent"] == 20.0
+    assert payload["item_id"] == 701
+    assert "item" not in payload
     assert payload["selling_price_without_tax"] == 10.0
     assert payload["vat_percent"] == 20.0
-    HenriItem(**payload["item"])
     DocumentLine(**payload)
 
 
-def test_henri_shipping_fee_does_not_synchronize_a_product() -> None:
-    """Une ligne de port ne doit déclencher aucune création de produit Henrri."""
+def test_henri_shipping_fee_synchronizes_product_on_first_use() -> None:
+    """Une ligne de port doit créer son produit Henrri lors du premier usage."""
+    fee_product = InvoiceFeeProduct(
+        id=7,
+        fee_type="shipping",
+        reference="PORT-1",
+        description="Frais de port (TVA 20 %)",
+        vat_rate=VatRate(code=3, rate=20, label="TVA 20 %"),
+    )
+    shipping_order_line = OrderLine(
+        is_shipping_fee=True,
+        invoice_fee_product=fee_product,
+        quantity=1,
+        unit_price=10,
+        discount=0,
+        vat_rate=20,
+    )
+    fee_product.order_lines = [shipping_order_line]
     invoice = Invoice(
         lines=[
             InvoiceLine(
-                order_line=OrderLine(is_shipping_fee=True),
+                order_line=shipping_order_line,
                 reference="PORT",
                 description="Frais de port",
                 quantity=1,
@@ -197,10 +232,15 @@ def test_henri_shipping_fee_does_not_synchronize_a_product() -> None:
         ]
     )
     service = MagicMock()
+    service.upsert_product.return_value = MagicMock(id=701)
 
     _sync_products_step(invoice, service)
 
-    service.assert_not_called()
+    service.upsert_product.assert_called_once()
+    sent_product = service.upsert_product.call_args.args[0]
+    assert sent_product.selling_price_without_tax == 10.0
+    assert fee_product.to_dict_henrri()["selling_price_without_tax"] == 10.0
+    assert fee_product.henrri_id == 701
 
 
 def test_henri_service_configures_http_timeout(monkeypatch: pytest.MonkeyPatch) -> None:

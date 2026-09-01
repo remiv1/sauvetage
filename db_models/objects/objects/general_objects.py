@@ -67,7 +67,6 @@ class GeneralObjects(WorkingBase, QueryMixin):
         unique=True,
         comment="Identifiant de l'objet chez Henrri (si synchronisé)",
     )
-
     supplier_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("app_schema.suppliers.id"),
@@ -289,18 +288,18 @@ class GeneralObjects(WorkingBase, QueryMixin):
     def to_dict_henrri(self) -> Dict[str, Any]:
         """Convertit l'objet GeneralObject en dictionnaire formaté pour Henrri."""
         vat_rate = float(self.vat_rate.rate) if self.vat_rate else 0.0
-        price_without_tax = self.get_price()
+        raw_price = self.get_price()
+        price_without_tax = Decimal("0.00") if raw_price is None else Decimal(str(raw_price))
         now_datetime = str(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+        with_tax = price_without_tax * (
+            Decimal("1") + Decimal(str(vat_rate)) / Decimal("100")
+        )
         return {
             "reference": self.ean13,
             "description": self.name,
             "is_tax_included": False,
             "selling_price_without_tax": float(price_without_tax),
-            "selling_price_with_tax": float(
-                price_without_tax * (
-                    Decimal("1") + Decimal(str(vat_rate)) / Decimal("100")
-                )
-            ),
+            "selling_price_with_tax": float(with_tax),
             "purchase_price": float(self.purchase_price or 0.0),
             "vat_percent": vat_rate,
             "is_a_group": False,

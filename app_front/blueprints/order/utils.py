@@ -20,6 +20,7 @@ from db_models.repositories.invoices import InvoiceRepository, Invoice, InvoiceL
 from db_models.repositories.shipments import ShipmentsRepository, ShipmentLine
 from db_models.repositories.objects.objects import ObjectsRepository, GeneralObjects
 from db_models.services.woo_commerce.orders import WCOrdersService
+from db_models.services.invoice_fees import get_or_create_invoice_fee_product
 
 logger = logging.getLogger(__name__)
 DATETIME_FORMAT = "%d/%m/%Y %H:%M"
@@ -783,13 +784,22 @@ def invoice_order(
         )
 
     shipping_lines = _create_shipping_fee_lines(order, selected_lines, shipping_fee)
+    vat_rates_by_id = {
+        line.vat_rate_id: line.vat_rate_ref for line, _quantity in selected_lines
+    }
+    for shipping_line in shipping_lines:
+        shipping_line.invoice_fee_product = get_or_create_invoice_fee_product(
+            session,
+            fee_type="shipping",
+            vat_rate=vat_rates_by_id[shipping_line.vat_rate_id],
+        )
     session.add_all(shipping_lines)
     session.flush()
     invoice_lines.extend(
         InvoiceLine(
             order_line_id=order_line.id,
-            reference="PORT",
-            description=f"Frais de port (TVA {order_line.vat_rate:g} %)",
+            reference=order_line.invoice_fee_product.reference,
+            description=order_line.invoice_fee_product.description,
             quantity=order_line.quantity,
             unit_price=order_line.unit_price,
             discount=0,

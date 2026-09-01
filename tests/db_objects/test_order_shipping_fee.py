@@ -7,7 +7,7 @@ import pytest
 
 from app_front.blueprints.order import utils as order_utils
 from app_front.blueprints.order.utils import _create_shipping_fee_lines
-from db_models.objects import Order, OrderLine
+from db_models.objects import InvoiceFeeProduct, Order, OrderLine, VatRate
 
 
 def _order_line(
@@ -99,6 +99,15 @@ def test_invoice_order_flushes_shipping_order_lines_before_invoice_lines(
     source_line = _order_line(vat_rate_id=1, vat_rate="20", unit_price="10")
     source_line.id = 1
     source_line.general_object = product
+    vat_rate = VatRate(id=1, code=3, rate=20, label="TVA 20 %")
+    source_line.vat_rate_ref = vat_rate
+    fee_product = InvoiceFeeProduct(
+        id=10,
+        fee_type="shipping",
+        vat_rate=vat_rate,
+        reference="PORT-1",
+        description="Frais de port (TVA 20 %)",
+    )
     order = MagicMock(
         customer_id=1,
         status="draft",
@@ -125,6 +134,11 @@ def test_invoice_order_flushes_shipping_order_lines_before_invoice_lines(
     monkeypatch.setattr(order_utils, "InvoiceRepository", lambda _: invoice_repository)
     monkeypatch.setattr(
         order_utils,
+        "get_or_create_invoice_fee_product",
+        lambda *_args, **_kwargs: fee_product,
+    )
+    monkeypatch.setattr(
+        order_utils,
         "_sync_invoice_with_henrri",
         lambda invoice, _: invoice,
     )
@@ -139,6 +153,7 @@ def test_invoice_order_flushes_shipping_order_lines_before_invoice_lines(
     assert session.add_all.call_args.args[0] == shipping_lines
     assert all(line.order_line_id is not None for line in invoice_lines)
     assert invoice_lines[-1].order_line_id == 100
+    assert shipping_lines[0].invoice_fee_product is fee_product
 
 
 def test_ship_order_rejects_shipping_fee_line(

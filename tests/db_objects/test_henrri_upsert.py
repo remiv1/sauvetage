@@ -116,6 +116,46 @@ def test_upsert_product_creates_then_updates() -> None:
     assert client.items.modify.call_args.args[0] == 8001
 
 
+def test_upsert_product_logs_payload_before_remote_call(caplog) -> None:
+    """Le payload exact envoyé à Henri doit être loggé pour faciliter le debug 400."""
+    service, client = _products_service_with_client()
+    client.items.add.return_value = Item(
+        id=8001,
+        reference="SKU-42",
+        description="Produit de test",
+        is_tax_included=False,
+        selling_price_without_tax=42.0,
+        selling_price_with_tax=50.4,
+        purchase_price=0.0,
+        vat_percent=20.0,
+        is_a_group=False,
+        item_category_id=17,
+        unit_id=16,
+        creation_date="2026-08-14",
+    )
+
+    service.upsert_product(
+        Item(
+            reference="SKU-42",
+            description="Produit de test",
+            is_tax_included=False,
+            selling_price_without_tax=42.0,
+            selling_price_with_tax=50.4,
+            purchase_price=0.0,
+            vat_percent=20.0,
+            is_a_group=False,
+            item_category_id=17,
+            unit_id=16,
+            creation_date="2026-08-14",
+        ),
+        None,
+    )
+
+    assert any("Henri product payload" in record.message for record in caplog.records)
+    assert "sellingPriceWithoutTax" in caplog.text
+    assert "isTaxIncluded" in caplog.text
+
+
 def test_sync_customer_persists_all_returned_identifiers() -> None:
     """
     Les identifiants Henrri du client, de son adresse et de son contact doivent être conservés.
