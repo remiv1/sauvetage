@@ -81,7 +81,7 @@ class HenrriProductsService(HenrriService):
         - int: L'identifiant du produit créé au format de la bibliothèque henrri-connect.
         """
         item = self._as_item(product)
-        logger.warning("Henri product payload create: %s", self._serialize_payload(item))
+        logger.debug("Henri product payload create: %s", self._serialize_payload(item))
         response = self.client.items.add(item)
         if response.id is None:
             raise ValueError("Le produit n'a pas pu étre créé.")
