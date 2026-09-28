@@ -36,6 +36,7 @@ class PricesRepository(BaseRepository):
         price: Decimal | float | int,
         from_date: date,
         to_date: Optional[date] = None,
+        vat_rate_id: int | None = None,
     ) -> ObjectPrices:
         """Cree ou met a jour le prix pour une date de debut donnee."""
         stmt = select(self.model).where(
@@ -48,6 +49,7 @@ class PricesRepository(BaseRepository):
             if existing is not None:
                 existing.price = Decimal(str(price))
                 existing.to_date = to_date
+                existing.vat_rate_id = vat_rate_id
                 self.session.flush()
                 return existing
 
@@ -56,6 +58,7 @@ class PricesRepository(BaseRepository):
                 price=Decimal(str(price)),
                 from_date=from_date,
                 to_date=to_date,
+                vat_rate_id=vat_rate_id,
             )
             self.session.add(row)
             self.session.flush()
