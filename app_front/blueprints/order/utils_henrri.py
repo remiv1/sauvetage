@@ -26,6 +26,10 @@ from db_models.services.henrri import (
     sync_product_to_henrri,
 )
 from db_models.objects.invoices import Invoice
+from db_models.services.henrri.monthly_credits import (
+    MonthlyCreditQuotaExceeded,
+    MonthlyCreditsUnavailable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +103,30 @@ class HenrriSyncError(Exception):
             parts.append(f"[étape: {self.step}]")
         return " ".join(parts)
 
+def ensure_invoice_credit_available(service: HenrriCustomersService | None = None) -> None:
+    """Vérifie le quota avant de commencer une nouvelle facturation.
+
+    Args:
+        service: Service existant, ou service temporaire fermé après vérification.
+
+    Raises:
+        HenrriSyncError: Si les crédits sont épuisés ou ne peuvent pas être vérifiés.
+    """
+    target = service if service is not None else HenrriCustomersService()
+    try:
+        target.ensure_monthly_credit()
+    except (MonthlyCreditQuotaExceeded, MonthlyCreditsUnavailable, ValueError) as exc:
+        raise HenrriSyncError(
+            str(exc),
+            status_code=_extract_status_code(exc),
+            details=_extract_error_details(exc),
+            step="quota",
+        ) from exc
+    finally:
+        if service is None:
+            target.client.close()
+
+
 def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
     """
     Crée une facture chez Henrri à partir des données en base métier.
@@ -117,6 +145,7 @@ def create_invoice(invoice: Invoice) -> tuple[Document, Invoice]:
         HenrriSyncError: Si une erreur survient lors de la communication avec Henrri.
     """
     hcs = HenrriCustomersService()
+    ensure_invoice_credit_available(hcs)
     hps = HenrriProductsService()
     hds = HenrriDocumentsService()
 

@@ -59,7 +59,7 @@ def import_vat_slugs():
 
 
 def _run_sync_catalog() -> None:
-    """Tâche exécutée en arrière-plan : synchronise le catalogue vers WooCommerce et Henrri."""
+    """Tâche exécutée en arrière-plan : synchronise le catalogue vers WooCommerce."""
     session = next(config.get_main_session())
     try:
         results = sync_all_products(session)
@@ -107,7 +107,7 @@ def sync_tags(background_tasks: BackgroundTasks):
 
 @router.post("/sync-catalog", status_code=202)
 def sync_catalog(background_tasks: BackgroundTasks):
-    """Déclenche la synchronisation du catalogue produits vers WooCommerce et Henrri.
+    """Déclenche la synchronisation du catalogue produits vers WooCommerce uniquement.
 
     Retourne immédiatement 202 Accepted pendant que la tâche s'exécute.
     """

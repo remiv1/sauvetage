@@ -4,6 +4,77 @@ Ce document présente un résumé des modèles SQLAlchemy définis dans `db_mode
 
 Chaque section liste la table, ses colonnes principales, types et relations.
 
+## Quota Henrri
+
+`HENRRI_RATE_LIMITING=20` dans `config/env/.env.henrri` limite les appels Henrri à
+20 requêtes sur une fenêtre glissante de 60 secondes. Utiliser `HENRRI_RATE_LIMITING=60`
+en production si ce quota est autorisé. La valeur doit être un entier strictement positif.
+
+Le front et le back chargent le même fichier et partagent un compteur MongoDB dans
+`MONGO_DB_LOGS`, avec les collections dédiées `henrri_rate_limit_windows` et
+`henrri_rate_limit_counters`. Le quota inclut les appels d'authentification et les
+requêtes en échec : il compte les requêtes HTTP, pas les articles. Une fois le quota
+atteint, l'appel attend un créneau. Si le compteur MongoDB est indisponible, l'envoi
+est bloqué explicitement ; les créations ne sont pas relancées automatiquement.
+
+Après une modification du quota, recréer ensemble les conteneurs front et back
+pour qu'ils utilisent la même valeur. Les horloges des hôtes doivent être synchronisées.
+
+### Crédits Mensuels
+
+La synchronisation partenaires des **produits**, unitaire ou globale, ne cible
+plus Henrri. Les produits restent synchronisés lors de la facturation. Les clients
+partenaires restent synchronisés et leurs écritures partagent le budget mensuel.
+
+Le même fichier d'environnement configure ce budget :
+
+```dotenv
+HENRRI_CREDIT_LIMIT=200
+HENRRI_MONTHLY_CREDIT_INITIAL_PERIOD=2026-10
+HENRRI_MONTHLY_CREDIT_INITIAL_USED=0
+```
+
+Le plafond provient de `HENRRI_CREDIT_LIMIT`, qui doit être un entier strictement positif
+(200 par défaut si la variable est absente). La collection MongoDB
+`henrri_monthly_credits` contient un document par compte, environnement et mois UTC.
+La consommation historique ne s'applique qu'à la création du document du mois
+indiqué : modifier l'environnement ne réinitialise jamais un compteur existant.
+Un nouveau budget commence automatiquement le premier du mois à 00:00 UTC, sans cron.
+
+Chaque écriture métier (`POST`, `PUT`, `PATCH`, `DELETE`) réserve atomiquement un
+crédit avant l'envoi. Une réponse HTTP 2xx confirme sa consommation, une réponse
+en erreur ou un échec certain de connexion libère la réservation. L'authentification,
+le renouvellement du jeton et les lectures ne consomment aucun crédit mensuel,
+mais restent limités par `HENRRI_RATE_LIMITING`.
+
+Un timeout de réception ou d'écriture peut cacher un succès distant : sa réservation
+reste alors indisponible jusqu'à vérification. Si MongoDB échoue après une réponse
+réussie, la réservation est conservée sans masquer l'identifiant renvoyé par Henrri.
+Les journaux indiquent le document mensuel et le jeton concernés. Ne pas relancer
+aveuglément une création distante dont l'issue est inconnue.
+
+Le contrôle préalable bloque une nouvelle facturation si le budget est épuisé ou
+invérifiable, avant la création locale. Chaque écriture reste contrôlée : une facture
+peut donc s'interrompre en cours de synchronisation. Dans ce cas, la facture locale,
+ses identifiants distants confirmés et son journal d'échec sont conservés pour une
+reprise ultérieure. Le téléchargement des PDF et les lectures restent possibles
+lorsque le budget mensuel est épuisé.
+
+Pour vérifier le compteur, utiliser `get_monthly_credits(api_key, base_url).get_status()`
+depuis un environnement configuré pour le compte concerné, sans afficher les clés.
+L'état expose `consumed`, `available` et `reservations`. Après vérification **chez
+Henrri** de l'issue d'une réservation, utiliser `confirm(reservation)` si l'écriture
+a réussi, ou `cancel(reservation)` si elle a certainement échoué. Une réservation
+est identifiée par `CreditReservation(document_id, token)`. Ces opérations sont
+idempotentes et portent sur le mois d'origine ; ne jamais les appliquer à une
+requête encore en cours ou à un résultat toujours inconnu.
+
+Ce compteur ne voit pas les écritures effectuées par d'autres applications : la
+consommation initiale doit les inclure. Tous les travailleurs doivent charger les
+mêmes paramètres et identifiants de compte. Les tests unitaires n'appellent pas
+Henrri ; le test concurrent MongoDB peut être activé avec `HENRRI_TEST_MONGO_URI`
+pointant vers une base **de test uniquement**.
+
 ---
 
 ## Tables liées aux clients (customers)

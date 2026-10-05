@@ -1,6 +1,5 @@
 """Synchronisation unitaire et diff des produits WooCommerce."""
 
-import json
 import logging
 from typing import Any, Sequence
 
@@ -9,6 +8,7 @@ from requests.exceptions import RequestException
 from db_models.repositories.objects import GeneralObjects
 
 logger = logging.getLogger(__name__)
+PRODUCT_BATCH_SIZE = 15
 
 
 class ProductCatalogMixin:
@@ -41,42 +41,41 @@ class ProductCatalogMixin:
             logger.warning("Produit avec ID %d inactif. Mise à jour ignorée.", product_id)
             return product.wpwc_id
 
-        self._ensure_product_tags_are_synced(product)
-        remote_product = self.api_read.get(
-            f"products/{product.wpwc_id}"
-        ).json() if product.wpwc_id else None
-        data = self._diff_objects([product], [remote_product] if remote_product else [])
-        returns: list[dict[str, list[dict[str, Any]]] ] = []
+        stage = "prepare"
         try:
-            for batch in data:
-                response = self.api_write.post("products/batch", data=batch)
+            self._ensure_product_tags_are_synced(product)
+            if product.wpwc_id:
+                response = self.api_read.get(f"products/{product.wpwc_id}")
                 response.raise_for_status()
-                result = response.json()
-                logger.info(
-                    "Retour WooCommerce produit %d: HTTP %s - %s",
-                    product_id,
-                    getattr(response, "status_code", "unknown"),
-                    (getattr(response, "text", None) or json.dumps(result, default=str))[:1000],
-                )
-                returns.append(result)
+                remote_product = response.json()
+                if not isinstance(remote_product, dict):
+                    raise ValueError("Réponse WooCommerce invalide pour le produit.")
+            else:
+                remote_product = self._find_product_by_sku(str(product.id))
+            data = self._diff_objects([product], [remote_product] if remote_product else [])
+            for batch in data:
+                stage = "batch"
+                self._send_product_batch(batch, [product])
+            stage = "variations"
+            self._sync_product_variations(product)
+            self.session.commit()
         except (RequestException, ValueError) as exc:
             logger.exception("Erreur de synchronisation WooCommerce du produit %d", product_id)
-            self._log_sync(
-                entity_type="object", entity_id=product.id, wpwc_id=product.wpwc_id,
-                operation="update", sync_status="error", error_message=str(exc),
-            )
+            if stage != "batch":
+                self._log_sync(
+                    entity_type="object", entity_id=product.id, wpwc_id=product.wpwc_id,
+                    operation="update", sync_status="error", error_message=str(exc),
+                )
             self.session.commit()
-            return product.wpwc_id
+            return None
 
-        for result in returns:
-            self._apply_product_returns(result, [product])
-        self.session.flush()
-        self._sync_product_variations(product)
-        self.session.commit()
-        has_batch_effect = any(result.get("create") or result.get("update") for result in returns)
+        has_batch_effect = any(batch.get("create") or batch.get("update") for batch in data)
         status = self._get_product_sync_status(has_batch_effect, bool(product.wpwc_id))
         if status == "error":
-            logger.warning("Produit %d sans identifiant WooCommerce après synchronisation.", product_id)
+            logger.warning(
+                "Produit %d sans identifiant WooCommerce après synchronisation.",
+                product_id,
+            )
         return product.wpwc_id if status == "success" else None
 
     def fetch_all_wc_products(self: Any) -> list[dict[str, Any]]:
@@ -84,7 +83,11 @@ class ProductCatalogMixin:
         products: list[dict[str, Any]] = []
         page = 1
         while True:
-            payload = self.api_read.get("products", params={"page": page, "per_page": 100}).json()
+            response = self.api_read.get("products", params={"page": page, "per_page": 100})
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                raise ValueError("Catalogue WooCommerce invalide : une liste est attendue.")
             if not payload:
                 return products
             products.extend(payload)
@@ -98,27 +101,39 @@ class ProductCatalogMixin:
         """Calcule les lots de créations, mises à jour et suppressions produit."""
         batches: list[dict[str, list[dict[str, Any]]]] = []
         batch = {"create": [], "update": [], "delete": []}
-        remote_ids = {int(item["id"]) for item in remote_objects}
+        remote_ids = {self._product_wc_id(item) for item in remote_objects}
         for index, product in enumerate(objects, start=1):
-            remote = next(
-                (item for item in remote_objects if int(item["id"]) == int(product.wpwc_id or 0)),
-                None,
-            )
+            remote = self._match_remote_product(product, remote_objects)
             if remote:
+                product.wpwc_id = int(remote["id"])
                 payload = self._build_product_payload(product)
                 payload["id"] = int(remote["id"])
                 batch["update"].append(payload)
                 remote_ids.discard(int(remote["id"]))
             else:
                 batch["create"].append(self._build_product_payload(product))
-            if index % 100 == 0 or index == len(objects):
+            if index % PRODUCT_BATCH_SIZE == 0 or index == len(objects):
                 batches.append(batch)
                 batch = {"create": [], "update": [], "delete": []}
         for remote_id in remote_ids:
             batch["delete"].append({"id": remote_id})
-            if sum(len(items) for items in batch.values()) >= 100:
+            if sum(len(items) for items in batch.values()) >= PRODUCT_BATCH_SIZE:
                 batches.append(batch)
                 batch = {"create": [], "update": [], "delete": []}
         if any(batch.values()):
             batches.append(batch)
         return batches
+
+    @staticmethod
+    def _match_remote_product(
+        product: GeneralObjects, remote_objects: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
+        remote = next((
+            item for item in remote_objects if int(item["id"]) == int(product.wpwc_id or 0)
+        ), None)
+        if remote is not None:
+            return remote
+        matches = [item for item in remote_objects if str(item.get("sku")) == str(product.id)]
+        if len(matches) > 1:
+            raise ValueError(f"UGS WooCommerce ambigu pour le produit {product.id}.")
+        return matches[0] if matches else None

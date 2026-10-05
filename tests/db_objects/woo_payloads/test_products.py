@@ -1,7 +1,13 @@
 """Tests des payloads et synchronisations produits WooCommerce."""
 
+# pylint: disable=protected-access
+
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import MagicMock
+
+import pytest
+from requests.exceptions import HTTPError
 
 from db_models.objects import (
     Books,
@@ -17,6 +23,304 @@ from db_models.objects import (
 )
 from db_models.services.woo_commerce.orders import _match_line_to_wc
 from db_models.services.woo_commerce.products import WCProductsService
+
+
+def _sync_service(products: list[SimpleNamespace]) -> WCProductsService:
+    service = object.__new__(WCProductsService)
+    service.session = MagicMock()
+    service.object_repo = MagicMock()
+    service.object_repo.get_all.return_value = products
+    service.api_read = MagicMock()
+    service.api_write = MagicMock()
+    service._log_sync = MagicMock()
+    service._build_product_payload = MagicMock(side_effect=lambda product: {"sku": str(product.id)})
+    service._sync_product_variations = MagicMock()
+    return service
+
+
+def _woo_response(payload: object) -> MagicMock:
+    response = MagicMock(status_code=200, text="")
+    response.json.return_value = payload
+    return response
+
+
+@pytest.mark.parametrize("weight, expected", [
+    ("110", "110"), (110, "110"), (Decimal("110.5"), "110.5"), (0, "0"),
+])
+def test_product_metadata_exports_weight_and_dimensions(
+    book_product: GeneralObjects, weight: object, expected: str,
+) -> None:
+    """Les mesures sont exportées en grammes et millimètres, avec les attributs conservés."""
+    service = object.__new__(WCProductsService)
+    book_product.obj_metadatas = ObjMetadatas(semistructured_data={
+        "poids_grammes": weight, "dimensions_mm": "246*217*24", "couleur": "rouge",
+    })
+
+    payload = service._build_product_payload(book_product)
+
+    assert payload["weight"] == expected
+    assert payload["dimensions"] == {"length": "246", "width": "217", "height": "24"}
+    assert any(attribute["name"] == "couleur" for attribute in payload["attributes"])
+    assert any(attribute["name"] == "poids_grammes" for attribute in payload["attributes"])
+    assert any(attribute["name"] == "dimensions_mm" for attribute in payload["attributes"])
+
+
+@pytest.mark.parametrize("weight", [None, "", "invalide", -1, True, "NaN", "Infinity", []])
+def test_product_metadata_omits_invalid_weight(
+    book_product: GeneralObjects, weight: object,
+) -> None:
+    """Un poids invalide est omis sans perdre les dimensions valides."""
+    service = object.__new__(WCProductsService)
+    book_product.obj_metadatas = ObjMetadatas(semistructured_data={
+        "poids_grammes": weight, "dimensions_mm": "246*217*24",
+    })
+
+    payload = service._build_product_payload(book_product)
+
+    assert "weight" not in payload
+    assert payload["dimensions"] == {"length": "246", "width": "217", "height": "24"}
+
+
+@pytest.mark.parametrize("dimensions", [
+    None, "", "246*217", "246*217*24*1", "246**24", "246*invalide*24",
+    "246*-217*24", "246*NaN*24", [246, 217, 24],
+])
+def test_product_metadata_omits_invalid_dimensions(
+    book_product: GeneralObjects, dimensions: object,
+) -> None:
+    """Un format incomplet ou invalide n'écrase pas les dimensions distantes."""
+    service = object.__new__(WCProductsService)
+    book_product.obj_metadatas = ObjMetadatas(semistructured_data={
+        "poids_grammes": "110", "dimensions_mm": dimensions,
+    })
+
+    payload = service._build_product_payload(book_product)
+
+    assert payload["weight"] == "110"
+    assert "dimensions" not in payload
+
+
+@pytest.mark.parametrize("metadata", [None, {}])
+def test_product_without_measurements_omits_shipping_fields(
+    book_product: GeneralObjects, metadata: dict[str, object] | None,
+) -> None:
+    """L'absence de mesures laisse les champs poids et dimensions hors du payload."""
+    service = object.__new__(WCProductsService)
+    book_product.obj_metadatas = ObjMetadatas(semistructured_data=metadata) if metadata is not None else None
+
+    payload = service._build_product_payload(book_product)
+
+    assert "weight" not in payload
+    assert "dimensions" not in payload
+
+
+def test_product_export_commits_first_batch_before_second_fails() -> None:
+    """Un lot réussi reste enregistré même si le lot suivant échoue."""
+    products = [SimpleNamespace(id=index, wpwc_id=None) for index in range(1, 17)]
+    service = _sync_service(products)
+    service.api_read.get.return_value = _woo_response([])
+    calls = 0
+
+    def post_batch(endpoint: str, data: dict[str, list[dict[str, object]]]) -> MagicMock:
+        nonlocal calls
+        calls += 1
+        assert endpoint == "products/batch"
+        if calls == 2:
+            assert all(product.wpwc_id == product.id + 100 for product in products[:15])
+            service.session.commit.assert_called_once()
+            raise HTTPError("500 Server Error")
+        assert len(data["create"]) == 15
+        return _woo_response({"create": [
+            {"id": product.id + 100, "sku": str(product.id)} for product in products[:15]
+        ]})
+
+    service.api_write.post.side_effect = post_batch
+
+    with pytest.raises(HTTPError, match="500"):
+        service.export_all_products()
+
+    assert products[-1].wpwc_id is None
+    errors = [call.kwargs for call in service._log_sync.call_args_list if call.kwargs["sync_status"] == "error"]
+    assert [error["entity_id"] for error in errors] == [16]
+
+
+def test_product_export_keeps_successful_items_of_failed_batch() -> None:
+    """Une erreur individuelle ne perd pas les autres identifiants du lot."""
+    products = [SimpleNamespace(id=index, wpwc_id=None) for index in (1, 2)]
+    service = _sync_service(products)
+    service.api_read.get.return_value = _woo_response([])
+    service.api_write.post.return_value = _woo_response({"create": [
+        {"id": 0, "error": {"code": "invalid_image", "message": "Image indisponible"}},
+        {"id": 102, "sku": "2"},
+    ]})
+
+    with pytest.raises(ValueError, match="invalid_image"):
+        service.export_all_products()
+
+    assert products[0].wpwc_id is None
+    assert products[1].wpwc_id == 102
+    service.session.commit.assert_called_once()
+    service.api_write.put.assert_not_called()
+
+
+def test_product_sku_conflict_is_reconciled_and_updated() -> None:
+    """Un conflit d'UGS rattache le produit existant puis met à jour ses données."""
+    product = SimpleNamespace(id=14, wpwc_id=None)
+    service = _sync_service([product])
+    service.api_read.get.side_effect = [
+        _woo_response([]),
+        _woo_response([{"id": 214, "sku": "14"}]),
+    ]
+    service.api_write.post.return_value = _woo_response({"create": [{
+        "id": 0, "error": {
+            "code": "woocommerce_rest_product_not_created",
+            "message": "Le produit avec l'UGS (14) est déjà présent dans le tableau de consultation",
+        },
+    }]})
+    service.api_write.put.return_value = _woo_response({"id": 214, "sku": "14"})
+
+    service.export_all_products()
+
+    assert product.wpwc_id == 214
+    service.api_read.get.assert_called_with("products", params={"sku": "14"})
+    service.api_write.put.assert_called_once_with("products/214", data={"sku": "14"})
+    assert any(call.kwargs["operation"] == "reconcile" for call in service._log_sync.call_args_list)
+    assert all(call.kwargs["sync_status"] == "success" for call in service._log_sync.call_args_list)
+
+
+@pytest.mark.parametrize("remote", [
+    [], [{"id": 214, "sku": "autre"}], [{"id": 0, "sku": "14"}],
+    [{"id": 214, "sku": "14"}, {"id": 215, "sku": "14"}],
+])
+def test_product_sku_conflict_without_unique_match_remains_error(remote: list[dict[str, object]]) -> None:
+    """La réconciliation refuse un produit absent, ambigu ou invalide."""
+    product = SimpleNamespace(id=14, wpwc_id=None)
+    service = _sync_service([product])
+    service.api_read.get.return_value = _woo_response(remote)
+    service.api_write.post.return_value = _woo_response({"create": [{
+        "id": 0, "error": {"code": "product_invalid_sku", "message": "Duplicate SKU"},
+    }]})
+
+    with pytest.raises(ValueError):
+        service._send_product_batch({"create": [{"sku": "14"}]}, [product])
+
+    assert product.wpwc_id is None
+    service.api_write.put.assert_not_called()
+    assert all(call.kwargs["sync_status"] == "error" for call in service._log_sync.call_args_list)
+
+
+def test_product_reconciliation_read_failure_remains_error() -> None:
+    """Un refus d'authentification pendant la réconciliation reste un échec."""
+    product = SimpleNamespace(id=14, wpwc_id=None)
+    service = _sync_service([product])
+    service.api_read.get.return_value = _woo_response([])
+    service.api_read.get.return_value.raise_for_status.side_effect = HTTPError("401 Unauthorized")
+    service.api_write.post.return_value = _woo_response({"create": [{
+        "id": 0, "error": {"code": "product_invalid_sku", "message": "Duplicate SKU"},
+    }]})
+
+    with pytest.raises(ValueError, match="401"):
+        service._send_product_batch({"create": [{"sku": "14"}]}, [product])
+
+    assert product.wpwc_id is None
+    service.api_write.put.assert_not_called()
+
+
+@pytest.mark.parametrize("item", [
+    {"id": 0, "sku": "14"}, {"sku": "14"},
+    {"id": 0, "error": {"code": "woocommerce_rest_product_not_created", "message": "Invalid image"}},
+])
+def test_invalid_product_return_does_not_report_success(item: dict[str, object]) -> None:
+    """Un ID invalide ou une erreur non liée à l'UGS ne devient pas un succès."""
+    product = SimpleNamespace(id=14, wpwc_id=None)
+    service = _sync_service([product])
+    service.api_write.post.return_value = _woo_response({"create": [item]})
+
+    with pytest.raises(ValueError):
+        service._send_product_batch({"create": [{"sku": "14"}]}, [product])
+
+    assert product.wpwc_id is None
+    service.api_read.get.assert_not_called()
+    assert service._log_sync.call_args.kwargs["sync_status"] == "error"
+
+
+def test_reconciled_product_id_survives_failed_update() -> None:
+    """L'identifiant retrouvé est conservé même si sa mise à jour échoue."""
+    product = SimpleNamespace(id=14, wpwc_id=None)
+    service = _sync_service([product])
+    service.api_read.get.return_value = _woo_response([{"id": 214, "sku": "14"}])
+    service.api_write.post.return_value = _woo_response({"create": [{
+        "id": 0, "error": {"code": "product_invalid_sku", "message": "Duplicate SKU"},
+    }]})
+    service.api_write.put.return_value.raise_for_status.side_effect = HTTPError("500")
+
+    with pytest.raises(ValueError, match="500"):
+        service._send_product_batch({"create": [{"sku": "14"}]}, [product])
+
+    assert product.wpwc_id == 214
+    service.session.commit.assert_called_once()
+    assert service._log_sync.call_args.kwargs["sync_status"] == "error"
+
+
+def test_single_product_is_found_by_sku_before_creation() -> None:
+    """L'export unitaire retrouve un UGS existant avant de tenter une création."""
+    product = SimpleNamespace(id=14, wpwc_id=None, is_active=True, object_tags=[])
+    service = _sync_service([product])
+    service.object_repo.get_by_ref.return_value = product
+    service.api_read.get.return_value = _woo_response([{"id": 214, "sku": "14"}])
+    service.api_write.post.return_value = _woo_response({"update": [{"id": 214, "sku": "14"}]})
+
+    assert service.update_product(14) == 214
+
+    payload = service.api_write.post.call_args.kwargs["data"]
+    assert payload["create"] == []
+    assert payload["delete"] == []
+    assert payload["update"] == [{"id": 214, "sku": "14"}]
+
+
+def test_single_product_with_existing_id_does_not_hide_update_error() -> None:
+    """Un identifiant déjà connu ne masque pas l'échec de mise à jour."""
+    product = SimpleNamespace(id=14, wpwc_id=214, is_active=True, object_tags=[])
+    service = _sync_service([product])
+    service.object_repo.get_by_ref.return_value = product
+    service.api_read.get.return_value = _woo_response({"id": 214, "sku": "14"})
+    service.api_write.post.return_value = _woo_response({"update": [{
+        "id": 214, "error": {"code": "invalid_image", "message": "Invalid image"},
+    }]})
+
+    assert service.update_product(14) is None
+    assert product.wpwc_id == 214
+    assert service._log_sync.call_args.kwargs["sync_status"] == "error"
+
+
+@pytest.mark.parametrize("payload", [{"code": "unauthorized"}, "invalid"])
+def test_invalid_remote_catalog_is_rejected(payload: object) -> None:
+    """Une réponse d'erreur ne peut pas devenir un catalogue de produits."""
+    service = _sync_service([])
+    service.api_read.get.return_value = _woo_response(payload)
+
+    with pytest.raises(ValueError, match="Catalogue"):
+        service.export_all_products()
+
+    service.api_write.post.assert_not_called()
+
+
+def test_product_batches_are_limited_and_reconcile_existing_sku() -> None:
+    """Les lots restent petits et un UGS retrouvé est mis à jour, jamais supprimé."""
+    service = object.__new__(WCProductsService)
+    service._build_product_payload = MagicMock(side_effect=lambda product: {"sku": str(product.id)})
+    products = [SimpleNamespace(id=index, wpwc_id=None) for index in range(1, 17)]
+    remote = [{"id": 101, "sku": "1"}] + [
+        {"id": index, "sku": f"externe-{index}"} for index in range(200, 231)
+    ]
+
+    batches = service._diff_objects(products, remote)
+
+    assert all(sum(len(items) for items in batch.values()) <= 15 for batch in batches)
+    assert sum(len(batch["create"]) for batch in batches) == 15
+    assert products[0].wpwc_id == 101
+    assert batches[0]["update"] == [{"id": 101, "sku": "1"}]
+    assert all(item["id"] != 101 for batch in batches for item in batch["delete"])
 
 
 def test_general_object_payload_uses_wc_tax_slug(book_product):
@@ -116,6 +420,7 @@ def test_update_product_syncs_missing_wc_tags_before_export() -> None:
     ]
     product.media_files = []
     service.object_repo.get_by_ref.return_value = product
+    service.api_read.get.return_value.json.return_value = []
 
     response = MagicMock()
     response.raise_for_status.return_value = None
@@ -440,7 +745,7 @@ def test_wc_product_update_fails_when_woo_returns_no_wc_id(caplog) -> None:
         ),
     ]
     service.object_repo.get_by_ref.return_value = product
-    service.api_read.get.return_value = MagicMock(json=MagicMock(return_value=None))
+    service.api_read.get.return_value = MagicMock(json=MagicMock(return_value=[]))
     service._diff_objects = MagicMock(  # pylint: disable=W0212
         return_value=[{"create": [{"sku": "9999999999999"}]}]
     )

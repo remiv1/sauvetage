@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from app_front.config import db_conf
 from app_front.blueprints.order.utils_henrri import (
     HenrriSyncError,
+    ensure_invoice_credit_available,
     create_invoice as create_henrri_invoice,
     find_invoice as find_henrri_invoice,
     get_invoice_pdf as get_henrri_invoice_pdf,
@@ -783,6 +784,11 @@ def invoice_order(
             )
         )
 
+    try:
+        ensure_invoice_credit_available()
+    except HenrriSyncError as exc:
+        raise ValueError(_format_henrri_sync_error(exc)) from exc
+
     shipping_lines = _create_shipping_fee_lines(order, selected_lines, shipping_fee)
     vat_rates_by_id = {
         line.vat_rate_id: line.vat_rate_ref for line, _quantity in selected_lines
@@ -818,16 +824,22 @@ def invoice_order(
         create_source="backoffice",
     )
 
+    sync_error: HenrriSyncError | None = None
     try:
         local_invoice = _sync_invoice_with_henrri(local_invoice, inv_repo)
-    except HenrriSyncError:
-        pass
+    except HenrriSyncError as exc:
+        sync_error = exc
 
     _mark_invoice_lines(order_repo, line_objects, line_items)
     session.commit()
 
     # Recalculer le statut de la commande
     _recalculate_order_status(order, order_repo)
+    if sync_error is not None and sync_error.status_code == 429:
+        raise ValueError(
+            f"Facture locale {local_invoice.reference} conservée, mais non finalisée "
+            f"sur Henrri : {_format_henrri_sync_error(sync_error)}"
+        ) from sync_error
     return local_invoice
 
 

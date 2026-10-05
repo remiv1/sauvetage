@@ -2,8 +2,67 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+from flask import Flask
+
+from app_front.blueprints.stock import utils as stock_utils
+from app_front.blueprints.stock import routes_htmx_search as stock_routes
 from db_models.objects import Customers
 from db_models.services.sync import partners
+
+
+@pytest.mark.parametrize("wpwc_id", [5001, None])
+def test_product_partners_push_uses_reader_writer_and_rejects_wc_failure(
+    monkeypatch: pytest.MonkeyPatch, wpwc_id: int | None,
+) -> None:
+    """L'envoi utilise Reader/Writer sans synchroniser le produit sur Henrri."""
+    session = MagicMock()
+    product = MagicMock(id=859, wpwc_id=None)
+    object_repo = MagicMock()
+    object_repo.return_value.get_by_ref.return_value = product
+    wc_service = MagicMock()
+    wc_service.return_value.update_product.return_value = wpwc_id
+    henrri_sync = MagicMock()
+    monkeypatch.setattr(stock_utils.db_conf, "get_main_session", lambda: session)
+    monkeypatch.setattr(stock_utils, "ObjectsRepository", object_repo)
+    monkeypatch.setattr(stock_utils, "WCProductsService", wc_service)
+    monkeypatch.setattr(stock_utils, "sync_product_to_henrri", henrri_sync, raising=False)
+
+    if wpwc_id is None:
+        with pytest.raises(ValueError, match="aucun identifiant confirmé"):
+            stock_utils.push_product_partners(859)
+    else:
+        stock_utils.push_product_partners(859)
+
+    wc_service.assert_called_once_with(session, separated_keys=True)
+    wc_service.return_value.update_product.assert_called_once_with(859)
+    henrri_sync.assert_not_called()
+    session.commit.assert_called_once()
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_product_partners_push_notification_reflects_sync_result(
+    monkeypatch: pytest.MonkeyPatch, failed: bool,
+) -> None:
+    """La notification ne présente pas un échec WooCommerce comme un succès."""
+    sync = MagicMock()
+    if failed:
+        sync.side_effect = ValueError("Échec WooCommerce : aucun identifiant confirmé.")
+    monkeypatch.setattr(stock_routes, "push_product_partners", sync)
+
+    with Flask(__name__).test_request_context():
+        response = stock_routes.product_partners_push(859)
+
+    body = response.get_data(as_text=True)
+    if failed:
+        assert "alert-danger" in body
+        assert "aucun identifiant confirmé" in body
+        assert "Produit synchronisé avec succès" not in body
+        assert "HX-Trigger" not in response.headers
+    else:
+        assert "alert-success" in body
+        assert "Produit synchronisé avec succès" in body
+        assert response.headers["HX-Trigger"] == "refreshTable"
 
 
 class HenrriValidationErrorWithBody(Exception):
@@ -95,7 +154,7 @@ def test_sync_customer_logs_henrri_validation_details() -> None:
     with patch.object(partners, "SyncLogRepository") as mock_repo_cls, patch.object(
         partners,
         "sync_customer_to_henrri",
-        side_effect=HenrriValidationErrorWithBody("HTTP 400", validation_body),
+        side_effect=HenrriValidationErrorWithBody("HTTP 400", validation_body), # type: ignore
     ):
         results = partners.sync_customer(MagicMock(), customer, wc_service=wc_service)
 
@@ -107,44 +166,38 @@ def test_sync_customer_logs_henrri_validation_details() -> None:
     assert "contacts" in error_message
 
 
-def test_sync_all_products_exports_woocommerce_then_henrri() -> None:
-    """Le catalogue doit partir en batch vers WooCommerce puis à l'unité vers Henrri."""
+def test_sync_all_products_exports_only_woocommerce() -> None:
+    """Le catalogue doit partir vers WooCommerce sans aucune écriture Henrri."""
     session = MagicMock()
-    product = MagicMock(id=81, henrri_id=None)
     wc_service = MagicMock()
 
     with patch.object(partners, "SyncLogRepository") as mock_repo_cls, patch.object(
         partners, "WCProductsService", return_value=wc_service
     ), patch.object(
-        partners, "_get_active_products", return_value=[product]
-    ), patch.object(
-        partners, "sync_product_to_henrri", return_value=MagicMock(id=8001)
+        partners, "sync_product_to_henrri", create=True
     ) as mock_henrri:
         results = partners.sync_all_products(session)
 
     wc_service.export_all_products.assert_called_once()
-    mock_henrri.assert_called_once_with(product)
-    assert [r.status for r in results] == ["success", "success"]
-    assert mock_repo_cls.return_value.log_object.call_args.kwargs["external_id"] == "8001"
+    mock_henrri.assert_not_called()
+    assert [(result.target, result.status) for result in results] == [(partners.WPWC, "success")]
+    mock_repo_cls.assert_not_called()
     session.commit.assert_called_once()
 
 
-def test_sync_all_products_reports_woocommerce_failure_without_blocking_henrri() -> None:
-    """Un export WooCommerce en échec ne doit pas interrompre l'envoi vers Henrri."""
+def test_sync_all_products_reports_woocommerce_failure_without_henrri() -> None:
+    """Un échec WooCommerce ne déclenche pas d'envoi Henrri de remplacement."""
     session = MagicMock()
-    product = MagicMock(id=81, henrri_id=82)
     wc_service = MagicMock()
     wc_service.export_all_products.side_effect = RuntimeError("WooCommerce indisponible")
 
     with patch.object(partners, "SyncLogRepository"), patch.object(
         partners, "WCProductsService", return_value=wc_service
     ), patch.object(
-        partners, "_get_active_products", return_value=[product]
-    ), patch.object(
-        partners, "sync_product_to_henrri", return_value=MagicMock(id=82)
+        partners, "sync_product_to_henrri", create=True
     ) as mock_henrri:
         results = partners.sync_all_products(session)
 
     assert results[0].status == "error"
-    assert results[1].status == "success"
-    mock_henrri.assert_called_once_with(product)
+    assert len(results) == 1
+    mock_henrri.assert_not_called()

@@ -30,7 +30,6 @@ from db_models.repositories.stocks import (
 from db_models.repositories.objects.objects import ObjectsRepository
 from db_models.repositories.objects.variations import VariationsRepository
 from db_models.repositories.tags import TagsRepository
-from db_models.services.henrri import sync_product_to_henrri
 from db_models.services.woo_commerce.products import WCProductsService
 
 logger = logging.getLogger("stock_utils")
@@ -846,7 +845,7 @@ def delete_variation_for_object(variation_id: int) -> bool:
 
 
 def push_product_partners(object_id: int) -> None:
-    """Pousse un produit vers WooCommerce et Henrri selon le workflow multi-partenaires.
+    """Pousse un produit vers WooCommerce, sans consommer de crédit Henrri.
 
     Args:
         object_id: Identifiant local du produit (GeneralObjects).
@@ -856,9 +855,13 @@ def push_product_partners(object_id: int) -> None:
     if product is None:
         raise ValueError(f"Produit {object_id} introuvable.")
 
-    WCProductsService(session).update_product(object_id)
-    sync_product_to_henrri(product)
+    wpwc_id = WCProductsService(session, separated_keys=True).update_product(object_id)
     session.commit()
+    if wpwc_id is None:
+        raise ValueError(
+            "Échec de la synchronisation WooCommerce : aucun identifiant confirmé. "
+            "Consultez le journal de synchronisation du produit."
+        )
 
 
 def trigger_catalog_wc_sync() -> None:

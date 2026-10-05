@@ -1,9 +1,11 @@
 """Exports batch des produits, tags et médias WooCommerce."""
 
+import json
 import logging
 import os
 from typing import Any, Sequence
 
+from requests.exceptions import RequestException
 from db_models.repositories.objects import GeneralObjects
 from db_models.repositories.objects.media import MediaFiles
 from db_models.repositories.tags import Tags
@@ -19,24 +21,51 @@ class ProductExportsMixin:
         """Exporte tous les produits actifs et leurs variations."""
         products = self.object_repo.get_all(only_actives=True)
         data = self._diff_objects(products, self.fetch_all_wc_products())
-        returns: list[dict[str, list[dict[str, Any]]]] = []
-        try:
-            for batch in data:
-                response = self.api_write.post("products/batch", data=batch)
-                response.raise_for_status()
-                returns.append(response.json())
-        except Exception as exc:  # pylint: disable=broad-except
-            self._log_export_failure("object", products, "batch", exc)
-            return
-        for result in returns:
-            self._apply_product_returns(result, products)
-        try:
-            for product in products:
+        for batch in data:
+            self._send_product_batch(batch, products)
+        for product in products:
+            try:
                 self._sync_product_variations(product)
-        except Exception as exc:  # pylint: disable=broad-except
-            self._log_export_failure("object", products, "batch", exc)
-            return
-        self.session.commit()
+            except Exception as exc:  # pylint: disable=broad-except
+                self._log_export_failure("object", [product], "variations", exc)
+                raise
+            self.session.commit()
+
+    def _send_product_batch(
+        self: Any, batch: dict[str, list[dict[str, Any]]], products: Sequence[GeneralObjects],
+    ) -> None:
+        try:
+            response = self.api_write.post("products/batch", data=batch)
+            response.raise_for_status()
+            result = response.json()
+            if not isinstance(result, dict) or result.get("error") or result.get("code"):
+                raise ValueError(f"Réponse batch WooCommerce invalide : {result}")
+            logger.info(
+                "Retour WooCommerce produits: HTTP %s - %s",
+                getattr(response, "status_code", "unknown"),
+                (getattr(response, "text", None) or json.dumps(result, default=str))[:1000],
+            )
+        except (RequestException, ValueError) as exc:
+            self._log_product_batch_failure(batch, products, exc)
+            self.session.commit()
+            raise
+        try:
+            self._apply_product_returns(result, products, batch=batch)
+        finally:
+            self.session.commit()
+
+    def _log_product_batch_failure(
+        self: Any, batch: dict[str, list[dict[str, Any]]],
+        products: Sequence[GeneralObjects], exc: Exception,
+    ) -> None:
+        for action, payloads in batch.items():
+            for payload in payloads:
+                local = self._local_product_for_payload(action, payload, products)
+                self._log_sync(
+                    entity_type="object", entity_id=local.id if local else None,
+                    wpwc_id=local.wpwc_id if local else payload.get("id"),
+                    operation=action, sync_status="error", error_message=str(exc),
+                )
 
     def export_tags(self: Any) -> None:
         """Exporte les tags actifs vers WooCommerce."""

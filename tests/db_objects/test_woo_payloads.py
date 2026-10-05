@@ -1007,7 +1007,7 @@ def test_wc_product_update_fails_when_woo_returns_no_wc_id(caplog) -> None:
         ),
     ]
     service.object_repo.get_by_ref.return_value = product
-    service.api_read.get.return_value = MagicMock(json=MagicMock(return_value=None))
+    service.api_read.get.return_value = MagicMock(json=MagicMock(return_value=[]))
     service._diff_objects = MagicMock(  # pylint: disable=W0212
         return_value=[
             {"create": [

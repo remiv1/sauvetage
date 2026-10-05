@@ -355,7 +355,7 @@ class WCOrdersService(WCBase):
                 remote_shipping_line_ids = self._pre_sync_line_ids(order)
             product_service = getattr(self, "product_service", None)
             if product_service is None and hasattr(self, "session"):
-                product_service = WCProductsService(self.session)
+                product_service = WCProductsService(self.session, separated_keys=True)
             self._ensure_order_products_synced(order, product_service)
             logger.info(
                 "Commande %d : préparation du payload WooCommerce pour %d ligne(s).",

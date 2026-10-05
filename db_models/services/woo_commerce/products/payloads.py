@@ -1,6 +1,7 @@
 """Construction des payloads produits WooCommerce."""
 
 import os
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from db_models.repositories.objects import GeneralObjects
@@ -58,6 +59,7 @@ class ProductPayloadMixin:  # pylint: disable=R0903
             for category_id in self._get_product_category_ids(product)
         ]
         self._merge_product_attributes(product, payload)
+        self._add_product_measurements(product, payload)
         self._add_synced_tags(product, payload)
         self._add_media(product, payload)
         return payload
@@ -83,6 +85,40 @@ class ProductPayloadMixin:  # pylint: disable=R0903
                 attributes,
             )
         self._merge_product_variation_attribute(product, payload)
+
+    def _add_product_measurements(
+        self: Any, product: GeneralObjects, payload: dict[str, Any],
+    ) -> None:
+        if product.obj_metadatas is None:
+            return
+        metadata = product.obj_metadatas.semistructured_data
+        if not isinstance(metadata, dict):
+            return
+        weight = self._measurement_string(metadata.get("poids_grammes"))
+        if weight is not None:
+            payload["weight"] = weight
+        raw_dimensions = metadata.get("dimensions_mm")
+        if not isinstance(raw_dimensions, str):
+            return
+        parts = raw_dimensions.split("*")
+        if len(parts) != 3:
+            return
+        dimensions = [self._measurement_string(part) for part in parts]
+        if any(value is None for value in dimensions):
+            return
+        payload["dimensions"] = dict(zip(("length", "width", "height"), dimensions))
+
+    @staticmethod
+    def _measurement_string(value: Any) -> str | None:
+        if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
+            return None
+        try:
+            measurement = Decimal(str(value).strip())
+        except InvalidOperation:
+            return None
+        if not measurement.is_finite() or measurement < 0:
+            return None
+        return format(measurement, "f")
 
     @staticmethod
     def _add_synced_tags(product: GeneralObjects, payload: dict[str, Any]) -> None:

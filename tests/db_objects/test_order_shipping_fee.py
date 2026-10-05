@@ -132,6 +132,7 @@ def test_invoice_order_flushes_shipping_order_lines_before_invoice_lines(
     monkeypatch.setattr(order_utils.db_conf, "get_main_session", lambda: session)
     monkeypatch.setattr(order_utils, "OrdersRepository", lambda _: order_repository)
     monkeypatch.setattr(order_utils, "InvoiceRepository", lambda _: invoice_repository)
+    monkeypatch.setattr(order_utils, "ensure_invoice_credit_available", MagicMock())
     monkeypatch.setattr(
         order_utils,
         "get_or_create_invoice_fee_product",

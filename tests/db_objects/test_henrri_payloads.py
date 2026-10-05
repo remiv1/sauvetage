@@ -2,8 +2,13 @@
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 from flask import Flask
 import pytest
+from limits.storage import MemoryStorage
+from limits.strategies import MovingWindowRateLimiter
+from limits.util import WindowStats
+from pymongo.errors import ServerSelectionTimeoutError
 from henrri_connect.models import (
     Address,
     Contact,
@@ -23,6 +28,9 @@ from app_front.blueprints.order.utils_henrri import (
     create_invoice,
 )
 from db_models.services.henrri.base import HenrriService
+from db_models.services.henrri import base as henrri_base
+from db_models.services.henrri import rate_limiting
+from db_models.services.henrri.rate_limiting import HenrriRateLimiter, get_requests_per_minute
 from db_models.objects import (
     Customers,
     GeneralObjects,
@@ -33,6 +41,178 @@ from db_models.objects import (
     OrderLine,
     VatRate,
 )
+
+@pytest.mark.parametrize("configured, expected", [(None, 20), ("20", 20), ("60", 60)])
+def test_henrri_quota_reads_environment(
+    monkeypatch: pytest.MonkeyPatch, configured: str | None, expected: int,
+) -> None:
+    """Le quota provient de HENRRI_RATE_LIMITING et vaut 20 par défaut."""
+    if configured is None:
+        monkeypatch.delenv("HENRRI_RATE_LIMITING", raising=False)
+    else:
+        monkeypatch.setenv("HENRRI_RATE_LIMITING", configured)
+
+    assert get_requests_per_minute() == expected
+
+
+@pytest.mark.parametrize("configured", ["", "0", "-1", "20/minute", "invalide"])
+def test_henrri_quota_rejects_invalid_configuration(
+    monkeypatch: pytest.MonkeyPatch, configured: str,
+) -> None:
+    """Une configuration invalide ne désactive jamais silencieusement le quota."""
+    monkeypatch.setenv("HENRRI_RATE_LIMITING", configured)
+
+    with pytest.raises(ValueError, match="HENRRI_RATE_LIMITING"):
+        get_requests_per_minute()
+
+
+def test_henrri_quota_waits_and_rechecks_before_sending() -> None:
+    """Après une attente, le créneau est de nouveau réservé atomiquement."""
+    strategy = MagicMock()
+    strategy.hit.side_effect = [False, False, True]
+    strategy.get_window_stats.return_value = WindowStats(60.0, 0)
+    clock = MagicMock(side_effect=[10.0, 60.0])
+    wait = MagicMock()
+    limiter = HenrriRateLimiter(20, "compte-test", strategy, clock=clock, wait=wait)
+
+    limiter.acquire()
+
+    assert strategy.hit.call_count == 3
+    assert [call.args[0] for call in wait.call_args_list] == [50.0, 0.01]
+    item, identifier = strategy.hit.call_args.args
+    assert item.amount == 20
+    assert item.get_expiry() == 60
+    assert identifier == "compte-test"
+
+
+def test_henrri_quota_enforces_moving_window_across_two_workers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deux travailleurs partageant le stockage attendent après avoir épuisé la fenêtre."""
+    current_time = [1000.0]
+    waits: list[float] = []
+
+    def clock() -> float:
+        return current_time[0]
+
+    def wait(delay: float) -> None:
+        waits.append(delay)
+        current_time[0] += delay
+
+    monkeypatch.setattr(rate_limiting.time, "time", clock)
+    storage = MemoryStorage()
+    first = HenrriRateLimiter(2, "compte-test", MovingWindowRateLimiter(storage), clock, wait)
+    second = HenrriRateLimiter(2, "compte-test", MovingWindowRateLimiter(storage), clock, wait)
+
+    first.acquire()
+    second.acquire()
+    assert waits == []
+    first.acquire()
+
+    assert 60.0 <= sum(waits) <= 60.1
+    assert current_time[0] >= 1060.0
+
+
+def test_henrri_quota_blocks_when_shared_storage_is_unavailable() -> None:
+    """Un stockage indisponible empêche de partir sans contrôle du quota."""
+    strategy = MagicMock()
+    strategy.hit.side_effect = ServerSelectionTimeoutError("MongoDB indisponible")
+    wait = MagicMock()
+    limiter = HenrriRateLimiter(20, "compte-test", strategy, wait=wait)
+
+    with pytest.raises(RuntimeError, match="requête bloquée"):
+        limiter.acquire()
+
+    wait.assert_not_called()
+
+
+def test_henrri_services_share_mongodb_quota(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Deux instances utilisent le même compte et les collections communes MongoDB."""
+    monkeypatch.setenv("HENRRI_RATE_LIMITING", "20")
+    monkeypatch.setenv("MONGO_DB_LOGS", "quota_test")
+    storage = MagicMock()
+    strategy = MagicMock()
+    monkeypatch.setattr(rate_limiting, "MongoDBStorage", storage)
+    monkeypatch.setattr(rate_limiting, "MovingWindowRateLimiter", strategy)
+    rate_limiting._cached_rate_limiter.cache_clear()    # pylint: disable=W0212
+    try:
+        first = rate_limiting.get_rate_limiter("compte-test", "https://henrri.example")
+        second = rate_limiting.get_rate_limiter("compte-test", "https://henrri.example/")
+        first.acquire()
+        second.acquire()
+
+        assert first is second
+        storage.assert_called_once()
+        assert storage.call_args.kwargs["database_name"] == "quota_test"
+        assert storage.call_args.kwargs["window_collection_name"] == "henrri_rate_limit_windows"
+        assert storage.call_args.kwargs["counter_collection_name"] == "henrri_rate_limit_counters"
+        assert strategy.return_value.hit.call_count == 2
+        item, identifier = strategy.return_value.hit.call_args.args
+        assert item.amount == 20
+        assert "compte-test" not in identifier
+    finally:
+        rate_limiting._cached_rate_limiter.cache_clear()    # pylint: disable=W0212
+
+
+def test_henrri_http_counts_authentication_and_business_requests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Le hook réserve un créneau avant l'authentification et avant l'appel métier."""
+    events: list[str] = []
+    limiter = MagicMock()
+    limiter.acquire.side_effect = lambda: events.append("quota")
+    factory = MagicMock(return_value=limiter)
+    monkeypatch.setattr(henrri_base, "get_rate_limiter", factory)
+    service = HenrriService()
+    factory.assert_not_called()
+    item = HenriItem(
+        vat_percent=0.0, creation_date="2026-10-05", is_tax_included=False,
+        purchase_price=0.0, is_a_group=False,
+    )
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        events.append(request.url.path)
+        if request.url.path.endswith("authenticate"):
+            return httpx.Response(200, json={"accessToken": "token-test", "expiresIn": 60})
+        return httpx.Response(200, json={**item.model_dump(by_alias=True), "id": 123})
+
+    original = service.client._http    # pylint: disable=W0212
+    service.client._http = httpx.Client(    # pylint: disable=W0212
+        transport=httpx.MockTransport(transport), event_hooks=original.event_hooks,
+        timeout=original.timeout,
+    )
+    original.close()
+    try:
+        service.client.authenticate()
+        service.client.items.add(item)
+
+        assert events == ["quota", "/v1/users/authenticate", "quota", "/v1/items"]
+        assert factory.call_count == 2
+    finally:
+        service.client.close()
+
+
+def test_henrri_http_does_not_send_when_quota_storage_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """L'indisponibilité du quota bloque l'envoi HTTP, sans fallback local."""
+    limiter = MagicMock()
+    limiter.acquire.side_effect = RuntimeError("Quota Henrri indisponible")
+    monkeypatch.setattr(henrri_base, "get_rate_limiter", MagicMock(return_value=limiter))
+    transport = MagicMock(return_value=httpx.Response(200))
+    service = HenrriService()
+    original = service.client._http    # pylint: disable=W0212
+    service.client._http = httpx.Client(    # pylint: disable=W0212
+        transport=httpx.MockTransport(transport), event_hooks=original.event_hooks,
+    )
+    original.close()
+    try:
+        with pytest.raises(RuntimeError, match="Quota Henrri indisponible"):
+            service.client.authenticate()
+        transport.assert_not_called()
+    finally:
+        service.client.close()
+
 
 def test_customer_to_dict_henrri_contract_for_professional(
         professional_customer: Customers

@@ -42,6 +42,7 @@ services:
       - ./config/env/.env.fast
       - ./config/env/.env.dilicom
       - ./config/env/.env.woo
+      - ./config/env/.env.henrri
     volumes:
       - sauv-dilicom-in:${DILICOM_IN_DIR}:rw,z
       - sauv-dilicom-out:${DILICOM_OUT_DIR}:rw,z
