@@ -7,6 +7,7 @@ Ce module inclut:
 import re
 from os import getenv
 import logging
+from html.parser import HTMLParser
 from pathlib import Path
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -35,6 +36,43 @@ from db_models.repositories.objects import (
 from db_models.repositories.stocks.dilicom import DilicomReferencialRepository
 
 logger = logging.getLogger("app_back.services.dilicom")
+
+class _DescriptionHTMLParser(HTMLParser):
+    _block_tags = {
+        "address", "article", "blockquote", "br", "div", "h1", "h2", "h3",
+        "h4", "h5", "h6", "hr", "li", "ol", "p", "pre", "section", "ul",
+    }
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.has_tags = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.has_tags = True
+        if tag in self._block_tags:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        self.handle_starttag(tag, [])
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
+def _clean_description(description: str | None) -> str | None:
+    if not description:
+        return description
+    parser = _DescriptionHTMLParser()
+    parser.feed(description)
+    parser.close()
+    text = "".join(parser.parts)
+    if not parser.has_tags:
+        return text
+    return "\n".join(
+        line.strip() for line in text.replace("\xa0", " ").splitlines() if line.strip()
+    )
+
 
 def _deep_getattr(obj: object, attr_path: str, default: str="N/A") -> str | object:
     for attr in attr_path.split("."):
@@ -647,7 +685,9 @@ class DilicomServiceBase:
         book.title = cast(str, _deep_getattr(onix_product, "title"))
         book.supplier_gln = cast(str, _deep_getattr(onix_product, "publisher.gln"))
         book.editor_gln = cast(str, _deep_getattr(onix_product, "editor.gln"))
-        book.description = cast(str, _deep_getattr(onix_product, "collateral.description"))
+        book.description = _clean_description(
+            cast(str | None, _deep_getattr(onix_product, "collateral.description"))
+        )
 
         price_data = self._extract_price_and_vat_from_onix(onix_product)
         book.price_ht = float(price_data["price_ht"])

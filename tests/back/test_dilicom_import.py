@@ -3,15 +3,57 @@
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from onixlib import Notice
+from onixlib import Notice, Product
 
 from db_models.objects import VatRate, GeneralObjects, DilicomReferencial, ObjectPrices
 from db_models.repositories.objects import ObjectsRepository
 from db_models.repositories.stocks.dilicom import DilicomReferencialRepository
 from db_models.services.dilicom import DilicomService
+
+
+@pytest.mark.parametrize(
+    ("description", "expected"),
+    [
+        ("Un texte sans HTML.", "Un texte sans HTML."),
+        ("Une ligne\n\nUne autre ligne", "Une ligne\n\nUne autre ligne"),
+        ("<p>Un <strong>livre</strong> illustré.</p>", "Un livre illustré."),
+        ("<p>Premier paragraphe.</p><p>Second<br/>Suite.</p>",
+         "Premier paragraphe.\nSecond\nSuite."),
+        ("<div>Un &amp; deux&nbsp;: &#233;.</div>", "Un & deux : é."),
+        ("Un &amp; deux", "Un & deux"),
+        ("Un prix < 10 et > 5", "Un prix < 10 et > 5"),
+        ("<p></p>", ""),
+        ("", ""),
+        (None, None),
+    ],
+)
+def test_dilicom_cleans_onix_description(
+    description: str | None,
+    expected: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """L'import ONIX conserve le texte et les paragraphes sans les balises HTML."""
+    product = cast(Product, SimpleNamespace(
+        title="Livre",
+        isbn="9782362563560",
+        collateral=SimpleNamespace(description=description),
+        authors=[],
+    ))
+    service = object.__new__(DilicomService)
+    monkeypatch.setattr(
+        service,
+        "_extract_price_and_vat_from_onix",
+        lambda product: {"price_ht": 0.0, "vat_rate": 0.0},
+    )
+
+    book = service._build_book_from_onix(product)  # pylint: disable=W0212
+
+    assert book.description == expected
 
 
 def test_price_ht_uses_taxable_amount_when_present() -> None:
