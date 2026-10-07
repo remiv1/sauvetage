@@ -154,13 +154,13 @@ class DilicomServiceBase:
         Cette méthode récupère les données nécessaires dans la base de données,
         génère le fichier de mise à jour, et le transfère via SFTP.
         """
-        txt_content: str | bool = self._build_refel_content(to_file=False)
-        byte_content = txt_content.encode(encoding="utf-8") \
-                            if isinstance(txt_content, str) \
-                            else None
+        stmt = select(DilicomReferencial).where(DilicomReferencial.dilicom_synced.is_(False))
+        references = list(self.session.execute(stmt).scalars().all())
+        txt_content = self._build_refel_content(to_file=False, references=references)
         logger.debug("Contenu du fichier de mise à jour (REFEL) généré: %s", txt_content)
-        if isinstance(txt_content, bool):
+        if not isinstance(txt_content, str):
             raise ValueError("Erreur lors de la création du fichier de mise à jour.")
+        byte_content = txt_content.encode(encoding="utf-8")
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
         filename = f"{self.connect.config.username}_MVT-REF_{timestamp}.txt"
         logger.info(
@@ -170,10 +170,13 @@ class DilicomServiceBase:
         remote_path = str(Path('I') / filename)
         with self.connect as server:
             server.upload_from_memory(byte_content, remote_path=remote_path)
-            logger.info(
-                "REF FEL envoyé avec succès au serveur de Dilicom à l'emplacement: %s",
-                remote_path,
-            )
+        for reference in references:
+            reference.dilicom_synced = True
+        self.session.commit()
+        logger.info(
+            "REF FEL envoyé avec succès au serveur de Dilicom à l'emplacement: %s",
+            remote_path,
+        )
 
     def _books_target_path(self, list_path: list[Path]) -> list[Path]:
         """
@@ -286,7 +289,12 @@ class DilicomServiceBase:
             self.dilicom_referencial_repo.update_status(ean13=ref)
         self.session.commit()
 
-    def _build_refel_content(self, to_file: bool = False) -> str | bool:
+    def _build_refel_content(
+        self,
+        to_file: bool = False,
+        *,
+        references: list[DilicomReferencial] | None = None,
+    ) -> str | bool:
         """
         Construit le contenu du fichier de mise à jour (REFEL) à envoyer à Dilicom.
         Cette méthode récupère les données nécessaires dans la base de données,
@@ -294,7 +302,8 @@ class DilicomServiceBase:
         """
         stmt = select(DilicomReferencial).where(DilicomReferencial.dilicom_synced == False) # pylint: disable=C0121
         try:
-            unsynced_refs = self.session.execute(stmt).scalars().all()
+            unsynced_refs = references if references is not None else \
+                self.session.execute(stmt).scalars().all()
             if not unsynced_refs:
                 logger.info(
                     "Rien à synchroniser avec Dilicom, REF-FEL non généré.",
@@ -309,7 +318,6 @@ class DilicomServiceBase:
                 value_to_return = True
             else:
                 value_to_return = txt_content
-            self._update_synced([ref.ean13 for ref in unsynced_refs])
             logger.info(
                 "Contenu du fichier REFEL construit avec succès. Nombre de références incluses: %d",
                 len(unsynced_refs)

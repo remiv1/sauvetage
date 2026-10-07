@@ -4,16 +4,102 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from onixlib import Notice, Product
+from dilicom_parser.transport.exceptions import DilicomConnectionError, DilicomSFTPError
 
 from db_models.objects import VatRate, GeneralObjects, DilicomReferencial, ObjectPrices
 from db_models.repositories.objects import ObjectsRepository
 from db_models.repositories.stocks.dilicom import DilicomReferencialRepository
 from db_models.services.dilicom import DilicomService
+
+
+@pytest.mark.parametrize("failure_stage", ["connection", "upload", "close", None])
+def test_dilicom_send_updates_marks_only_uploaded_references(
+    failure_stage: str | None,
+) -> None:
+    """Seul un dépôt réussi synchronise les lignes incluses dans le fichier."""
+    reference = DilicomReferencial(
+        ean13="9782362563560", gln13="1234567890123",
+        create_ref=True, delete_ref=False, dilicom_synced=False,
+    )
+    other_reference = DilicomReferencial(
+        ean13="9782362563560", gln13="1234567890123",
+        create_ref=False, delete_ref=True, dilicom_synced=False,
+    )
+    session = MagicMock(spec=Session)
+    session.execute.return_value.scalars.return_value.all.return_value = [reference]
+    connector = MagicMock()
+    connector.config.username = "TEST"
+    connector.__enter__.return_value = connector
+    connector.__exit__.return_value = False
+
+    def upload(content: bytes, remote_path: str) -> None:
+        assert reference.dilicom_synced is False
+        session.commit.assert_not_called()
+        assert content == f"BEGIN|MAJREF|\n{reference.to_pipe()}\n".encode("utf-8")
+        assert remote_path.startswith("I/TEST_MVT-REF_")
+        if failure_stage == "upload":
+            raise DilicomSFTPError("Transfert interrompu")
+
+    connector.upload_from_memory.side_effect = upload
+    if failure_stage == "connection":
+        connector.__enter__.side_effect = DilicomConnectionError("Connexion interrompue")
+    elif failure_stage == "close":
+        connector.__exit__.side_effect = DilicomSFTPError("Fermeture interrompue")
+
+    service = object.__new__(DilicomService)
+    service.session = session
+    service.connect = connector
+    service.dilicom_referencial_repo = MagicMock(spec=DilicomReferencialRepository)
+
+    if failure_stage is not None:
+        with pytest.raises((DilicomConnectionError, DilicomSFTPError)):
+            service.send_updates()
+        assert reference.dilicom_synced is False
+        session.commit.assert_not_called()
+    else:
+        service.send_updates()
+        assert reference.dilicom_synced is True
+        session.commit.assert_called_once_with()
+    assert other_reference.dilicom_synced is False
+    service.dilicom_referencial_repo.update_status.assert_not_called()
+    session.execute.assert_called_once()
+
+
+@pytest.mark.parametrize("to_file", [False, True])
+def test_dilicom_build_refel_does_not_mark_references_synced(
+    to_file: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """La génération seule du référentiel ne vaut pas confirmation du dépôt."""
+    monkeypatch.chdir(tmp_path)
+    reference = DilicomReferencial(
+        ean13="9782362563560", gln13="1234567890123",
+        create_ref=True, delete_ref=False, dilicom_synced=False,
+    )
+    session = MagicMock(spec=Session)
+    session.execute.return_value.scalars.return_value.all.return_value = [reference]
+    service = object.__new__(DilicomService)
+    service.session = session
+    service.dilicom_referencial_repo = MagicMock(spec=DilicomReferencialRepository)
+
+    content = service._build_refel_content(to_file=to_file)  # pylint: disable=W0212
+
+    expected = f"BEGIN|MAJREF|\n{reference.to_pipe()}\n"
+    if to_file:
+        assert content is True
+        assert (tmp_path / "refel.txt").read_text(encoding="utf-8") == expected
+    else:
+        assert content == expected
+    assert reference.dilicom_synced is False
+    session.commit.assert_not_called()
+    service.dilicom_referencial_repo.update_status.assert_not_called()
 
 
 @pytest.mark.parametrize(
