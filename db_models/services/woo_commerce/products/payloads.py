@@ -7,6 +7,7 @@ from typing import Any
 from db_models.repositories.objects import GeneralObjects
 from db_models.repositories.objects.media import MediaFiles
 from db_models.repositories.objects.media_access_token import MediaAccessTokenRepository
+from db_models.repositories.stocks.inventory import InventoryRepository
 from db_models.services.woo_commerce.utils import _merge_attribute_lists
 
 from .constants import FRONT_BASE_URL, OBJECT_TYPE_MAPPING, PROTOCOL
@@ -51,13 +52,30 @@ class ProductPayloadMixin:  # pylint: disable=R0903
             [attribute],
         )
 
-    def _build_product_payload(self: Any, product: GeneralObjects) -> dict[str, Any]:
-        """Construit le payload produit complet destiné à WooCommerce."""
-        payload = product.to_dict_for_woo_commerce()
+    def _update_stock_quantity(
+        self: Any,
+        product: GeneralObjects,
+        payload: dict[str, Any],
+    ) -> None:
+        """Met à jour la quantité en stock dans le payload produit."""
+        inventory_repo = InventoryRepository(self.session)
+        payload["stock_quantity"] = inventory_repo.get_available_quantity(product.id)
+
+    def _update_categories(
+        self: Any,
+        product: GeneralObjects,
+        payload: dict[str, Any],
+    ) -> None:
+        """Met à jour les catégories dans le payload produit."""
         payload["categories"] = [
             {"id": category_id}
             for category_id in self._get_product_category_ids(product)
         ]
+    def _build_product_payload(self: Any, product: GeneralObjects) -> dict[str, Any]:
+        """Construit le payload produit complet destiné à WooCommerce."""
+        payload = product.to_dict_for_woo_commerce()
+        self._update_categories(product, payload)
+        self._update_stock_quantity(product, payload)
         self._merge_product_attributes(product, payload)
         self._add_product_measurements(product, payload)
         self._add_synced_tags(product, payload)

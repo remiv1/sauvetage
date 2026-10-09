@@ -102,6 +102,89 @@ def test_dilicom_build_refel_does_not_mark_references_synced(
     service.dilicom_referencial_repo.update_status.assert_not_called()
 
 
+def test_dilicom_fetch_returns_streams_onix_products_and_cleans_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Le retour ONIX passe par l'itérateur streaming et nettoie les fichiers préparés."""
+    downloaded_file = tmp_path / "DIF123456789.zip.rdy"
+    downloaded_file.touch()
+    extracted_file = tmp_path / "DIF123456789" / "123456789.xml"
+    extracted_file.parent.mkdir()
+    extracted_file.touch()
+
+    product = cast(Product, SimpleNamespace())
+    classifier = MagicMock()
+    classifier.file_list = [extracted_file]
+    classifier.classify.return_value = classifier
+    classifier.parse.return_value = {}
+    classifier.count_by_type.return_value = {"onix": 1}
+    classifier.get_files_by_type.return_value = [SimpleNamespace(source_path=extracted_file)]
+    classifier.iter_onix_products.return_value = iter([product])
+    monkeypatch.setattr(
+        "db_models.services.dilicom.base.FilesClassifier",
+        lambda file_list, streaming_option: classifier,
+    )
+
+    connector = MagicMock()
+    connector.__enter__.return_value = connector
+    connector.__exit__.return_value = False
+    connector.download_all.return_value = [downloaded_file]
+    service = object.__new__(DilicomService)
+    service.connect = connector
+    monkeypatch.setattr(service, "_clear_directory", lambda _: None)
+    monkeypatch.setattr(service, "refresh_vat_rate_cache", lambda: None)
+
+    general_object = SimpleNamespace(ean13="9782362563560")
+    book = object()
+    metadata = object()
+    values = {
+        "general_object": general_object,
+        "book": book,
+        "obj_metadatas": metadata,
+        "object_prices": [],
+    }
+    get_values = MagicMock(return_value=values)
+    update_synced = MagicMock()
+    monkeypatch.setattr(service, "_get_values_from_onix", get_values)
+    monkeypatch.setattr(service, "_update_synced", update_synced)
+    service.objects_repo = MagicMock()
+
+    service.fetch_returns()
+
+    classifier.iter_onix_products.assert_called_once_with()
+    get_values.assert_called_once_with(product)
+    service.objects_repo.save_or_update_from_object.assert_called_once_with(
+        general_object=general_object,
+        book=book,
+        obj_metadatas=metadata,
+        object_price=[],
+    )
+    service.objects_repo.commit_object.assert_called_once_with()
+    update_synced.assert_called_once_with(["9782362563560"])
+    assert not downloaded_file.exists()
+    assert not extracted_file.exists()
+
+
+def test_dilicom_update_books_preserves_xml_path_input(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Les appels historiques continuent de traiter des chemins XML."""
+    book_file = tmp_path / "123456789.xml"
+    products = [cast(Product, SimpleNamespace())]
+    parse_notice = MagicMock(return_value=SimpleNamespace(products=products))
+    update_products = MagicMock()
+    monkeypatch.setattr("db_models.services.dilicom.base.Notice.parse_full", parse_notice)
+    service = object.__new__(DilicomService)
+    monkeypatch.setattr(service, "_update_onix_products", update_products)
+
+    service._update_books([book_file])  # pylint: disable=W0212
+
+    parse_notice.assert_called_once_with(book_file, version="3.0")
+    update_products.assert_called_once_with(products, source_name=book_file.name)
+
+
 @pytest.mark.parametrize(
     ("description", "expected"),
     [
@@ -140,6 +223,74 @@ def test_dilicom_cleans_onix_description(
     book = service._build_book_from_onix(product)  # pylint: disable=W0212
 
     assert book.description == expected
+
+
+def test_dilicom_imports_imprint_and_single_collection_keyword(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """L'ImprintName devient l'éditeur et les collections ne créent qu'un mot-clé."""
+    title_details = [
+        SimpleNamespace(
+            title_element=[SimpleNamespace(title_text="Docs/récits/essais")]
+        ),
+        SimpleNamespace(
+            title_element=[SimpleNamespace(title_text="DOC RECIT ESSAI")]
+        ),
+    ]
+    raw_product = SimpleNamespace(
+        product_identifier=[],
+        publishing_detail=SimpleNamespace(
+            imprint=SimpleNamespace(imprint_name="Éditions Exemple")
+        ),
+        descriptive_detail=SimpleNamespace(
+            collection=[
+                SimpleNamespace(title_detail=title_details),
+                SimpleNamespace(
+                    title_detail=[
+                        SimpleNamespace(
+                            title_element=[SimpleNamespace(title_text="DOCS/RECITS/ESSAIS")]
+                        )
+                    ]
+                ),
+            ],
+            extent=[],
+            measure=[],
+        ),
+    )
+    product = cast(
+        Product,
+        SimpleNamespace(
+            title="Livre",
+            isbn="9782362563560",
+            publisher=SimpleNamespace(gln="1234567890123"),
+            editor=SimpleNamespace(gln="9876543210123", name="Ancien nom éditeur"),
+            collateral=SimpleNamespace(description=None),
+            authors=[],
+            _raw=raw_product,
+        ),
+    )
+    service = object.__new__(DilicomService)
+    supplier = SimpleNamespace(id=1, name="Diffuseur")
+    service.supplier_repo = MagicMock()
+    service.supplier_repo.get_by_gln13.side_effect = lambda gln: (
+        supplier if gln == "1234567890123" else None
+    )
+    monkeypatch.setattr(
+        service,
+        "_extract_price_and_vat_from_onix",
+        lambda _: {"price_ht": 10.0, "vat_rate": 5.5},
+    )
+    monkeypatch.setattr(service, "_extract_prices_and_vats_from_onix", lambda _: [])
+    monkeypatch.setattr(service, "_extract_publication_year_from_onix", lambda _: None)
+    monkeypatch.setattr(service, "_get_vat_rate_id", lambda _: None)
+
+    values = service._get_values_from_onix(product)  # pylint: disable=W0212
+
+    assert values is not None
+    assert values["book"].editor == "Éditions Exemple"
+    metadata = values["obj_metadatas"].semistructured_data
+    assert metadata["collection"] == "Docs/récits/essais"
+    assert "collections" not in metadata
 
 
 def test_price_ht_uses_taxable_amount_when_present() -> None:

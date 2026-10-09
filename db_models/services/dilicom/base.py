@@ -11,7 +11,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Any, Optional, cast
+from typing import Any, Iterable, Optional, cast
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from onixlib import Notice, Product
@@ -222,23 +222,18 @@ class DilicomServiceBase:
             )
         self.classifier = FilesClassifier(files_list, streaming_option=True)
         objects_to_merge = self.classifier.classify().parse()
-        books_to_merge = self.classifier.heavy_files
+        onix_files = self.classifier.get_files_by_type("onix")
         total_by_type = self.classifier.count_by_type()
-        total_by_type["books"] = len(books_to_merge)
+        total_by_type["books"] = len(onix_files)
         logger.info(
             "objets trouvés après classification et parsing: %s",
             total_by_type
         )
-        # Suppression des extensions de fichiers sur les `books_to_merge` qui ont été extraits
-        books_to_merge = self._books_target_path(books_to_merge)
-        if not books_to_merge and not objects_to_merge:
+        if not onix_files and not objects_to_merge:
             message = "Aucun fichier de retour trouvé ou reconnu après classification."
             logger.warning(message)
             raise FileNotFoundError(message)
-        if not objects_to_merge:
-            message = "Aucun type de fichier reconnu dans les fichiers de retour."
-            logger.warning(message)
-        elif not books_to_merge:
+        if objects_to_merge and not onix_files:
             message = "Aucun fichier de type 'books' trouvé dans les fichiers de retour."
             logger.warning(message)
 
@@ -260,16 +255,20 @@ class DilicomServiceBase:
                 len(objects_to_merge["gencod"])
             )
             self._update_services(objects_to_merge["gencod"])
-        if books_to_merge:
+        if onix_files:
             logger.info(
                 "Mise à jour des livres avec %d entrées à traiter.",
-                len(books_to_merge)
+                len(onix_files)
             )
             self.refresh_vat_rate_cache()
-            self._update_books(books_to_merge)
+            self._update_onix_products(
+                self.classifier.iter_onix_products(),
+                source_name="fichiers ONIX de retour",
+            )
 
-        # Suppression des fichiers locaux après traitement
-        for file in files_list:
+        # Supprime les fichiers reçus ainsi que les fichiers extraits par le classificateur.
+        files_to_remove = list(dict.fromkeys([*files_list, *self.classifier.file_list]))
+        for file in files_to_remove:
             try:
                 file.unlink()
                 logger.info("Fichier %s supprimé avec succès après traitement.", file.name)
@@ -617,7 +616,6 @@ class DilicomServiceBase:
                     collection_names.append(title_text)
         if collection_names:
             metadatas["collection"] = collection_names[0]
-            metadatas["collections"] = collection_names
         return metadatas
 
     def _extract_dimensions_metadata(self, raw_product: Any) -> dict[str, Any]:
@@ -693,6 +691,10 @@ class DilicomServiceBase:
         book.title = cast(str, _deep_getattr(onix_product, "title"))
         book.supplier_gln = cast(str, _deep_getattr(onix_product, "publisher.gln"))
         book.editor_gln = cast(str, _deep_getattr(onix_product, "editor.gln"))
+        book.editor_name = cast(
+            str,
+            _deep_getattr(onix_product, "publishing_detail.imprint.imprint_name")
+        )
         book.description = _clean_description(
             cast(str | None, _deep_getattr(onix_product, "collateral.description"))
         )
@@ -774,8 +776,18 @@ class DilicomServiceBase:
             logger.info("Création d'un nouveau fournisseur %s nécessaire.", book.supplier_gln)
             return None
 
-        if not book.editor:
-            book.editor_name = cast(str, _deep_getattr(onix_product, "editor.name"))
+        if book.editor:
+            book.editor_name = book.editor.name
+        else:
+            raw_product = getattr(onix_product, "_raw", None)
+            publishing_detail = getattr(raw_product, "publishing_detail", None)
+            imprint = getattr(publishing_detail, "imprint", None)
+            imprint_name = _read_value(getattr(imprint, "imprint_name", None))
+            book.editor_name = (
+                str(imprint_name).strip()
+                if imprint_name
+                else cast(str, _deep_getattr(onix_product, "editor.name", default=""))
+            )
 
         supplier_id = book.supplier.id
         book.supplier_name = book.supplier.name
@@ -793,8 +805,8 @@ class DilicomServiceBase:
         )
         if book.pages:
             b.pages = cast(int, book.pages)
-        if book.editor:
-            b.editor = book.editor.name
+        if book.editor_name:
+            b.editor = book.editor_name
 
         metadatas = ObjMetadatas(semistructured_data=self._get_metadatas_from_onix(onix_product))
         logger.debug(
@@ -829,27 +841,33 @@ class DilicomServiceBase:
                 "Traitement du fichier de livres: %s",
                 book_file.name
             )
-            list_ean13: list[str] = []
-            for i, product in enumerate(Notice.parse_full(book_file, version="3.0").products):
-                values = self._get_values_from_onix(product)
-                if values:
-                    g_o = values["general_object"]
-                    b = values["book"]
-                    m = values["obj_metadatas"]
-                else:
-                    logger.warning(
-                        "Eléments manquants pour le livre %s avec les données ONIX du fichier %s,",
-                        i, book_file.name)
-                    continue
-                self.objects_repo.save_or_update_from_object(
-                    general_object=g_o,
-                    book=b,
-                    obj_metadatas=m,
-                    object_price=values.get("object_prices", values.get("object_price")),
+            self._update_onix_products(
+                Notice.parse_full(book_file, version="3.0").products,
+                source_name=book_file.name,
+            )
+
+    def _update_onix_products(self, products: Iterable[Product], source_name: str) -> None:
+        """Enregistre les produits ONIX et synchronise les références traitées."""
+        list_ean13: list[str] = []
+        for index, product in enumerate(products):
+            values = self._get_values_from_onix(product)
+            if not values:
+                logger.warning(
+                    "Eléments manquants pour le livre %s avec les données ONIX du fichier %s,",
+                    index,
+                    source_name,
                 )
-                list_ean13.append(g_o.ean13)
-            self.objects_repo.commit_object()
-            self._update_synced(list_ean13)
+                continue
+            general_object = values["general_object"]
+            self.objects_repo.save_or_update_from_object(
+                general_object=general_object,
+                book=values["book"],
+                obj_metadatas=values["obj_metadatas"],
+                object_price=values.get("object_prices", values.get("object_price")),
+            )
+            list_ean13.append(general_object.ean13)
+        self.objects_repo.commit_object()
+        self._update_synced(list_ean13)
 
 
     def _update_distributors(self, distributor_list: list[DistributorData]) -> None:
