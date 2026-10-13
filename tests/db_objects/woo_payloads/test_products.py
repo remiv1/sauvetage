@@ -52,6 +52,7 @@ def test_product_metadata_exports_weight_and_dimensions(
 ) -> None:
     """Les mesures sont exportées en grammes et millimètres, avec les attributs conservés."""
     service = object.__new__(WCProductsService)
+    service.session = MagicMock()
     book_product.obj_metadatas = ObjMetadatas(semistructured_data={
         "poids_grammes": weight, "dimensions_mm": "246*217*24", "couleur": "rouge",
     })
@@ -71,6 +72,7 @@ def test_product_metadata_omits_invalid_weight(
 ) -> None:
     """Un poids invalide est omis sans perdre les dimensions valides."""
     service = object.__new__(WCProductsService)
+    service.session = MagicMock()
     book_product.obj_metadatas = ObjMetadatas(semistructured_data={
         "poids_grammes": weight, "dimensions_mm": "246*217*24",
     })
@@ -90,6 +92,7 @@ def test_product_metadata_omits_invalid_dimensions(
 ) -> None:
     """Un format incomplet ou invalide n'écrase pas les dimensions distantes."""
     service = object.__new__(WCProductsService)
+    service.session = MagicMock()
     book_product.obj_metadatas = ObjMetadatas(semistructured_data={
         "poids_grammes": "110", "dimensions_mm": dimensions,
     })
@@ -106,6 +109,7 @@ def test_product_without_measurements_omits_shipping_fields(
 ) -> None:
     """L'absence de mesures laisse les champs poids et dimensions hors du payload."""
     service = object.__new__(WCProductsService)
+    service.session = MagicMock()
     book_product.obj_metadatas = ObjMetadatas(semistructured_data=metadata) if metadata is not None else None
 
     payload = service._build_product_payload(book_product)

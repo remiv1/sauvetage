@@ -43,6 +43,32 @@ safe_source_env_file "$ENV_TEST_FILE" || {
 echo "🔨 Building + starting service test-db..."
 compose_build_and_up test-db "$COMPOSE_FILE"
 
+echo "🔨 Building + starting service db-logs..."
+compose_build_and_up db-logs "$COMPOSE_FILE"
+export HENRRI_TEST_MONGO_URI="$(
+	python - "$PROJECT_ROOT/config/env/.env.db_logs" <<'PY'
+from pathlib import Path
+from sys import argv
+from urllib.parse import quote_plus
+
+from dotenv import dotenv_values
+
+settings = dotenv_values(Path(argv[1]))
+username = quote_plus(settings["MONGO_INITDB_ROOT_USERNAME"] or "")
+password = quote_plus(settings["MONGO_INITDB_ROOT_PASSWORD"] or "")
+print(f"mongodb://{username}:{password}@127.0.0.1:27018/?authSource=admin")
+PY
+)"
+python - <<'PY'
+import os
+
+from pymongo import MongoClient
+
+with MongoClient(os.environ["HENRRI_TEST_MONGO_URI"], serverSelectionTimeoutMS=30000) as client:
+		client.admin.command("ping")
+PY
+echo "✅ MongoDB de test prêt sur 127.0.0.1:27018"
+
 HOST=${POSTGRES_HOST:-localhost}
 PORT=${POSTGRES_PORT:-5433}
 DB=${POSTGRES_DB_MAIN:-sauvetage_test}

@@ -2,8 +2,9 @@
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
+import pytest
 from sqlalchemy.orm import Session
-from db_models.objects import (
+from db_models.objects import ( # pylint: disable=W0611
     InventoryMovements,
     GeneralObjects,
     Books,
@@ -14,6 +15,7 @@ from db_models.objects import (
     OrderLine,
 )
 from db_models.repositories.orders import OrdersRepository
+from app_front.blueprints.order import utils as order_utils
 from app_front.blueprints.order.utils import invoice_order, ship_order
 from app_front.main import app
 
@@ -151,8 +153,13 @@ def test_multi_price_order_can_be_invoiced_and_shipped_by_split_lines(
     db_session_main: Session,
     supplier,
     complete_customer_part,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Une commande multi-prix doit être facturée puis expédiée en gardant chaque ligne séparée."""
+    monkeypatch.setattr(order_utils, "ensure_invoice_credit_available", lambda: None)
+    monkeypatch.setattr(
+        order_utils, "_sync_invoice_with_henrri", lambda invoice, _repository: invoice,
+    )
     vat_5 = VatRate(
         code=1,
         rate=5.5,

@@ -293,6 +293,7 @@ def test_update_product_syncs_missing_wc_tags_before_export() -> None:
     ]
     product.media_files = []
     service.object_repo.get_by_ref.return_value = product
+    service.api_read.get.return_value.json.return_value = []
 
     response = MagicMock()
     response.raise_for_status.return_value = None

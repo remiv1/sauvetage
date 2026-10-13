@@ -402,6 +402,14 @@ class DilicomServiceBase:
         seen: set[tuple[float, float, date]] = set()
         entries: list[dict[str, Any]] = []
         for raw_price in self._iter_raw_prices(raw_product):
+            territory = getattr(raw_price, "territory", None)
+            excluded = getattr(territory, "countries_excluded", None)
+            if any(
+                _read_value(country) == "FR"
+                for country in getattr(excluded, "value", [])
+                or []
+            ):
+                continue
             taxes = getattr(raw_price, "tax", []) or []
             effective_date = self._price_effective_date(raw_price)
             for tax_entry in self._tax_entries(raw_price):

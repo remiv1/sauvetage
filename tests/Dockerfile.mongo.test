@@ -3,22 +3,13 @@ FROM docker.io/library/mongo:7.0.16
 # Installer des outils supplémentaires
 RUN apt-get update && apt-get install -y bash gettext
 
-# Copier les fichiers d'environnement et scripts
-COPY config/env/.env.db_logs /tmp/.env.db_logs
+# Copier les scripts d'initialisation sans inclure les identifiants dans l'image
 COPY tests/init_mongo/02_immutable_collections.js /docker-entrypoint-initdb.d/02_immutable_collections.js
 COPY tests/init_mongo/03_collections_rotation.js /docker-entrypoint-initdb.d/03_collections_rotation.js
-COPY tests/init_mongo/00_generate_config.sh /tmp/00_generate_config.sh
-COPY tests/init_mongo/*.js.pattern /tmp/
+COPY tests/init_mongo/01_create_db_users.js.pattern /tmp/01_create_db_users.js.pattern
+COPY tests/init_mongo/01_create_db_users.sh /docker-entrypoint-initdb.d/01_create_db_users.sh
 
-# Rendre exécutable et générer les fichiers JS
-RUN chmod +x /tmp/00_generate_config.sh && \
-    set -a && \
-    . /tmp/.env.db_logs && \
-    set +a && \
-    cd /tmp && \
-    ./00_generate_config.sh && \
-    mkdir -p /docker-entrypoint-initdb.d && \
-    cp /tmp/*.js /docker-entrypoint-initdb.d/ 2>/dev/null || true
+RUN chmod +x /docker-entrypoint-initdb.d/01_create_db_users.sh
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
