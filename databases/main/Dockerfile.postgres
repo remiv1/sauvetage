@@ -10,21 +10,22 @@ ENV POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=fr_FR.utf8 --lc-collate=fr_FR
 WORKDIR /docker-entrypoint-initdb.d
 
 # Copier les fichiers
-COPY init/00_generate_models.sh .
-COPY init/*.sql.pattern .
-COPY init/04_secure_hba.sh .
-COPY init/05_secure_conf.sh .
-COPY init/99_cleanup.sh .
+COPY databases/main/init/00_generate_models.sh .
+COPY databases/main/init/*.sql.pattern .
+COPY databases/main/init/04_secure_hba.sh .
+COPY databases/main/init/05_secure_conf.sh .
+COPY databases/main/init/99_cleanup.sh .
 
 RUN chmod +x 00_generate_models.sh 04_secure_hba.sh 05_secure_conf.sh 99_cleanup.sh \
     && chown -R postgres:postgres /docker-entrypoint-initdb.d
 
 # Copier le fichier .env dans un emplacement temporaire
-COPY .env.db_main /tmp/.env
+COPY config/env/.env.db_main /tmp/.env
 
 # Exécuter le script de génération avant le démarrage
-RUN set -a && \
-    . /tmp/.env && \
+RUN sed '/^POSTGRES_INITDB_ARGS=/d' /tmp/.env > /tmp/.env.build && \
+    set -a && \
+    . /tmp/.env.build && \
     set +a && \
     ./00_generate_models.sh && \
     chmod 644 *.sql && \

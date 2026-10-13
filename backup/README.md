@@ -41,8 +41,45 @@ Variables importantes :
 ## Exécution
 
 - Service permanent : `backup` dans `docker-compose.yml` (cron interne, `CRON_SCHEDULE=0 2 * * *`)
-- Lancement manuel (dans le conteneur déjà démarré) : `./scripts/snapshot_container.sh`
-- Restauration : `./scripts/restore_snapshot.sh`
+- Backup manuel avec confirmation :
+
+    ```bash
+    ./scripts/snapshot_container.sh
+    ```
+
+    Pour ne pas demander de confirmation : `./scripts/snapshot_container.sh --yes`.
+
+- Restauration interactive d’un snapshot daté :
+
+    ```bash
+    ./scripts/restore_snapshot.sh
+    ```
+
+    Ajouter `--new-cluster` pour restaurer sans conserver les propriétaires et privilèges PostgreSQL.
+
+### Restauration directe
+
+Pour utiliser les options récentes du script sans dépendre de la version du conteneur permanent, exécuter un conteneur ponctuel. Cette commande reconstruit l’image, ne démarre pas les services de base et contourne l’entrypoint (donc ne déclenche pas de backup automatique) :
+
+```bash
+podman compose run --build --no-deps --rm -T \
+    --entrypoint /usr/local/bin/run-restore.sh backup \
+    latest --encrypted true --dry-run
+```
+
+Le `--dry-run` déchiffre l’archive dans un répertoire temporaire et vérifie les dumps, sans modifier les bases ni les documents. Après vérification du fichier affiché et de sa provenance, retirer `--dry-run` pour lancer la restauration réelle. Celle-ci remplace le contenu des bases ciblées.
+
+Pour restaurer un snapshot précis, remplacer `latest` par son horodatage, par exemple `20261013111303`.
+
+Les anciennes archives DB chiffrées qui ne sont pas rangées dans un dossier de snapshot peuvent être données directement au script :
+
+```bash
+podman compose run --build --no-deps --rm -T \
+    --entrypoint /usr/local/bin/run-restore.sh backup \
+    /backups/local/snapshots/db_20261013082732.tar.enc --dry-run
+```
+
+Retirer `--dry-run` pour restaurer. Une archive DB fournie seule ne contient pas de snapshot de documents : ceux-ci ne sont donc pas restaurés. `--encrypted true|false` choisit le format lorsque le script sélectionne une archive dans un snapshot ; pour un fichier direct, le format est déduit de son extension (`.tar.enc` ou `.tar`). `--passphrase CLE` est accepté, mais il est préférable de configurer `BACKUP_ENCRYPTION_PASSPHRASE` dans `config/env/.env.backup` pour ne pas exposer la clé dans l’historique du shell ou la liste des processus.
 
 ## Logs et verbosité
 
@@ -57,20 +94,17 @@ une surcharge de sortie dans les logs. Les scripts inscrivent toutefois des marq
 standard et d'erreur vers les fichiers de log cités ci‑dessus.
 
 Si vous souhaitez activer la verbosité pour diagnostiquer un problème, il faut
-modifier les scripts `backup/run-backup.sh` et `backup/run-restore.sh` : ajouter
-le flag `-v` aux appels `pg_dump` / `pg_restore`, puis rebuild/recréer le conteneur
-backup. Exemple :
+modifier les scripts `backup/run-backup.sh` et `backup/run-restore.sh`, puis
+reconstruire l’image. Un conteneur ponctuel permet d’utiliser cette image sans
+recréer le service permanent :
 
 ```bash
-# Rebuild (podman)
-podman compose up --build -d --no-deps --force-recreate backup
+# Backup ponctuel avec l’image reconstruite
+podman compose run --build --no-deps --rm -T \
+    --entrypoint /usr/local/bin/run-backup.sh backup
 
-# Lancer un backup manuel et suivre les logs
-./scripts/snapshot_container.sh
+# Suivre les logs
 tail -f backup_logs/backup.log
-
-# Lancer une restauration (interactif via le script) et consulter le log
-./scripts/restore_snapshot.sh
 tail -f backup_logs/restore.log
 ```
 

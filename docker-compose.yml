@@ -67,8 +67,8 @@ services:
       - LETSENCRYPT=true
       - LETSENCRYPT_EMAIL=contact@editions-sauvetage.fr
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     networks:
       - sauv-network
     volumes:
@@ -85,8 +85,8 @@ services:
   db-main:
     container_name: sauv-db-main
     build:
-      context: ./databases/main
-      dockerfile: ./Dockerfile.postgres
+      context: .
+      dockerfile: databases/main/Dockerfile.postgres
     env_file:
       - ./config/env/.env.db_main
     networks:
@@ -106,8 +106,8 @@ services:
   db-logs:
     container_name: sauv-db-logs
     build:
-      context: ./databases/logs
-      dockerfile: ./Dockerfile.mongo
+      context: .
+      dockerfile: databases/logs/Dockerfile.mongo
     env_file:
       - ./config/env/.env.db_logs
     networks:
