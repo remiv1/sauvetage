@@ -1,5 +1,5 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -euo pipefail
 
 # Environnement capturé par entrypoint.sh (nécessaire pour l'exécution via cron).
 [ -f /etc/backup/env.sh ] && . /etc/backup/env.sh
@@ -73,8 +73,13 @@ log "mongodump $MONGO_DB_LOGS terminé"
 log "Chiffrement de l'archive DB..."
 DB_ARCHIVE="$SNAP_DIR/db/db_${TIMESTAMP}.tar.enc"
 tar -C "$WORK_DIR" -cf - . \
+  2>>"$LOG_FILE" \
   | openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt -pass env:BACKUP_ENCRYPTION_PASSPHRASE \
-  > "$DB_ARCHIVE"
+      > "$DB_ARCHIVE" 2>>"$LOG_FILE"
+if [ ! -s "$DB_ARCHIVE" ]; then
+  log "Archive chiffrée vide, transfert annulé"
+  exit 1
+fi
 log "Chiffrement de l'archive DB terminé"
 
 # Snapshot des documents (rsync local incrémental via --link-dest sur le snapshot précédent).
@@ -103,8 +108,11 @@ ln -sfn "$SNAP_DIR" "$LATEST_LINK"
 KEEP_DAYS="${KEEP_DAYS:-30}"
 PURGED_LOCAL="$(find "$SNAP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -printf '%f\n')"
 if [ -n "$PURGED_LOCAL" ]; then
-  find "$SNAP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +
-  log "Snapshots locaux purgés (> $KEEP_DAYS j): $(echo "$PURGED_LOCAL" | tr '\n' ' ')"
+  if find "$SNAP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} + 2>>"$LOG_FILE"; then
+    log "Snapshots locaux purgés (> $KEEP_DAYS j): $(echo "$PURGED_LOCAL" | tr '\n' ' ')"
+  else
+    log "Purge locale incomplète (> $KEEP_DAYS j); la sauvegarde distante continue"
+  fi
 fi
 
 REMOTE_ENABLED="${REMOTE_ENABLED:-false}"
