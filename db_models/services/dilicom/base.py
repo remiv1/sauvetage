@@ -697,12 +697,13 @@ class DilicomServiceBase:
         book = Book(title=cast(str, _deep_getattr(onix_product, "title")))
         book.isbn = cast(str, _deep_getattr(onix_product, "isbn"))
         book.title = cast(str, _deep_getattr(onix_product, "title"))
-        book.supplier_gln = cast(str, _deep_getattr(onix_product, "publisher.gln"))
-        book.editor_gln = cast(str, _deep_getattr(onix_product, "editor.gln"))
-        book.editor_name = cast(
-            str,
-            _deep_getattr(onix_product, "publishing_detail.imprint.imprint_name")
-        )
+        raw_product = getattr(onix_product, "raw", getattr(onix_product, "_raw", None))
+        publishing_detail = getattr(raw_product, "publishing_detail", None)
+        imprints = self._normalise_list(getattr(publishing_detail, "imprint", None))
+        if imprints:
+            imprint_name = _read_value(getattr(imprints[0], "imprint_name", None))
+            if imprint_name is not None:
+                book.editor_name = str(imprint_name)
         book.description = _clean_description(
             cast(str | None, _deep_getattr(onix_product, "collateral.description"))
         )
@@ -768,8 +769,6 @@ class DilicomServiceBase:
         """
         book = self._build_book_from_onix(onix_product)
         logger.debug("Mise à jour du livre avec ISBN %s et titre %s", book.isbn, book.title)
-        book.supplier = self.supplier_repo.get_by_gln13(book.supplier_gln or "")
-        book.editor = self.supplier_repo.get_by_gln13(book.editor_gln or "")
         self._hydrate_book_year_and_pages(onix_product, book)
 
         vat_rate_id = self._get_vat_rate_id(book.vat_rate)
@@ -780,27 +779,7 @@ class DilicomServiceBase:
                 book.isbn,
             )
 
-        if not book.supplier:
-            logger.info("Création d'un nouveau fournisseur %s nécessaire.", book.supplier_gln)
-            return None
-
-        if book.editor:
-            book.editor_name = book.editor.name
-        else:
-            raw_product = getattr(onix_product, "_raw", None)
-            publishing_detail = getattr(raw_product, "publishing_detail", None)
-            imprint = getattr(publishing_detail, "imprint", None)
-            imprint_name = _read_value(getattr(imprint, "imprint_name", None))
-            book.editor_name = (
-                str(imprint_name).strip()
-                if imprint_name
-                else cast(str, _deep_getattr(onix_product, "editor.name", default=""))
-            )
-
-        supplier_id = book.supplier.id
-        book.supplier_name = book.supplier.name
         g_o = GeneralObjects(
-            supplier_id=supplier_id,
             general_object_type="book",
             ean13=book.isbn,
             name=book.title,
@@ -808,7 +787,6 @@ class DilicomServiceBase:
         )
         b = Books(
             author=book.authors,
-            diffuser=book.supplier_name,
             publication_year=int(book.year) if book.year is not None else None,
         )
         if book.pages:

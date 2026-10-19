@@ -457,6 +457,8 @@ class ObjectsRepository(BaseRepository):    # pylint: disable=R0902
     ) -> None:
         """Attache les relations de l'objet sans logique métier de prix."""
         if book:
+            if instance.book is not None and "diffuser" not in vars(book):
+                book.diffuser = instance.book.diffuser
             instance.book = book
         if other_object:
             instance.other_object = other_object
